@@ -4,14 +4,6 @@
  <Application.Resources>
   <ResourceDictionary>
    <ResourceDictionary.MergedDictionaries><XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" /></ResourceDictionary.MergedDictionaries>
-   <!-- Fallbacks also resolve before a control joins the themed visual tree. -->
-   <SolidColorBrush x:Key="NexusText" Color="#F2F3FD"/>
-   <SolidColorBrush x:Key="NexusMuted" Color="#A9B0C9"/>
-   <SolidColorBrush x:Key="NexusAccent" Color="#C7BDFF"/>
-   <SolidColorBrush x:Key="NexusPanel" Color="#E8192033"/>
-   <SolidColorBrush x:Key="NexusBorder" Color="#35D9DEFF"/>
-   <SolidColorBrush x:Key="NexusCard" Color="#B5252D45"/>
-   <SolidColorBrush x:Key="NexusSidebar" Color="#800D1321"/>
    <ResourceDictionary.ThemeDictionaries>
     <ResourceDictionary x:Key="Light">
      <SolidColorBrush x:Key="NexusText" Color="#F2F3FD"/>
@@ -41,6 +33,15 @@
      <SolidColorBrush x:Key="NexusSidebar" Color="{ThemeResource SystemColorWindowColor}"/>
     </ResourceDictionary>
    </ResourceDictionary.ThemeDictionaries>
+   <!-- Keep all dictionary items together after its property elements. -->
+   <!-- Fallbacks also resolve before a control joins the themed visual tree. -->
+   <SolidColorBrush x:Key="NexusText" Color="#F2F3FD"/>
+   <SolidColorBrush x:Key="NexusMuted" Color="#A9B0C9"/>
+   <SolidColorBrush x:Key="NexusAccent" Color="#C7BDFF"/>
+   <SolidColorBrush x:Key="NexusPanel" Color="#E8192033"/>
+   <SolidColorBrush x:Key="NexusBorder" Color="#35D9DEFF"/>
+   <SolidColorBrush x:Key="NexusCard" Color="#B5252D45"/>
+   <SolidColorBrush x:Key="NexusSidebar" Color="#800D1321"/>
    <Style x:Key="QuietButton" TargetType="Button">
     <Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/>
     <Setter Property="CornerRadius" Value="10"/><Setter Property="Padding" Value="12,8"/>
