@@ -25,6 +25,14 @@ The main desktop now uses the **Nexus Orbit** theme: dark pearl surfaces, violet
 
 ## Validation status
 
+Added `appveyor.yml` and browser setup instructions for AppVeyor's free public, open-source Windows builds. The desktop application version remains 0.2.0. The first user-run AppVeyor attempt failed during NuGet restore; the second restored packages but failed during C# compilation. No successful cloud publish is verified yet.
+
 Source XML, handler/resource references, C# syntax, structural performance guards, and archive integrity are checked in the authoring workspace. Windows compilation, rendering, motion smoothness, frame timing, memory behavior, and the cloud workflow still need Windows validation. This release remains source, not a verified executable.
 
 Providers, download/game installation, privileged services, Explorer replacement, and a persistent global dock remain outside this desktop prototype.
+
+## Build correction — 2026-10-06
+
+Updated `Microsoft.Windows.SDK.BuildTools` from 10.0.26100.1 to 10.0.26100.4654 to satisfy the existing Windows App SDK Base dependency and correct the reported NU1605 package downgrade. The change keeps the existing app version and UI. `START-HERE.md` includes a one-line GitHub browser edit so existing users can retry the cloud build without downloading developer tools or the source again.
+
+Corrected both action-button padding calls from `new Thickness(14, 9)` to `new Thickness(14, 9, 14, 9)`, resolving the reported CS7036 constructor-argument errors while retaining the intended spacing. Other C# `Thickness` constructions were reviewed. The corrected source still awaits successful Windows compilation and publish.

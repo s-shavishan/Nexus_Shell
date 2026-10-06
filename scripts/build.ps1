@@ -10,12 +10,12 @@ $projectFile = Join-Path $projectRoot 'src\Nexus.Shell\Nexus.Shell.csproj'
 $publishDirectory = Join-Path $projectRoot 'artifacts\Nexus-Shell-0.2.0-win-x64'
 $logDirectory = Join-Path $projectRoot 'artifacts\logs'
 
-if ($env:OS -ne 'Windows_NT') { throw 'WinUI must be built on Windows. Use the included GitHub Actions workflow.' }
+if ($env:OS -ne 'Windows_NT') { throw 'WinUI must be built on Windows. Use an included Windows cloud-build route in START-HERE.md.' }
 if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
-    throw '.NET 8 SDK is missing. To avoid local SDK downloads, use the GitHub build route in START-HERE.md. The script does not install tools.'
+    throw '.NET 8 SDK is missing. To avoid local SDK downloads, use a cloud-build route in START-HERE.md. The script does not install tools.'
 }
 $sdkVersions = & dotnet --list-sdks
-if ($LASTEXITCODE -ne 0 -or -not ($sdkVersions -match '^8\.0\.')) { throw 'Install .NET 8 SDK (x64), or use the GitHub build route. A runtime alone cannot compile source.' }
+if ($LASTEXITCODE -ne 0 -or -not ($sdkVersions -match '^8\.0\.')) { throw 'Install .NET 8 SDK (x64), or use a Windows cloud-build route. A runtime alone cannot compile source.' }
 New-Item $publishDirectory -ItemType Directory -Force | Out-Null
 New-Item $logDirectory -ItemType Directory -Force | Out-Null
 $binlog = Join-Path $logDirectory 'build.binlog'
@@ -25,7 +25,7 @@ $msbuild = $null
 if ($UseMSBuild) {
     $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
     if (Test-Path $vswhere) { $msbuild = & $vswhere -latest -products '*' -requires Microsoft.Component.MSBuild -find 'MSBuild\**\Bin\MSBuild.exe' | Select-Object -First 1 }
-    if (-not $msbuild) { throw 'Visual Studio MSBuild was not found. Omit -UseMSBuild to try dotnet publish, or use the GitHub workflow.' }
+    if (-not $msbuild) { throw 'Visual Studio MSBuild was not found. Omit -UseMSBuild to try dotnet publish, or use a Windows cloud-build route.' }
 }
 Push-Location $projectRoot
 try {
@@ -37,7 +37,7 @@ try {
         & dotnet publish $projectFile --configuration $Configuration --runtime win-x64 --self-contained true --output $publishDirectory '/p:Platform=x64' '/p:WindowsAppSDKSelfContained=true' "/bl:$binlog" 2>&1 | Tee-Object -FilePath $buildLog
     }
     $buildExit = $LASTEXITCODE
-    if ($buildExit -ne 0) { throw "Build failed with exit code $buildExit. Logs: $buildLog. If this is a XAML compiler/MSBuild task error, try scripts\build.ps1 -UseMSBuild or the GitHub workflow." }
+    if ($buildExit -ne 0) { throw "Build failed with exit code $buildExit. Logs: $buildLog. If this is a XAML compiler/MSBuild task error, try scripts\build.ps1 -UseMSBuild or a Windows cloud-build route." }
     $exe = Join-Path $publishDirectory 'Nexus.Shell.exe'
     if (-not (Test-Path $exe)) { throw 'Build returned success without Nexus.Shell.exe.' }
     if (-not (Get-ChildItem $publishDirectory -Recurse -Filter 'Microsoft.UI.Xaml.dll')) { throw 'The native WinUI runtime is missing from the publish directory.' }

@@ -1,3 +1,5 @@
+# Free hosted Windows builds require AppVeyor's public, open-source plan.
+# Place this file beside Nexus.Shell.sln in the repository root.
 image: Visual Studio 2022
 
 build_script:

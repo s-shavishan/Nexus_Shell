@@ -2,7 +2,7 @@
 
 A native C# / WinUI 3 desktop source preview for Windows 11 x64. **Nexus Orbit** combines a macOS-inspired menu bar, floating dock, and sidebar workspace with its own pearl/violet/teal theme. It opens ordinary Windows applications.
 
-Start with **[START-HERE.md](START-HERE.md)**. It includes a cloud-build route so you can obtain the Windows executable without downloading local developer tools.
+Start with **[START-HERE.md](START-HERE.md)**. It includes AppVeyor and GitHub Actions cloud-build routes so you can obtain the Windows executable without downloading local developer tools. AppVeyor's free hosted plan requires a public, open-source project.
 
 ## Project layout
 
@@ -20,6 +20,7 @@ Start with **[START-HERE.md](START-HERE.md)**. It includes a cloud-build route s
 | `Services/StartupRegistration.cs` | Explicit current-user login startup |
 | `Interop/NativeMethods.cs` | Win32 window enumeration, activation, and idle detection |
 | `scripts` | Build, package, diagnostics, and startup cleanup |
+| `appveyor.yml` | AppVeyor Windows compile/publish/package configuration |
 | `.github/workflows` | Windows compile/publish workflow |
 
 No Electron, Node.js, webview-hosted interface, cloud telemetry, or provider bundle is used by the running app. WinUI's dependency graph includes SDK support for WebView2, but the project does not instantiate a WebView2 control or run its UI in Chromium.

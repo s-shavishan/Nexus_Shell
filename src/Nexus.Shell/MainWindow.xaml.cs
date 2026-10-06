@@ -319,13 +319,13 @@ public sealed partial class MainWindow : Window
     }
     private Button ActionButton(string title, Action action)
     {
-        var button = new Button { Content = title, CornerRadius = new CornerRadius(10), Padding = new Thickness(14, 9) };
+        var button = new Button { Content = title, CornerRadius = new CornerRadius(10), Padding = new Thickness(14, 9, 14, 9) };
         button.Click += (_, _) => { try { action(); } catch (Exception ex) { Error(title, ex); } };
         return button;
     }
     private Button AsyncButton(string title, Func<Task> action)
     {
-        var button = new Button { Content = title, CornerRadius = new CornerRadius(10), Padding = new Thickness(14, 9) };
+        var button = new Button { Content = title, CornerRadius = new CornerRadius(10), Padding = new Thickness(14, 9, 14, 9) };
         button.Click += async (_, _) =>
         {
             button.IsEnabled = false;
