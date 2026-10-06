@@ -1,0 +1,51 @@
+<Application x:Class="Nexus.Shell.App"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+ <Application.Resources>
+  <ResourceDictionary>
+   <ResourceDictionary.MergedDictionaries><XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" /></ResourceDictionary.MergedDictionaries>
+   <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Default">
+     <SolidColorBrush x:Key="NexusText" Color="#F2F3FD"/>
+     <SolidColorBrush x:Key="NexusMuted" Color="#A9B0C9"/>
+     <SolidColorBrush x:Key="NexusAccent" Color="#C7BDFF"/>
+     <SolidColorBrush x:Key="NexusPanel" Color="#E8192033"/>
+     <SolidColorBrush x:Key="NexusBorder" Color="#35D9DEFF"/>
+     <SolidColorBrush x:Key="NexusCard" Color="#B5252D45"/>
+     <SolidColorBrush x:Key="NexusSidebar" Color="#800D1321"/>
+    </ResourceDictionary>
+    <ResourceDictionary x:Key="HighContrast">
+     <SolidColorBrush x:Key="NexusText" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="NexusMuted" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="NexusAccent" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="NexusPanel" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="NexusBorder" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="NexusCard" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="NexusSidebar" Color="{ThemeResource SystemColorWindowColor}"/>
+    </ResourceDictionary>
+   </ResourceDictionary.ThemeDictionaries>
+   <Style x:Key="QuietButton" TargetType="Button">
+    <Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="CornerRadius" Value="10"/><Setter Property="Padding" Value="12,8"/>
+    <Setter Property="Foreground" Value="{ThemeResource NexusText}"/>
+   </Style>
+   <Style x:Key="IconButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
+    <Setter Property="Width" Value="40"/><Setter Property="Height" Value="36"/><Setter Property="Padding" Value="0"/>
+   </Style>
+   <Style x:Key="SidebarButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
+    <Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Height" Value="42"/>
+   </Style>
+   <Style x:Key="DockButton" TargetType="Button">
+    <Setter Property="Width" Value="52"/><Setter Property="Height" Value="52"/><Setter Property="CornerRadius" Value="15"/><Setter Property="Padding" Value="0"/>
+    <Setter Property="Background" Value="#454C67"/><Setter Property="BorderBrush" Value="#45E5E7FF"/><Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Foreground" Value="{ThemeResource NexusText}"/>
+   </Style>
+   <Style x:Key="ShortcutCard" TargetType="Button">
+    <Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="HorizontalContentAlignment" Value="Left"/>
+    <Setter Property="Padding" Value="16,15"/><Setter Property="CornerRadius" Value="16"/>
+    <Setter Property="Background" Value="{ThemeResource NexusCard}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusBorder}"/>
+    <Setter Property="BorderThickness" Value="1"/><Setter Property="Foreground" Value="{ThemeResource NexusText}"/>
+   </Style>
+  </ResourceDictionary>
+ </Application.Resources>
+</Application>
