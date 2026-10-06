@@ -47,7 +47,9 @@ public sealed partial class MainWindow : Window
 
     public MainWindow()
     {
+        Log.Write("Loading MainWindow.xaml");
         InitializeComponent();
+        Log.Write("MainWindow.xaml loaded; configuring window");
         _state = _store.Load();
         _usage = new UsageTracker(_state);
         if (!_state.CatalogInitialized)
@@ -120,7 +122,7 @@ public sealed partial class MainWindow : Window
     private static SolidColorBrush MakeBrush(byte r, byte g, byte b, byte alpha = 255) => new(Windows.UI.Color.FromArgb(alpha, r, g, b));
     private Brush Resource(string key)
     {
-        var theme = _accessibility.HighContrast ? "HighContrast" : "Default";
+        var theme = _accessibility.HighContrast ? "HighContrast" : "Dark";
         return (Brush)((ResourceDictionary)Application.Current.Resources.ThemeDictionaries[theme])[key];
     }
     private TextBlock Text(string value, double size = 14, bool muted = false) => new()
@@ -130,7 +132,7 @@ public sealed partial class MainWindow : Window
     };
     private static FontIcon Glyph(string value, double size = 22) => new()
     {
-        Glyph = value, FontSize = size, FontFamily = new FontFamily("Segoe Fluent Icons")
+        Glyph = value, FontSize = size, FontFamily = new FontFamily("Segoe MDL2 Assets")
     };
     private Border Card(UIElement content) => new()
     {
@@ -227,6 +229,26 @@ public sealed partial class MainWindow : Window
     private void AppGrid_ItemClick(object sender, ItemClickEventArgs args)
     {
         if (args.ClickedItem is AppEntry app) Launch(app);
+    }
+
+    private void AppContainer_ContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
+    {
+        if (args.ItemContainer is not GridViewItem item) return;
+        if (args.InRecycleQueue)
+        {
+            if (item.ContextFlyout is MenuFlyout recycled)
+            {
+                recycled.Hide();
+                recycled.Items.Clear();
+            }
+            return;
+        }
+        if (item.ContextFlyout is not null) return;
+        // Each realized/recycled container owns one menu, rather than creating
+        // an event-bearing Flyout as a shared Style.Setter value during XAML load.
+        var menu = new MenuFlyout();
+        menu.Opening += AppContext_Opening;
+        item.ContextFlyout = menu;
     }
 
     private void AppContext_Opening(object sender, object args)
@@ -618,8 +640,9 @@ public sealed partial class MainWindow : Window
     private void Controls_Click(object sender, RoutedEventArgs args)
     {
         if (_controlsOpen) ControlsFlyout.Hide();
-        else { ApplyWidgetLayout(); ControlsFlyout.ShowAt(ControlsButton); }
+        else ControlsFlyout.ShowAt(ControlsButton);
     }
+    private void Controls_Opening(object sender, object args) => ApplyWidgetLayout();
     private void Controls_Opened(object sender, object args) => _controlsOpen = true;
     private void Controls_Closed(object sender, object args) => _controlsOpen = false;
     private void CloseControls_Click(object sender, RoutedEventArgs args) => ControlsFlyout.Hide();

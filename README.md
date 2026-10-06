@@ -1,6 +1,6 @@
 # White Dreams Nexus Shell
 
-A native C# / WinUI 3 desktop source preview for Windows 11 x64. **Nexus Orbit** combines a macOS-inspired menu bar, floating dock, and sidebar workspace with its own pearl/violet/teal theme. It opens ordinary Windows applications.
+A native C# / WinUI 3 desktop source preview for Windows 10 (build 19041 or newer) and Windows 11 x64. **Nexus Orbit** combines a macOS-inspired menu bar, floating dock, and sidebar workspace with its own pearl/violet/teal theme. It opens ordinary Windows applications.
 
 Start with **[START-HERE.md](START-HERE.md)**. It includes AppVeyor and GitHub Actions cloud-build routes so you can obtain the Windows executable without downloading local developer tools. AppVeyor's free hosted plan requires a public, open-source project.
 

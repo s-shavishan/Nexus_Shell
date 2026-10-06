@@ -34,7 +34,7 @@ assert len(names) == len(set(names)), "Duplicate XAML names"
 handlers = set()
 for node in window.iter():
     for key, value in node.attrib.items():
-        if key in {"Click", "Toggled", "SizeChanged", "PointerPressed", "Loaded", "Opening", "Opened", "Closed", "ItemClick", "TextChanged"}:
+        if key in {"Click", "Toggled", "SizeChanged", "PointerPressed", "Loaded", "Opening", "Opened", "Closed", "ItemClick", "TextChanged", "ContainerContentChanging"}:
             assert re.search(r"\b" + re.escape(value) + r"\s*\(", code), f"Missing handler: {value}"
             handlers.add(value)
 assert "AutomationProperties =" not in code, "Attached properties must use their setters"
@@ -44,9 +44,26 @@ app_resources = {node.attrib[xns + "Key"] for node in application.iter() if xns 
 local_resources = {node.attrib[xns + "Key"] for node in window.iter() if xns + "Key" in node.attrib}
 for node in window.iter():
     for value in node.attrib.values():
-        match = re.fullmatch(r"\{StaticResource ([^}]+)\}", value)
-        if match:
+        for match in re.finditer(r"\{StaticResource\s+([^}\s,]+)\}", value):
             assert match[1] in app_resources | local_resources, f"Missing resource: {match[1]}"
+
+# Validate custom theme references, including styles, converters, and flyouts
+# before they are attached to the themed root. XML well-formedness alone cannot
+# detect a missing resource key that causes Application.LoadComponent to fail.
+used_theme_keys = {
+    match[1] for node in [*application.iter(), *window.iter()]
+    for value in node.attrib.values()
+    for match in re.finditer(r"\{ThemeResource\s+(Nexus[^}\s,]+)\}", value)
+}
+pns = "{http://schemas.microsoft.com/winfx/2006/xaml/presentation}"
+theme_node = next(application.iter(pns + "ResourceDictionary.ThemeDictionaries"))
+for theme in ["Light", "Dark", "HighContrast"]:
+    dictionary = next(node for node in theme_node if node.attrib.get(xns + "Key") == theme)
+    keys = {node.attrib[xns + "Key"] for node in dictionary if xns + "Key" in node.attrib}
+    assert used_theme_keys <= keys, f"Missing {theme} resources: {used_theme_keys - keys}"
+main_dictionary = application.find(pns + "Application.Resources/" + pns + "ResourceDictionary")
+fallback_keys = {node.attrib[xns + "Key"] for node in main_dictionary if xns + "Key" in node.attrib}
+assert used_theme_keys <= fallback_keys, f"Missing fallback resources: {used_theme_keys - fallback_keys}"
 
 # Guard the library's finite viewport; an outer ScrollViewer/StackPanel would
 # reintroduce full realization of all discovered application tiles.

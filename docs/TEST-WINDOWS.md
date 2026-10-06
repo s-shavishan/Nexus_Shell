@@ -1,6 +1,12 @@
 # Windows test checklist
 
-Record your Windows build, monitor resolution/scaling, and whether this is a local or GitHub build.
+Record your Windows build, monitor resolution/scaling, and whether this is a local, AppVeyor, or GitHub Actions build. Test Windows 10 build 19041 or newer and Windows 11, x64.
+
+## Startup regression
+
+1. Extract 0.2.1 into a fresh folder and start `Nexus.Shell.exe` on Windows 10 build 19045. Confirm the latest log says `Nexus Shell 0.2.1` and contains `MainWindow.xaml loaded; configuring window` and `MainWindow activation completed`.
+2. Confirm the actual desktop is visible and interactive; log markers alone are not UI acceptance. Try both Control center anchors and repeated app-tile context menus while scrolling/recycling the library.
+3. If startup fails, confirm a native dialog identifies the stage/HRESULT/log path. Close it, then collect the latest startup section, including `RestrictedDescription` and resource messages if present. Do not mark the XAML bug fixed on the strength of a compile alone.
 
 ## Basic operation
 

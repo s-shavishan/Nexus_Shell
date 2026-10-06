@@ -21,7 +21,12 @@ internal static class NativeMethods
     [DllImport("user32.dll")] private static extern bool GetLastInputInfo(ref LastInputInfo input);
     [DllImport("user32.dll")] private static extern bool ReleaseCapture();
     [DllImport("user32.dll")] private static extern IntPtr SendMessage(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
+    [DllImport("user32.dll", EntryPoint = "MessageBoxW", CharSet = CharSet.Unicode, ExactSpelling = true)]
+    private static extern int MessageBox(IntPtr owner, string text, string caption, uint type);
     [StructLayout(LayoutKind.Sequential)] private struct LastInputInfo { public uint Size; public uint Tick; }
+
+    internal static void ShowStartupError(string message) =>
+        MessageBox(IntPtr.Zero, message, "Nexus startup error", 0x00000010); // MB_OK | MB_ICONERROR
 
     internal static bool Activate(IntPtr window)
     {

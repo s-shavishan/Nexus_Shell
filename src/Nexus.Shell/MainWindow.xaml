@@ -8,7 +8,7 @@
    <DataTemplate x:Key="AppTile">
     <StackPanel Width="114" Spacing="9" Padding="6,10" HorizontalAlignment="Center" AutomationProperties.Name="{Binding Name}">
      <Border Width="56" Height="56" CornerRadius="17" BorderBrush="#45FFFFFF" BorderThickness="1" Background="{Binding Category, Converter={StaticResource AppAccent}}" HorizontalAlignment="Center">
-      <FontIcon Glyph="{Binding Glyph}" FontSize="25" Foreground="{ThemeResource NexusText}" FontFamily="Segoe Fluent Icons"/>
+      <FontIcon Glyph="{Binding Glyph}" FontSize="25" Foreground="{ThemeResource NexusText}" FontFamily="Segoe MDL2 Assets"/>
      </Border>
      <TextBlock Text="{Binding Name}" FontSize="13" Foreground="{ThemeResource NexusText}" TextTrimming="CharacterEllipsis" TextAlignment="Center" ToolTipService.ToolTip="{Binding Name}"/>
     </StackPanel>
@@ -18,35 +18,7 @@
     <Setter Property="Margin" Value="3"/><Setter Property="Padding" Value="0"/>
     <Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="VerticalContentAlignment" Value="Stretch"/>
     <Setter Property="CornerRadius" Value="14"/>
-    <Setter Property="ContextFlyout"><Setter.Value><MenuFlyout Opening="AppContext_Opening"/></Setter.Value></Setter>
    </Style>
-   <Flyout x:Name="ControlsFlyout" Placement="BottomEdgeAlignedRight" Opened="Controls_Opened" Closed="Controls_Closed">
-    <Flyout.FlyoutPresenterStyle><Style TargetType="FlyoutPresenter"><Setter Property="Padding" Value="0"/><Setter Property="CornerRadius" Value="22"/><Setter Property="MaxWidth" Value="420"/></Style></Flyout.FlyoutPresenterStyle>
-    <Border x:Name="ControlPanel" Width="356" Background="{ThemeResource NexusPanel}" CornerRadius="22" Padding="22">
-     <Grid RowSpacing="16"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="Control center" FontSize="22" FontWeight="SemiBold" Foreground="{ThemeResource NexusText}" TextTrimming="CharacterEllipsis"/><Button Grid.Column="1" Content="Close" Click="CloseControls_Click" Style="{StaticResource QuietButton}"/></Grid>
-      <ScrollViewer x:Name="ControlScroller" Grid.Row="1" MaxHeight="580" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-       <StackPanel Spacing="17">
-        <TextBlock Text="YOUR WINDOWS, WITHIN REACH" Foreground="{ThemeResource NexusMuted}" FontSize="10" CharacterSpacing="120"/>
-        <Button Content="Sound and volume" Tag="ms-settings:sound" Click="SystemSettings_Click" HorizontalAlignment="Stretch" CornerRadius="10"/>
-        <Button Content="Wi-Fi and network" Tag="ms-settings:network-status" Click="SystemSettings_Click" HorizontalAlignment="Stretch" CornerRadius="10"/>
-        <Button Content="Bluetooth devices" Tag="ms-settings:bluetooth" Click="SystemSettings_Click" HorizontalAlignment="Stretch" CornerRadius="10"/>
-        <Button Content="Display and brightness" Tag="ms-settings:display" Click="SystemSettings_Click" HorizontalAlignment="Stretch" CornerRadius="10"/>
-        <TextBox x:Name="DisplayNameBox" Header="Your name" MaxLength="40"/>
-        <Button Content="Save name" Click="SaveName_Click" HorizontalAlignment="Left" CornerRadius="10"/>
-        <ToggleSwitch x:Name="EffectsSwitch" Header="Reduced effects" Toggled="Effects_Toggled" OffContent="Nexus signature" OnContent="Simpler surfaces and no custom motion"/>
-        <TextBlock Text="Short interaction animations follow Windows animation settings. Reduced effects keeps every feature available." Foreground="{ThemeResource NexusMuted}" FontSize="12" TextWrapping="Wrap"/>
-        <ToggleSwitch x:Name="FocusSwitch" Header="Focus view" Toggled="Focus_Toggled" OffContent="Show desktop widgets" OnContent="Give your workspace more room"/>
-        <ToggleSwitch x:Name="TrackingSwitch" Header="App usage tracking" Toggled="Tracking_Toggled" OffContent="Off" OnContent="On"/>
-        <TextBlock Text="Approximate foreground time while Nexus is open. Idle time is excluded. Stored only on this PC." Foreground="{ThemeResource NexusMuted}" FontSize="12" TextWrapping="Wrap"/>
-        <ToggleSwitch x:Name="StartupSwitch" Header="Start after Windows sign-in" Toggled="Startup_Toggled" OffContent="Off" OnContent="On"/>
-        <Button Content="Open Nexus data folder" Click="DataFolder_Click" HorizontalAlignment="Stretch" CornerRadius="10"/>
-        <Button Content="Exit to Windows" Click="Exit_Click" HorizontalAlignment="Stretch" CornerRadius="10"/>
-       </StackPanel>
-      </ScrollViewer>
-     </Grid>
-    </Border>
-   </Flyout>
   </Grid.Resources>
   <Grid.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#131529" Offset="0"/><GradientStop Color="#1D2940" Offset="0.52"/><GradientStop Color="#0D222B" Offset="1"/></LinearGradientBrush></Grid.Background>
   <Grid.RowDefinitions><RowDefinition Height="44"/><RowDefinition Height="62"/><RowDefinition Height="*"/><RowDefinition Height="104"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
@@ -71,22 +43,53 @@
     <Border Grid.Column="2" Background="Transparent" PointerPressed="DragArea_PointerPressed" ToolTipService.ToolTip="Drag to move Nexus"/>
     <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
      <TextBlock x:Name="MenuClock" FontSize="12" Foreground="{ThemeResource NexusText}" VerticalAlignment="Center" Margin="0,0,12,0"/>
-     <Button x:Name="FullScreenButton" Click="FullScreen_Click" Style="{StaticResource IconButton}" AutomationProperties.Name="Toggle full screen" ToolTipService.ToolTip="Full screen · F11"><FontIcon Glyph="&#xE740;" FontSize="16"/></Button>
-     <Button x:Name="ControlsButton" Click="Controls_Click" Style="{StaticResource IconButton}" AutomationProperties.Name="Control center" ToolTipService.ToolTip="Control center"><FontIcon Glyph="&#xE713;" FontSize="16"/></Button>
-     <Button Click="Exit_Click" Style="{StaticResource IconButton}" AutomationProperties.Name="Exit to Windows" ToolTipService.ToolTip="Exit to Windows · Alt+F4"><FontIcon Glyph="&#xE8BB;" FontSize="16"/></Button>
+     <Button x:Name="FullScreenButton" Click="FullScreen_Click" Style="{StaticResource IconButton}" AutomationProperties.Name="Toggle full screen" ToolTipService.ToolTip="Full screen · F11"><FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE740;" FontSize="16"/></Button>
+     <Button x:Name="ControlsButton" Style="{StaticResource IconButton}" AutomationProperties.Name="Control center" ToolTipService.ToolTip="Control center">
+      <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE713;" FontSize="16"/>
+      <Button.Flyout>
+       <Flyout x:Name="ControlsFlyout" Placement="BottomEdgeAlignedRight" Opening="Controls_Opening" Opened="Controls_Opened" Closed="Controls_Closed">
+        <Flyout.FlyoutPresenterStyle><Style TargetType="FlyoutPresenter"><Setter Property="Padding" Value="0"/><Setter Property="CornerRadius" Value="22"/><Setter Property="MaxWidth" Value="420"/></Style></Flyout.FlyoutPresenterStyle>
+        <Border x:Name="ControlPanel" Width="356" Background="{ThemeResource NexusPanel}" CornerRadius="22" Padding="22">
+         <Grid RowSpacing="16"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="Control center" FontSize="22" FontWeight="SemiBold" Foreground="{ThemeResource NexusText}" TextTrimming="CharacterEllipsis"/><Button Grid.Column="1" Content="Close" Click="CloseControls_Click" Style="{StaticResource QuietButton}"/></Grid>
+          <ScrollViewer x:Name="ControlScroller" Grid.Row="1" MaxHeight="580" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+           <StackPanel Spacing="17">
+            <TextBlock Text="YOUR WINDOWS, WITHIN REACH" Foreground="{ThemeResource NexusMuted}" FontSize="10" CharacterSpacing="120"/>
+            <Button Content="Sound and volume" Tag="ms-settings:sound" Click="SystemSettings_Click" HorizontalAlignment="Stretch" CornerRadius="10"/>
+            <Button Content="Wi-Fi and network" Tag="ms-settings:network-status" Click="SystemSettings_Click" HorizontalAlignment="Stretch" CornerRadius="10"/>
+            <Button Content="Bluetooth devices" Tag="ms-settings:bluetooth" Click="SystemSettings_Click" HorizontalAlignment="Stretch" CornerRadius="10"/>
+            <Button Content="Display and brightness" Tag="ms-settings:display" Click="SystemSettings_Click" HorizontalAlignment="Stretch" CornerRadius="10"/>
+            <TextBox x:Name="DisplayNameBox" Header="Your name" MaxLength="40"/>
+            <Button Content="Save name" Click="SaveName_Click" HorizontalAlignment="Left" CornerRadius="10"/>
+            <ToggleSwitch x:Name="EffectsSwitch" Header="Reduced effects" Toggled="Effects_Toggled" OffContent="Nexus signature" OnContent="Simpler surfaces and no custom motion"/>
+            <TextBlock Text="Short interaction animations follow Windows animation settings. Reduced effects keeps every feature available." Foreground="{ThemeResource NexusMuted}" FontSize="12" TextWrapping="Wrap"/>
+            <ToggleSwitch x:Name="FocusSwitch" Header="Focus view" Toggled="Focus_Toggled" OffContent="Show desktop widgets" OnContent="Give your workspace more room"/>
+            <ToggleSwitch x:Name="TrackingSwitch" Header="App usage tracking" Toggled="Tracking_Toggled" OffContent="Off" OnContent="On"/>
+            <TextBlock Text="Approximate foreground time while Nexus is open. Idle time is excluded. Stored only on this PC." Foreground="{ThemeResource NexusMuted}" FontSize="12" TextWrapping="Wrap"/>
+            <ToggleSwitch x:Name="StartupSwitch" Header="Start after Windows sign-in" Toggled="Startup_Toggled" OffContent="Off" OnContent="On"/>
+            <Button Content="Open Nexus data folder" Click="DataFolder_Click" HorizontalAlignment="Stretch" CornerRadius="10"/>
+            <Button Content="Exit to Windows" Click="Exit_Click" HorizontalAlignment="Stretch" CornerRadius="10"/>
+           </StackPanel>
+          </ScrollViewer>
+         </Grid>
+        </Border>
+       </Flyout>
+      </Button.Flyout>
+     </Button>
+     <Button Click="Exit_Click" Style="{StaticResource IconButton}" AutomationProperties.Name="Exit to Windows" ToolTipService.ToolTip="Exit to Windows · Alt+F4"><FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE8BB;" FontSize="16"/></Button>
     </StackPanel>
    </Grid>
   </Border>
   <Grid Grid.Row="1" Margin="32,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
    <TextBlock Text="WHITE DREAMS  /  YOUR WORLD, CONNECTED" Foreground="{ThemeResource NexusMuted}" FontSize="10" CharacterSpacing="160" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
-   <Button Grid.Column="1" Click="SearchApps_Click" Style="{StaticResource QuietButton}" AutomationProperties.Name="Search apps" ToolTipService.ToolTip="Search your apps · Ctrl+K"><StackPanel Orientation="Horizontal" Spacing="10"><FontIcon Glyph="&#xE721;" FontSize="14"/><TextBlock Text="Find an app" FontSize="12"/><TextBlock Text="Ctrl K" Foreground="{ThemeResource NexusMuted}" FontSize="11"/></StackPanel></Button>
+   <Button Grid.Column="1" Click="SearchApps_Click" Style="{StaticResource QuietButton}" AutomationProperties.Name="Search apps" ToolTipService.ToolTip="Search your apps · Ctrl+K"><StackPanel Orientation="Horizontal" Spacing="10"><FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE721;" FontSize="14"/><TextBlock Text="Find an app" FontSize="12"/><TextBlock Text="Ctrl K" Foreground="{ThemeResource NexusMuted}" FontSize="11"/></StackPanel></Button>
   </Grid>
   <Grid Grid.Row="2" Margin="32,0" ColumnSpacing="28" x:Name="Workspace"><Grid.ColumnDefinitions><ColumnDefinition x:Name="DesktopColumn" Width="236"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
    <ScrollViewer x:Name="DesktopWidgets" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Spacing="12" Padding="0,28,4,0">
     <TextBlock x:Name="DateText" Foreground="{ThemeResource NexusMuted}" FontSize="14"/>
     <TextBlock x:Name="ClockText" FontSize="78" FontWeight="Light" Foreground="{ThemeResource NexusText}" Margin="-4,-12,0,0"/>
     <TextBlock x:Name="GreetingText" Foreground="{ThemeResource NexusText}" FontSize="16" TextWrapping="Wrap" Margin="0,4,0,20"/>
-    <Border x:Name="SpaceCard" Padding="19" CornerRadius="20" Background="#80353C5C" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="1"><StackPanel Spacing="10"><FontIcon Glyph="&#xE8D4;" FontSize="22" Foreground="{ThemeResource NexusAccent}" HorizontalAlignment="Left"/><TextBlock x:Name="SpaceName" FontSize="18" Foreground="{ThemeResource NexusText}" TextWrapping="Wrap"/><TextBlock Text="A little space for your next big idea." FontSize="13" Foreground="{ThemeResource NexusMuted}" TextWrapping="Wrap"/></StackPanel></Border>
+    <Border x:Name="SpaceCard" Padding="19" CornerRadius="20" Background="#80353C5C" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="1"><StackPanel Spacing="10"><FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE8D4;" FontSize="22" Foreground="{ThemeResource NexusAccent}" HorizontalAlignment="Left"/><TextBlock x:Name="SpaceName" FontSize="18" Foreground="{ThemeResource NexusText}" TextWrapping="Wrap"/><TextBlock Text="A little space for your next big idea." FontSize="13" Foreground="{ThemeResource NexusMuted}" TextWrapping="Wrap"/></StackPanel></Border>
     <Button Content="Open my files" Tag="files" Click="QuickLaunch_Click" Style="{StaticResource QuietButton}" HorizontalAlignment="Left" Margin="0,8,0,0"/>
     <Button Content="Windows settings" Tag="settings" Click="QuickLaunch_Click" Style="{StaticResource QuietButton}" HorizontalAlignment="Left"/>
    </StackPanel></ScrollViewer>
@@ -100,20 +103,20 @@
         <Button Width="26" Height="30" Padding="0" Click="ExpandHome_Click" Style="{StaticResource QuietButton}" AutomationProperties.Name="Expand workspace" ToolTipService.ToolTip="Expand workspace"><Ellipse Width="11" Height="11" Fill="#87DCC2"/></Button>
        </StackPanel>
        <TextBlock x:Name="PageTitle" Text="Nexus Home" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="13" Foreground="{ThemeResource NexusMuted}" TextTrimming="CharacterEllipsis"/>
-       <Button Grid.Column="2" Style="{StaticResource IconButton}" AutomationProperties.Name="Workspace navigation" ToolTipService.ToolTip="Workspace navigation"><FontIcon Glyph="&#xE700;" FontSize="16"/><Button.Flyout><MenuFlyout><MenuFlyoutItem Text="Home" Tag="Home" Click="NavigateMenu_Click"/><MenuFlyoutItem Text="Apps" Tag="Apps" Click="NavigateMenu_Click"/><MenuFlyoutItem Text="Games" Tag="Gaming" Click="NavigateMenu_Click"/><MenuFlyoutItem Text="Activity" Tag="Activity" Click="NavigateMenu_Click"/><MenuFlyoutItem Text="Running apps" Tag="Running apps" Click="NavigateMenu_Click"/></MenuFlyout></Button.Flyout></Button>
+       <Button Grid.Column="2" Style="{StaticResource IconButton}" AutomationProperties.Name="Workspace navigation" ToolTipService.ToolTip="Workspace navigation"><FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE700;" FontSize="16"/><Button.Flyout><MenuFlyout><MenuFlyoutItem Text="Home" Tag="Home" Click="NavigateMenu_Click"/><MenuFlyoutItem Text="Apps" Tag="Apps" Click="NavigateMenu_Click"/><MenuFlyoutItem Text="Games" Tag="Gaming" Click="NavigateMenu_Click"/><MenuFlyoutItem Text="Activity" Tag="Activity" Click="NavigateMenu_Click"/><MenuFlyoutItem Text="Running apps" Tag="Running apps" Click="NavigateMenu_Click"/></MenuFlyout></Button.Flyout></Button>
       </Grid>
      </Border>
      <Grid Grid.Row="1"><Grid.ColumnDefinitions><ColumnDefinition x:Name="SidebarColumn" Width="184"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
       <Border x:Name="Sidebar" Background="{ThemeResource NexusSidebar}" BorderBrush="#18D9DEFF" BorderThickness="0,0,1,0">
        <Grid Margin="14,22,14,16"><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Spacing="5"><TextBlock Text="WORKSPACE" FontSize="10" CharacterSpacing="120" Margin="12,0,0,13" Foreground="{ThemeResource NexusMuted}"/>
-         <Button x:Name="NavHome" Tag="Home" Click="Navigate_Click" Style="{StaticResource SidebarButton}"><StackPanel Orientation="Horizontal" Spacing="12"><FontIcon Glyph="&#xE80F;" FontSize="17"/><TextBlock Text="Home" FontSize="13"/></StackPanel></Button>
-         <Button x:Name="NavApps" Tag="Apps" Click="Navigate_Click" Style="{StaticResource SidebarButton}"><StackPanel Orientation="Horizontal" Spacing="12"><FontIcon Glyph="&#xE71D;" FontSize="17"/><TextBlock Text="Apps" FontSize="13"/></StackPanel></Button>
-         <Button x:Name="NavGames" Tag="Gaming" Click="Navigate_Click" Style="{StaticResource SidebarButton}"><StackPanel Orientation="Horizontal" Spacing="12"><FontIcon Glyph="&#xE7FC;" FontSize="17"/><TextBlock Text="Games" FontSize="13"/></StackPanel></Button>
-         <Button x:Name="NavActivity" Tag="Activity" Click="Navigate_Click" Style="{StaticResource SidebarButton}"><StackPanel Orientation="Horizontal" Spacing="12"><FontIcon Glyph="&#xE9D9;" FontSize="17"/><TextBlock Text="Activity" FontSize="13"/></StackPanel></Button>
+         <Button x:Name="NavHome" Tag="Home" Click="Navigate_Click" Style="{StaticResource SidebarButton}"><StackPanel Orientation="Horizontal" Spacing="12"><FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE80F;" FontSize="17"/><TextBlock Text="Home" FontSize="13"/></StackPanel></Button>
+         <Button x:Name="NavApps" Tag="Apps" Click="Navigate_Click" Style="{StaticResource SidebarButton}"><StackPanel Orientation="Horizontal" Spacing="12"><FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE71D;" FontSize="17"/><TextBlock Text="Apps" FontSize="13"/></StackPanel></Button>
+         <Button x:Name="NavGames" Tag="Gaming" Click="Navigate_Click" Style="{StaticResource SidebarButton}"><StackPanel Orientation="Horizontal" Spacing="12"><FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE7FC;" FontSize="17"/><TextBlock Text="Games" FontSize="13"/></StackPanel></Button>
+         <Button x:Name="NavActivity" Tag="Activity" Click="Navigate_Click" Style="{StaticResource SidebarButton}"><StackPanel Orientation="Horizontal" Spacing="12"><FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE9D9;" FontSize="17"/><TextBlock Text="Activity" FontSize="13"/></StackPanel></Button>
          <TextBlock Text="YOUR SESSION" FontSize="10" CharacterSpacing="120" Margin="12,24,0,10" Foreground="{ThemeResource NexusMuted}"/>
-         <Button x:Name="NavRunning" Tag="Running apps" Click="Navigate_Click" Style="{StaticResource SidebarButton}"><StackPanel Orientation="Horizontal" Spacing="12"><FontIcon Glyph="&#xE7F4;" FontSize="17"/><TextBlock Text="Running apps" FontSize="12"/></StackPanel></Button>
-         <Button Click="Controls_Click" Style="{StaticResource SidebarButton}"><StackPanel Orientation="Horizontal" Spacing="12"><FontIcon Glyph="&#xE713;" FontSize="17"/><TextBlock Text="Settings" FontSize="13"/></StackPanel></Button>
+         <Button x:Name="NavRunning" Tag="Running apps" Click="Navigate_Click" Style="{StaticResource SidebarButton}"><StackPanel Orientation="Horizontal" Spacing="12"><FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE7F4;" FontSize="17"/><TextBlock Text="Running apps" FontSize="12"/></StackPanel></Button>
+         <Button Click="Controls_Click" Style="{StaticResource SidebarButton}"><StackPanel Orientation="Horizontal" Spacing="12"><FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE713;" FontSize="17"/><TextBlock Text="Settings" FontSize="13"/></StackPanel></Button>
         </StackPanel></ScrollViewer>
         <Border Grid.Row="1" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="0,1,0,0" Padding="9,16,0,0"><StackPanel Spacing="5"><TextBlock x:Name="SidebarName" FontSize="13" Foreground="{ThemeResource NexusText}" TextTrimming="CharacterEllipsis"/><TextBlock Text="Personal workspace" FontSize="11" Foreground="{ThemeResource NexusMuted}"/></StackPanel></Border>
        </Grid>
@@ -130,11 +133,11 @@
          </Border>
          <Grid><TextBlock Text="Your essentials" FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource NexusText}" VerticalAlignment="Center"/><Button Content="See all" Click="SearchApps_Click" HorizontalAlignment="Right" Style="{StaticResource QuietButton}" FontSize="12"/></Grid>
          <TextBlock x:Name="HomePinsEmpty" Text="Pin an app from the library to make it yours." Foreground="{ThemeResource NexusMuted}" Visibility="Collapsed" TextWrapping="Wrap"/>
-         <GridView x:Name="HomePins" MaxHeight="252" Margin="-6,-12,-6,0" SelectionMode="None" IsItemClickEnabled="True" ItemClick="AppGrid_ItemClick" ItemTemplate="{StaticResource AppTile}" ItemsPanel="{StaticResource AppItemsPanel}" ItemContainerStyle="{StaticResource AppContainer}" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+         <GridView x:Name="HomePins" MaxHeight="252" Margin="-6,-12,-6,0" SelectionMode="None" IsItemClickEnabled="True" ItemClick="AppGrid_ItemClick" ContainerContentChanging="AppContainer_ContentChanging" ItemTemplate="{StaticResource AppTile}" ItemsPanel="{StaticResource AppItemsPanel}" ItemContainerStyle="{StaticResource AppContainer}" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"/>
          <Grid x:Name="ShortcutRow" ColumnSpacing="10"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-          <Button x:Name="FilesCard" Tag="files" Click="QuickLaunch_Click" Style="{StaticResource ShortcutCard}"><StackPanel Spacing="10"><FontIcon Glyph="&#xE8B7;" FontSize="20" Foreground="{ThemeResource NexusAccent}" HorizontalAlignment="Left"/><TextBlock Text="My files" FontSize="13"/></StackPanel></Button>
-          <Button x:Name="GamesCard" Grid.Column="1" Tag="Gaming" Click="Navigate_Click" Style="{StaticResource ShortcutCard}"><StackPanel Spacing="10"><FontIcon Glyph="&#xE7FC;" FontSize="20" Foreground="{ThemeResource NexusAccent}" HorizontalAlignment="Left"/><TextBlock Text="Games" FontSize="13"/></StackPanel></Button>
-          <Button x:Name="FocusCard" Grid.Column="2" Click="FocusCard_Click" Style="{StaticResource ShortcutCard}"><StackPanel Spacing="10"><FontIcon Glyph="&#xE708;" FontSize="20" Foreground="{ThemeResource NexusAccent}" HorizontalAlignment="Left"/><TextBlock x:Name="FocusCardLabel" Text="Focus view" FontSize="13" TextWrapping="Wrap"/></StackPanel></Button>
+          <Button x:Name="FilesCard" Tag="files" Click="QuickLaunch_Click" Style="{StaticResource ShortcutCard}"><StackPanel Spacing="10"><FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE8B7;" FontSize="20" Foreground="{ThemeResource NexusAccent}" HorizontalAlignment="Left"/><TextBlock Text="My files" FontSize="13"/></StackPanel></Button>
+          <Button x:Name="GamesCard" Grid.Column="1" Tag="Gaming" Click="Navigate_Click" Style="{StaticResource ShortcutCard}"><StackPanel Spacing="10"><FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE7FC;" FontSize="20" Foreground="{ThemeResource NexusAccent}" HorizontalAlignment="Left"/><TextBlock Text="Games" FontSize="13"/></StackPanel></Button>
+          <Button x:Name="FocusCard" Grid.Column="2" Click="FocusCard_Click" Style="{StaticResource ShortcutCard}"><StackPanel Spacing="10"><FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE708;" FontSize="20" Foreground="{ThemeResource NexusAccent}" HorizontalAlignment="Left"/><TextBlock x:Name="FocusCardLabel" Text="Focus view" FontSize="13" TextWrapping="Wrap"/></StackPanel></Button>
          </Grid>
          <Border Padding="0,4,0,2"><StackPanel Spacing="5"><TextBlock Text="LAST IN YOUR SESSION" Foreground="{ThemeResource NexusMuted}" FontSize="9" CharacterSpacing="100"/><TextBlock x:Name="HomeRecentText" Text="Ready for your next idea." Foreground="{ThemeResource NexusMuted}" FontSize="12" TextWrapping="Wrap"/></StackPanel></Border>
         </StackPanel>
@@ -142,9 +145,9 @@
        <!-- Finite viewport outside the page ScrollViewer keeps the app library virtualized. -->
        <Grid x:Name="AppLibraryView" Visibility="Collapsed" Padding="24" RowSpacing="14"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
         <StackPanel Spacing="6"><TextBlock x:Name="LibraryHeading" Text="App Library" FontSize="28" FontWeight="SemiBold" Foreground="{ThemeResource NexusText}"/><TextBlock x:Name="LibraryDescription" FontSize="12" Foreground="{ThemeResource NexusMuted}" TextWrapping="Wrap"/></StackPanel>
-        <Grid Grid.Row="1" ColumnSpacing="10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBox x:Name="AppsSearchBox" PlaceholderText="Find an app" TextChanged="AppsSearch_TextChanged" AutomationProperties.Name="Find an app"/><Button Grid.Column="1" x:Name="AddAppButton" Content="Add…" Click="AddApp_Click" CornerRadius="10"/><Button Grid.Column="2" x:Name="RefreshAppsButton" Click="RefreshApps_Click" Style="{StaticResource IconButton}" AutomationProperties.Name="Refresh app discovery" ToolTipService.ToolTip="Refresh Start menu apps"><FontIcon Glyph="&#xE72C;" FontSize="17"/></Button></Grid>
+        <Grid Grid.Row="1" ColumnSpacing="10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBox x:Name="AppsSearchBox" PlaceholderText="Find an app" TextChanged="AppsSearch_TextChanged" AutomationProperties.Name="Find an app"/><Button Grid.Column="1" x:Name="AddAppButton" Content="Add…" Click="AddApp_Click" CornerRadius="10"/><Button Grid.Column="2" x:Name="RefreshAppsButton" Click="RefreshApps_Click" Style="{StaticResource IconButton}" AutomationProperties.Name="Refresh app discovery" ToolTipService.ToolTip="Refresh Start menu apps"><FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE72C;" FontSize="17"/></Button></Grid>
         <Grid Grid.Row="2"><TextBlock x:Name="LibraryCountText" FontSize="11" Foreground="{ThemeResource NexusMuted}"/><ProgressRing x:Name="DiscoveryProgress" Width="15" Height="15" IsActive="False" Visibility="Collapsed" HorizontalAlignment="Right"/></Grid>
-        <Grid Grid.Row="3"><GridView x:Name="AppsGrid" SelectionMode="None" IsItemClickEnabled="True" ItemClick="AppGrid_ItemClick" ItemTemplate="{StaticResource AppTile}" ItemsPanel="{StaticResource AppItemsPanel}" ItemContainerStyle="{StaticResource AppContainer}" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"/><TextBlock x:Name="LibraryEmpty" Text="No matching apps." Foreground="{ThemeResource NexusMuted}" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" Margin="16" Visibility="Collapsed"/></Grid>
+        <Grid Grid.Row="3"><GridView x:Name="AppsGrid" SelectionMode="None" IsItemClickEnabled="True" ItemClick="AppGrid_ItemClick" ContainerContentChanging="AppContainer_ContentChanging" ItemTemplate="{StaticResource AppTile}" ItemsPanel="{StaticResource AppItemsPanel}" ItemContainerStyle="{StaticResource AppContainer}" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"/><TextBlock x:Name="LibraryEmpty" Text="No matching apps." Foreground="{ThemeResource NexusMuted}" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" Margin="16" Visibility="Collapsed"/></Grid>
        </Grid>
        <ScrollViewer x:Name="PageScroller" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel x:Name="PageContent" Spacing="16" Padding="24"/></ScrollViewer>
       </Grid>
@@ -156,7 +159,7 @@
   </Grid>
   <Grid Grid.Row="3" Margin="32,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
    <TextBlock x:Name="ResourceText" Text="Nexus · native desktop" FontSize="11" Foreground="{ThemeResource NexusMuted}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,18,0"/>
-   <Border x:Name="DockBorder" Grid.Column="1" CornerRadius="23" Background="#B04C526D" BorderBrush="#60DFDFFF" BorderThickness="1" Padding="12,11"><StackPanel Orientation="Horizontal" Spacing="9"><Button x:Name="DockHomeButton" Click="Reopen_Click" Style="{StaticResource DockButton}" Background="Transparent" BorderBrush="Transparent" ToolTipService.ToolTip="Nexus Home" AutomationProperties.Name="Nexus Home"><Border Width="48" Height="48" CornerRadius="13" Background="#C4B5EB"><TextBlock Text="N" FontSize="27" Foreground="#24243C" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border></Button><Border Width="1" Background="#50D9DEFF" Margin="4,8"/><StackPanel Orientation="Horizontal" Spacing="9" x:Name="DockApps"/><Button x:Name="DockRunningButton" Click="Running_Click" Background="Transparent" BorderBrush="Transparent" Style="{StaticResource DockButton}" ToolTipService.ToolTip="Running applications" AutomationProperties.Name="Running applications"><Border Width="48" Height="48" Background="#454C67" CornerRadius="13" BorderBrush="#45E5E7FF" BorderThickness="1"><FontIcon Glyph="&#xE7F4;" FontSize="22"/></Border></Button></StackPanel></Border>
+   <Border x:Name="DockBorder" Grid.Column="1" CornerRadius="23" Background="#B04C526D" BorderBrush="#60DFDFFF" BorderThickness="1" Padding="12,11"><StackPanel Orientation="Horizontal" Spacing="9"><Button x:Name="DockHomeButton" Click="Reopen_Click" Style="{StaticResource DockButton}" Background="Transparent" BorderBrush="Transparent" ToolTipService.ToolTip="Nexus Home" AutomationProperties.Name="Nexus Home"><Border Width="48" Height="48" CornerRadius="13" Background="#C4B5EB"><TextBlock Text="N" FontSize="27" Foreground="#24243C" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border></Button><Border Width="1" Background="#50D9DEFF" Margin="4,8"/><StackPanel Orientation="Horizontal" Spacing="9" x:Name="DockApps"/><Button x:Name="DockRunningButton" Click="Running_Click" Background="Transparent" BorderBrush="Transparent" Style="{StaticResource DockButton}" ToolTipService.ToolTip="Running applications" AutomationProperties.Name="Running applications"><Border Width="48" Height="48" Background="#454C67" CornerRadius="13" BorderBrush="#45E5E7FF" BorderThickness="1"><FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE7F4;" FontSize="22"/></Border></Button></StackPanel></Border>
    <Button Grid.Column="2" x:Name="FooterSettingsButton" Content="Control center" Click="Controls_Click" Style="{StaticResource QuietButton}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="18,0,0,0" FontSize="12"/>
   </Grid>
   <InfoBar Grid.Row="4" x:Name="StatusBar" IsOpen="False" IsClosable="True" Severity="Informational" Margin="20,0,20,12"/>

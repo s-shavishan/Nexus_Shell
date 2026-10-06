@@ -1,10 +1,28 @@
-# Nexus Shell 0.2.0 — Nexus Orbit
+# Nexus Shell 0.2.1 — Nexus Orbit
 
 This is a complete **C# + WinUI 3 source project**, not a compiled Windows download. Build it on Windows, or use the included AppVeyor or GitHub Actions configuration to produce the executable online.
 
-The source was authored and statically checked in a Linux workspace. It has **not been compiled, launched, or performance-tested on Windows here**. The first successful Windows build is the next validation gate.
+Version **0.2.0 compiled and published successfully in your AppVeyor build** with zero warnings and errors. Its launch on Windows 10 Pro x64 build 19045 then failed in `MainWindow.InitializeComponent()` with a generic `XamlParseException`. Version **0.2.1** is a startup compatibility/diagnostic patch; it has been statically checked here, and still requires a new Windows build and launch test.
 
-This update improves the main desktop, introduces restrained compositor motion and Reduced effects, and changes the full app library to a finite, virtualized view. See `docs/CHANGELOG.md` and the included design reference.
+The project targets **Windows 10 build 19041 or newer and Windows 11, x64**. The earlier Windows-11-only wording was incorrect. Build 19045 meets this project's minimum.
+
+### Update your existing AppVeyor project
+
+1. Extract this source ZIP and upload the **contents of `Nexus-Shell-0.2.1`** to your existing GitHub repository root. Replace the matching files, including `src`, `scripts`, `appveyor.yml`, and `.github/workflows/build-windows.yml`. Do not upload the ZIP or create a nested `Nexus-Shell-0.2.1` folder in the repository.
+2. Commit the update. In AppVeyor, start **New build** for the latest commit, or let its existing push trigger run.
+3. Download **`Nexus-Shell-0.2.1-win-x64.zip`** from the successful build's Artifacts tab. Extract it into a **new folder**, keeping all its files together. Run `Nexus.Shell.exe`.
+4. Confirm the latest log entry in `%LOCALAPPDATA%\WhiteDreams\NexusShell\nexus.log` says **Nexus Shell 0.2.1**. Successful initialization writes `MainWindow.xaml loaded; configuring window`, followed by `MainWindow activation completed`. These markers establish startup progress, not complete UI acceptance or performance.
+5. If launch still fails, close the native error message and copy the latest startup section of `nexus.log`. The improved log includes the HRESULT, available `RestrictedDescription`/other textual native error data, and missing-resource messages when WinUI emits them. You can read the final lines in PowerShell:
+
+```powershell
+Get-Content "$env:LOCALAPPDATA\WhiteDreams\NexusShell\nexus.log" -Tail 100
+```
+
+No local SDK or Visual Studio installation is required for this route.
+
+The patch supplies ordinary-resource fallback brushes and explicit Light/Dark/HighContrast dictionaries; attaches Control center directly to its anchor button; creates app context menus on realized/recycled containers rather than inside a Style setter; and uses Windows 10's Segoe MDL2 Assets icon font. The Nexus Orbit design and motion policy remain in place. **The original log does not identify an exact failing element or resource, so these loading changes are not a confirmed root-cause fix.** The diagnostic additions are intended to expose that detail if it still fails.
+
+See `docs/CHANGELOG.md`, `docs/VALIDATION.md`, and the included design reference.
 
 ### Build fix: NU1605 package downgrade
 
@@ -16,7 +34,7 @@ If you already uploaded the source, edit `src/Nexus.Shell/Nexus.Shell.csproj` in
 <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.4654" PrivateAssets="all" />
 ```
 
-Commit that change, then start a **New build** for the latest `main` commit in AppVeyor. You do not need to download the source again or install local developer tools for this change. This corrects the reported restore conflict; a successful Windows compile and launch are still required.
+Commit that change, then start a **New build** for the latest `main` commit in AppVeyor. You do not need to download the source again or install local developer tools for this change. This corrected the reported restore conflict. Your subsequent 0.2.0 AppVeyor build compiled and published successfully; its separate startup failure is addressed by the 0.2.1 update instructions above.
 
 ### Build fix: CS7036 button padding
 
@@ -32,7 +50,7 @@ AppVeyor's [Open-source plan](https://www.appveyor.com/pricing/) offers free hos
 
 This free route makes your source public. Use it only if that suits your project; private projects are on paid plans. Choose **Open-source / FREE**, rather than the private-project trial.
 
-1. Put the **contents of `Nexus-Shell-0.2.0`** in your public GitHub repository root. `appveyor.yml`, `Nexus.Shell.sln`, and the `scripts` and `src` folders must be at the same level. Do not upload only the ZIP.
+1. Put the **contents of `Nexus-Shell-0.2.1`** in your public GitHub repository root. `appveyor.yml`, `Nexus.Shell.sln`, and the `scripts` and `src` folders must be at the same level. Do not upload only the ZIP.
 2. If you already uploaded the previous source, you can add just `appveyor.yml` using GitHub's **Add file > Create new file** in your browser. Copy this configuration:
 
 ```yaml
@@ -46,25 +64,25 @@ test: off
 deploy: off
 
 artifacts:
-  - path: artifacts\Nexus-Shell-0.2.0-win-x64.zip
-  - path: artifacts\Nexus-Shell-0.2.0-win-x64.zip.sha256
+  - path: artifacts\Nexus-Shell-0.2.1-win-x64.zip
+  - path: artifacts\Nexus-Shell-0.2.1-win-x64.zip.sha256
 ```
 
 3. [Create a free AppVeyor account](https://ci.appveyor.com/signup/free). Add a new project, connect GitHub, and select this repository. Public-repository access is enough for this route.
 4. Click **New build**. The configuration selects the **Visual Studio 2022** Windows image, then restores, compiles, publishes, and packages Nexus. The tools and NuGet downloads stay on the build server.
-5. When the build succeeds, open its **Artifacts** tab. Download `Nexus-Shell-0.2.0-win-x64.zip`, extract it, and run `Nexus.Shell.exe` or `Launch-Nexus.bat`. Keep every DLL and resource in the extracted folder.
+5. When the build succeeds, open its **Artifacts** tab. Download `Nexus-Shell-0.2.1-win-x64.zip`, extract it, and run `Nexus.Shell.exe` or `Launch-Nexus.bat`. Keep every DLL and resource in the extracted folder.
 
-No Visual Studio or SDK download is needed on your PC. You still need to download the finished app bundle to run a native Windows application locally. Its exact size is unknown until a successful build; this source ZIP is not the runnable bundle.
+No Visual Studio or SDK download is needed on your PC. You still need to download the finished app bundle to run a native Windows application locally. Your 0.2.0 AppVeyor bundle was 84,444,232 bytes (about 84.4 MB). The next package size can differ; this source ZIP is not the runnable bundle.
 
-If the build fails, use AppVeyor's console log to find the first build error. A successful source upload is not evidence of successful compilation. This configuration has been checked locally. The first user-reported run failed at restore with NU1605; the second restored packages and reached C# compilation, which reported the two button-padding errors corrected above. No successful publish or launch has been verified. The authoring workspace has not submitted or executed a cloud build.
+If the build fails, use AppVeyor's console log to find the first build error. A successful source upload is not evidence of successful compilation. This configuration has been checked locally. Your first run failed at restore with NU1605; the second reported the two button-padding compile errors corrected above; the third compiled and published 0.2.0 successfully. Your Windows 10 launch log then showed a MainWindow XAML parsing failure. Successful launch of this 0.2.1 patch is still required. The authoring workspace has not submitted or executed a cloud build.
 
 ### GitHub Actions: if your account can run workflows
 
 1. Create a GitHub repository for this starter.
-2. Extract this ZIP. Upload the **contents of `Nexus-Shell-0.2.0`** into the repository root, including the `.github` folder. Do not put the whole project inside another folder in the repository.
+2. Extract this ZIP. Upload the **contents of `Nexus-Shell-0.2.1`** into the repository root, including the `.github` folder. Do not put the whole project inside another folder in the repository.
 3. Open the repository's **Actions** tab. Select **Build Nexus for Windows** and choose **Run workflow**. A push to `main` or `master` also triggers it.
-4. When the job succeeds, open the run and download the **Nexus-Shell-0.2.0-win-x64** artifact. GitHub downloads it as a wrapper ZIP containing the runnable ZIP and its SHA-256 file.
-5. Extract the wrapper, then extract `Nexus-Shell-0.2.0-win-x64.zip` to a permanent folder.
+4. When the job succeeds, open the run and download the **Nexus-Shell-0.2.1-win-x64** artifact. GitHub downloads it as a wrapper ZIP containing the runnable ZIP and its SHA-256 file.
+5. Extract the wrapper, then extract `Nexus-Shell-0.2.1-win-x64.zip` to a permanent folder.
 6. Run `Nexus.Shell.exe`, or `Launch-Nexus.bat`. Keep every DLL and resource beside the executable.
 
 The build runs on a GitHub Windows runner. You download the finished runtime bundle instead of SDKs and build dependencies. Workflow availability and minutes depend on your GitHub account. This project includes the workflow; no repository has been created or build submitted for you.
@@ -126,7 +144,7 @@ This is a desktop-surface preview. It does not replace Explorer, disable Windows
 
 ## Build outputs
 
-- Runnable folder: `artifacts\Nexus-Shell-0.2.0-win-x64`.
+- Runnable folder: `artifacts\Nexus-Shell-0.2.1-win-x64`.
 - Optional portable ZIP: run `scripts\package.ps1` after a successful build.
 - Build logs: `artifacts\logs\build.txt` and `build.binlog`.
 - A NuGet dependency lockfile is created during the first restore. Commit it after a successful Windows restore if continuing development.
