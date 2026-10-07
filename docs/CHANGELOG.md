@@ -1,4 +1,14 @@
-# 0.5.0 — Nexus Desktop foundation
+# NEXUS Shell changes
+
+## 0.8.0 — Opal & Explore
+
+- Added the Opal palette, folded vector wallpaper, an open Home desktop, floating focus/spaces widgets and framed work panels.
+- Added Explore spaces, boards/list views, notes/tags, collections, quick capture, drop capture, local Quick Look, moves, import/export and persisted view/selection.
+- References can appear in independent spaces; duplicate detection respects case-sensitive URL paths and case-insensitive Windows paths.
+- Added Ctrl+N note capture and Space/Enter Quick Look. Panel close returns Home and unconfigured workspace launch opens configuration.
+- Added bounded settings recovery, durable atomic replacement and a visible recovery message. A queued save cannot overwrite the final snapshot.
+- Corrected four-mood selection mapping, light-theme dialogs, stale preview cleanup and single-instance window lookup.
+- Core behavior and source checks pass locally. Native Windows compilation and runtime acceptance are separate checks.
 
 ## 0.7.0 — Shell Experience
 

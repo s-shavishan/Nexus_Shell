@@ -100,7 +100,7 @@ public sealed partial class MainWindow
         PageContent.Children.Add(Text("Choose your mood, shape the desktop, and keep what matters within reach.", 14, true));
         PageContent.Children.Add(Text("AURA MOODS", 11, true));
         _moodGrid = new Grid { ColumnSpacing = 12, RowSpacing = 12 };
-        foreach (string mood in new[] { "Orbit", "Aurora", "Slate" })
+        foreach (string mood in new[] { "Opal", "Orbit", "Aurora", "Slate" })
         {
             var palette = AuraPalette.For(mood);
             var content = new StackPanel { Spacing = 12 };
@@ -111,14 +111,14 @@ public sealed partial class MainWindow
                     BorderBrush = Resource("NexusBorder"), BorderThickness = new Thickness(1) });
             var moodTitle = Text(palette.Name, 17);
             content.Children.Add(swatches); content.Children.Add(moodTitle);
-            content.Children.Add(Text(mood == "Orbit" ? "Iris & charcoal" : mood == "Aurora" ? "Deep teal" : "Cool blue", 12, true));
+            content.Children.Add(Text(mood == "Opal" ? "Luminous glass" : mood == "Orbit" ? "Iris & charcoal" : mood == "Aurora" ? "Deep teal" : "Cool blue", 12, true));
             var button = new Button { Tag = mood, Content = content, Style = (Style)Application.Current.Resources["AuraSurfaceButton"],
                 HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left,
                 Padding = new Thickness(20), CornerRadius = new CornerRadius(20) };
             button.Click += (_, _) =>
             {
                 _state.Wallpaper = mood;
-                WallpaperBox.SelectedIndex = mood == "Aurora" ? 1 : mood == "Slate" ? 2 : 0;
+                WallpaperBox.SelectedIndex = mood == "Orbit" ? 1 : mood == "Aurora" ? 2 : mood == "Slate" ? 3 : 0;
                 SelectWallpaper(); ApplyEffects(); SaveState();
             };
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, "Use " + palette.Name + " mood");
@@ -146,7 +146,7 @@ public sealed partial class MainWindow
         var interfacePanel = new StackPanel { Spacing = 18 };
         interfacePanel.Children.Add(Text("Feel & interaction", 21));
         interfacePanel.Children.Add(PersonalizeToggle("Native glass", () => _state.NativeGlass, v => _state.NativeGlass = v,
-            "Windows acrylic", "Pearl surfaces"));
+            "Windows acrylic", "Layered surfaces"));
         interfacePanel.Children.Add(PersonalizeToggle("Reduced effects", () => _state.ReducedEffects, v => _state.ReducedEffects = v));
         interfacePanel.Children.Add(PersonalizeToggle("Compact dock", () => _state.CompactDock, v => _state.CompactDock = v,
             "Smaller icons & spacing", "Comfortable icons"));
@@ -187,7 +187,7 @@ public sealed partial class MainWindow
     }
     private void RestoreAppearanceDefaults()
     {
-        _state.Wallpaper = "Orbit"; _state.NativeGlass = false; _state.ReducedEffects = false;
+        _state.Wallpaper = "Opal"; _state.NativeGlass = true; _state.ReducedEffects = false;
         _state.DesktopLayout = true; _state.FocusMode = false; _state.Clock24Hour = true;
         _state.ShowClockWidget = true; _state.ShowSpaceWidget = true;
         _state.ShowHomeNotes = true; _state.ShowHomeEssentials = true; _state.CompactDock = false;
@@ -198,10 +198,10 @@ public sealed partial class MainWindow
     {
         if (_moodGrid is not null)
         {
-            int columns = PageHost.ActualWidth >= 660 ? 3 : 1;
+            int columns = PageHost.ActualWidth >= 850 ? 4 : PageHost.ActualWidth >= 520 ? 2 : 1;
             _moodGrid.ColumnDefinitions.Clear(); _moodGrid.RowDefinitions.Clear();
             for (int i = 0; i < columns; i++) _moodGrid.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) });
-            for (int i = 0; i < (3 + columns - 1) / columns; i++) _moodGrid.RowDefinitions.Add(new() { Height = GridLength.Auto });
+            for (int i = 0; i < (_moodChoices.Count + columns - 1) / columns; i++) _moodGrid.RowDefinitions.Add(new() { Height = GridLength.Auto });
             for (int i = 0; i < _moodChoices.Count; i++) { Grid.SetRow(_moodChoices[i], i / columns); Grid.SetColumn(_moodChoices[i], i % columns); }
         }
         if (_personalizeSections is not null)
@@ -221,11 +221,11 @@ public sealed partial class MainWindow
     private void ApplyDockDensity()
     {
         bool compact = _state.CompactDock;
-        DockBorder.CornerRadius = new CornerRadius(compact ? 22 : 26);
-        DockBorder.Padding = new Thickness(compact ? 9 : 12, compact ? 8 : 10, compact ? 9 : 12, compact ? 8 : 10);
-        if (DockBorder.Child is StackPanel dock) dock.Spacing = compact ? 5 : 8;
+        DockBorder.CornerRadius = new CornerRadius(compact ? 18 : 22);
+        DockBorder.Padding = new Thickness(compact ? 8 : 10, compact ? 6 : 7, compact ? 8 : 10, compact ? 6 : 7);
+        if (DockBorder.Child is StackPanel dock) dock.Spacing = compact ? 4 : 6;
         DockApps.Spacing = compact ? 5 : 9; DockRunningApps.Spacing = compact ? 2 : 4;
-        foreach (var button in new[] { DockHomeButton, DockSearchButton, DockRunningButton }
+        foreach (var button in new[] { DockHomeButton, DockExploreButton, DockSearchButton, DockRunningButton }
             .Concat(DockApps.Children.OfType<Button>()).Concat(DockRunningApps.Children.OfType<Button>()))
         {
             button.Width = compact ? 46 : 54; button.Height = compact ? 48 : 56;

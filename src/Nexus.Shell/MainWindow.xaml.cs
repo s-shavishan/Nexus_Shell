@@ -17,6 +17,7 @@ namespace Nexus.Shell;
 
 public sealed partial class MainWindow : Window
 {
+    internal const string NativeWindowTitle = "White Dreams Nexus Shell";
     private readonly StateStore _store = new();
     private readonly ShellState _state;
     private readonly UsageTracker _usage;
@@ -70,6 +71,7 @@ public sealed partial class MainWindow : Window
         };
         _handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
         _appWindow = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(_handle));
+        _appWindow.Title = NativeWindowTitle;
         var workArea = DisplayArea.GetFromWindowId(_appWindow.Id, DisplayAreaFallback.Nearest).WorkArea;
         int initialWidth = Math.Max(320, Math.Min(1440, workArea.Width - 48));
         int initialHeight = Math.Max(420, Math.Min(940, workArea.Height - 48));
@@ -79,6 +81,7 @@ public sealed partial class MainWindow : Window
         var icon = Path.Combine(AppContext.BaseDirectory, "Assets", "Nexus.ico");
         if (File.Exists(icon)) _appWindow.SetIcon(icon);
         DisplayNameBox.Text = _state.DisplayName;
+        ExploreWorkspace.Normalize(_state);
         InitializeWorkspaces();
         InitializeDesktop();
         GlassSwitch.IsOn = _state.NativeGlass;
@@ -97,6 +100,7 @@ public sealed partial class MainWindow : Window
         });
         AddAccelerator(VirtualKey.F11, VirtualKeyModifiers.None, () => SetFullScreen(!_state.FullScreen));
         AddAccelerator(VirtualKey.K, VirtualKeyModifiers.Control, SearchApps);
+        AddAccelerator(VirtualKey.N, VirtualKeyModifiers.Control, NewExploreNote);
         AddAccelerator(VirtualKey.Number2, VirtualKeyModifiers.Control, () => Navigate("Explore"));
         AddAccelerator(VirtualKey.Number3, VirtualKeyModifiers.Control, () => Navigate("Study"));
         AddAccelerator(VirtualKey.Number1, VirtualKeyModifiers.Control, () => Navigate("Home"));
@@ -120,13 +124,14 @@ public sealed partial class MainWindow : Window
         if (_state.UsageTracking) _usageTimer.Start();
         if (_dirty) SaveState();
         InitializeDesktopIntegration();
+        if (_store.RecoveryMessage.Length > 0) ShowStatus(_store.RecoveryMessage, true);
         // No Start-menu scan until the app library is opened.
     }
 
     private void AddAccelerator(VirtualKey key, VirtualKeyModifiers modifiers, Action action)
     {
         var accelerator = new KeyboardAccelerator { Key = key, Modifiers = modifiers };
-        accelerator.Invoked += (_, args) => { if (_ready) action(); args.Handled = true; };
+        accelerator.Invoked += (_, args) => { if (_ready && !_dialogOpen && !_picking) { action(); args.Handled = true; } };
         DesktopRoot.KeyboardAccelerators.Add(accelerator);
     }
     private static SolidColorBrush MakeBrush(byte r, byte g, byte b, byte alpha = 255) => new(Windows.UI.Color.FromArgb(alpha, r, g, b));
@@ -167,8 +172,10 @@ public sealed partial class MainWindow : Window
         HomeView.Visibility = page == "Home" ? Visibility.Visible : Visibility.Collapsed;
         AppLibraryView.Visibility = page is "Apps" or "Gaming" ? Visibility.Visible : Visibility.Collapsed;
         WindowOverviewView.Visibility = page == "Running apps" ? Visibility.Visible : Visibility.Collapsed;
-        PageScroller.Visibility = page is "Activity" or "Explore" or "Study" or "Workspaces" or "Personalize" ? Visibility.Visible : Visibility.Collapsed;
+        ExploreView.Visibility = page == "Explore" ? Visibility.Visible : Visibility.Collapsed;
+        PageScroller.Visibility = page is "Activity" or "Study" or "Workspaces" or "Personalize" ? Visibility.Visible : Visibility.Collapsed;
         if (page != "Running apps") ReleaseWindowOverview();
+        if (page != "Explore") ReleaseExploreControls();
         ReleaseWorkspaceControls();
         PageContent.Children.Clear();
         if (page is not ("Apps" or "Gaming"))
@@ -196,8 +203,9 @@ public sealed partial class MainWindow : Window
             case "Study": BuildStudy(); break;
             default: RefreshHome(); PageStatus.Text = "Your personal workspace"; break;
         }
+        ApplyWidgetLayout();
         if (changed && animate)
-            _motion?.Enter(page is "Apps" or "Gaming" ? AppLibraryView : page == "Home" ? HomeView : page == "Running apps" ? WindowOverviewView : PageScroller);
+            _motion?.Enter(page is "Apps" or "Gaming" ? AppLibraryView : page == "Home" ? HomeView : page == "Running apps" ? WindowOverviewView : page == "Explore" ? ExploreView : PageScroller);
     }
 
     private void RefreshHome()
@@ -427,7 +435,7 @@ public sealed partial class MainWindow : Window
                 Content = new Border
                 {
                     Width = 48, Height = 48, CornerRadius = new CornerRadius(16), BorderThickness = new Thickness(1),
-                    BorderBrush = Resource("NexusBorder"), Child = Glyph(app.Glyph),
+                    BorderBrush = Resource("NexusBorder"), Child = new FontIcon { Glyph = app.Glyph, FontFamily = new FontFamily("Segoe MDL2 Assets"), Foreground = Resource("NexusDesktopText"), FontSize = 22 },
                     Background = (Brush)accent.Convert(app.Category, typeof(Brush), "", "")
                 },
                 Style = (Style)Application.Current.Resources["DockButton"],
@@ -533,13 +541,13 @@ public sealed partial class MainWindow : Window
         DateText.Visibility = ClockText.Visibility = _state.ShowClockWidget ? Visibility.Visible : Visibility.Collapsed;
         ClockPeriod.Visibility = !_state.Clock24Hour && _state.ShowClockWidget ? Visibility.Visible : Visibility.Collapsed;
         SpaceCard.Visibility = _state.ShowSpaceWidget ? Visibility.Visible : Visibility.Collapsed;
-        bool hidden = _expanded || _state.FocusMode || width < 1220 || DesktopRoot.ActualHeight < 720;
+        bool hidden = _page != "Home" || _expanded || _state.FocusMode || !_state.DesktopLayout || width < 1120 || DesktopRoot.ActualHeight < 650;
         DesktopWidgets.Visibility = hidden ? Visibility.Collapsed : Visibility.Visible;
         DesktopColumn.Width = new GridLength(hidden ? 0 : 236);
         Workspace.ColumnSpacing = hidden ? 0 : 28;
-        bool sidebar = width >= 800 && DesktopRoot.ActualHeight >= 640;
+        bool sidebar = width >= 760 && DesktopRoot.ActualHeight >= 580;
         Sidebar.Visibility = sidebar ? Visibility.Visible : Visibility.Collapsed;
-        SidebarColumn.Width = new GridLength(sidebar ? 184 : 0);
+        SidebarColumn.Width = new GridLength(sidebar ? 170 : 0);
         ResourceText.Visibility = width < 1120 ? Visibility.Collapsed : Visibility.Visible;
         FooterSettingsButton.Visibility = width < 1120 ? Visibility.Collapsed : Visibility.Visible;
         MenuLinks.Visibility = width < 1060 ? Visibility.Collapsed : Visibility.Visible;
@@ -549,8 +557,8 @@ public sealed partial class MainWindow : Window
         FullScreenButton.Visibility = width < 500 ? Visibility.Collapsed : Visibility.Visible;
         SearchLabel.Visibility = width < 650 ? Visibility.Collapsed : Visibility.Visible;
         SearchShortcut.Visibility = width < 650 ? Visibility.Collapsed : Visibility.Visible;
-        MenuBar.Margin = new Thickness(width < 600 ? 12 : 24, 16, width < 600 ? 12 : 24, 8);
-        Workspace.Margin = new Thickness(width < 600 ? 16 : 32, 0, width < 600 ? 16 : 32, 0);
+        MenuBar.Margin = new Thickness(width < 600 ? 8 : 12, 8, width < 600 ? 8 : 12, 2);
+        Workspace.Margin = new Thickness(width < 600 ? 12 : _state.DesktopLayout ? 36 : 20, 6, width < 600 ? 12 : _state.DesktopLayout ? 36 : 20, 4);
         int capacity = width < 550 ? 1 : width < 720 ? 2 : width < 1120 ? 4 : 5;
         DockRunningApps.Visibility = width >= 1200 ? Visibility.Visible : Visibility.Collapsed;
         if (_dockCapacity != capacity) { _dockCapacity = capacity; RefreshDock(); }
@@ -564,6 +572,7 @@ public sealed partial class MainWindow : Window
         UpdateExperienceLayout();
         UpdateHomeColumns();
         UpdateHero();
+        UpdateExploreLayout();
     }
     private void UpdateHero()
     {
@@ -592,6 +601,7 @@ public sealed partial class MainWindow : Window
         WallpaperAccents.Visibility = simple ? Visibility.Collapsed : Visibility.Visible;
         DesktopRoot.Background = highContrast ? Resource("NexusPanel") : _chosenWallpaper ?? _wallpaper;
         ApplyAuraSurfaces(simple);
+        ApplyDesktopLayout();
         RefreshPersonalizationControls();
         UpdateCommandCategories();
         UpdateHero();
@@ -608,7 +618,7 @@ public sealed partial class MainWindow : Window
         try
         {
             _motion = new MotionController(DesktopRoot);
-            foreach (var control in new FrameworkElement[] { DockHomeButton, DockRunningButton, DockSearchButton, FilesCard, GamesCard, FocusCard })
+            foreach (var control in new FrameworkElement[] { DockHomeButton, DockExploreButton, DockRunningButton, DockSearchButton, FilesCard, GamesCard, FocusCard })
                 _motion.AttachHover(control);
             foreach (var control in DockApps.Children.OfType<FrameworkElement>()) _motion.AttachHover(control);
             ApplyEffects();
@@ -673,7 +683,7 @@ public sealed partial class MainWindow : Window
         {
             var dialog = new ContentDialog
             {
-                XamlRoot = DesktopRoot.XamlRoot, RequestedTheme = ElementTheme.Dark, Title = "Clear activity?",
+                XamlRoot = DesktopRoot.XamlRoot, RequestedTheme = DesktopRoot.RequestedTheme, Title = "Clear activity?",
                 Content = "Delete locally stored launch history and usage totals?",
                 PrimaryButtonText = "Clear", CloseButtonText = "Keep", DefaultButton = ContentDialogButton.Close
             };
@@ -709,7 +719,7 @@ public sealed partial class MainWindow : Window
     private void Minimize_Click(object sender, RoutedEventArgs args) => Minimize();
     private void HideHome_Click(object sender, RoutedEventArgs args)
     {
-        HomeBorder.Visibility = Visibility.Collapsed; ReopenHomeButton.Visibility = Visibility.Visible;
+        Navigate("Home");
     }
     private void ExpandHome_Click(object sender, RoutedEventArgs args) { _expanded = !_expanded; ApplyWidgetLayout(); }
     private void Desktop_SizeChanged(object sender, SizeChangedEventArgs args) { if (_ready) ApplyWidgetLayout(); }

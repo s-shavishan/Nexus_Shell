@@ -13,7 +13,7 @@ options = parser.parse_args()
 root = Path(__file__).resolve().parents[1]
 project = root / "src/Nexus.Shell"
 required = [
-    "App.xaml", "App.xaml.cs", "MainWindow.xaml", "MainWindow.xaml.cs", "MainWindow.Workspaces.cs", "MainWindow.Orbit.cs", "MainWindow.Desktop.cs", "MainWindow.Appearance.cs", "MainWindow.Experience.cs", "Services/NavigationTrail.cs", "Services/ShellExperience.cs", "Services/AuraPalette.cs", "Services/DesktopWorkspace.cs", "Interop/DesktopIntegration.cs",
+    "App.xaml", "App.xaml.cs", "MainWindow.xaml", "MainWindow.xaml.cs", "MainWindow.Workspaces.cs", "MainWindow.Orbit.cs", "MainWindow.Desktop.cs", "MainWindow.Appearance.cs", "MainWindow.Experience.cs", "MainWindow.Explore.cs", "Services/ExploreWorkspace.cs", "UI/SavedKindConverter.cs", "Services/NavigationTrail.cs", "Services/ShellExperience.cs", "Services/AuraPalette.cs", "Services/DesktopWorkspace.cs", "Interop/DesktopIntegration.cs",
     "Services/FocusSession.cs", "Services/CommandSearch.cs", "Services/WorkspaceState.cs",
     "Nexus.Shell.csproj", "app.manifest", "Assets/Nexus.ico",
     "Interop/NativeMethods.cs", "Models/ShellState.cs", "Services/AppCatalog.cs",
@@ -63,7 +63,7 @@ assert len(names) == len(set(names)), "Duplicate XAML names"
 handlers = set()
 for node in window.iter():
     for key, value in node.attrib.items():
-        if key in {"Click", "Toggled", "SizeChanged", "PointerPressed", "Loaded", "Opening", "Opened", "Closed", "ItemClick", "TextChanged", "ContainerContentChanging", "SelectionChanged", "PreviewKeyDown"}:
+        if key in {"Click", "DragOver", "Drop", "Toggled", "Checked", "Unchecked", "KeyDown", "SizeChanged", "PointerPressed", "Loaded", "Opening", "Opened", "Closed", "ItemClick", "TextChanged", "ContainerContentChanging", "SelectionChanged", "PreviewKeyDown"}:
             assert re.search(r"\b" + re.escape(value) + r"\s*\(", code), f"Missing handler: {value}"
             handlers.add(value)
 assert "AutomationProperties =" not in code, "Attached properties must use their setters"
@@ -106,7 +106,7 @@ assert used_theme_keys <= fallback_keys, f"Missing fallback resources: {used_the
 # Guard the library's finite viewport; an outer ScrollViewer/StackPanel would
 # reintroduce full realization of all discovered application tiles.
 parents = {child: parent for parent in window.iter() for child in parent}
-for grid_name in ["AppsGrid", "WindowsGrid"]:
+for grid_name in ["AppsGrid", "WindowsGrid", "ExploreGrid"]:
     grid = next(node for node in window.iter() if node.attrib.get(xns + "Name") == grid_name)
     ancestor = parents[grid]
     while ancestor is not window:
@@ -147,6 +147,11 @@ resource_items = resource_target.find("ItemGroup/_NexusBuildResources").attrib["
 assert "*.pri" in resource_items and "*.xbf" in resource_items
 copy = resource_target.find("Copy[@SourceFiles='@(_NexusBuildResources)']")
 assert "%(RecursiveDir)" in copy.attrib["DestinationFiles"]
+for source in project.rglob("*.cs"):
+    body = source.read_text()
+    if "NativeMethods." in body and "namespace Nexus.Shell.Interop;" not in body:
+        assert "using Nexus.Shell.Interop;" in body or "Interop.NativeMethods." in body, f"Missing interop import: {source}"
+print("Interop imports OK")
 if options.syntax:
     from tree_sitter import Language, Parser
     import tree_sitter_c_sharp

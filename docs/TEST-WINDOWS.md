@@ -174,3 +174,17 @@ For build failures, the GitHub run uploads `Nexus-build-logs`; local builds writ
 8. Open and close Notepad while search is open; verify titles appear/disappear on refresh, current selection survives when possible, and unavailable-window selection reports gracefully. Check global hotkey reopening and notification-area reopening.
 9. Check 320×480, 1024×600, 1366×768 and 1440×900 logical windows at 100/125/150/200% display scaling and larger text. Personalize should stack its cards, search categories should scroll, and palettes/control center should stay bounded. Inspect native switch tracks/knobs in normal/hover/pressed/disabled and high-contrast states.
 10. Measure actual memory/CPU with compact dock, materials off/on and reduced effects. No source or preview result is a runtime performance claim.
+# 0.8.0 acceptance
+
+1. On Windows 10 build 19045, extract the new binary into a fresh folder and launch it. Confirm the latest log reports 0.8.0 and the desktop responds to input.
+2. Upgrade with existing notes, tasks, pins and saved links. Check their contents; confirm `settings.before-0.8.0.json` exists and Opal is selected on the first upgrade only.
+3. Open Explore, Study, Apps and Personalize; use the red panel button to return Home. Test 1366×768 and 1920×1080 at 100%, 125% and 150% scaling, then a narrow window. Menus, search, scrolling, Quick Look and the dock must remain reachable.
+4. Create spaces, capture a URL and note, drop a local file/folder and try the same link in two spaces. Test collection/tag search, favorites, moves and both views. Ctrl+N creates a note; Space/Enter on a card opens Quick Look.
+5. Preview a small text file/image, then change selection/page before loading finishes. No old preview should appear. Missing files should report an unavailable shortcut without freezing.
+6. Export/import a space. Reject malformed/oversized/unknown-format files and an over-capacity import without changing the board. An imported space is independent; originals stay in Windows.
+7. Start/pause focus from the desktop, continue in Study, close and reopen. The remaining time must restore paused. Test optional notification-area residency and global summon independently.
+8. Switch all four moods from both Personalize and Control center. Enable Reduced effects, high contrast and the Windows animation preference; confirm clear controls and usable dialogs. Appearance changes must not drop notes or disable input.
+9. With Nexus fully closed, make a copy of its data folder and deliberately damage `settings.json`. Reopen: the last backup should restore with a message, and an unreadable copy should remain. Restore your original data afterward.
+10. Fully exit Nexus and apply the small binary update; verify runtime checks, old-folder preservation and sign-in startup repair. Measure memory/CPU using the existing resource script after native acceptance.
+
+Automated CI compilation and packaging cannot establish how the UI renders or performs on this PC.

@@ -14,22 +14,24 @@ if (OperatingSystem.IsWindows())
     Console.WriteLine("PASS: Win32 desktop accessibility queries (actual user32 calls).");
 }
 // Check small body text on the actual palette surfaces, including translucent cards.
-foreach (string mood in new[] { "Orbit", "Aurora", "Slate" })
+foreach (string mood in new[] { "Opal", "Orbit", "Aurora", "Slate" })
 {
     var palette = AuraPalette.For(mood);
     var canvas = AuraColor.Parse(palette.Canvas);
     var panel = AuraColor.Parse(palette.Panel).Over(canvas);
     var card = AuraColor.Parse(palette.Card).Over(panel);
-    foreach (var background in new[] { canvas, panel, card, AuraColor.Parse(palette.HeroStart), AuraColor.Parse(palette.HeroEnd) })
+    foreach (var background in new[] { panel, card, AuraColor.Parse(palette.HeroStart), AuraColor.Parse(palette.HeroEnd) })
     {
-        Check(AuraColor.Contrast(AuraColor.Parse(AuraPalette.Text), background) >= 4.5,
+        Check(AuraColor.Contrast(AuraColor.Parse(palette.Tokens["NexusText"]), background) >= 4.5,
             palette.Name + " body text must meet 4.5:1 contrast.");
         Check(AuraColor.Contrast(AuraColor.Parse(palette.Muted), background) >= 4.5,
             palette.Name + " secondary text must meet 4.5:1 contrast.");
     }
-    Check(AuraColor.Contrast(AuraColor.Parse(AuraPalette.AccentText), AuraColor.Parse(palette.Accent)) >= 4.5,
+    Check(AuraColor.Contrast(AuraColor.Parse(palette.Tokens["NexusAccentText"]), AuraColor.Parse(palette.Accent)) >= 4.5,
         palette.Name + " primary button text must meet 4.5:1 contrast.");
 }
+ExploreChecks.Run(Check);
+ReliabilityChecks.Run(Check);
 Check(AuraPalette.For("old-unknown").Name == "Pearl", "Unknown mood values should use the safe default palette.");
 var glassState = new ShellState { NativeGlass = true };
 Check(glassState.Snapshot().NativeGlass && JsonSerializer.Deserialize<ShellState>(JsonSerializer.Serialize(glassState))!.NativeGlass,

@@ -4,6 +4,7 @@
    <ResourceDictionary.MergedDictionaries><XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls"/></ResourceDictionary.MergedDictionaries>
    <ResourceDictionary.ThemeDictionaries>
     <ResourceDictionary x:Key="Light">
+   <SolidColorBrush x:Key="NexusDesktopText" Color="#FFF5F8FF"/><SolidColorBrush x:Key="NexusDesktopMuted" Color="#FFD2DDED"/>
    <SolidColorBrush x:Key="NexusText" Color="#FFF4F7FE"/>
    <SolidColorBrush x:Key="NexusMuted" Color="#FFB8C3D6"/>
    <SolidColorBrush x:Key="NexusAccent" Color="#FFC7BEF7"/>
@@ -55,6 +56,7 @@
    <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPressed" Color="#FFB8C3D6"/>
     </ResourceDictionary>
     <ResourceDictionary x:Key="Dark">
+   <SolidColorBrush x:Key="NexusDesktopText" Color="#FFF5F8FF"/><SolidColorBrush x:Key="NexusDesktopMuted" Color="#FFD2DDED"/>
    <SolidColorBrush x:Key="NexusText" Color="#FFF4F7FE"/>
    <SolidColorBrush x:Key="NexusMuted" Color="#FFB8C3D6"/>
    <SolidColorBrush x:Key="NexusAccent" Color="#FFC7BEF7"/>
@@ -106,6 +108,7 @@
    <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPressed" Color="#FFB8C3D6"/>
     </ResourceDictionary>
     <ResourceDictionary x:Key="HighContrast">
+   <SolidColorBrush x:Key="NexusDesktopText" Color="{ThemeResource SystemColorWindowTextColor}"/><SolidColorBrush x:Key="NexusDesktopMuted" Color="{ThemeResource SystemColorWindowTextColor}"/>
    <SolidColorBrush x:Key="NexusText" Color="{ThemeResource SystemColorWindowTextColor}"/>
    <SolidColorBrush x:Key="NexusMuted" Color="{ThemeResource SystemColorWindowTextColor}"/>
    <SolidColorBrush x:Key="NexusAccent" Color="{ThemeResource SystemColorHighlightColor}"/>
@@ -158,6 +161,7 @@
     </ResourceDictionary>
    </ResourceDictionary.ThemeDictionaries>
    <!-- Fallback resources remain contiguous after dictionary property elements. -->
+   <SolidColorBrush x:Key="NexusDesktopText" Color="#FFF5F8FF"/><SolidColorBrush x:Key="NexusDesktopMuted" Color="#FFD2DDED"/>
    <SolidColorBrush x:Key="NexusText" Color="#FFF4F7FE"/>
    <SolidColorBrush x:Key="NexusMuted" Color="#FFB8C3D6"/>
    <SolidColorBrush x:Key="NexusAccent" Color="#FFC7BEF7"/>
@@ -224,7 +228,7 @@
     <Setter Property="Width" Value="38"/><Setter Property="Height" Value="36"/><Setter Property="Padding" Value="0"/>
    </Style>
    <Style x:Key="SidebarButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
-    <Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Height" Value="46"/>
+    <Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Height" Value="38"/>
    </Style>
    <Style x:Key="DockButton" TargetType="Button">
     <Setter Property="Width" Value="54"/><Setter Property="Height" Value="56"/><Setter Property="CornerRadius" Value="16"/><Setter Property="Padding" Value="0"/>

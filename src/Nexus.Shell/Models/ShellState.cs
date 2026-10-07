@@ -3,7 +3,9 @@ namespace Nexus.Shell.Models;
 public sealed record AppEntry(string Id, string Name, string Target, string Glyph, string Category = "App");
 public sealed record RunningWindow(IntPtr Handle, string Title, string ProcessName);
 public sealed record ActivityEntry(DateTimeOffset Time, string Message);
-public sealed record SavedItem(string Id, string Title, string Target, string Kind, string Collection = "Personal", bool Favorite = false);
+public sealed record SavedItem(string Id, string Title, string Target, string Kind, string Collection = "Personal", bool Favorite = false,
+    string SpaceId = "personal", string Note = "", string Tags = "");
+public sealed record ExploreSpace(string Id, string Name, string Description, string Accent = "Iris");
 public sealed record TaskEntry(string Id, string Title, bool Completed = false);
 public sealed record RecentCommand(string Kind, string Target);
 public sealed record CommandEntry(string Title, string Subtitle, string Glyph, string Kind, string Target);
@@ -20,8 +22,15 @@ public sealed class ShellState
     public bool FocusMode { get; set; }
     public bool ReducedEffects { get; set; }
     public bool CatalogInitialized { get; set; }
-    public string Wallpaper { get; set; } = "Orbit";
-    public bool NativeGlass { get; set; }
+    public string Wallpaper { get; set; } = "Opal";
+    public bool NativeGlass { get; set; } = true;
+    public List<ExploreSpace> ExploreSpaces { get; set; } = [];
+    public string ActiveExploreSpaceId { get; set; } = "personal";
+    public string ExploreSelectedItemId { get; set; } = "";
+    public string ExploreView { get; set; } = "Board";
+    public string ExploreQuery { get; set; } = "";
+    public string ExploreCollection { get; set; } = "";
+    public bool ExploreFavoritesOnly { get; set; }
     public bool Clock24Hour { get; set; } = true;
     public bool ShowClockWidget { get; set; } = true;
     public bool ShowSpaceWidget { get; set; } = true;
@@ -57,6 +66,9 @@ public sealed class ShellState
         Clock24Hour = Clock24Hour, ShowClockWidget = ShowClockWidget, ShowSpaceWidget = ShowSpaceWidget,
         ShowHomeNotes = ShowHomeNotes, ShowHomeEssentials = ShowHomeEssentials, CompactDock = CompactDock,
         RememberRecentItems = RememberRecentItems, RecentCommands = [.. RecentCommands],
+        ExploreSpaces = [.. ExploreSpaces], ActiveExploreSpaceId = ActiveExploreSpaceId,
+        ExploreSelectedItemId = ExploreSelectedItemId, ExploreView = ExploreView,
+        ExploreQuery = ExploreQuery, ExploreCollection = ExploreCollection, ExploreFavoritesOnly = ExploreFavoritesOnly,
         NativeGlass = NativeGlass, DesktopLayout = DesktopLayout, GlobalShortcut = GlobalShortcut, KeepAvailable = KeepAvailable,
         ResumeWorkspace = ResumeWorkspace, LastPage = LastPage, ActiveProfileId = ActiveProfileId,
         Profiles = Profiles.Select(p => p with { Apps = [.. p.Apps], SavedItemIds = [.. p.SavedItemIds] }).ToList(),

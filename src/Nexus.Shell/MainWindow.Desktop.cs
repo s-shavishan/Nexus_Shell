@@ -148,28 +148,32 @@ public sealed partial class MainWindow
     }
     private void ApplyDesktopLayout()
     {
-        bool desktop = _state.DesktopLayout;
-        WindowChrome.Visibility = desktop ? Visibility.Collapsed : Visibility.Visible;
-        WindowFooter.Visibility = desktop ? Visibility.Collapsed : Visibility.Visible;
-        ChromeRow.Height = new GridLength(desktop ? 0 : 50);
-        FooterRow.Height = new GridLength(desktop ? 0 : 34);
+        bool desktop = _page == "Home" && _state.DesktopLayout && !_highContrast;
+        WindowChrome.Visibility = WindowFooter.Visibility = desktop ? Visibility.Collapsed : Visibility.Visible;
+        ChromeRow.Height = new GridLength(desktop ? 0 : 48);
+        FooterRow.Height = new GridLength(desktop ? 0 : 30);
+        HomeBorder.MaxWidth = _expanded ? double.PositiveInfinity : 1300;
+        HomeBorder.BorderThickness = new Thickness(desktop ? 0 : 1);
+        HomeBorder.Background = desktop ? _transparent : _highContrast ? Resource("NexusPanel")
+            : _state.ReducedEffects ? _solidPanel : (Brush?)_auraGlass ?? Resource("NexusShell");
         if (desktop)
         {
             Sidebar.Visibility = Visibility.Collapsed; SidebarColumn.Width = new GridLength(0);
+            HomeBorder.Shadow = null; HomeBorder.Translation = new(0, 0, 0);
         }
-        HomeBorder.BorderThickness = new Thickness(desktop ? 0 : 1);
-        HomeBorder.Background = desktop && !_highContrast ? _transparent : _highContrast ? Resource("NexusPanel")
-            : _state.ReducedEffects ? _solidPanel : Resource("NexusShell");
+        HomeGreeting.Visibility = HomeWorkspacesButton.Visibility = desktop ? Visibility.Collapsed : Visibility.Visible;
+        HomeWindowsSummary.Foreground = HomeRecentText.Foreground = Resource(desktop ? "NexusDesktopMuted" : "NexusMuted");
+        HomeOverviewButton.Foreground = Resource(desktop ? "NexusDesktopText" : "NexusText");
     }
     private void UpdateHomeColumns()
     {
-        bool wide = PageHost.ActualWidth >= 920;
+        bool wide = PageHost.ActualWidth >= 780;
         HomeCards.ColumnSpacing = wide ? 16 : 0;
         HomePrimaryColumn.Width = new GridLength(1, GridUnitType.Star);
         HomeSecondaryColumn.Width = new GridLength(wide ? 1 : 0, GridUnitType.Star);
         HomeEssentialsCard.Visibility = _state.ShowHomeEssentials ? Visibility.Visible : Visibility.Collapsed;
         HomeNotesCard.Visibility = _state.ShowHomeNotes ? Visibility.Visible : Visibility.Collapsed;
-        var cards = new[] { HomeTaskCard, HomeFavoritesCard, HomeEssentialsCard, HomeNotesCard }
+        var cards = new[] { HomeEssentialsCard, HomeTaskCard, HomeFavoritesCard, HomeNotesCard }
             .Where(card => card.Visibility == Visibility.Visible).ToArray();
         int columns = wide ? 2 : 1;
         HomeCards.RowDefinitions.Clear();
@@ -184,11 +188,12 @@ public sealed partial class MainWindow
     }
     private void RenderDesktopIdentity()
     {
+        RefreshDesktopSpaceShortcuts();
         var profile = ActiveProfile;
         HeroTitle.Text = profile.Id == "personal" ? "Your day, your space." : profile.Name + ". A space to begin.";
         HeroDescription.Text = profile.Description;
         UpdatePageTrail();
-        ProfileOpenButton.Content = "Open " + profile.Name;
+        ProfileOpenButton.Content = profile.Apps.Count + profile.SavedItemIds.Count == 0 ? "Set up workspace" : "Open " + profile.Name;
         ProfileOpenButton.IsEnabled = !_launchingWorkspace;
         ProfileDestinationButton.Content = profile.Page == "Home" ? "Your apps" : "Go to " + profile.Page;
         ProfileSummary.Text = profile.Apps.Count + " apps · " + profile.SavedItemIds.Count + " saved items";
@@ -206,7 +211,7 @@ public sealed partial class MainWindow
             content.Children.Add(glyph); content.Children.Add(label);
             var button = new Button { Content = content, HorizontalAlignment = HorizontalAlignment.Stretch,
                 HorizontalContentAlignment = HorizontalAlignment.Left, CornerRadius = new CornerRadius(18), Padding = new Thickness(16, 14, 16, 14),
-                Background = profile.Id == _state.ActiveProfileId ? _selection : Resource("NexusCard"),
+                Background = selected && !(_page == "Home" && _state.DesktopLayout && !_highContrast) ? _selection : Resource("NexusCard"),
                 BorderBrush = profile.Id == _state.ActiveProfileId ? Resource("NexusAccent") : Resource("NexusBorder"), BorderThickness = new Thickness(1) };
             button.Click += (_, _) => EnterProfile(profile.Id);
             ToolTipService.SetToolTip(button, profile.Description);
@@ -234,10 +239,18 @@ public sealed partial class MainWindow
         ShowStatus(ActiveProfile.Name + " workspace selected. Open it when you’re ready.");
     }
     private void ProfileDestination_Click(object sender, RoutedEventArgs args) => Navigate(ActiveProfile.Page == "Home" ? "Apps" : ActiveProfile.Page);
-    private async void ProfileEdit_Click(object sender, RoutedEventArgs args) => await EditProfileAsync(ActiveProfile);
+    private async void ProfileEdit_Click(object sender, RoutedEventArgs args)
+    {
+        try { await EditProfileAsync(ActiveProfile); }
+        catch (Exception ex) { Error("Could not configure this workspace", ex); }
+    }
     private async void ProfileOpen_Click(object sender, RoutedEventArgs args)
     {
-        try { await OpenProfileAsync(ActiveProfile); }
+        try
+        {
+            if (ActiveProfile.Apps.Count + ActiveProfile.SavedItemIds.Count == 0) await EditProfileAsync(ActiveProfile);
+            else await OpenProfileAsync(ActiveProfile);
+        }
         catch (Exception ex) { if (_ready) Error("Could not open the workspace", ex); else Log.Write("Workspace opening stopped", ex); }
     }
     private void BuildProfiles()
@@ -285,7 +298,7 @@ public sealed partial class MainWindow
             panel.Children.Add(Text("Saved items · Choose up to 8", 13)); panel.Children.Add(saved);
             panel.Children.Add(Text("Add apps in App Library and links or files in Explore. Nothing opens when you save.", 12, true));
             panel.Children.Add(validation);
-            var dialog = new ContentDialog { XamlRoot = DesktopRoot.XamlRoot, RequestedTheme = ElementTheme.Dark,
+            var dialog = new ContentDialog { XamlRoot = DesktopRoot.XamlRoot, RequestedTheme = DesktopRoot.RequestedTheme,
                 Title = create ? "Create a workspace" : "Configure " + profile.Name, PrimaryButtonText = "Save", CloseButtonText = "Cancel",
                 Content = new ScrollViewer { Content = panel, MaxHeight = Math.Max(180, Math.Min(520, DesktopRoot.ActualHeight - 210)),
                     HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled } };
@@ -314,7 +327,7 @@ public sealed partial class MainWindow
         _dialogOpen = true;
         try
         {
-            var dialog = new ContentDialog { XamlRoot = DesktopRoot.XamlRoot, RequestedTheme = ElementTheme.Dark,
+            var dialog = new ContentDialog { XamlRoot = DesktopRoot.XamlRoot, RequestedTheme = DesktopRoot.RequestedTheme,
                 Title = "Remove " + profile.Name + "?", Content = "This removes the workspace preset. Your apps, saved items, tasks and notes stay available.",
                 PrimaryButtonText = "Remove", CloseButtonText = "Keep", DefaultButton = ContentDialogButton.Close };
             PolishDialog(dialog);
@@ -335,7 +348,7 @@ public sealed partial class MainWindow
             var preview = new StackPanel { Spacing = 10 };
             preview.Children.Add(Text("Open these items with Windows? Apps may create another window if they are already open.", 13, true));
             foreach (var item in plan) preview.Children.Add(Text("• " + item.Title, 14));
-            var dialog = new ContentDialog { XamlRoot = DesktopRoot.XamlRoot, RequestedTheme = ElementTheme.Dark,
+            var dialog = new ContentDialog { XamlRoot = DesktopRoot.XamlRoot, RequestedTheme = DesktopRoot.RequestedTheme,
                 Title = "Open " + profile.Name, PrimaryButtonText = "Open " + plan.Length + " items", CloseButtonText = "Cancel",
                 Content = new ScrollViewer { Content = preview, MaxHeight = Math.Max(120, Math.Min(400, DesktopRoot.ActualHeight - 240)),
                     HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled } };

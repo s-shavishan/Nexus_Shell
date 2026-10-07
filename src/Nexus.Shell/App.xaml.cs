@@ -34,7 +34,7 @@ public partial class App : Application
         _instance = new Mutex(true, @"Local\WhiteDreams.Nexus.Shell." + user, out bool first);
         if (!first)
         {
-            var handle = Interop.NativeMethods.FindWindow(null, "White Dreams Nexus Shell");
+            var handle = Interop.NativeMethods.FindWindow(null, MainWindow.NativeWindowTitle);
             if (handle != IntPtr.Zero)
                 Interop.DesktopIntegration.PostMessage(handle, Interop.DesktopIntegration.SummonMessage, UIntPtr.Zero, IntPtr.Zero);
             Exit();

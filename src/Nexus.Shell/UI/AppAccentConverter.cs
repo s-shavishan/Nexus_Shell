@@ -17,10 +17,10 @@ public sealed class AppAccentConverter : IValueConverter
         {
             var c = Services.AuraColor.Parse(hex); return Windows.UI.Color.FromArgb(c.A, c.R, c.G, c.B);
         }
-        _system.Color = highContrast ? highContrastColor : Color("FF31515D");
-        _browser.Color = highContrast ? highContrastColor : Color("FF344E70");
-        _development.Color = highContrast ? highContrastColor : Color("FF514766");
-        _game.Color = highContrast ? highContrastColor : Color("FF614852");
+        _system.Color = highContrast ? highContrastColor : Color("FF237EA1");
+        _browser.Color = highContrast ? highContrastColor : Color("FF355DC7");
+        _development.Color = highContrast ? highContrastColor : Color("FF7550BA");
+        _game.Color = highContrast ? highContrastColor : Color("FFAF4E88");
         _default.Color = highContrast ? highContrastColor : Color(palette.Tokens["NexusIcon"]);
     }
     public object Convert(object value, Type targetType, object parameter, string language) => (value as string) switch

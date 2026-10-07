@@ -12,6 +12,7 @@
     <Compile Include="../../src/Nexus.Shell/Services/AuraPalette.cs" Link="AuraPalette.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/FocusSession.cs" Link="FocusSession.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/CommandSearch.cs" Link="CommandSearch.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/ExploreWorkspace.cs" Link="ExploreWorkspace.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/WorkspaceState.cs" Link="WorkspaceState.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DesktopWorkspace.cs" Link="DesktopWorkspace.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/DesktopIntegration.cs" Link="DesktopIntegration.cs" />

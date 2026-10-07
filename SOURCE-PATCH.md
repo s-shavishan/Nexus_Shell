@@ -1,11 +1,9 @@
-# Apply the 0.7.0 source patch
+# Updating the source
 
-Base: the complete **0.6.0** source from the previous Aura update.
+This tree is the complete 0.8.0 source update, based on main commit `8a3e88d465212bc55b54b6848489a1ab24070286`. It still needs to be committed to GitHub and built on Windows.
 
-Merge the patch folder's contents into the repository root. Replace matching files and add new files; no source deletions are required. Commit and run AppVeyor. Use the complete 0.7.0 source ZIP if your repository is an earlier version.
+When applying a source patch manually, merge its contents into the repository root and replace matching files. Preserve existing files that the patch does not mention. Commit the result and build that exact commit in AppVeyor.
 
-PNG/SVG design previews are omitted from the small patch. The UI is drawn by native XAML/code and does not use these documentation images.
+The prepared patch contains new files as well as replacements. GitHub's Upload files view accepts the extracted folders; preserve their paths. Uploading the ZIP itself does not update the application source.
 
-`PATCH-MANIFEST.json` includes the base/target versions and changed-file SHA-256 hashes. Applying the patch to 0.6.0 was checked against every non-preview file in the complete 0.7.0 source.
-
-This patch updates source; the CI-produced binary Update ZIP updates the runnable application.
+The AppVeyor binary Update ZIP is a separate deliverable. It reuses compatible runtime files in your existing full app folder; source files are not a runnable update.

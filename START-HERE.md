@@ -1,3 +1,11 @@
+# 0.8.0 quick start
+
+Use the repository's latest 0.8.0 commit and let AppVeyor build it. After the entire build succeeds, download `Nexus-Shell-0.8.0-Update-win-x64.zip` to update a compatible existing full app folder, or the full `Nexus-Shell-0.8.0-win-x64.zip` for a fresh installation.
+
+Fully exit Nexus before applying an update. On first upgrade, saved links migrate into Personal, notes/tasks/pins are preserved, a settings backup is made and Opal is selected. Check the current Windows acceptance list in docs/TEST-WINDOWS.md.
+
+The older notes below describe the project history.
+
 # Nexus Shell 0.7.0 — start here
 
 This archive is source. Build it through AppVeyor to get the runnable Windows application.

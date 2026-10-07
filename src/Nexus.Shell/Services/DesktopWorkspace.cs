@@ -52,7 +52,7 @@ public static class DesktopWorkspace
         var items = profile.Apps.Where(a => IsAppTarget(a.Target)).Take(MaximumApps)
             .Select(a => new WorkspaceLaunchItem(a.Name, a.Target, "App"));
         var selected = profile.SavedItemIds.ToHashSet(StringComparer.Ordinal);
-        return items.Concat(saved.Where(s => selected.Contains(s.Id)).Take(MaximumSavedItems)
+        return items.Concat(saved.Where(s => s.Kind != "Note" && selected.Contains(s.Id)).Take(MaximumSavedItems)
                 .Select(s => new WorkspaceLaunchItem(s.Title, s.Target, s.Kind)))
             .DistinctBy(i => i.Target, StringComparer.OrdinalIgnoreCase).ToArray();
     }

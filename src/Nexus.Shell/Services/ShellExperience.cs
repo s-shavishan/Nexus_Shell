@@ -8,12 +8,12 @@ public static class ShellExperience
     public static readonly string[] Categories = ["All", "Apps", "Saved", "Workspaces", "Actions", "Tasks", "Windows"];
     public static bool MatchesCategory(CommandEntry entry, string category) => category switch
     {
-        "Apps" => entry.Kind == "App", "Saved" => entry.Kind == "Saved",
+        "Apps" => entry.Kind == "App", "Saved" => entry.Kind is "Saved" or "Space",
         "Workspaces" => entry.Kind is "Workspace" or "Profile", "Actions" => entry.Kind == "Action",
         "Tasks" => entry.Kind == "Task", "Windows" => entry.Kind == "Window", _ => true
     };
     private static bool CanRemember(RecentCommand? entry) => entry is not null &&
-        entry.Kind is "App" or "Saved" or "Workspace" or "Profile" &&
+        entry.Kind is "App" or "Saved" or "Space" or "Workspace" or "Profile" &&
         !string.IsNullOrWhiteSpace(entry.Target) && entry.Target.Length <= 4096;
     public static List<RecentCommand> NormalizeRecent(IEnumerable<RecentCommand>? entries) =>
         (entries ?? []).Where(CanRemember).Distinct().Take(RecentLimit).ToList();

@@ -15,7 +15,7 @@ public sealed class MotionController : IDisposable
     private readonly HashSet<FrameworkElement> _hoverTargets = [];
     private readonly HashSet<FrameworkElement> _entranceTargets = [];
     private readonly ScalarKeyFrameAnimation _fade;
-    private readonly Vector3KeyFrameAnimation _enter, _lift, _settle, _grow, _shrink;
+    private readonly Vector3KeyFrameAnimation _enter, _lift, _settle, _grow, _shrink, _dockGrow, _dockLift;
     private readonly CubicBezierEasingFunction _easing;
     private bool _enabled, _usable = true;
 
@@ -27,8 +27,10 @@ public sealed class MotionController : IDisposable
         _fade.Duration = TimeSpan.FromMilliseconds(180);
         _fade.InsertKeyFrame(0, .84f); _fade.InsertKeyFrame(1, 1, easing);
         _enter = compositor.CreateVector3KeyFrameAnimation();
-        _enter.Duration = TimeSpan.FromMilliseconds(200);
-        _enter.InsertKeyFrame(0, new Vector3(0, 8, 0)); _enter.InsertKeyFrame(1, Vector3.Zero, easing);
+        _enter.Duration = TimeSpan.FromMilliseconds(240);
+        _enter.InsertKeyFrame(0, new Vector3(0, 8, 0));
+        _enter.InsertKeyFrame(.72f, new Vector3(0, -1, 0), easing);
+        _enter.InsertKeyFrame(1, Vector3.Zero, easing);
         Vector3KeyFrameAnimation Transition(Vector3 end)
         {
             var animation = compositor.CreateVector3KeyFrameAnimation();
@@ -39,6 +41,7 @@ public sealed class MotionController : IDisposable
         }
         _lift = Transition(new Vector3(0, -4, 0)); _settle = Transition(Vector3.Zero);
         _grow = Transition(new Vector3(1.045f)); _shrink = Transition(Vector3.One);
+        _dockGrow = Transition(new Vector3(1.14f)); _dockLift = Transition(new Vector3(0, -6, 0));
     }
 
     public void SetEnabled(bool value)
@@ -82,11 +85,12 @@ public sealed class MotionController : IDisposable
             if (!_enabled) { Reset(target); return; }
             ElementCompositionPreview.SetIsTranslationEnabled(target, true);
             var visual = ElementCompositionPreview.GetElementVisual(target);
-            visual.CenterPoint = new Vector3((float)target.ActualWidth / 2, (float)target.ActualHeight / 2, 0);
+            bool dock = element is Button button && ReferenceEquals(button.Style, Application.Current.Resources["DockButton"]);
+            visual.CenterPoint = new Vector3((float)target.ActualWidth / 2, (float)target.ActualHeight * (dock ? .85f : .5f), 0);
             // Replacing the same property animation samples its current presentation
             // value. Do not reset the baseline between opposing hover transitions.
-            visual.StartAnimation("Translation", over ? _lift : _settle);
-            visual.StartAnimation("Scale", over ? _grow : _shrink);
+            visual.StartAnimation("Translation", over ? dock ? _dockLift : _lift : _settle);
+            visual.StartAnimation("Scale", over ? dock ? _dockGrow : _grow : _shrink);
         }
         catch (Exception ex) { Disable(ex); }
     }
@@ -128,6 +132,7 @@ public sealed class MotionController : IDisposable
         foreach (var element in _hoverTargets.ToArray()) Detach(element);
         _hoverTargets.Clear(); _entranceTargets.Clear();
         _fade.Dispose(); _enter.Dispose(); _lift.Dispose(); _settle.Dispose(); _grow.Dispose(); _shrink.Dispose();
+        _dockGrow.Dispose(); _dockLift.Dispose();
         _easing.Dispose();
     }
 }

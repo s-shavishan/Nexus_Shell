@@ -14,9 +14,7 @@ public sealed partial class MainWindow
     private readonly Dictionary<int, Button> _presetButtons = new();
     private TextBox? _taskInput;
     private StackPanel? _taskCards;
-    private ComboBox? _savedCollection;
-    private string _collectionFilter = "";
-    private bool _favoritesOnly, _showCompletedTasks, _updatingCollections, _refreshingWindows;
+    private bool _showCompletedTasks, _refreshingWindows;
     private long _windowEpoch;
     private IReadOnlyList<RunningWindow> _openWindows = [];
     private bool? _renderedHighContrast;
@@ -24,7 +22,7 @@ public sealed partial class MainWindow
     private void ReleaseOrbitControls()
     {
         _focusTaskText = null; _focusStateText = null; _focusModeLabel = null;
-        _taskSummary = null; _taskInput = null; _taskCards = null; _savedCollection = null; _presetButtons.Clear();
+        _taskSummary = null; _taskInput = null; _taskCards = null; _presetButtons.Clear();
     }
     private ShellState CaptureWorkspaceSnapshot()
     {
@@ -160,64 +158,13 @@ public sealed partial class MainWindow
         }
         if (_taskCards.Children.Count == 0) _taskCards.Children.Add(Text("Room for your next idea.", 13, true));
     }
-    private void RefreshCollectionChoices()
-    {
-        if (_savedCollection is null) return;
-        _updatingCollections = true;
-        try
-        {
-            var choices = _state.SavedItems.Select(a => a.Collection).Distinct(StringComparer.CurrentCultureIgnoreCase)
-                .OrderBy(a => a, StringComparer.CurrentCultureIgnoreCase).Prepend("").ToArray();
-            _savedCollection.Items.Clear();
-            foreach (string choice in choices)
-                _savedCollection.Items.Add(new ComboBoxItem { Content = choice.Length == 0 ? "All collections" : choice, Tag = choice });
-            if (!choices.Contains(_collectionFilter, StringComparer.CurrentCultureIgnoreCase)) _collectionFilter = "";
-            _savedCollection.SelectedItem = _savedCollection.Items.Cast<ComboBoxItem>().First(c =>
-                ((string)c.Tag).Equals(_collectionFilter, StringComparison.CurrentCultureIgnoreCase));
-        }
-        finally { _updatingCollections = false; }
-    }
     private void SavedItemsChanged()
     {
-        DesktopWorkspace.Normalize(_state);
-        SaveState(); RefreshCollectionChoices(); RenderSavedItems(); RenderHomeWorkspace(); RefreshWorkspaceSummary(); RenderDesktopIdentity();
+        ExploreWorkspace.Normalize(_state); DesktopWorkspace.Normalize(_state);
+        SaveState(); RenderHomeWorkspace(); RefreshWorkspaceSummary(); RenderDesktopIdentity();
+        if (_page == "Explore") BuildExplore();
         if (_commandOpen) RenderCommands();
     }
-    private async Task EditSavedAsync(SavedItem entry)
-    {
-        if (_dialogOpen) return;
-        _dialogOpen = true;
-        try
-        {
-            var title = new TextBox { Header = "Title", Text = entry.Title, MaxLength = 100 };
-            var collection = new TextBox { Header = "Collection", Text = entry.Collection, MaxLength = 24 };
-            var favorite = new CheckBox { Content = "Show on Home", IsChecked = entry.Favorite };
-            var address = new TextBox { Header = "Web address", Text = entry.Target, MaxLength = 4096 };
-            var content = new StackPanel { Spacing = 14 };
-            content.Children.Add(title); content.Children.Add(collection); content.Children.Add(favorite);
-            if (entry.Kind == "Link") content.Children.Add(address);
-            var dialog = new ContentDialog { XamlRoot = DesktopRoot.XamlRoot, RequestedTheme = ElementTheme.Dark,
-                Title = "Make it yours", Content = content, PrimaryButtonText = "Save", CloseButtonText = "Cancel" };
-            dialog.PrimaryButtonClick += (_, args) =>
-            {
-                if (string.IsNullOrWhiteSpace(title.Text)) { title.Header = "Enter a title"; args.Cancel = true; }
-                if (entry.Kind == "Link" && (!Uri.TryCreate(address.Text.Trim(), UriKind.Absolute, out var uri) || uri.Scheme is not ("https" or "http")))
-                { address.Header = "Enter a complete http:// or https:// address"; args.Cancel = true; }
-            };
-            PolishDialog(dialog);
-            if (await dialog.ShowAsync() != ContentDialogResult.Primary || !_ready) return;
-            string target = entry.Kind == "Link" ? new Uri(address.Text.Trim()).AbsoluteUri : entry.Target;
-            if (_state.SavedItems.Any(s => s.Id != entry.Id && s.Target.Equals(target, StringComparison.OrdinalIgnoreCase)))
-            { ShowStatus("That address is already on your board."); return; }
-            int index = _state.SavedItems.FindIndex(s => s.Id == entry.Id);
-            if (index < 0) return;
-            _state.SavedItems[index] = entry with { Title = title.Text.Trim(), Collection = WorkspaceState.CollectionName(collection.Text),
-                Favorite = favorite.IsChecked == true, Target = target };
-            SavedItemsChanged();
-        }
-        finally { _dialogOpen = false; }
-    }
-
     private void ShowWindowOverview(bool changed)
     {
         if (changed) WindowsSearchBox.Text = "";

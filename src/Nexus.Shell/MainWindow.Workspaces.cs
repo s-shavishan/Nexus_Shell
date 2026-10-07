@@ -20,16 +20,15 @@ public sealed partial class MainWindow
     private TextBlock? _focusClock, _focusSummary;
     private ProgressBar? _focusProgress;
     private Button? _focusAction;
-    private TextBox? _studyNote, _savedSearch;
-    private StackPanel? _savedCards;
-    private StackPanel? _focusPresets, _savedActions;
+    private TextBox? _studyNote;
+    private StackPanel? _focusPresets;
     private Brush? _chosenWallpaper;
     private int _focusCheckpointTicks;
 
     private void InitializeWorkspaces()
     {
         QuickNotesBox.Text = _state.QuickNote;
-        WallpaperBox.SelectedIndex = _state.Wallpaper switch { "Aurora" => 1, "Slate" => 2, _ => 0 };
+        WallpaperBox.SelectedIndex = _state.Wallpaper switch { "Orbit" => 1, "Aurora" => 2, "Slate" => 3, _ => 0 };
         if (_state.FocusRemainingSeconds >= 0)
             _focusSession.Restore(_state.FocusMinutes, TimeSpan.FromSeconds(_state.FocusRemainingSeconds));
         else _focusSession.Reset(_state.FocusMinutes);
@@ -41,13 +40,27 @@ public sealed partial class MainWindow
     private void ReleaseWorkspaceControls()
     {
         _focusClock = null; _focusSummary = null; _focusProgress = null;
-        _focusAction = null; _studyNote = null; _savedSearch = null; _savedCards = null;
-        _focusPresets = null; _savedActions = null;
+        _focusAction = null; _studyNote = null;
+        _focusPresets = null;
         ReleaseOrbitControls();
+        ReleaseExploreControls();
         _personalizationSync.Clear(); _moodChoices.Clear(); _moodGrid = null; _personalizeSections = null;
+    }
+    private void DesktopFocus_Click(object sender, RoutedEventArgs args)
+    {
+        if (_ready && !_dialogOpen && !_picking) ToggleFocusSession();
+    }
+    private void RefreshDesktopFocus()
+    {
+        DesktopFocusTime.Text = FormatRemaining();
+        DesktopFocusAction.Content = _focusSession.IsRunning ? "Pause" : "Start focus";
+        DesktopFocusTitle.Text = _focusSession.IsRunning
+            ? _state.Tasks.FirstOrDefault(t => t.Id == _state.FocusTaskId && !t.Completed)?.Title ?? "Your focus session"
+            : "A moment of focus";
     }
     private void RefreshWorkspaceSummary()
     {
+        RefreshDesktopFocus();
         string day = DateTime.Now.ToString("yyyy-MM-dd");
         if (_state.FocusDay != day)
         {
@@ -131,6 +144,7 @@ public sealed partial class MainWindow
     }
     private void RenderFocus()
     {
+        RefreshDesktopFocus();
         if (_focusClock is not null) _focusClock.Text = FormatRemaining();
         if (_focusProgress is not null)
             _focusProgress.Value = 100 * (1 - _focusSession.Remaining.TotalSeconds / _focusSession.Duration.TotalSeconds);
@@ -182,159 +196,9 @@ public sealed partial class MainWindow
         SaveState();
     }
 
-    private void BuildExplore()
-    {
-        PageContent.Children.Add(Text("Keep a little of your world.", 28));
-        PageContent.Children.Add(Text("Save links, files and folders here. Your board is separate from your Windows folders.", 13, true));
-        var actions = _savedActions = new StackPanel { Orientation = PageHost.ActualWidth < 480 ? Orientation.Vertical : Orientation.Horizontal, Spacing = 8 };
-        actions.Children.Add(AsyncButton("Save link", AddLinkAsync));
-        actions.Children.Add(AsyncButton("File", () => PickSavedAsync(false)));
-        actions.Children.Add(AsyncButton("Folder", () => PickSavedAsync(true)));
-        PageContent.Children.Add(actions);
-        _savedSearch = new TextBox { PlaceholderText = "Find something you saved", MaxLength = 100 };
-        _savedSearch.TextChanged += (_, _) => RenderSavedItems();
-        PageContent.Children.Add(_savedSearch);
-        var filters = new Grid { ColumnSpacing = 10 };
-        filters.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        filters.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        _savedCollection = new ComboBox { PlaceholderText = "All collections", HorizontalAlignment = HorizontalAlignment.Stretch };
-        RefreshCollectionChoices();
-        _savedCollection.SelectionChanged += (_, _) =>
-        {
-            if (_updatingCollections) return;
-            _collectionFilter = (_savedCollection?.SelectedItem as ComboBoxItem)?.Tag as string ?? ""; RenderSavedItems();
-        };
-        var favorites = new CheckBox { Content = "Favorites", IsChecked = _favoritesOnly, VerticalAlignment = VerticalAlignment.Center };
-        favorites.Checked += (_, _) => { _favoritesOnly = true; RenderSavedItems(); };
-        favorites.Unchecked += (_, _) => { _favoritesOnly = false; RenderSavedItems(); };
-        Grid.SetColumn(favorites, 1);
-        filters.Children.Add(_savedCollection); filters.Children.Add(favorites);
-        PageContent.Children.Add(filters);
-        _savedCards = new StackPanel { Spacing = 10 };
-        PageContent.Children.Add(_savedCards);
-        RenderSavedItems();
-    }
-    private void RenderSavedItems()
-    {
-        if (_savedCards is null) return;
-        string query = _savedSearch?.Text.Trim() ?? "";
-        _savedCards.Children.Clear();
-        var entries = _state.SavedItems.Where(a => (!_favoritesOnly || a.Favorite) &&
-            (_collectionFilter.Length == 0 || a.Collection.Equals(_collectionFilter, StringComparison.CurrentCultureIgnoreCase)) &&
-            (a.Title.Contains(query, StringComparison.CurrentCultureIgnoreCase) || a.Target.Contains(query, StringComparison.CurrentCultureIgnoreCase)))
-            .OrderByDescending(a => a.Favorite).ToArray();
-        if (entries.Length == 0)
-            _savedCards.Children.Add(Card(Text(query.Length == 0 ? "Your board is waiting. Save your first link or file." : "Nothing matches this search.", 14, true)));
-        foreach (var entry in entries)
-        {
-            var row = new StackPanel { Spacing = 8 };
-            var open = ActionButton(entry.Title, () => OpenSaved(entry));
-            open.HorizontalAlignment = HorizontalAlignment.Stretch;
-            open.HorizontalContentAlignment = HorizontalAlignment.Left;
-            row.Children.Add(open);
-            row.Children.Add(Text(entry.Collection + "  ·  " + entry.Kind + "  ·  " + entry.Target, 11, true));
-            var options = new Grid { ColumnSpacing = 8 };
-            options.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            options.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            var favorite = ActionButton(entry.Favorite ? "★ Favorite" : "☆ Favorite", () =>
-            {
-                int index = _state.SavedItems.FindIndex(a => a.Id == entry.Id);
-                if (index < 0) return;
-                _state.SavedItems[index] = entry with { Favorite = !entry.Favorite };
-                SavedItemsChanged();
-            });
-            var more = new Button { Content = "•••", CornerRadius = new CornerRadius(10) };
-            var menu = new MenuFlyout();
-            var edit = new MenuFlyoutItem { Text = "Edit title and collection" };
-            edit.Click += async (_, _) => { try { await EditSavedAsync(entry); } catch (Exception ex) { Error("Could not edit saved item", ex); } };
-            var remove = new MenuFlyoutItem { Text = "Remove from board" };
-            remove.Click += (_, _) =>
-            {
-                _state.SavedItems.RemoveAll(a => a.Id == entry.Id);
-                SavedItemsChanged();
-            };
-            menu.Items.Add(edit); menu.Items.Add(remove); more.Flyout = menu;
-            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(more, "Options for " + entry.Title);
-            Grid.SetColumn(more, 1); options.Children.Add(favorite); options.Children.Add(more);
-            row.Children.Add(options);
-            _savedCards.Children.Add(Card(row));
-        }
-        PageStatus.Text = entries.Length + " shown · " + _state.SavedItems.Count + " saved on this PC";
-    }
-    private async Task AddLinkAsync()
-    {
-        if (_dialogOpen) return;
-        _dialogOpen = true;
-        ControlsFlyout.Hide();
-        try
-        {
-            var title = new TextBox { Header = "Title", MaxLength = 100, PlaceholderText = "Give it a name" };
-            var url = new TextBox { Header = "Web address", MaxLength = 4096, PlaceholderText = "https://" };
-            var collection = new TextBox { Header = "Collection", MaxLength = 24, Text = WorkspaceState.CollectionName(_collectionFilter) };
-            var favorite = new CheckBox { Content = "Add to Home favorites", IsChecked = _favoritesOnly };
-            var content = new StackPanel { Spacing = 14 };
-            content.Children.Add(title); content.Children.Add(url); content.Children.Add(collection); content.Children.Add(favorite);
-            var dialog = new ContentDialog
-            {
-                XamlRoot = DesktopRoot.XamlRoot, RequestedTheme = ElementTheme.Dark, Title = "Save a link",
-                Content = content, PrimaryButtonText = "Save", CloseButtonText = "Cancel"
-            };
-            dialog.PrimaryButtonClick += (_, args) =>
-            {
-                if (!Uri.TryCreate(url.Text.Trim(), UriKind.Absolute, out var uri) || uri.Scheme is not ("https" or "http"))
-                {
-                    args.Cancel = true; url.Header = "Enter a complete http:// or https:// address";
-                }
-            };
-            PolishDialog(dialog);
-            if (await dialog.ShowAsync() != ContentDialogResult.Primary || !_ready) return;
-            var link = new Uri(url.Text.Trim());
-            SaveItem(string.IsNullOrWhiteSpace(title.Text) ? link.Host : title.Text.Trim(), link.AbsoluteUri, "Link",
-                collection.Text, favorite.IsChecked == true);
-        }
-        finally { _dialogOpen = false; }
-    }
-    private async Task PickSavedAsync(bool folder)
-    {
-        if (_picking) return;
-        _picking = true;
-        try
-        {
-            if (folder)
-            {
-                var picker = new FolderPicker();
-                WinRT.Interop.InitializeWithWindow.Initialize(picker, _handle);
-                picker.FileTypeFilter.Add("*");
-                var result = await picker.PickSingleFolderAsync();
-                if (_ready && result is not null) SaveItem(result.Name, result.Path, "Folder");
-            }
-            else
-            {
-                var picker = new FileOpenPicker();
-                WinRT.Interop.InitializeWithWindow.Initialize(picker, _handle);
-                picker.FileTypeFilter.Add("*");
-                var result = await picker.PickSingleFileAsync();
-                if (_ready && result is not null) SaveItem(result.Name, result.Path, "File");
-            }
-        }
-        finally { _picking = false; }
-    }
-    private void SaveItem(string title, string target, string kind, string? collection = null, bool favorite = false)
-    {
-        if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(target) || target.Length > 4096)
-        { ShowStatus("This item cannot be saved. Choose an item with a shorter path or address."); return; }
-        title = title.Trim()[..Math.Min(title.Trim().Length, 100)];
-        if (_state.SavedItems.Any(a => a.Target.Equals(target, StringComparison.OrdinalIgnoreCase)))
-        { ShowStatus("This is already on your board."); return; }
-        if (_state.SavedItems.Count >= 100) { ShowStatus("Your 100 spaces are full. Remove an item to save another."); return; }
-        _state.SavedItems.Insert(0, new(Guid.NewGuid().ToString("N"), title, target, kind,
-            WorkspaceState.CollectionName(collection ?? _collectionFilter), favorite));
-        Record("Saved " + title); SaveState(); RefreshWorkspaceSummary();
-        if (_page == "Explore") Navigate("Explore", false);
-        RenderHomeWorkspace();
-    }
     private void OpenSaved(SavedItem item)
     {
+        if (item.Kind == "Note") { SelectExploreItem(item); return; }
         try
         {
             if (item.Kind == "Link")
@@ -352,9 +216,11 @@ public sealed partial class MainWindow
 
     private IEnumerable<CommandEntry> CommandEntries()
     {
+        foreach (var space in _state.ExploreSpaces)
+            yield return new(space.Name + " space", space.Description + " · Explore", "\uE8B7", "Space", space.Id);
         foreach (var item in new[] {
             ("Home", "Your personal desktop", "\uE80F"),
-            ("Explore", "Saved links, files and folders", "\uE8B7"),
+            ("Explore", "Spaces, links, notes and file shortcuts", "\uE8B7"),
             ("Study", "Tasks, focus timer and local notes", "\uE916"),
             ("Apps", "Start-menu apps and pins", "\uE71D"),
             ("Gaming", "Installed games and shortcuts", "\uE7FC"),
@@ -454,6 +320,7 @@ public sealed partial class MainWindow
         RememberCommand(entry);
         CloseCommands();
         if (entry.Kind == "Profile") EnterProfile(entry.Target);
+        else if (entry.Kind == "Space") EnterExploreSpace(entry.Target);
         else if (entry.Kind == "Workspace") Navigate(entry.Target);
         else if (entry.Kind == "App")
         {
@@ -481,13 +348,13 @@ public sealed partial class MainWindow
     {
         var orientation = PageHost.ActualWidth < 480 ? Orientation.Vertical : Orientation.Horizontal;
         if (_focusPresets is not null) _focusPresets.Orientation = orientation;
-        if (_savedActions is not null) _savedActions.Orientation = orientation;
         UpdateWindowTileSize();
+        UpdateExploreLayout();
     }
     private void Wallpaper_SelectionChanged(object sender, SelectionChangedEventArgs args)
     {
         if (!_ready) return;
-        _state.Wallpaper = WallpaperBox.SelectedIndex switch { 1 => "Aurora", 2 => "Slate", _ => "Orbit" };
+        _state.Wallpaper = WallpaperBox.SelectedIndex switch { 1 => "Orbit", 2 => "Aurora", 3 => "Slate", _ => "Opal" };
         SelectWallpaper(); ApplyEffects(); SaveState();
     }
     private void SelectWallpaper()
