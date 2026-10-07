@@ -1,3 +1,37 @@
+# 0.5.0 — Nexus Desktop foundation
+
+## 0.7.0 — Shell Experience
+
+- Added bounded in-session page history, back/forward buttons, Alt+Left/Right and page/profile breadcrumbs.
+- Added seven search categories and current open-window entries; async refreshes preserve selected items.
+- Added bounded, live-resolved recent search choices with clear/disable controls. Queries and window handles are excluded from this recent list.
+- Added the Personalize page, appearance reset, widget/Home-card visibility, 12/24-hour clock and compact dock.
+- Packed visible Home cards, synchronized appearance controls, themed native switch states, and fixed high-contrast workspace selection text.
+- Added navigation/search/recent-reference/settings migration tests to the Windows CI harness and updated illustrative previews.
+- No new runtime dependency. Windows build and native acceptance pending.
+
+
+## 0.6.0 — Nexus Aura
+
+- Introduced the shared Aura palette and Pearl/Lagoon/Graphite moods, preserving saved mood identifiers.
+- Polished the floating menu/dock, desktop hero, workspace capsules, cards, search, inputs and all six ContentDialog paths.
+- Added themed navigation states and compact navigation/labels for smaller windows.
+- Redesigned Control center's Windows-settings shortcuts as a two-column grid.
+- Added opt-in native acrylic with reduced-effects/high-contrast/focus fallbacks; default remains off.
+- Added pure contrast and glass-preference checks to the core CI harness, source checks and clearly labeled design previews.
+- Runtime dependencies and existing desktop/workspace behaviors retained. Windows build and runtime acceptance pending.
+
+
+- Added desktop layout, responsive two-column Home, and configurable workspace presets.
+- Added explicit workspace launch previews and workspace-specific app/saved-item selections.
+- Added an optional global shortcut, notification-area residency, reopen/search/exit controls and Explorer-restart recovery.
+- Added a bounded running-window dock that refreshes only while Nexus is active.
+- Added last-page recovery, nested snapshot isolation, and settings migration backups.
+- Filtered DWM-cloaked windows out of the visible-window list.
+- Retained runtime package versions, Windows 10 accessibility handling, PRI/XBF checks and the small-update workflow.
+
+Preparation checks pass. Windows CI and native acceptance are pending.
+
 # Nexus Shell 0.4.1 — desktop startup repair
 
 - Removes the unsupported `AccessibilitySettings.HighContrastChanged` event that aborted 0.4.0 startup on Windows 10 build 19045 after XAML had loaded.

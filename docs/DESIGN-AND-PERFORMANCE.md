@@ -1,73 +1,59 @@
-# Nexus Orbit: design and resource behavior
+# Shell experience and Aura design — 0.7.0
 
-The desktop aims for a calm macOS-inspired layout with a distinct Nexus identity. Pearl text, violet focus accents, teal orbital details, translucent tinted panels, generous spacing, and vector icon tiles provide the finish. The artwork is static and the running app does not load the design-reference image.
+The default desktop layout removes the central panel's chrome/sidebar while keeping a top navigation bar, desktop widgets, Home cards and a dock. A Control center switch restores the panel layout. F11 provides fullscreen.
 
-The panels have a layered glass appearance. They do **not** continuously blur the desktop behind them. This avoids adding live backdrop sampling just for decoration. Reduced effects replaces the principal translucent surfaces with opaque fills, hides ornamental artwork, and disables custom motion. Features and app launching stay available.
+The desktop remains a native WinUI surface over Windows. Explorer keeps running; presets do not create Windows virtual desktops. No web renderer or external process is added.
 
-## Motion policy
+## Navigation and search
 
-| Interaction | Implementation |
-|---|---|
-| Change workspace | 180 ms opacity, 200 ms translation, at most 8 logical pixels |
-| Dock/card content hover | 140 ms transition, 4-pixel lift and 1.045 scale |
-| Search filtering | Update the collection without an entrance animation |
-| Rapid repeated input | Replace the animation on the same property; input never waits for completion |
-| Nexus loses activation | Stop custom animations and pause visual sampling |
-| Reduced effects / Windows animations off | Custom motion disabled |
-| High contrast | Decorative effects disabled; primary colors use system resources |
+`NavigationTrail` stores at most 24 page names in memory. Returning Back/Forward does not create a new visit; visiting a new page after Back removes the forward branch. Profile selections and third-party launches are not replayed. Last-page persistence accepts Personalize.
 
-Animations run through Microsoft.UI.Composition rather than a user-authored frame loop. Hover animates the button content while its input bounds stay fixed, avoiding a moving hover boundary. No timer drives wallpaper animation, width/height interpolation, or pointer-position tracking. Native control and flyout animations remain governed by WinUI and Windows; Reduced effects disables this project's custom animation layer.
+`ShellExperience` categorizes command entries and resolves up to eight persisted recent references against the current command catalog. Recent-first ordering applies only to an empty All search; typed queries retain the existing title-prefix ranking. Actions, tasks and ephemeral window handles never enter this list. Disabling recent items clears the references and prevents new recording. Activity/usage remain separate existing data stores.
 
-Windows animation preference is read at load/reactivation. High-contrast changes are dispatched to the UI thread. The finite animations and shared definitions aim to reduce UI-thread work; smoothness is still a Windows test result, not a guarantee from the choice of API.
+Search includes current window titles/process names from the existing Windows enumeration. Its results stay limited to 30, and the list remains bounded. Opening search requests an asynchronous window refresh; changed windows and app-discovery completion refresh results while preserving selection when possible. Execution resolves the selected handle against the current in-memory list and reports unavailable windows.
 
-## Bounds and idle behavior
+## Personalization
 
-The discovered catalog contains at most 500 shortcuts from each Start-menu root. Records are lightweight names/paths/glyphs. The full app library is a GridView with a finite star-row viewport and native container virtualization. It sits outside any outer ScrollViewer. When leaving the library, its ItemsSource is cleared; WinUI can retain a bounded recycling cache. Home displays at most six pin records, and the dock shows at most five. No executable-icon bitmap cache is maintained.
+The Personalize page uses generated native controls and the same Aura resources. It exposes appearance/layout/widget/card choices, compact dock, clock format and recent-item controls. Control center and the page synchronize under a reentrancy guard.
 
-Settings accept at most 100 pins, 200 activity entries, 300 usage records, and a 2 MB settings file. Usage is approximate process foreground time sampled every five seconds, with idle and long-gap exclusion. The tracking timer is stopped when tracking is disabled. While minimized with tracking off and no running focus session, Nexus has no recurring visual or tracking timer; a pending settings write or discovery task can finish.
+Hidden Home cards preserve their underlying notes/pins; remaining cards are packed into one or two columns. The dock changes button/content sizes and spacing without replacing its launch behavior or timers. A 12-hour desktop clock places the localized period in a separate small label to avoid compressing the main numerals.
 
-The on-screen resource footer samples only while the window is active and the footer is visible. It shows this process's working set and CPU normalized across available logical processors. CPU uses actual monotonic elapsed time; the first/resume sample has no CPU estimate. The tooltip adds private bytes. GPU allocations and Windows DWM memory are excluded.
+Appearance reset restores the mood, material/effects, desktop layout/widgets/cards, clock and dock defaults. It leaves notes, tasks, pins, profiles, tracking/startup and recent-item settings intact.
 
-Settings changes schedule a two-second coalesced save. A worker writes an immutable snapshot atomically. A final synchronous save on normal close waits for an in-flight write and prevents an older queued snapshot from overwriting it. Closing may briefly wait for storage. Abrupt power/process termination can lose changes that have not yet reached the atomic file.
+Mood cards and settings columns respond to page width. Controls release their synchronization delegates and references when the page is left. Navigation/filter/setting changes add no rendering loop or polling timer.
 
-## Measure on your Windows PC
+## Aura visual system
 
-Build once with the included cloud/local route, launch Nexus, wait for warm-up, then capture scenarios separately. From the source project:
+`AuraPalette` is the source for shared ARGB tokens. App.xaml provides fallback, Light/Dark and high-contrast dictionaries; palette changes mutate the existing non-high-contrast brushes so active controls follow the chosen mood. System high-contrast colors remain intact.
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\measure-resources.ps1 -Scenario Home -Seconds 60
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\measure-resources.ps1 -Scenario Apps -Seconds 60
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\measure-resources.ps1 -Scenario ReducedEffects -Seconds 60
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\measure-resources.ps1 -Scenario Minimized -Seconds 60
-```
+Pearl uses iris and teal on charcoal. Lagoon shifts the surfaces toward teal. Graphite uses cool blue with quieter surfaces. Existing serialized mood values are retained for compatibility.
 
-Set the named scenario yourself before each command. The script labels the run; it does not click controls or modify preferences. The portable bundle also includes the script beside the executable; use `.\measure-resources.ps1` there. CSV and JSON reports are written under `%LOCALAPPDATA%\WhiteDreams\NexusShell\measurements`, so the installed app folder can remain read-only. No report is automatically shared.
+Menu, dock, Control center and search share a material. Native acrylic is off by default and only connects while enabled, active and outside high contrast/reduced effects. Construction/connection errors select solid surfaces; Windows can also provide the brush's configured fallback. The design references show the default pearl surfaces, not measured blur or transparency behavior.
 
-Compare average/peak working set, private bytes, and normalized CPU across scenarios. Use Task Manager separately for GPU/DWM cost. Compare gaming frame rate with Nexus closed, minimized with tracking off, and minimized with tracking on. Check idle memory again after ten minutes and after repeated navigation; increasing memory across every cycle needs investigation. A nonzero cache that stabilizes is different from unbounded growth.
+Typography, radii and spacing are shared across static XAML and generated pages. Dialog buttons use the native AccentButtonStyle with Aura resources; native input/focus behavior remains. The body/secondary/primary-action text checks use the actual palette values and composite translucent cards over their backgrounds. They do not certify every native state or the whole UI.
 
-There are **no measured MB, FPS, or Electron comparison claims** in this source release. Lower memory usage is a design objective. .NET/WinUI runtime overhead and framework caches remain, and this must be tested on real Windows before it can be called a reliable release.
+A compact menu exposes every page at narrow widths. Widgets/sidebar, pinned/running dock capacity, labels, profile columns, card columns, hero typography/actions and bounded search/control scrolling respond to available dimensions. Verify physical sizes and text scaling on Windows.
 
-## References
+No extra package, wallpaper bitmap, backdrop service, browser renderer or continuous rendering loop was added. Optional acrylic should be measured on the target PC; no memory/CPU performance claim is based on the previews.
 
-- [WinUI collection virtualization](https://learn.microsoft.com/en-us/windows/apps/develop/performance/optimize-gridview-and-listview)
-- [Animation performance](https://learn.microsoft.com/en-us/windows/apps/develop/performance/optimize-animations-and-media)
-- [XAML / Composition interop](https://learn.microsoft.com/en-us/windows/apps/develop/composition/using-the-visual-layer-with-xaml)
-- [Windows animation preference](https://learn.microsoft.com/en-us/uwp/api/windows.ui.viewmanagement.uisettings.animationsenabled)
+## Workspaces
 
-`Nexus-Orbit-preview.svg` is a code-drawn design reference with sample pins, not a Windows runtime screenshot. Font rendering, native flyouts, focus outlines, and window scaling must be assessed in the Windows build.
+Each preset owns a name, description, destination, up to eight app selections and eight saved-item references. Selected apps replace the global pin list on Home and in the pinned dock; empty app selections use global pins. Selected saved items replace global favorites on Home; empty saved selections use favorites.
 
-## 0.3.0 workspace additions
+Notes, tasks, focus sessions and activity stay shared. Enter changes the desktop without launching anything. Open shows a bounded launch preview and requests each distinct target after confirmation. It does not reposition third-party windows or promise those applications started successfully; failed requests are reported.
 
-Command results are capped at 30 and the ListView viewport is finite. Explore stores at most 100 user-created shortcut records; it does not crawl folders or index the PC. New page controls are constructed on navigation and released when leaving the page. Home and Study share one bounded 10,000-character note, saved using the existing debounce/snapshot/atomic store.
+Presets copy the selected app metadata so they survive lazy Start-menu discovery. Missing saved-item references are pruned. Snapshots copy nested selection lists before persistence runs off the UI thread.
 
-The focus timer is based on monotonic elapsed time, with a one-second dispatcher tick only while a session runs. Switching or minimizing apps does not stop the session. Inactive ticks avoid repainting timer UI; completion is recorded once. Wallpaper presets are small vector/gradient changes. The new palette entrance uses the same finite compositor controller and reduced-motion fallback.
+## Desktop presence
 
-Runtime-reusing update downloads trade local disk copying for less network transfer. Every reused byte is checked before publishing a fresh destination; old binaries remain in their original folder. Native performance remains unmeasured until Windows testing.
+Ctrl+Alt+Space uses RegisterHotKey and native window messages; no global keyboard hook is used. Shortcut registration can fail independently of window startup. The local Ctrl+K palette remains available.
 
-## 0.4.0 everyday workspaces
+Notification-area residency is opt-in. Hiding stops visible-UI refreshes and custom motion. An active focus timer and user-enabled usage tracking continue, using the existing timers. Exit saves a paused focus checkpoint and removes native registrations.
 
-Window overview uses a GridView in its own finite star-row viewport with ItemsWrapGrid virtualization. It holds up to 80 lightweight records, does not capture live thumbnails, enumerates off the UI thread, permits one refresh at a time, and refreshes every five seconds only when the view and window are active. Leaving releases the records and item source; a navigation epoch discards results from an older view. Unchanged results do not rebuild the grid. Title search operates on the bounded in-memory snapshot. Card widths adapt to the page; native focus switching remains subject to Windows policy.
+The running-window dock is limited to three entries and appears only on wide layouts. Enumeration refreshes every five seconds while the surface is active; it releases dock entries when hidden. It excludes own/tool/DWM-cloaked windows. Full window overview remains available at all sizes. Window order follows Windows enumeration, not a claimed recency ranking.
 
-Tasks and saved items are each bounded at 100. Their programmatic page controls are released on navigation. Home realizes only three task rows and four favorite shortcuts. Collections are short string labels, not folders on disk. Persistent records stay in the existing local settings store. A legacy-settings backup is attempted once before migration.
+Existing finite composition animations and reduced-effects/high-contrast handling are retained. There is no continuous wallpaper-render loop or window-thumbnail capture.
 
-A running timer still uses the monotonic session clock. Checkpoints save approximately every 30 seconds through the coalesced store, and a normal close captures the exact remaining time. Restoring stays paused and does not credit closed-app time. A crash may recover an older checkpoint. Task completion remains a separate user action. Native performance must still be measured; these bounds are design controls, not MB/FPS guarantees.
+## Rendering evidence
+
+`Nexus-Experience-preview.png` and `Nexus-Experience-search.png` is a code-drawn design reference with illustrative selected apps/tasks/links. The shipped app uses actual local settings. Windows launch/layout and memory/CPU measurements remain necessary.

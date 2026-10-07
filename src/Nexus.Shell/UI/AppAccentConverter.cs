@@ -11,6 +11,18 @@ public sealed class AppAccentConverter : IValueConverter
     private readonly SolidColorBrush _game = Make(137, 70, 113);
     private readonly SolidColorBrush _default = Make(67, 77, 105);
     private static SolidColorBrush Make(byte r, byte g, byte b) => new(Windows.UI.Color.FromArgb(255, r, g, b));
+    public void UseAura(Services.AuraPalette palette, bool highContrast, Windows.UI.Color highContrastColor)
+    {
+        Windows.UI.Color Color(string hex)
+        {
+            var c = Services.AuraColor.Parse(hex); return Windows.UI.Color.FromArgb(c.A, c.R, c.G, c.B);
+        }
+        _system.Color = highContrast ? highContrastColor : Color("FF31515D");
+        _browser.Color = highContrast ? highContrastColor : Color("FF344E70");
+        _development.Color = highContrast ? highContrastColor : Color("FF514766");
+        _game.Color = highContrast ? highContrastColor : Color("FF614852");
+        _default.Color = highContrast ? highContrastColor : Color(palette.Tokens["NexusIcon"]);
+    }
     public object Convert(object value, Type targetType, object parameter, string language) => (value as string) switch
     {
         "System" => _system, "Browser" => _browser, "Development" => _development, "Game" => _game, _ => _default

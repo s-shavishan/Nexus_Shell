@@ -1,69 +1,244 @@
-<Application x:Class="Nexus.Shell.App"
- xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
- xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+<Application x:Class="Nexus.Shell.App" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
  <Application.Resources>
   <ResourceDictionary>
-   <ResourceDictionary.MergedDictionaries><XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" /></ResourceDictionary.MergedDictionaries>
+   <ResourceDictionary.MergedDictionaries><XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls"/></ResourceDictionary.MergedDictionaries>
    <ResourceDictionary.ThemeDictionaries>
     <ResourceDictionary x:Key="Light">
-     <SolidColorBrush x:Key="NexusText" Color="#F2F3FD"/>
-     <SolidColorBrush x:Key="NexusMuted" Color="#A9B0C9"/>
-     <SolidColorBrush x:Key="NexusAccent" Color="#C7BDFF"/>
-     <SolidColorBrush x:Key="NexusPanel" Color="#E8192033"/>
-     <SolidColorBrush x:Key="NexusBorder" Color="#35D9DEFF"/>
-     <SolidColorBrush x:Key="NexusCard" Color="#B5252D45"/>
-     <SolidColorBrush x:Key="NexusSidebar" Color="#800D1321"/>
+   <SolidColorBrush x:Key="NexusText" Color="#FFF4F7FE"/>
+   <SolidColorBrush x:Key="NexusMuted" Color="#FFB8C3D6"/>
+   <SolidColorBrush x:Key="NexusAccent" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="NexusAccentText" Color="#FF171C29"/>
+   <SolidColorBrush x:Key="NexusSecondary" Color="#FF9BDED8"/>
+   <SolidColorBrush x:Key="NexusPanel" Color="#EF222A39"/>
+   <SolidColorBrush x:Key="NexusCard" Color="#E52B3445"/>
+   <SolidColorBrush x:Key="NexusBorder" Color="#406D809A"/>
+   <SolidColorBrush x:Key="NexusSidebar" Color="#B0121A27"/>
+   <SolidColorBrush x:Key="NexusInput" Color="#F0141B29"/>
+   <SolidColorBrush x:Key="NexusSelection" Color="#384F657F"/>
+   <SolidColorBrush x:Key="NexusShell" Color="#E61A2331"/>
+   <SolidColorBrush x:Key="NexusIcon" Color="#FF34465C"/>
+   <SolidColorBrush x:Key="NexusHeroStart" Color="#FF343B54"/>
+   <SolidColorBrush x:Key="NexusHeroEnd" Color="#FF29494C"/>
+   <SolidColorBrush x:Key="NexusOverlay" Color="#BC090E18"/>
+   <SolidColorBrush x:Key="AccentButtonBackground" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="AccentButtonForeground" Color="#FF171C29"/>
+   <SolidColorBrush x:Key="AccentButtonBorderBrush" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="#FF171C29"/>
+   <SolidColorBrush x:Key="AccentButtonBorderBrushPointerOver" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#384F657F"/>
+   <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#FFF4F7FE"/>
+   <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#406D809A"/>
+   <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="#FF171C29"/>
+   <SolidColorBrush x:Key="AccentButtonBorderBrushPressed" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#384F657F"/>
+   <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#FFF4F7FE"/>
+   <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#406D809A"/>
+   <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="ToggleSwitchStrokeOn" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="#FF171C29"/>
+   <SolidColorBrush x:Key="ToggleSwitchFillOff" Color="#E52B3445"/>
+   <SolidColorBrush x:Key="ToggleSwitchStrokeOff" Color="#406D809A"/>
+   <SolidColorBrush x:Key="ToggleSwitchKnobFillOff" Color="#FFB8C3D6"/>
+   <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="ToggleSwitchStrokeOnPointerOver" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="#FF171C29"/>
+   <SolidColorBrush x:Key="ToggleSwitchFillOffPointerOver" Color="#E52B3445"/>
+   <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="#406D809A"/>
+   <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPointerOver" Color="#FFB8C3D6"/>
+   <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="ToggleSwitchStrokeOnPressed" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPressed" Color="#FF171C29"/>
+   <SolidColorBrush x:Key="ToggleSwitchFillOffPressed" Color="#E52B3445"/>
+   <SolidColorBrush x:Key="ToggleSwitchStrokeOffPressed" Color="#406D809A"/>
+   <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPressed" Color="#FFB8C3D6"/>
     </ResourceDictionary>
     <ResourceDictionary x:Key="Dark">
-     <SolidColorBrush x:Key="NexusText" Color="#F2F3FD"/>
-     <SolidColorBrush x:Key="NexusMuted" Color="#A9B0C9"/>
-     <SolidColorBrush x:Key="NexusAccent" Color="#C7BDFF"/>
-     <SolidColorBrush x:Key="NexusPanel" Color="#E8192033"/>
-     <SolidColorBrush x:Key="NexusBorder" Color="#35D9DEFF"/>
-     <SolidColorBrush x:Key="NexusCard" Color="#B5252D45"/>
-     <SolidColorBrush x:Key="NexusSidebar" Color="#800D1321"/>
+   <SolidColorBrush x:Key="NexusText" Color="#FFF4F7FE"/>
+   <SolidColorBrush x:Key="NexusMuted" Color="#FFB8C3D6"/>
+   <SolidColorBrush x:Key="NexusAccent" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="NexusAccentText" Color="#FF171C29"/>
+   <SolidColorBrush x:Key="NexusSecondary" Color="#FF9BDED8"/>
+   <SolidColorBrush x:Key="NexusPanel" Color="#EF222A39"/>
+   <SolidColorBrush x:Key="NexusCard" Color="#E52B3445"/>
+   <SolidColorBrush x:Key="NexusBorder" Color="#406D809A"/>
+   <SolidColorBrush x:Key="NexusSidebar" Color="#B0121A27"/>
+   <SolidColorBrush x:Key="NexusInput" Color="#F0141B29"/>
+   <SolidColorBrush x:Key="NexusSelection" Color="#384F657F"/>
+   <SolidColorBrush x:Key="NexusShell" Color="#E61A2331"/>
+   <SolidColorBrush x:Key="NexusIcon" Color="#FF34465C"/>
+   <SolidColorBrush x:Key="NexusHeroStart" Color="#FF343B54"/>
+   <SolidColorBrush x:Key="NexusHeroEnd" Color="#FF29494C"/>
+   <SolidColorBrush x:Key="NexusOverlay" Color="#BC090E18"/>
+   <SolidColorBrush x:Key="AccentButtonBackground" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="AccentButtonForeground" Color="#FF171C29"/>
+   <SolidColorBrush x:Key="AccentButtonBorderBrush" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="#FF171C29"/>
+   <SolidColorBrush x:Key="AccentButtonBorderBrushPointerOver" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#384F657F"/>
+   <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#FFF4F7FE"/>
+   <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#406D809A"/>
+   <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="#FF171C29"/>
+   <SolidColorBrush x:Key="AccentButtonBorderBrushPressed" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#384F657F"/>
+   <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#FFF4F7FE"/>
+   <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#406D809A"/>
+   <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="ToggleSwitchStrokeOn" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="#FF171C29"/>
+   <SolidColorBrush x:Key="ToggleSwitchFillOff" Color="#E52B3445"/>
+   <SolidColorBrush x:Key="ToggleSwitchStrokeOff" Color="#406D809A"/>
+   <SolidColorBrush x:Key="ToggleSwitchKnobFillOff" Color="#FFB8C3D6"/>
+   <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="ToggleSwitchStrokeOnPointerOver" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="#FF171C29"/>
+   <SolidColorBrush x:Key="ToggleSwitchFillOffPointerOver" Color="#E52B3445"/>
+   <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="#406D809A"/>
+   <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPointerOver" Color="#FFB8C3D6"/>
+   <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="ToggleSwitchStrokeOnPressed" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPressed" Color="#FF171C29"/>
+   <SolidColorBrush x:Key="ToggleSwitchFillOffPressed" Color="#E52B3445"/>
+   <SolidColorBrush x:Key="ToggleSwitchStrokeOffPressed" Color="#406D809A"/>
+   <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPressed" Color="#FFB8C3D6"/>
     </ResourceDictionary>
     <ResourceDictionary x:Key="HighContrast">
-     <SolidColorBrush x:Key="NexusText" Color="{ThemeResource SystemColorWindowTextColor}"/>
-     <SolidColorBrush x:Key="NexusMuted" Color="{ThemeResource SystemColorWindowTextColor}"/>
-     <SolidColorBrush x:Key="NexusAccent" Color="{ThemeResource SystemColorHighlightColor}"/>
-     <SolidColorBrush x:Key="NexusPanel" Color="{ThemeResource SystemColorWindowColor}"/>
-     <SolidColorBrush x:Key="NexusBorder" Color="{ThemeResource SystemColorWindowTextColor}"/>
-     <SolidColorBrush x:Key="NexusCard" Color="{ThemeResource SystemColorWindowColor}"/>
-     <SolidColorBrush x:Key="NexusSidebar" Color="{ThemeResource SystemColorWindowColor}"/>
+   <SolidColorBrush x:Key="NexusText" Color="{ThemeResource SystemColorWindowTextColor}"/>
+   <SolidColorBrush x:Key="NexusMuted" Color="{ThemeResource SystemColorWindowTextColor}"/>
+   <SolidColorBrush x:Key="NexusAccent" Color="{ThemeResource SystemColorHighlightColor}"/>
+   <SolidColorBrush x:Key="NexusAccentText" Color="{ThemeResource SystemColorHighlightTextColor}"/>
+   <SolidColorBrush x:Key="NexusSecondary" Color="{ThemeResource SystemColorWindowTextColor}"/>
+   <SolidColorBrush x:Key="NexusPanel" Color="{ThemeResource SystemColorWindowColor}"/>
+   <SolidColorBrush x:Key="NexusCard" Color="{ThemeResource SystemColorWindowColor}"/>
+   <SolidColorBrush x:Key="NexusBorder" Color="{ThemeResource SystemColorWindowTextColor}"/>
+   <SolidColorBrush x:Key="NexusSidebar" Color="{ThemeResource SystemColorWindowColor}"/>
+   <SolidColorBrush x:Key="NexusInput" Color="{ThemeResource SystemColorWindowColor}"/>
+   <SolidColorBrush x:Key="NexusSelection" Color="{ThemeResource SystemColorHighlightColor}"/>
+   <SolidColorBrush x:Key="NexusShell" Color="{ThemeResource SystemColorWindowColor}"/>
+   <SolidColorBrush x:Key="NexusIcon" Color="{ThemeResource SystemColorWindowColor}"/>
+   <SolidColorBrush x:Key="NexusHeroStart" Color="{ThemeResource SystemColorWindowColor}"/>
+   <SolidColorBrush x:Key="NexusHeroEnd" Color="{ThemeResource SystemColorWindowColor}"/>
+   <SolidColorBrush x:Key="NexusOverlay" Color="{ThemeResource SystemColorWindowColor}"/>
+   <SolidColorBrush x:Key="AccentButtonBackground" Color="{ThemeResource SystemColorHighlightColor}"/>
+   <SolidColorBrush x:Key="AccentButtonForeground" Color="{ThemeResource SystemColorHighlightTextColor}"/>
+   <SolidColorBrush x:Key="AccentButtonBorderBrush" Color="{ThemeResource SystemColorHighlightColor}"/>
+   <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="{ThemeResource SystemColorHighlightColor}"/>
+   <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="{ThemeResource SystemColorHighlightTextColor}"/>
+   <SolidColorBrush x:Key="AccentButtonBorderBrushPointerOver" Color="{ThemeResource SystemColorHighlightColor}"/>
+   <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{ThemeResource SystemColorWindowColor}"/>
+   <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="{ThemeResource SystemColorWindowTextColor}"/>
+   <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="{ThemeResource SystemColorWindowTextColor}"/>
+   <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="{ThemeResource SystemColorHighlightColor}"/>
+   <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="{ThemeResource SystemColorHighlightTextColor}"/>
+   <SolidColorBrush x:Key="AccentButtonBorderBrushPressed" Color="{ThemeResource SystemColorHighlightColor}"/>
+   <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{ThemeResource SystemColorWindowColor}"/>
+   <SolidColorBrush x:Key="ButtonForegroundPressed" Color="{ThemeResource SystemColorWindowTextColor}"/>
+   <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="{ThemeResource SystemColorWindowTextColor}"/>
+   <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="{ThemeResource SystemColorHighlightColor}"/>
+   <SolidColorBrush x:Key="ToggleSwitchStrokeOn" Color="{ThemeResource SystemColorHighlightColor}"/>
+   <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="{ThemeResource SystemColorHighlightTextColor}"/>
+   <SolidColorBrush x:Key="ToggleSwitchFillOff" Color="{ThemeResource SystemColorWindowColor}"/>
+   <SolidColorBrush x:Key="ToggleSwitchStrokeOff" Color="{ThemeResource SystemColorWindowTextColor}"/>
+   <SolidColorBrush x:Key="ToggleSwitchKnobFillOff" Color="{ThemeResource SystemColorWindowTextColor}"/>
+   <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="{ThemeResource SystemColorHighlightColor}"/>
+   <SolidColorBrush x:Key="ToggleSwitchStrokeOnPointerOver" Color="{ThemeResource SystemColorHighlightColor}"/>
+   <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="{ThemeResource SystemColorHighlightTextColor}"/>
+   <SolidColorBrush x:Key="ToggleSwitchFillOffPointerOver" Color="{ThemeResource SystemColorWindowColor}"/>
+   <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="{ThemeResource SystemColorWindowTextColor}"/>
+   <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPointerOver" Color="{ThemeResource SystemColorWindowTextColor}"/>
+   <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="{ThemeResource SystemColorHighlightColor}"/>
+   <SolidColorBrush x:Key="ToggleSwitchStrokeOnPressed" Color="{ThemeResource SystemColorHighlightColor}"/>
+   <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPressed" Color="{ThemeResource SystemColorHighlightTextColor}"/>
+   <SolidColorBrush x:Key="ToggleSwitchFillOffPressed" Color="{ThemeResource SystemColorWindowColor}"/>
+   <SolidColorBrush x:Key="ToggleSwitchStrokeOffPressed" Color="{ThemeResource SystemColorWindowTextColor}"/>
+   <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPressed" Color="{ThemeResource SystemColorWindowTextColor}"/>
     </ResourceDictionary>
    </ResourceDictionary.ThemeDictionaries>
-   <!-- Keep all dictionary items together after its property elements. -->
-   <!-- Fallbacks also resolve before a control joins the themed visual tree. -->
-   <SolidColorBrush x:Key="NexusText" Color="#F2F3FD"/>
-   <SolidColorBrush x:Key="NexusMuted" Color="#A9B0C9"/>
-   <SolidColorBrush x:Key="NexusAccent" Color="#C7BDFF"/>
-   <SolidColorBrush x:Key="NexusPanel" Color="#E8192033"/>
-   <SolidColorBrush x:Key="NexusBorder" Color="#35D9DEFF"/>
-   <SolidColorBrush x:Key="NexusCard" Color="#B5252D45"/>
-   <SolidColorBrush x:Key="NexusSidebar" Color="#800D1321"/>
+   <!-- Fallback resources remain contiguous after dictionary property elements. -->
+   <SolidColorBrush x:Key="NexusText" Color="#FFF4F7FE"/>
+   <SolidColorBrush x:Key="NexusMuted" Color="#FFB8C3D6"/>
+   <SolidColorBrush x:Key="NexusAccent" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="NexusAccentText" Color="#FF171C29"/>
+   <SolidColorBrush x:Key="NexusSecondary" Color="#FF9BDED8"/>
+   <SolidColorBrush x:Key="NexusPanel" Color="#EF222A39"/>
+   <SolidColorBrush x:Key="NexusCard" Color="#E52B3445"/>
+   <SolidColorBrush x:Key="NexusBorder" Color="#406D809A"/>
+   <SolidColorBrush x:Key="NexusSidebar" Color="#B0121A27"/>
+   <SolidColorBrush x:Key="NexusInput" Color="#F0141B29"/>
+   <SolidColorBrush x:Key="NexusSelection" Color="#384F657F"/>
+   <SolidColorBrush x:Key="NexusShell" Color="#E61A2331"/>
+   <SolidColorBrush x:Key="NexusIcon" Color="#FF34465C"/>
+   <SolidColorBrush x:Key="NexusHeroStart" Color="#FF343B54"/>
+   <SolidColorBrush x:Key="NexusHeroEnd" Color="#FF29494C"/>
+   <SolidColorBrush x:Key="NexusOverlay" Color="#BC090E18"/>
+   <SolidColorBrush x:Key="AccentButtonBackground" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="AccentButtonForeground" Color="#FF171C29"/>
+   <SolidColorBrush x:Key="AccentButtonBorderBrush" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="#FF171C29"/>
+   <SolidColorBrush x:Key="AccentButtonBorderBrushPointerOver" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#384F657F"/>
+   <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#FFF4F7FE"/>
+   <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#406D809A"/>
+   <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="#FF171C29"/>
+   <SolidColorBrush x:Key="AccentButtonBorderBrushPressed" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#384F657F"/>
+   <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#FFF4F7FE"/>
+   <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#406D809A"/>
+   <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="ToggleSwitchStrokeOn" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="#FF171C29"/>
+   <SolidColorBrush x:Key="ToggleSwitchFillOff" Color="#E52B3445"/>
+   <SolidColorBrush x:Key="ToggleSwitchStrokeOff" Color="#406D809A"/>
+   <SolidColorBrush x:Key="ToggleSwitchKnobFillOff" Color="#FFB8C3D6"/>
+   <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="ToggleSwitchStrokeOnPointerOver" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="#FF171C29"/>
+   <SolidColorBrush x:Key="ToggleSwitchFillOffPointerOver" Color="#E52B3445"/>
+   <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="#406D809A"/>
+   <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPointerOver" Color="#FFB8C3D6"/>
+   <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="ToggleSwitchStrokeOnPressed" Color="#FFC7BEF7"/>
+   <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPressed" Color="#FF171C29"/>
+   <SolidColorBrush x:Key="ToggleSwitchFillOffPressed" Color="#E52B3445"/>
+   <SolidColorBrush x:Key="ToggleSwitchStrokeOffPressed" Color="#406D809A"/>
+   <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPressed" Color="#FFB8C3D6"/>
    <Style x:Key="QuietButton" TargetType="Button">
     <Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/>
-    <Setter Property="CornerRadius" Value="10"/><Setter Property="Padding" Value="12,8"/>
-    <Setter Property="Foreground" Value="{ThemeResource NexusText}"/>
+    <Setter Property="CornerRadius" Value="12"/><Setter Property="Padding" Value="13,10"/>
+    <Setter Property="FontSize" Value="14"/><Setter Property="Foreground" Value="{ThemeResource NexusText}"/>
+   </Style>
+   <Style x:Key="AuraSurfaceButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
+    <Setter Property="Background" Value="{ThemeResource NexusCard}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusBorder}"/>
+    <Setter Property="BorderThickness" Value="1"/><Setter Property="Padding" Value="15,11"/>
+   </Style>
+   <Style x:Key="AuraPrimaryButton" TargetType="Button" BasedOn="{StaticResource AccentButtonStyle}">
+    <Setter Property="CornerRadius" Value="12"/><Setter Property="Padding" Value="18,12"/><Setter Property="FontSize" Value="14"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
    </Style>
    <Style x:Key="IconButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
-    <Setter Property="Width" Value="40"/><Setter Property="Height" Value="36"/><Setter Property="Padding" Value="0"/>
+    <Setter Property="Width" Value="38"/><Setter Property="Height" Value="36"/><Setter Property="Padding" Value="0"/>
    </Style>
    <Style x:Key="SidebarButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
-    <Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Height" Value="42"/>
+    <Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Height" Value="46"/>
    </Style>
    <Style x:Key="DockButton" TargetType="Button">
-    <Setter Property="Width" Value="52"/><Setter Property="Height" Value="52"/><Setter Property="CornerRadius" Value="15"/><Setter Property="Padding" Value="0"/>
-    <Setter Property="Background" Value="#454C67"/><Setter Property="BorderBrush" Value="#45E5E7FF"/><Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Width" Value="54"/><Setter Property="Height" Value="56"/><Setter Property="CornerRadius" Value="16"/><Setter Property="Padding" Value="0"/>
+    <Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/>
     <Setter Property="Foreground" Value="{ThemeResource NexusText}"/>
    </Style>
    <Style x:Key="ShortcutCard" TargetType="Button">
     <Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="HorizontalContentAlignment" Value="Left"/>
-    <Setter Property="Padding" Value="16,15"/><Setter Property="CornerRadius" Value="16"/>
+    <Setter Property="Padding" Value="20,18"/><Setter Property="CornerRadius" Value="20"/>
     <Setter Property="Background" Value="{ThemeResource NexusCard}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusBorder}"/>
     <Setter Property="BorderThickness" Value="1"/><Setter Property="Foreground" Value="{ThemeResource NexusText}"/>
    </Style>
+   <Style TargetType="TextBox"><Setter Property="CornerRadius" Value="12"/><Setter Property="Padding" Value="13,11"/><Setter Property="FontSize" Value="14"/><Setter Property="Background" Value="{ThemeResource NexusInput}"/><Setter Property="Foreground" Value="{ThemeResource NexusText}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusBorder}"/></Style>
+   <Style TargetType="ComboBox"><Setter Property="CornerRadius" Value="12"/><Setter Property="Padding" Value="13,10"/><Setter Property="FontSize" Value="14"/><Setter Property="Background" Value="{ThemeResource NexusInput}"/><Setter Property="Foreground" Value="{ThemeResource NexusText}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusBorder}"/></Style>
   </ResourceDictionary>
  </Application.Resources>
 </Application>

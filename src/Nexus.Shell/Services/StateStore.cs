@@ -6,7 +6,9 @@ namespace Nexus.Shell.Services;
 public sealed class StateStore
 {
     public static string DirectoryPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WhiteDreams", "NexusShell");
-    public string FilePath => Path.Combine(DirectoryPath, "settings.json");
+    private readonly string _directoryPath;
+    public StateStore(string? directoryPath = null) => _directoryPath = directoryPath ?? DirectoryPath;
+    public string FilePath => Path.Combine(_directoryPath, "settings.json");
     private readonly JsonSerializerOptions _json = new() { WriteIndented = true };
     private readonly object _writeLock = new();
     private bool _finalized;
@@ -20,9 +22,15 @@ public sealed class StateStore
             var state = JsonSerializer.Deserialize<ShellState>(json, _json) ?? new();
             using (var document = JsonDocument.Parse(json))
             {
+                if (document.RootElement.ValueKind == JsonValueKind.Object && !document.RootElement.TryGetProperty("Profiles", out _))
+                {
+                    string desktopBackup = Path.Combine(_directoryPath, "settings.before-0.5.0.json");
+                    try { if (!File.Exists(desktopBackup)) File.Copy(FilePath, desktopBackup, false); }
+                    catch (Exception ex) { Log.Write("Could not create desktop migration backup", ex); }
+                }
                 if (document.RootElement.ValueKind == JsonValueKind.Object && !document.RootElement.TryGetProperty("Tasks", out _))
                 {
-                    string backup = Path.Combine(DirectoryPath, "settings.before-0.4.0.json");
+                    string backup = Path.Combine(_directoryPath, "settings.before-0.4.0.json");
                     try { if (!File.Exists(backup)) File.Copy(FilePath, backup, false); }
                     catch (Exception ex) { Log.Write("Could not create migration backup; keeping loaded settings", ex); }
                 }
@@ -37,6 +45,8 @@ public sealed class StateStore
             state.FocusDay ??= "";
             state.FocusCompleted = Math.Clamp(state.FocusCompleted, 0, 1000);
             WorkspaceState.Normalize(state);
+            DesktopWorkspace.Normalize(state);
+            ShellExperience.Normalize(state);
             state.UsageSeconds = (state.UsageSeconds ?? []).Where(a => !string.IsNullOrWhiteSpace(a.Key) && a.Key.Length <= 260 &&
                     double.IsFinite(a.Value) && a.Value >= 0 && a.Value <= 1_000_000_000)
                 .DistinctBy(a => a.Key, StringComparer.OrdinalIgnoreCase)
@@ -75,7 +85,7 @@ public sealed class StateStore
     }
     private void WriteAtomic(ShellState state)
     {
-        Directory.CreateDirectory(DirectoryPath);
+        Directory.CreateDirectory(_directoryPath);
         var temporary = FilePath + ".tmp";
         File.WriteAllText(temporary, JsonSerializer.Serialize(state, _json));
         File.Move(temporary, FilePath, overwrite: true);

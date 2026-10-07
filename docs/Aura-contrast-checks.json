@@ -1,0 +1,14 @@
+[
+  {
+    "palette": "Lagoon",
+    "minimumTextContrast": 5.62
+  },
+  {
+    "palette": "Graphite",
+    "minimumTextContrast": 6.33
+  },
+  {
+    "palette": "Pearl",
+    "minimumTextContrast": 5.49
+  }
+]

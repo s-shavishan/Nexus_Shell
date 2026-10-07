@@ -35,7 +35,8 @@ public partial class App : Application
         if (!first)
         {
             var handle = Interop.NativeMethods.FindWindow(null, "White Dreams Nexus Shell");
-            if (handle != IntPtr.Zero) Interop.NativeMethods.Activate(handle);
+            if (handle != IntPtr.Zero)
+                Interop.DesktopIntegration.PostMessage(handle, Interop.DesktopIntegration.SummonMessage, UIntPtr.Zero, IntPtr.Zero);
             Exit();
             return;
         }

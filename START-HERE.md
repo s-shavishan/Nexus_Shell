@@ -1,59 +1,23 @@
-# Nexus Shell 0.4.1 — desktop startup repair
+# Nexus Shell 0.7.0 — start here
 
-This release addresses the reported Windows 10 build 19045 failure after MainWindow.xaml loads. The application used AccessibilitySettings.HighContrastChanged, an event unsupported in desktop apps. 0.4.1 removes that event and reads desktop accessibility/animation preferences through guarded Win32 calls. All 0.4.0 workspaces and the existing resource-publishing repair are retained.
+This archive is source. Build it through AppVeyor to get the runnable Windows application.
 
-## Rebuild with your existing AppVeyor project
+1. If your repository contains **0.6.0 source**, extract `Nexus-Shell-0.7.0-Source-Patch.zip` and merge the extracted folder's contents into the repository root. Replace matching files and add new files; include `src`, `tests`, `scripts` and CI configuration. Do not nest the patch folder inside your repository.
+2. If your source is earlier than 0.6.0, use the complete `Nexus-Shell-0.7.0-Source.zip` as the new source tree.
+3. Commit and run AppVeyor. Wait for behavior checks, publish/resource checks and packaging to succeed.
+4. Download `Nexus-Shell-0.7.0-Update-win-x64.zip`. Fully exit any running/hidden Nexus instance through Control center or its notification-area menu.
+5. Extract the binary Update ZIP, run `Apply-Update.bat`, and choose your current full binary app folder containing `Nexus.Shell.exe` and its runtime files. The updater creates a new version folder and keeps the old one.
+6. Launch the new folder. If runtime hashes do not match, use the full `Nexus-Shell-0.7.0-win-x64.zip` instead.
+7. If startup still points to the old folder, choose **Use this version at sign-in** in Control center.
 
-1. If your repository already contains Nexus Shell 0.4.0, extract the **Source-Patch ZIP**. Upload the **contents** of `Nexus-Shell-0.4.1-Patch` into your repository root, replacing the matching files. This focused patch assumes the complete 0.4.0 source is already present.
-2. To start from a complete source tree, use the full Source ZIP and upload the contents of `Nexus-Shell-0.4.1` instead. Do not create an extra nested project directory.
-3. Commit all patched files, including appveyor.yml, scripts, tests and src. Run a new AppVeyor build for that commit.
-4. CI runs the existing core checks plus actual Win32 accessibility queries, the PowerShell updater fixtures, the WinUI build, and published/archived resource checks. Use artifacts from a successful run.
+No local developer installation is needed for this route. Source ZIPs cannot be passed to the binary updater.
 
-The source ZIPs contain no compiled EXE. You do not need local development tools to build through AppVeyor or to run the resulting self-contained app. The source fix has only been checked in the authoring workspace; the changed Windows binary still needs compilation and a launch test.
+## First things to try
 
-## Download the smaller app update
+- **More → Personalize**: choose a mood, compact dock, clock format and visible Home cards.
+- Navigate Home → Apps → Study; use Alt+Left/Right or the header arrows.
+- Ctrl+K: try Apps, Saved, Workspaces and Windows categories. The current window list refreshes when search opens.
+- Select an app, saved item or workspace in search, then reopen All to see recent choices. Clear/disable these in Personalize.
+- Hide Home notes, return to Home and then show them again. The text should remain saved.
 
-Keep the full 0.4.0 app folder that produced your latest log. A startup failure at the old event subscription does not prevent the updater from checking and reusing intact runtime files.
-
-1. Download **Nexus-Shell-0.4.1-Update-win-x64.zip** from your successful AppVeyor build, and extract it into a separate folder.
-2. Close Nexus. Double-click **Apply-Update.bat** and choose your full extracted 0.4.0 app folder containing Nexus.Shell.exe.
-3. The updater checks the downloaded app payload and the exact runtime bytes in the old folder, then creates a fresh **Nexus-Shell-0.4.1-win-x64** folder beside it. The old folder is retained.
-4. Run Nexus.Shell.exe from the newly created folder.
-
-If runtime compatibility checks fail, use **Nexus-Shell-0.4.1-win-x64.zip** once and extract it into a fresh folder. The CI log prints the actual Update ZIP size. Do not replace only the EXE or mix app files from separate builds.
-
-If the default destination already exists, select an unused destination:
-
-```powershell
-.\Apply-Update.ps1 -BaseDirectory "C:\Apps\Nexus-Shell-0.4.0-win-x64" -TargetDirectory "C:\Apps\Nexus-Test-0.4.1"
-```
-
-If sign-in startup points to the old folder, select **Use this version at sign-in** in Control center after the new build opens.
-
-## Confirm the launch
-
-The latest startup section should contain:
-
-```text
-Nexus Shell 0.4.1 started
-MainWindow.xaml loaded; configuring window
-Reading desktop accessibility settings
-Desktop settings ready
-MainWindow activation completed
-```
-
-The actual log includes timestamps and preference values. Confirm Home is visible and interactive as well; markers alone do not establish successful rendering. If it fails, collect only the newest section:
-
-```powershell
-Get-Content "$env:LOCALAPPDATA\WhiteDreams\NexusShell\nexus.log" -Tail 60
-```
-
-The old 0.2.x exceptions remain in this appended log and do not describe the current run. The supplied 0.4.0 log already confirms that MainWindow.xaml loaded, before its high-contrast event subscription failed.
-
-## Your data and accessibility
-
-Settings remain in `%LOCALAPPDATA%\WhiteDreams\NexusShell`. This fix introduces no new settings schema. Notes, tasks, pins and saved items use the existing 0.4.0 persistence path. The legacy migration backup remains named `settings.before-0.4.0.json`.
-
-Desktop preferences refresh on startup, activation, and the existing five-second UI tick while Nexus is active. Optional query failures retain last known values; custom motion starts disabled until its preference is available. Unchanged settings do not rebuild Study/Explore/Activity pages. No new timer or runtime package is added.
-
-See docs/TEST-WINDOWS.md for high-contrast, animation preference, minimize/restore and normal-close checks. See docs/VALIDATION.md for observed evidence and checks still pending on Windows.
+Prepared source checks pass. Windows compilation and native acceptance still need to run. Keep the complete published folder together; the existing resource publishing and accessibility safeguards remain in place.

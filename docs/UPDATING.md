@@ -1,15 +1,17 @@
-# Smaller Nexus downloads
+# Updating Nexus 0.7.0
 
-The build emits a full app ZIP and a separate `Nexus-Shell-0.4.1-Update-win-x64.zip`. The full ZIP carries all self-contained runtimes; the Update ZIP omits their bytes and records the exact runtime files needed from a base folder. CI prints its actual size.
+## Small binary update
 
-Extract the Update ZIP separately and double-click `Apply-Update.bat`. Choose your old extracted app folder. Before creating anything, the updater checks downloaded payload hashes and reused runtime hashes. It then uses local copies to assemble a fresh version folder and verifies the copied bytes. The original folder is retained. No SDK, global .NET installation, or runtime installer is added.
+Download the CI-produced Nexus-Shell-0.7.0-Update-win-x64.zip after the entire build succeeds. Fully exit Nexus first, including a hidden resident instance. Use Exit Nexus in Control center or its notification-area menu.
 
-A runtime mismatch requires the full ZIP once. The updater compares bytes, rather than trusting app version or direct NuGet pins: a build host's .NET servicing version or transitive dependency can change. A prior broken app can supply runtime files if those files are intact and match; its old executable and app resource index are replaced by the update payload in the fresh destination.
+Extract the Update ZIP and run Apply-Update.bat. Choose your current full runnable folder containing Nexus.Shell.exe. The updater verifies payload/runtime hashes, builds a new version folder, and leaves the old folder intact. Settings remain in the existing local app-data directory.
 
-If the default destination already exists, use `-TargetDirectory` with an unused path. Existing destinations are rejected. Your settings, pins, notes and board remain in `%LOCALAPPDATA%\WhiteDreams\NexusShell`, separate from both binary folders. If sign-in startup points to the older folder, Control center shows a **Use this version at sign-in** button. It updates the registration only when you select it.
+Launch the new folder. If sign-in startup still points to your old copy, use Use this version at sign-in in Control center. If runtime files differ, use the full binary ZIP once. The three runtime package references have not changed from 0.6.0, but actual compatibility is decided by their published file hashes.
 
-The updater performs local copying, so the new folder still needs disk space comparable to a full app. This reduces network downloads; it is not an automatic online update service. Download archives only from your own successful CI run. Build checks establish file compatibility and integrity; Windows launch/rendering still need testing.
+## Source patch
 
-The updater requires Nexus.Shell.exe, Nexus.Shell.dll, and Nexus.resources.json in the new payload. App-owned binaries/assets and loose XBF files cannot be reclassified as old runtime files. The resource report must match the release and every listed app resource must match a new payload record; a root app PRI is mandatory. File records require canonical relative paths, nonnegative lengths, valid SHA-256 values and unique normalized names. These checks detect corrupt/incompatible packages; they are not a publisher signature.
+The 0.7.0 source patch targets the complete 0.6.0 source from the previous release. Merge its contents into your repository root; replace existing files and add new files. Then commit and build through AppVeyor. No source deletions are required.
 
-Existing notes, pins, and saved items migrate to the new schema; older saved items become Personal items without favorites. The app attempts one migration backup before first saving older settings. An older binary may rewrite settings without new fields, so retain a current data copy before a rollback.
+Documentation preview images are omitted from the small source patch and do not affect the app. The complete source includes them.
+
+Both source packages require a Windows build. Neither is a runnable binary update.

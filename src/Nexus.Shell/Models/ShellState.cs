@@ -5,7 +5,12 @@ public sealed record RunningWindow(IntPtr Handle, string Title, string ProcessNa
 public sealed record ActivityEntry(DateTimeOffset Time, string Message);
 public sealed record SavedItem(string Id, string Title, string Target, string Kind, string Collection = "Personal", bool Favorite = false);
 public sealed record TaskEntry(string Id, string Title, bool Completed = false);
+public sealed record RecentCommand(string Kind, string Target);
 public sealed record CommandEntry(string Title, string Subtitle, string Glyph, string Kind, string Target);
+
+public sealed record WorkspaceProfile(string Id, string Name, string Description, string Page, string Glyph,
+    List<AppEntry> Apps, List<string> SavedItemIds);
+public sealed record WorkspaceLaunchItem(string Title, string Target, string Kind);
 
 public sealed class ShellState
 {
@@ -16,6 +21,22 @@ public sealed class ShellState
     public bool ReducedEffects { get; set; }
     public bool CatalogInitialized { get; set; }
     public string Wallpaper { get; set; } = "Orbit";
+    public bool NativeGlass { get; set; }
+    public bool Clock24Hour { get; set; } = true;
+    public bool ShowClockWidget { get; set; } = true;
+    public bool ShowSpaceWidget { get; set; } = true;
+    public bool ShowHomeNotes { get; set; } = true;
+    public bool ShowHomeEssentials { get; set; } = true;
+    public bool CompactDock { get; set; }
+    public bool RememberRecentItems { get; set; } = true;
+    public List<RecentCommand> RecentCommands { get; set; } = [];
+    public bool DesktopLayout { get; set; } = true;
+    public bool GlobalShortcut { get; set; } = true;
+    public bool KeepAvailable { get; set; }
+    public bool ResumeWorkspace { get; set; } = true;
+    public string LastPage { get; set; } = "Home";
+    public string ActiveProfileId { get; set; } = "personal";
+    public List<WorkspaceProfile> Profiles { get; set; } = [];
     public string QuickNote { get; set; } = "";
     public int FocusMinutes { get; set; } = 25;
     public string FocusDay { get; set; } = "";
@@ -33,6 +54,12 @@ public sealed class ShellState
     {
         DisplayName = DisplayName, UsageTracking = UsageTracking, FullScreen = FullScreen,
         FocusMode = FocusMode, ReducedEffects = ReducedEffects, CatalogInitialized = CatalogInitialized,
+        Clock24Hour = Clock24Hour, ShowClockWidget = ShowClockWidget, ShowSpaceWidget = ShowSpaceWidget,
+        ShowHomeNotes = ShowHomeNotes, ShowHomeEssentials = ShowHomeEssentials, CompactDock = CompactDock,
+        RememberRecentItems = RememberRecentItems, RecentCommands = [.. RecentCommands],
+        NativeGlass = NativeGlass, DesktopLayout = DesktopLayout, GlobalShortcut = GlobalShortcut, KeepAvailable = KeepAvailable,
+        ResumeWorkspace = ResumeWorkspace, LastPage = LastPage, ActiveProfileId = ActiveProfileId,
+        Profiles = Profiles.Select(p => p with { Apps = [.. p.Apps], SavedItemIds = [.. p.SavedItemIds] }).ToList(),
         Wallpaper = Wallpaper, QuickNote = QuickNote, FocusMinutes = FocusMinutes,
         FocusDay = FocusDay, FocusCompleted = FocusCompleted, SavedItems = [.. SavedItems],
         FocusRemainingSeconds = FocusRemainingSeconds, FocusTaskId = FocusTaskId, Tasks = [.. Tasks],

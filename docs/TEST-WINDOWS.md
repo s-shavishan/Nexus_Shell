@@ -1,3 +1,37 @@
+# 0.5.0 desktop acceptance
+
+Run these checks on your Windows 10 PC after a successful CI build. Use a copy of your app folder if experimenting with updates.
+
+| Check | Expected |
+|---|---|
+| Upgrade with existing settings | Notes, pins, saved items and tasks survive; four starter profiles appear and residency stays off |
+| Home at 1440px and 900px | Cards/strips adapt without overlap; app and window grids retain finite viewports |
+| 125%, 150%, 200% display scale | Text remains readable and controls can be reached by scrolling |
+| Desktop layout off/on | Workspace panel and desktop canvas switch without losing data |
+| Configure Study | Save selected apps and saved items, rename the preset, then restart; choices survive |
+| Enter a preset | Home and pinned dock change; no app or file opens |
+| Open a preset, then Cancel | Nothing opens |
+| Open and confirm | Each distinct target gets one open request; missing paths are reported while remaining items continue |
+| Change preset during focus | Shared timer/tasks stay intact; the preset switch does not start or reset a focus session |
+| Ctrl+Alt+Space from Firefox | Nexus becomes visible and opens search; disabling the switch releases the shortcut |
+| Shortcut already in use | Nexus opens normally and reports shortcut unavailability |
+| Keep Nexus available on | Alt+F4 hides the window; the tray icon can reopen it or exit completely |
+| Focus timer while hidden | Timer continues; completion is recorded once; reopening shows the current state |
+| Usage tracking off while hidden | No foreground-time sampling is enabled implicitly |
+| Start Nexus again while hidden | Existing instance reopens; a second instance does not remain running |
+| Explorer restart | Tray icon is restored, or Nexus reopens if registration fails |
+| Wide running dock | Up to three visible windows appear; clicking switches to the intended window |
+| Narrow running dock | Extra running tiles collapse; Ctrl+4 still lists windows |
+| Exit Nexus | Process exits, tray icon disappears, hotkey is released, timer is saved paused |
+| Update after residency enabled | Fully exit first; small updater reuses verified runtime files and retains the old app folder |
+| High contrast and reduced effects | Native controls remain usable; color/layout switching does not disable workspace actions |
+
+Windows APIs can decline a foreground-window switch. In that case Nexus reports it and Alt+Tab remains available.
+
+The core CI smoke check exercises native subclass invocation and cleanup using a hidden test window. Actual hotkey input, tray interactions, WinUI layout, focus handling and fullscreen still require manual acceptance above.
+
+---
+
 # Windows test checklist
 
 Record your Windows build, monitor resolution/scaling, and whether this is a local, AppVeyor, or GitHub Actions build. Test Windows 10 build 19041 or newer and Windows 11, x64.
@@ -116,3 +150,27 @@ For build failures, the GitHub run uploads `Nexus-build-logs`; local builds writ
 7. Leave/re-enter overview while a refresh is pending; confirm older results do not replace another view. Check keyboard-only card invocation, native focus outlines, high contrast, reduced effects and rapid navigation. Study/Explore input must retain its text/caret when merely switching focus between apps.
 8. Use the small update with a matching base, then mismatched/corrupted files and an existing target. Confirm rejection does not change the base or publish an incomplete new folder. Confirm new EXE/DLL/PRI/XBF come from the update and startup-folder repair is offered only for an existing registration pointing elsewhere.
 9. Measure Home, Study (paused/running), Explore, overview, minimized and reduced-effects scenarios. Repeatedly navigate and inspect idle memory after ten minutes. Verify stable caches, inactive CPU and game impact on the actual machine.
+
+## Aura 0.6.0 acceptance
+
+1. Build/publish on AppVeyor; run core/native/resource/update checks. Launch from the complete publish folder on Windows 10 19045.
+2. Start with the default solid material. Choose Pearl, Lagoon and Graphite; verify menu, cards, inputs, buttons, search, dialog actions and dock all update. Restart and verify the chosen mood/name/notes persist.
+3. Enable Native glass. Verify active material and inactive fallback. Toggle Reduced effects and high contrast while running, including with a dialog and Control center open. Verify the UI stays readable and usable; fallback must not crash startup. Test with Windows transparency disabled.
+4. Open add-app, saved-item, task, workspace editor/new-workspace and launch-preview dialogs. Check primary/close button text, hover/press, Tab/Enter/Escape, validation and cancel/save behavior.
+5. Try 1440×900, 1366×768, 1024×600 and 320×480 logical window sizes; repeat at 100/125/150/200% display scaling and increased text size. All pages must remain reachable through compact navigation. Check hero actions, profiles, library/window scrolling, palette and control scrolling, and dock fit.
+6. Use mouse and keyboard for every menu, search row and Windows-settings shortcut. Confirm these shortcuts open Windows settings; no in-app volume/network state is claimed.
+7. Test fullscreen, panel/desktop layout, focus mode, hotkey, notification-area hide/reopen/exit and existing workspace/task/notes behavior after the theme changes.
+8. Run `measure-resources.ps1` with glass off/on and reduced effects. Capture actual memory/CPU; no preview-based performance estimates are acceptance evidence.
+
+## Shell Experience 0.7.0 acceptance
+
+1. Build and run the core/native/resource/update checks in AppVeyor. Launch the complete publish folder on Windows 10 19045.
+2. Visit Home → Apps → Study. Back returns Apps then Home; Forward returns Apps. After going Back, choose Explore and verify the old forward branch is gone. Page rebuilds and theme changes must not add history entries. Test header arrows and Alt+Left/Right, including with a dialog/picker active.
+3. Open Personalize from More, the compact menu, panel sidebar and Control center. Change each setting; return Home, close/reopen Nexus and verify persistence. Resume Personalize when it was the last page.
+4. Hide/show notes and essentials independently. Confirm notes/pins survive and remaining cards pack without holes. Test reduced effects, high contrast, 12/24-hour clock including localized AM/PM text, and compact dock with no/five pins and zero/three open-window entries.
+5. Verify All/Apps/Saved/Workspaces/Actions/Tasks/Windows categories, title-prefix ordering, no matches, mouse selection and keyboard typing/arrows/Enter/Escape. After a filter choice, typing should continue in the search field. Tab must reach filters and results.
+6. Open an app, saved item and workspace from search. Reopen empty All; recent choices should appear once at the top. Type an unrelated query and verify recency does not force unrelated results. Remove a saved item/change catalog entries and verify stale recent references do not launch old targets.
+7. Clear recent items. Disable remembering and select more search items; none should return as recent. Separate Activity/usage controls must retain their existing behavior.
+8. Open and close Notepad while search is open; verify titles appear/disappear on refresh, current selection survives when possible, and unavailable-window selection reports gracefully. Check global hotkey reopening and notification-area reopening.
+9. Check 320×480, 1024×600, 1366×768 and 1440×900 logical windows at 100/125/150/200% display scaling and larger text. Personalize should stack its cards, search categories should scroll, and palettes/control center should stay bounded. Inspect native switch tracks/knobs in normal/hover/pressed/disabled and high-contrast states.
+10. Measure actual memory/CPU with compact dock, materials off/on and reduced effects. No source or preview result is a runtime performance claim.

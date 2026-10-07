@@ -43,6 +43,7 @@ public sealed partial class MainWindow
         _focusAction = null; _studyNote = null; _savedSearch = null; _savedCards = null;
         _focusPresets = null; _savedActions = null;
         ReleaseOrbitControls();
+        _personalizationSync.Clear(); _moodChoices.Clear(); _moodGrid = null; _personalizeSections = null;
     }
     private void RefreshWorkspaceSummary()
     {
@@ -284,6 +285,7 @@ public sealed partial class MainWindow
                     args.Cancel = true; url.Header = "Enter a complete http:// or https:// address";
                 }
             };
+            PolishDialog(dialog);
             if (await dialog.ShowAsync() != ContentDialogResult.Primary || !_ready) return;
             var link = new Uri(url.Text.Trim());
             SaveItem(string.IsNullOrWhiteSpace(title.Text) ? link.Host : title.Text.Trim(), link.AbsoluteUri, "Link",
@@ -356,15 +358,23 @@ public sealed partial class MainWindow
             ("Apps", "Start-menu apps and pins", "\uE71D"),
             ("Gaming", "Installed games and shortcuts", "\uE7FC"),
             ("Window overview", "Switch to an open window · Ctrl+4", "\uE7F4"),
-            ("Activity", "Your local session", "\uE9D9") })
+            ("Activity", "Your local session", "\uE9D9"),
+            ("Personalize", "Moods, desktop widgets and dock", "\uE790") })
             yield return new(item.Item1, item.Item2, item.Item3, "Workspace", item.Item1 == "Window overview" ? "Running apps" : item.Item1);
         yield return new("Control center", "Appearance and Windows settings", "\uE713", "Action", "controls");
         yield return new(_focusSession.IsRunning ? "Pause focus" : "Start focus", "Study session", "\uE916", "Action", "focus");
         yield return new("Toggle full screen", "Nexus desktop view", "\uE740", "Action", "screen");
+        foreach (var profile in _state.Profiles)
+            yield return new(profile.Name + " workspace", profile.Description, profile.Glyph, "Profile", profile.Id);
+        yield return new("Workspaces", "Configure your personal desktop presets", "\uE8F1", "Workspace", "Workspaces");
+        yield return new("Hide Nexus", "Return to your other apps", "\uE8BB", "Action", "hide");
         foreach (var app in _orderedCatalog)
             yield return new(app.Name, app.Category == "Game" ? "Installed game" : "Windows app", app.Glyph, "App", app.Target);
         foreach (var saved in _state.SavedItems.OrderByDescending(a => a.Favorite))
             yield return new(saved.Title, saved.Collection + " · Saved " + saved.Kind.ToLowerInvariant(), saved.Kind == "Link" ? "\uE774" : "\uE8B7", "Saved", saved.Id);
+        foreach (var window in _desktopWindows)
+            yield return new(window.Title, window.ProcessName + " · Open window", "\uE7F4", "Window",
+                window.Handle.ToInt64().ToString(System.Globalization.CultureInfo.InvariantCulture));
         foreach (var task in _state.Tasks.Where(t => !t.Completed))
             yield return new(task.Title, "Task · Focus on this", "\uE916", "Task", task.Id);
     }
@@ -375,6 +385,7 @@ public sealed partial class MainWindow
         _previousFocus = FocusManager.GetFocusedElement(DesktopRoot.XamlRoot) as Control;
         ControlsFlyout.Hide();
         _commandOpen = true; CommandOverlay.Visibility = Visibility.Visible;
+        _commandCategory = "All";
         CommandSearchBox.Text = "";
         RenderCommands();
         DispatcherQueue.TryEnqueue(() =>
@@ -383,6 +394,7 @@ public sealed partial class MainWindow
         });
         _motion?.Enter(CommandPanel);
         if (!_catalogReady && !_discovering) _ = DiscoverAsync();
+        _ = RefreshDesktopWindowsAsync();
     }
     private void CloseCommands()
     {
@@ -391,13 +403,22 @@ public sealed partial class MainWindow
         CommandList.ItemsSource = null;
         _previousFocus?.Focus(FocusState.Programmatic); _previousFocus = null;
     }
-    private void RenderCommands()
+    private void RenderCommands(bool preserveSelection = false)
     {
         if (!_ready || !_commandOpen) return;
-        var entries = CommandSearch.Filter(CommandEntries(), CommandSearchBox.Text);
-        CommandList.ItemsSource = entries; CommandList.SelectedIndex = entries.Length == 0 ? -1 : 0;
+        var previous = preserveSelection ? CommandList.SelectedItem as CommandEntry : null;
+        var entries = ShellExperience.Search(CommandEntries(), CommandSearchBox.Text, _commandCategory,
+            _state.RecentCommands, _state.RememberRecentItems);
+        CommandList.ItemsSource = entries;
+        int selected = previous is null ? -1 : Array.FindIndex(entries, e => e.Kind == previous.Kind && e.Target == previous.Target);
+        CommandList.SelectedIndex = entries.Length == 0 ? -1 : selected >= 0 ? selected : 0;
         CommandEmpty.Visibility = entries.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        CommandSectionTitle.Text = string.IsNullOrWhiteSpace(CommandSearchBox.Text) && _commandCategory == "All"
+            ? entries.Any(e => e.Subtitle.StartsWith("Recent · ", StringComparison.Ordinal)) ? "RECENT & SUGGESTED" : "SUGGESTED"
+            : _commandCategory == "All" ? "RESULTS" : _commandCategory.ToUpperInvariant();
+        CommandResultCount.Text = entries.Length == 30 ? "30 shown" : entries.Length + " found";
         CommandHint.Text = _discovering ? "Finding your Start-menu apps…" : "↑ ↓ choose     Enter open     Esc close";
+        UpdateCommandCategories();
     }
     private void CommandSearch_TextChanged(object sender, TextChangedEventArgs args)
     {
@@ -429,8 +450,10 @@ public sealed partial class MainWindow
     }
     private void ExecuteCommand(CommandEntry entry)
     {
+        RememberCommand(entry);
         CloseCommands();
-        if (entry.Kind == "Workspace") Navigate(entry.Target);
+        if (entry.Kind == "Profile") EnterProfile(entry.Target);
+        else if (entry.Kind == "Workspace") Navigate(entry.Target);
         else if (entry.Kind == "App")
         {
             var app = _orderedCatalog.FirstOrDefault(a => a.Target == entry.Target);
@@ -441,7 +464,13 @@ public sealed partial class MainWindow
             var saved = _state.SavedItems.FirstOrDefault(a => a.Id == entry.Target);
             if (saved is not null) OpenSaved(saved);
         }
+        else if (entry.Kind == "Window")
+        {
+            var window = _desktopWindows.FirstOrDefault(w => w.Handle.ToInt64().ToString(System.Globalization.CultureInfo.InvariantCulture) == entry.Target);
+            if (window is null || !NativeMethods.Activate(window.Handle)) ShowStatus("This window is unavailable. Refresh window overview.");
+        }
         else if (entry.Kind == "Task") SelectFocusTask(entry.Target);
+        else if (entry.Target == "hide") HideNexus();
         else if (entry.Target == "controls") ControlsFlyout.ShowAt(ControlsButton);
         else if (entry.Target == "screen") SetFullScreen(!_state.FullScreen);
         else if (entry.Target == "focus") { Navigate("Study"); ToggleFocusSession(); }
@@ -462,15 +491,7 @@ public sealed partial class MainWindow
     }
     private void SelectWallpaper()
     {
-        var colors = _state.Wallpaper switch
-        {
-            "Aurora" => new[] { Windows.UI.Color.FromArgb(255, 10, 38, 40), Windows.UI.Color.FromArgb(255, 24, 55, 63), Windows.UI.Color.FromArgb(255, 31, 29, 57) },
-            "Slate" => new[] { Windows.UI.Color.FromArgb(255, 21, 24, 34), Windows.UI.Color.FromArgb(255, 37, 40, 55), Windows.UI.Color.FromArgb(255, 13, 25, 33) },
-            _ => new[] { Windows.UI.Color.FromArgb(255, 24, 22, 43), Windows.UI.Color.FromArgb(255, 38, 44, 71), Windows.UI.Color.FromArgb(255, 15, 42, 47) }
-        };
-        var brush = new LinearGradientBrush { StartPoint = new(0, 0), EndPoint = new(1, 1) };
-        for (int i = 0; i < colors.Length; i++) brush.GradientStops.Add(new GradientStop { Color = colors[i], Offset = i / 2.0 });
-        _chosenWallpaper = brush;
-        WallpaperAccents.Opacity = _state.Wallpaper == "Slate" ? .3 : _state.Wallpaper == "Aurora" ? .65 : .9;
+        ApplyAuraPalette();
+        WallpaperAccents.Opacity = _state.Wallpaper == "Slate" ? .35 : .7;
     }
 }

@@ -44,7 +44,9 @@ public sealed partial class MainWindow
             check.Checked += (_, _) => SetTaskCompleted(task.Id, true);
             HomeTaskList.Children.Add(check);
         }
-        foreach (var saved in _state.SavedItems.Where(s => s.Favorite).Take(4))
+        var selectedSaved = ActiveProfile.SavedItemIds.ToHashSet(StringComparer.Ordinal);
+        var homeSaved = selectedSaved.Count > 0 ? _state.SavedItems.Where(s => selectedSaved.Contains(s.Id)) : _state.SavedItems.Where(s => s.Favorite);
+        foreach (var saved in homeSaved.Take(4))
         {
             var button = ActionButton("★  " + saved.Title, () => OpenSaved(saved));
             button.HorizontalAlignment = HorizontalAlignment.Stretch; button.HorizontalContentAlignment = HorizontalAlignment.Left;
@@ -177,7 +179,8 @@ public sealed partial class MainWindow
     }
     private void SavedItemsChanged()
     {
-        SaveState(); RefreshCollectionChoices(); RenderSavedItems(); RenderHomeWorkspace(); RefreshWorkspaceSummary();
+        DesktopWorkspace.Normalize(_state);
+        SaveState(); RefreshCollectionChoices(); RenderSavedItems(); RenderHomeWorkspace(); RefreshWorkspaceSummary(); RenderDesktopIdentity();
         if (_commandOpen) RenderCommands();
     }
     private async Task EditSavedAsync(SavedItem entry)
@@ -201,6 +204,7 @@ public sealed partial class MainWindow
                 if (entry.Kind == "Link" && (!Uri.TryCreate(address.Text.Trim(), UriKind.Absolute, out var uri) || uri.Scheme is not ("https" or "http")))
                 { address.Header = "Enter a complete http:// or https:// address"; args.Cancel = true; }
             };
+            PolishDialog(dialog);
             if (await dialog.ShowAsync() != ContentDialogResult.Primary || !_ready) return;
             string target = entry.Kind == "Link" ? new Uri(address.Text.Trim()).AbsoluteUri : entry.Target;
             if (_state.SavedItems.Any(s => s.Id != entry.Id && s.Target.Equals(target, StringComparison.OrdinalIgnoreCase)))

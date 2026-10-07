@@ -13,7 +13,7 @@ options = parser.parse_args()
 root = Path(__file__).resolve().parents[1]
 project = root / "src/Nexus.Shell"
 required = [
-    "App.xaml", "App.xaml.cs", "MainWindow.xaml", "MainWindow.xaml.cs", "MainWindow.Workspaces.cs", "MainWindow.Orbit.cs",
+    "App.xaml", "App.xaml.cs", "MainWindow.xaml", "MainWindow.xaml.cs", "MainWindow.Workspaces.cs", "MainWindow.Orbit.cs", "MainWindow.Desktop.cs", "MainWindow.Appearance.cs", "MainWindow.Experience.cs", "Services/NavigationTrail.cs", "Services/ShellExperience.cs", "Services/AuraPalette.cs", "Services/DesktopWorkspace.cs", "Interop/DesktopIntegration.cs",
     "Services/FocusSession.cs", "Services/CommandSearch.cs", "Services/WorkspaceState.cs",
     "Nexus.Shell.csproj", "app.manifest", "Assets/Nexus.ico",
     "Interop/NativeMethods.cs", "Models/ShellState.cs", "Services/AppCatalog.cs",
@@ -129,6 +129,7 @@ for relative in ["TEST-WINDOWS.md", "RUN-PORTABLE.md", "VALIDATION.md", "DESIGN-
 assert (root / "docs/UPDATING.md").is_file()
 assert (root / "tests/Nexus.Core.Checks/Nexus.Core.Checks.csproj").is_file()
 assert (root / "tests/Nexus.Core.Checks/Program.cs").is_file()
+assert (root / "tests/Nexus.Core.Checks/DesktopNativeChecks.cs").is_file()
 workflow = (root / ".github/workflows/build-windows.yml").read_text()
 assert "./scripts/build.ps1 -UseMSBuild" in workflow
 assert "./scripts/package.ps1" in workflow
@@ -150,7 +151,7 @@ if options.syntax:
     from tree_sitter import Language, Parser
     import tree_sitter_c_sharp
     syntax_parser = Parser(Language(tree_sitter_c_sharp.language()))
-    for source in sorted(project.rglob("*.cs")):
+    for source in sorted([*project.rglob("*.cs"), *(root / "tests").rglob("*.cs")]):
         tree = syntax_parser.parse(source.read_bytes())
         assert not tree.root_node.has_error, f"C# syntax error: {source}"
     print("C# syntax OK (tree-sitter; API/type resolution NOT checked)")

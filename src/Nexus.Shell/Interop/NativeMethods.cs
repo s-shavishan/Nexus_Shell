@@ -7,6 +7,7 @@ namespace Nexus.Shell.Interop;
 
 internal static class NativeMethods
 {
+    [DllImport("dwmapi.dll", ExactSpelling = true)] private static extern int DwmGetWindowAttribute(IntPtr window, uint attribute, out uint value, uint size);
     private delegate bool EnumWindowCallback(IntPtr window, IntPtr parameter);
     [DllImport("user32.dll")] private static extern bool EnumWindows(EnumWindowCallback callback, IntPtr parameter);
     [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr window);
@@ -90,6 +91,7 @@ internal static class NativeMethods
         EnumWindows((window, _) =>
         {
             if (window == ownHandle || !IsWindowVisible(window)) return true;
+            if (DwmGetWindowAttribute(window, 14, out uint cloaked, 4) == 0 && cloaked != 0) return true; // DWMWA_CLOAKED
             long style = GetWindowLongPtr(window, -20).ToInt64();
             if ((style & 0x80) != 0) return true; // WS_EX_TOOLWINDOW
             var title = new StringBuilder(512);

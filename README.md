@@ -1,48 +1,50 @@
-# White Dreams Nexus Shell
+# NEXUS Shell 0.7.0 — Shell Experience
 
-A native C# / WinUI 3 desktop source preview for Windows 10 (build 19041 or newer) and Windows 11 x64. **Nexus Orbit** combines a macOS-inspired menu bar, floating dock, and sidebar workspace with its own pearl/violet/teal theme. It opens ordinary Windows applications.
+A native Windows desktop surface for your apps, study sessions, saved items and daily work, built on the Nexus Aura visual system.
 
-Start with **[START-HERE.md](START-HERE.md)**. It includes AppVeyor and GitHub Actions cloud-build routes so you can obtain the Windows executable without downloading local developer tools. AppVeyor's free hosted plan requires a public, open-source project.
+## New in this update
 
-## Project layout
+- Back/forward buttons and **Alt+Left / Alt+Right** for page navigation. History stays in the current session and is bounded to 24 pages; page refreshes add no duplicate entry.
+- A page/profile breadcrumb beneath the floating menu bar.
+- Search categories: **All, Apps, Saved, Workspaces, Actions, Tasks, Windows**.
+- Current open-window titles in search. Choosing a window asks Windows to activate it.
+- Up to eight recent app/saved-item/workspace choices from search. Current catalog entries resolve those references; stale items are omitted. Search text and ephemeral window handles are not stored in this list.
+- A **Personalize** page with Pearl/Lagoon/Graphite mood cards, desktop/panel layout, widgets, Home card visibility, glass/effects, compact dock and clock format.
+- Clear/disable recent-item shortcuts, and restore appearance defaults.
+- Compact dock controls, packed Home cards when some are hidden, native switch palette resources and high-contrast selection fixes.
 
-| Path | Responsibility |
+Notes and pins remain saved when their Home cards are hidden. Existing focus/tasks, workspace presets, global shortcut, notification-area residency, app library, usage tracking and binary updater remain available.
+
+## Use the update
+
+Open **More → Personalize**, the workspace sidebar, or Control center → **Personalize desktop**. Try compact dock and clock format; hide the Home cards you do not need. Personalization is saved on this PC. Appearance reset leaves notes, tasks, pins, workspaces and recent-item preferences intact.
+
+Press Ctrl+K, choose a category and type. Recent items appear first only in the empty All view. After choosing a category, input returns to the search field for typing and arrow/Enter selection. Recent-item clearing applies to these search shortcuts; Activity and optional usage data have their separate controls.
+
+| Shortcut | Action |
 |---|---|
-| `src/Nexus.Shell/MainWindow.xaml` | Native desktop composition and controls |
-| `src/Nexus.Shell/MainWindow.xaml.cs` | Window lifecycle, app library, dock, and Windows integration |
-| `src/Nexus.Shell/MainWindow.Workspaces.cs` | Command palette, Explore board, Study timer/notes, and desktop moods |
-| `src/Nexus.Shell/MainWindow.Orbit.cs` | Tasks, favorites/collections, paused recovery, and virtualized window overview |
-| `Services/WorkspaceState.cs` | Bounded workspace migration and validation |
-| `tests/Nexus.Core.Checks` | Timing, recovery, search, migration, JSON, and snapshot behavioral checks |
-| `Models` | Preferences, app entries, and session records |
-| `Services/AppCatalog.cs` | Known app detection, bounded Start menu discovery, launches |
-| `Services/StateStore.cs` | Atomic local JSON preferences |
-| `Services/UsageTracker.cs` | Opt-in foreground-time sampling |
-| `Services/ResourceSampler.cs` | Refreshed process memory and elapsed CPU measurements |
-| `UI/MotionController.cs` | Shared finite compositor animations, cancellation, and cleanup |
-| `UI/AppAccentConverter.cs` | Reused vector-tile color brushes |
-| `Services/StartupRegistration.cs` | Explicit current-user login startup |
-| `Interop/NativeMethods.cs` | Win32 accessibility/animation preferences, window enumeration, activation, and idle detection |
-| `scripts` | Build, compiled-resource checks, full/small packages, update checks, diagnostics, and startup cleanup |
-| `appveyor.yml` | AppVeyor Windows compile/publish/package configuration |
-| `.github/workflows` | Windows compile/publish workflow |
+| Alt+Left / Alt+Right | Previous / next Nexus page |
+| Ctrl+K | Search your orbit |
+| Ctrl+Alt+Space | Summon search from other apps while Nexus runs and the shortcut is enabled |
+| Ctrl+1 / 2 / 3 | Home / Explore / Study |
+| Ctrl+4 | Window overview |
+| F11 | Fullscreen / windowed |
+| Escape | Close search or controls, leave fullscreen, or minimize |
 
-No Electron, Node.js, webview-hosted interface, cloud telemetry, or provider bundle is used by the running app. WinUI's dependency graph includes SDK support for WebView2, but the project does not instantiate a WebView2 control or run its UI in Chromium.
+Navigation history changes pages; it does not restore prior workspace selections or execute app launches. Nexus continues to use Windows Explorer.
 
-This prototype runs as the signed-in user. A future privileged service must be a separate process with a restricted request interface. Applications launched from the dock should retain normal user-session behavior.
+## Build through AppVeyor
 
-## Deliberate limits
+Merge the small source patch into your **0.6.0 source repository**, commit and run AppVeyor. For earlier source versions, start from the complete 0.7.0 source ZIP. `START-HERE.md` explains the steps.
 
-The current dock is part of the Nexus window. It is not a system taskbar replacement and will not remain visible on top of every external app. Start menu discovery covers `.lnk` shortcuts, not every Store-app registration. Window focus follows Windows' foreground restrictions. No universal third-party title-bar restyling is attempted.
+After core/native checks, publishing and packaging succeed, use `Nexus-Shell-0.7.0-Update-win-x64.zip`. Fully exit Nexus, extract it and run `Apply-Update.bat` against your full binary folder. Runtime package references are unchanged from 0.6.0; the updater still checks actual runtime bytes. Use the full binary ZIP if compatibility checks fail.
 
-Usage totals are approximate foreground time, exclude periods idle for at least 90 seconds, and stop when Nexus exits. Sampling avoids crediting long gaps across sleep or a blocked UI thread. It collects process names, not screenshots, keyboard input, or browsing history.
+Source ZIPs need a Windows build and are not runnable application updates. The AppVeyor route needs no local developer downloads.
 
-## Verification
+## Validation status
 
-0.4.1 replaces the unsupported UWP high-contrast event with guarded Win32 preference queries, using the existing active-window timer and an activation refresh. The user-supplied 0.4.0 log confirms the app XAML loads on Windows 10 build 19045, then startup fails at that event subscription. The fix still needs a Windows build and launch test.
+Source XML, resource/event wiring, C# syntax parsing, linked core-source checks, version/dependency consistency and source-patch reconstruction passed here. Behavior checks were added to the CI harness. This environment has no Windows toolchain: compilation, test execution, native startup/input/material/scaling checks and performance measurements remain pending.
 
-0.4.0 connects Home to a task checklist and favorite items, adds collections and editing to Explore, restores focus timers paused, and introduces a searchable virtualized window overview. Small update downloads reuse compatible runtimes and require the new app resource set. The published PRI/XBF repair is retained. Windows build and launch checks remain required.
+`docs/Nexus-Experience-preview.png` and `docs/Nexus-Experience-search.png` are illustrative design references, not native Windows screenshots. Actual labels, fonts, toggle states and data follow the Windows runtime and local settings.
 
-See `docs/VALIDATION.md` for the checks performed while preparing this source and the Windows verification still required. There is no prebuilt executable in this source ZIP.
-
-See `docs/CHANGELOG.md` for release changes, `docs/DESIGN-AND-PERFORMANCE.md` for motion/resource policy, and `docs/Nexus-Orbit-preview.svg` for a design reference. None of these documents establishes a measured Windows memory reduction.
+Local Windows build: `.\scripts\build.ps1 -UseMSBuild -Run`. See `docs/TEST-WINDOWS.md`, `docs/VALIDATION.md`, `docs/DESIGN-AND-PERFORMANCE.md` and `docs/UPDATING.md`.

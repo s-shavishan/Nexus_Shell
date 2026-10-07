@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="940" viewBox="0 0 1440 940" role="img">
+<title>Nexus Desktop 0.5.0 — design reference, not a Windows screenshot</title><desc>Illustrative Study workspace with sample tasks and configured applications.</desc>
+<defs><linearGradient id="wallpaper" x2="1" y2="1"><stop stop-color="#18162B"/><stop offset=".52" stop-color="#262C47"/><stop offset="1" stop-color="#0F2A2F"/></linearGradient><linearGradient id="hero" x2="1" y2="1"><stop stop-color="#4B426A"/><stop offset=".65" stop-color="#2B3854"/><stop offset="1" stop-color="#28474C"/></linearGradient><clipPath id="viewport"><rect x="296" y="96" width="1112" height="744"/></clipPath></defs>
+<g font-family="DejaVu Sans, sans-serif">
+<rect x="0" y="0" width="1440" height="940" rx="0" fill="url(#wallpaper)" fill-opacity="1"/>
+<path d="M600,-80 C1000,300 600,460 1360,530" fill="none" stroke="#9B91EA" stroke-opacity=".11" stroke-width="180"/>
+<path d="M-190,780 C510,430 400,1190 1200,1110" fill="none" stroke="#5DDDCE" stroke-opacity=".09" stroke-width="160"/>
+<rect x="0" y="0" width="1440" height="44" rx="0" fill="#151A29" fill-opacity="1" stroke="#DFDFFF" stroke-opacity=".25"/>
+<rect x="20" y="9" width="26" height="26" rx="7" fill="#D0C7FF" fill-opacity="1"/>
+<text x="33" y="29" font-size="18" fill="#24203B" font-weight="600" text-anchor="middle">N</text>
+<text x="56" y="29" font-size="14" fill="#F2F3FD" font-weight="600" text-anchor="start">Nexus</text>
+<text x="143" y="28" font-size="12" fill="#F2F3FD" font-weight="400" text-anchor="start">Desktop</text>
+<text x="228" y="28" font-size="12" fill="#F2F3FD" font-weight="400" text-anchor="start">Workspaces</text>
+<text x="346" y="28" font-size="12" fill="#F2F3FD" font-weight="400" text-anchor="start">Explore</text>
+<text x="430" y="28" font-size="12" fill="#F2F3FD" font-weight="400" text-anchor="start">Study</text>
+<text x="504" y="28" font-size="12" fill="#F2F3FD" font-weight="400" text-anchor="start">Apps</text>
+<text x="574" y="28" font-size="12" fill="#F2F3FD" font-weight="400" text-anchor="start">More</text>
+<text x="1140" y="28" font-size="12" fill="#F2F3FD" font-weight="400" text-anchor="start">Wed 14:56</text>
+<g transform="translate(1260,13) scale(0.7083333333333334)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9V2h7m6 0h7v7M2 15v7h7m6 0h7v-7"/></g>
+<g transform="translate(1307,13) scale(0.7083333333333334)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="m12 1 2 4 4-1 2 3-2 4 3 2-1 4-4 1-2 4-4-1-1-4-4-2 1-4-3-2 2-4 4 1 3-3Z"/></g>
+<g transform="translate(1360,13) scale(0.7083333333333334)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M5 19 19 5"/></g>
+<text x="32" y="77" font-size="10" fill="#A9B0C9" font-weight="400" text-anchor="start" letter-spacing="1.5">NEXUS DESKTOP  /  STUDY</text>
+<g transform="translate(1196,59) scale(0.6666666666666666)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7"/><path d="m15 15 7 7"/></g>
+<text x="1220" y="73" font-size="12" fill="#F2F3FD" font-weight="400" text-anchor="start">Search your orbit</text>
+<text x="1360" y="73" font-size="10" fill="#A9B0C9" font-weight="400" text-anchor="start">Ctrl K</text>
+<rect x="32" y="124" width="134" height="30" rx="10" fill="#353C5C" fill-opacity="0.65"/>
+<text x="46" y="144" font-size="11" fill="#C7BDFF" font-weight="400" text-anchor="start">25:00 · Focus</text>
+<text x="32" y="184" font-size="14" fill="#A9B0C9" font-weight="400" text-anchor="start">Wednesday, 7 October</text>
+<text x="27" y="272" font-size="78" fill="#F2F3FD" font-weight="400" text-anchor="start">14:56</text>
+<text x="32" y="317" font-size="16" fill="#F2F3FD" font-weight="400" text-anchor="start">Good afternoon, Shan.</text>
+<rect x="32" y="359" width="232" height="151" rx="20" fill="#2C354E" fill-opacity="0.82" stroke="#D9DEFF" stroke-opacity=".25"/>
+<g transform="translate(52,379) scale(0.9166666666666666)" fill="none" stroke="#C7BDFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 18a9 9 0 0 1-13-13 9 9 0 1 0 13 13Z"/></g>
+<text x="52" y="427" font-size="18" fill="#F2F3FD" font-weight="400" text-anchor="start">Shan’s space</text>
+<text x="52" y="457" font-size="13" fill="#A9B0C9" font-weight="400" text-anchor="start">A little space for your</text>
+<text x="52" y="479" font-size="13" fill="#A9B0C9" font-weight="400" text-anchor="start">next big idea.</text>
+<text x="46" y="550" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Open my files</text>
+<text x="46" y="592" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Windows settings</text>
+<g clip-path="url(#viewport)">
+<text x="312" y="130" font-size="15" fill="#A9B0C9" font-weight="400" text-anchor="start">Welcome back, Shan.</text>
+<text x="1301" y="130" font-size="12" fill="#F2F3FD" font-weight="400" text-anchor="start">Workspaces</text>
+<rect x="312" y="153" width="266" height="51" rx="14" fill="#252D45" fill-opacity="0.95" stroke="#D9DEFF" stroke-opacity=".25"/>
+<g transform="translate(328,169) scale(0.75)" fill="none" stroke="#F2F3FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m2 10 10-8 10 8M5 9v13h14V9m-10 13v-8h6v8"/></g>
+<text x="359" y="185" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Personal</text>
+<rect x="588" y="153" width="266" height="51" rx="14" fill="#45445E" fill-opacity="0.95" stroke="#C7BDFF" stroke-opacity=".25"/>
+<g transform="translate(604,169) scale(0.75)" fill="none" stroke="#C7BDFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 18a9 9 0 0 1-13-13 9 9 0 1 0 13 13Z"/></g>
+<text x="635" y="185" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Study</text>
+<rect x="864" y="153" width="266" height="51" rx="14" fill="#252D45" fill-opacity="0.95" stroke="#D9DEFF" stroke-opacity=".25"/>
+<g transform="translate(880,169) scale(0.75)" fill="none" stroke="#F2F3FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m8 5-6 7 6 7m8-14 6 7-6 7m-3-15-3 18"/></g>
+<text x="911" y="185" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Coding</text>
+<rect x="1140" y="153" width="266" height="51" rx="14" fill="#252D45" fill-opacity="0.95" stroke="#D9DEFF" stroke-opacity=".25"/>
+<g transform="translate(1156,169) scale(0.75)" fill="none" stroke="#F2F3FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12c5 0 8 14 4 15-2 1-4-4-6-4H8c-2 0-4 5-6 4C-2 21 1 7 6 7Z"/><path d="M7 10v7m-3-3.5h6m6-2h.2m3 3h.2"/></g>
+<text x="1187" y="185" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Entertainment</text>
+<rect x="312" y="222" width="1096" height="218" rx="24" fill="url(#hero)" fill-opacity="1" stroke="#D2C7FF" stroke-opacity=".25"/>
+<text x="338" y="251" font-size="10" fill="#C7BDFF" font-weight="400" text-anchor="start" letter-spacing="1.4">YOUR PERSONAL DESKTOP</text>
+<text x="338" y="298" font-size="36" fill="#F2F3FD" font-weight="600" text-anchor="start">Study. A space to begin.</text>
+<text x="338" y="329" font-size="14" fill="#BBC3D9" font-weight="400" text-anchor="start">Make room for your A/L studies</text>
+<text x="338" y="357" font-size="12" fill="#BBC3D9" font-weight="400" text-anchor="start">2 apps · 2 saved items</text>
+<rect x="338" y="378" width="128" height="42" rx="11" fill="#C7BDFF" fill-opacity="1"/>
+<text x="402" y="404" font-size="13" fill="#201C32" font-weight="600" text-anchor="middle">Open Study</text>
+<text x="490" y="404" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Go to Study</text>
+<text x="600" y="404" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Configure</text>
+<g transform="translate(1240,260)"><circle cx="55" cy="65" r="54" fill="#284149" stroke="#5BBAB7" stroke-opacity=".5"/><ellipse cx="55" cy="65" rx="73" ry="26" fill="none" stroke="#C6B9FF" transform="rotate(-32,55,65)"/><ellipse cx="55" cy="65" rx="70" ry="23" fill="none" stroke="#7EE0D0" stroke-opacity=".4" transform="rotate(34,55,65)"/></g>
+<text x="1295" y="348" font-size="58" fill="#F0E9FF" font-weight="300" text-anchor="middle">N</text>
+<rect x="312" y="458" width="540" height="184" rx="20" fill="#252D45" fill-opacity="0.9" stroke="#D9DEFF" stroke-opacity=".25"/>
+<rect x="868" y="458" width="540" height="184" rx="20" fill="#252D45" fill-opacity="0.9" stroke="#D9DEFF" stroke-opacity=".25"/>
+<text x="332" y="493" font-size="19" fill="#F2F3FD" font-weight="600" text-anchor="start">In focus</text>
+<text x="784" y="491" font-size="12" fill="#F2F3FD" font-weight="400" text-anchor="start">Study</text>
+<text x="332" y="523" font-size="13" fill="#A9B0C9" font-weight="400" text-anchor="start">Focusing on: ET — revise circuit notes</text>
+<rect x="333" y="541" width="16" height="16" rx="4" fill="#182133" fill-opacity="1" stroke="#D9DEFF" stroke-opacity=".25"/>
+<text x="359" y="554" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">ET — revise circuit notes</text>
+<rect x="333" y="573" width="16" height="16" rx="4" fill="#182133" fill-opacity="1" stroke="#D9DEFF" stroke-opacity=".25"/>
+<text x="359" y="586" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Practice JavaScript for 30 minutes</text>
+<text x="332" y="622" font-size="12" fill="#A9B0C9" font-weight="400" text-anchor="start">1 focus session today</text>
+<text x="888" y="493" font-size="19" fill="#F2F3FD" font-weight="600" text-anchor="start">Within reach</text>
+<text x="1320" y="491" font-size="12" fill="#F2F3FD" font-weight="400" text-anchor="start">Explore</text>
+<g transform="translate(889,527) scale(0.7083333333333334)" fill="none" stroke="#C7BDFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><ellipse cx="12" cy="12" rx="4.5" ry="10"/><path d="M2 12h20"/></g>
+<text x="919" y="542" font-size="14" fill="#F2F3FD" font-weight="400" text-anchor="start">ICT learning resources</text>
+<g transform="translate(889,564) scale(0.7083333333333334)" fill="none" stroke="#C7BDFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7V4h7l3 3h10v14H2Z"/></g>
+<text x="919" y="579" font-size="14" fill="#F2F3FD" font-weight="400" text-anchor="start">My A/L notes</text>
+<text x="888" y="621" font-size="12" fill="#A9B0C9" font-weight="400" text-anchor="start">2 saved items</text>
+<rect x="312" y="660" width="540" height="228" rx="20" fill="#252D45" fill-opacity="0.9" stroke="#D9DEFF" stroke-opacity=".25"/>
+<rect x="868" y="660" width="540" height="228" rx="20" fill="#252D45" fill-opacity="0.9" stroke="#D9DEFF" stroke-opacity=".25"/>
+<text x="332" y="695" font-size="19" fill="#F2F3FD" font-weight="600" text-anchor="start">Your essentials</text>
+<text x="758" y="693" font-size="12" fill="#F2F3FD" font-weight="400" text-anchor="start">App Library</text>
+<rect x="350" y="721" width="56" height="56" rx="17" fill="#405786" fill-opacity="1" stroke="#D9DEFF" stroke-opacity=".25"/>
+<g transform="translate(365,736) scale(1.0416666666666667)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><ellipse cx="12" cy="12" rx="4.5" ry="10"/><path d="M2 12h20"/></g>
+<text x="378" y="803" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="middle">Firefox</text>
+<rect x="484" y="721" width="56" height="56" rx="17" fill="#645181" fill-opacity="1" stroke="#D9DEFF" stroke-opacity=".25"/>
+<g transform="translate(499,736) scale(1.0416666666666667)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m8 5-6 7 6 7m8-14 6 7-6 7m-3-15-3 18"/></g>
+<text x="512" y="803" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="middle">VS Code</text>
+<text x="888" y="695" font-size="19" fill="#F2F3FD" font-weight="600" text-anchor="start">A thought to keep</text>
+<rect x="888" y="716" width="500" height="142" rx="10" fill="#192133" fill-opacity="1" stroke="#D9DEFF" stroke-opacity=".25"/>
+<text x="904" y="747" font-size="14" fill="#A9B0C9" font-weight="400" text-anchor="start">One small step today.</text>
+<text x="904" y="777" font-size="13" fill="#A9B0C9" font-weight="400" text-anchor="start">Finish ET notes, then build something.</text>
+</g>
+<rect x="414" y="850" width="740" height="76" rx="23" fill="#434C65" fill-opacity="0.84" stroke="#DFDFFF" stroke-opacity=".25"/>
+<rect x="428" y="863" width="48" height="48" rx="13" fill="#C4B5EB" fill-opacity="1"/>
+<text x="452" y="897" font-size="27" fill="#24243C" font-weight="400" text-anchor="middle">N</text>
+<rect x="499" y="863" width="48" height="48" rx="13" fill="#405786" fill-opacity="1" stroke="#D9DEFF" stroke-opacity=".25"/>
+<g transform="translate(512,876) scale(0.9166666666666666)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><ellipse cx="12" cy="12" rx="4.5" ry="10"/><path d="M2 12h20"/></g>
+<rect x="560" y="863" width="48" height="48" rx="13" fill="#645181" fill-opacity="1" stroke="#D9DEFF" stroke-opacity=".25"/>
+<g transform="translate(573,876) scale(0.9166666666666666)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m8 5-6 7 6 7m8-14 6 7-6 7m-3-15-3 18"/></g>
+<rect x="626" y="863" width="40" height="38" rx="11" fill="#252D45" fill-opacity="1"/>
+<text x="646" y="890" font-size="17" fill="#F2F3FD" font-weight="400" text-anchor="middle">F</text>
+<rect x="644" y="906" width="5" height="3" rx="2" fill="#C7BDFF" fill-opacity="1"/>
+<rect x="680" y="863" width="40" height="38" rx="11" fill="#252D45" fill-opacity="1"/>
+<text x="700" y="890" font-size="17" fill="#F2F3FD" font-weight="400" text-anchor="middle">C</text>
+<rect x="698" y="906" width="5" height="3" rx="2" fill="#C7BDFF" fill-opacity="1"/>
+<rect x="734" y="863" width="40" height="38" rx="11" fill="#252D45" fill-opacity="1"/>
+<text x="754" y="890" font-size="17" fill="#F2F3FD" font-weight="400" text-anchor="middle">T</text>
+<rect x="752" y="906" width="5" height="3" rx="2" fill="#C7BDFF" fill-opacity="1"/>
+<rect x="794" y="863" width="48" height="48" rx="13" fill="#454C67" fill-opacity="1" stroke="#D9DEFF" stroke-opacity=".25"/>
+<g transform="translate(807,876) scale(0.9166666666666666)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7"/><path d="m15 15 7 7"/></g>
+<rect x="854" y="863" width="48" height="48" rx="13" fill="#454C67" fill-opacity="1" stroke="#D9DEFF" stroke-opacity=".25"/>
+<g transform="translate(867,876) scale(0.9166666666666666)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="2" width="15" height="14" rx="2"/><rect x="7" y="8" width="16" height="14" rx="2"/></g>
+<text x="940" y="893" font-size="11" fill="#C7BDFF" font-weight="400" text-anchor="start">Ctrl+Alt+Space</text>
+<text x="32" y="895" font-size="11" fill="#A9B0C9" font-weight="400" text-anchor="start">Nexus · native desktop</text>
+<text x="1240" y="895" font-size="12" fill="#F2F3FD" font-weight="400" text-anchor="start">Control center</text>
+<text x="32" y="932" font-size="9" fill="#A9B0C9" font-weight="400" text-anchor="start">0.5.0 DESIGN REFERENCE · Sample workspace data · Windows appearance still needs testing</text>
+</g></svg>

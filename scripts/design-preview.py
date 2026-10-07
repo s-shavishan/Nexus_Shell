@@ -1,12 +1,10 @@
-"""Draw a documentation design reference. Not a Windows/WinUI screenshot.
-Optional rendering needs CairoSVG and Pillow; neither is an app dependency.
+"""Nexus Shell 0.7.0 design references. Illustrative data, not Windows screenshots.
+Standard-library SVG; rasterize with a suitable SVG renderer for PNG delivery.
 """
 from pathlib import Path
 from html import escape
-import xml.etree.ElementTree as ET
-
-root = Path(__file__).resolve().parents[1]
-out = root / "docs"
+root=Path(__file__).resolve().parents[1]
+out=root/'docs'
 svg = []
 def add(value): svg.append(value)
 def rect(x,y,w,h,fill,rx=0,stroke=None,opacity=1):
@@ -32,113 +30,104 @@ def icon(kind,x,y,color="#EFF1FD",size=22):
         "menu": '<path d="M3 6h18M3 12h18M3 18h18"/>',
     }
     add(f'<g transform="translate({x},{y}) scale({size/24})" fill="none" stroke="{color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">{paths[kind]}</g>')
-add('<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="940" viewBox="0 0 1440 940" role="img">')
-add('<title>Nexus Orbit design reference — not a Windows runtime screenshot</title><desc>Code-drawn reference using the native source palette and sample application pins.</desc>')
-add('<defs><linearGradient id="wallpaper" x2="1" y2="1"><stop stop-color="#18162B"/><stop offset=".52" stop-color="#262C47"/><stop offset="1" stop-color="#0F2A2F"/></linearGradient><linearGradient id="hero" x2="1" y2="1"><stop stop-color="#494361"/><stop offset=".7" stop-color="#2A354E"/><stop offset="1" stop-color="#29474F"/></linearGradient></defs>')
-add('<g font-family="DejaVu Sans, sans-serif">')
-rect(0,0,1440,940,"url(#wallpaper)")
-# Draw the actual static wallpaper paths from XAML, with its Viewbox scaling.
-ns={"p":"http://schemas.microsoft.com/winfx/2006/xaml/presentation"}
-xml=ET.parse(root/"src/Nexus.Shell/MainWindow.xaml").getroot()
-canvas=xml.find('.//p:Viewbox/p:Canvas',ns)
-add('<g transform="translate(-32,0) scale(.94)" opacity=".85">')
-for i,node in enumerate(canvas):
-    data=node.attrib.get("Data")
-    if not data:continue
-    fill=node.find("p:Path.Fill/p:LinearGradientBrush",ns)
-    if fill is not None:
-        add(f'<defs><linearGradient id="ribbon{i}" x2="1" y2="1">')
-        for stop in fill:
-            add(f'<stop offset="{stop.attrib["Offset"]}" stop-color="{stop.attrib["Color"]}"/>')
-        add('</linearGradient></defs>')
-        add(f'<path d="{data}" fill="url(#ribbon{i})"/>')
-    else:
-        color=node.attrib["Stroke"]
-        alpha=int(color[1:3],16)/255 if len(color)==9 else 1
-        rgb="#"+color[-6:]
-        add(f'<path d="{data}" fill="none" stroke="{rgb}" stroke-opacity="{alpha}" stroke-width="{node.attrib["StrokeThickness"]}"/>')
-add('</g>')
-rect(0,0,1440,44,"#0C111D",opacity=.75)
-rect(20,9,26,26,"#D0C7FF",7);text(33,29,"N",19,"#24203B",600,"middle")
-text(55,28,"Nexus",14,weight=600)
-for x,label in [(151,"Home"),(219,"Explore"),(303,"Study"),(374,"Apps"),(434,"Games"),(502,"Activity")]:text(x,28,label,13)
-text(1210,28,"Wed  08:35",12,anchor="end")
-icon("expand",1249,15,size=16);icon("settings",1294,15,size=16);icon("exit",1341,15,size=16)
-text(32,81,"WHITE DREAMS  /  NEXUS ORBIT",10,"#A9B0C9",spacing=1.2)
-icon("search",1174,66,"#A9B0C9",14);text(1198,80,"Search your orbit",12);text(1340,80,"Ctrl K",11,"#A9B0C9")
-rect(32,115,107,26,"#3E4565",10,opacity=.35);text(44,133,"Your orbit",11,"#C7BDFF")
-text(32,163,"Wednesday, 7 October",14,"#A9B0C9");text(26,251,"08:35",78,weight=300)
-text(32,290,"Good morning, Shan.",16)
-rect(32,335,232,154,"#353C5C",20,"#D9DEFF",.5)
-icon("focus",51,356,"#C7BDFF",22);text(51,410,"Shan’s space",18)
-text(51,439,"A little space for your",13,"#A9B0C9");text(51,460,"next big idea.",13,"#A9B0C9")
-text(43,530,"Open my files",13);text(43,570,"Windows settings",13)
-# Floating workspace, sidebar and chrome.
-rect(296,106,1112,730,"#192033",23,"#D9DEFF",.91)
-rect(297,107,1110,49,"#3C435F",22,opacity=.44)
-rect(297,134,1110,22,"#3C435F",opacity=.44)
-for x,c in [(322,"#FF7F88"),(348,"#F1CE80"),(374,"#87DCC2")]:add(f'<circle cx="{x}" cy="131" r="5.5" fill="{c}"/>')
-text(852,135,"Window overview",13,"#A9B0C9",anchor="middle");icon("menu",1367,121,"#CBD0E8",17)
-rect(297,157,183,644,"#0D1321",opacity=.5)
-add('<path d="M480 156v646" stroke="#D9DEFF" stroke-opacity=".1"/>')
-text(322,192,"WORKSPACE",10,"#A9B0C9",spacing=1.0)
-for i,(kind,label) in enumerate([("home","Home"),("browser","Explore"),("focus","Study"),("apps","Apps"),("game","Games"),("activity","Activity")]):
-    y=210+i*44
 
-    icon(kind,322,y+12,"#DEDFF1",17);text(351,y+27,label,13)
-text(322,505,"YOUR SESSION",10,"#A9B0C9",spacing=1.0)
-rect(310,523,156,42,"#BEABF8",10,opacity=.16)
-icon("running",322,535,size=17);text(351,550,"Window overview",12)
-icon("settings",322,578,size=17);text(351,593,"Settings",13)
-add('<path d="M319 730h142" stroke="#D9DEFF" stroke-opacity=".2"/>')
-text(319,759,"Shan",13);text(319,780,"Personal workspace",11,"#A9B0C9")
-# Sample window titles; this is a design reference, not captured user data.
-text(504,210,"Everything in your orbit.",28,weight=600)
-text(504,239,"Find an open window and return to it. Ctrl+4 opens this view.",12,"#A9B0C9")
-rect(504,256,826,36,"#141B30",10,"#D9DEFF",.9)
-icon("search",518,267,"#A9B0C9",15);text(545,280,"Find a window or app",13,"#A9B0C9")
-rect(1340,256,44,36,"#252D45",10,"#D9DEFF",.8)
-text(1362,281,"↻",22,"#D2C7FF",anchor="middle")
-text(504,319,"6 of 6 open windows",11,"#A9B0C9")
-windows=[("Code",["Nexus Shell —", "MainWindow.xaml"]),
-         ("firefox",["A little inspiration", "— Firefox"]),
-         ("explorer",["Pictures"]),
-         ("WindowsTerminal",["PowerShell"]),
-         ("Notepad",["Today’s ideas"]),
-         ("ApplicationFrameHost",["Personalization"]) ]
-for i,(process,title) in enumerate(windows):
-    x=504+(i%3)*292; y=337+(i//3)*192
-    rect(x,y,280,180,"#252D45",18,"#D9DEFF",.94)
-    rect(x+17,y+17,36,36,"#151D30",11)
-    icon("running",x+26,y+26,"#C7BDFF",18)
-    text(x+64,y+40,process,11,"#A9B0C9")
-    for j,line in enumerate(title):text(x+17,y+89+j*23,line,16)
-    text(x+17,y+158,"Return to this window ↗",10,"#C7BDFF")
-# Space below the bounded grid stays calm; it is not filled with live thumbnails.
+TEXT='#F4F7FE'; MUTED='#B8C3D6'; ACCENT='#C7BEF7'; TEAL='#9BDED8'; CARD='#2A3343'; EDGE='#6D809A'
+def label(x,y,value,size=13,fill=TEXT,weight=400,anchor='start',spacing=None):text(x,y,value,size,fill,weight,anchor,spacing)
+def pill(x,y,w,title,active=False):
+ rect(x,y,w,38,'#344052' if active else '#273243',12,EDGE)
+ label(x+w/2,y+24,title,13,ACCENT if active else TEXT,anchor='middle')
+def start(title):
+ svg.clear()
+ add('<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1000" viewBox="0 0 1440 1000">')
+ add('<title>'+escape(title)+'</title>')
+ add('<defs><linearGradient id="wallpaper" x2="1" y2="1"><stop stop-color="#121722"/><stop offset="1" stop-color="#1B2C3A"/></linearGradient><linearGradient id="hero" x2="1" y2="1"><stop stop-color="#343B54"/><stop offset="1" stop-color="#29494C"/></linearGradient><clipPath id="viewport"><rect x="296" y="134" width="1112" height="748"/></clipPath></defs>')
+ add('<g font-family="DejaVu Sans, sans-serif">')
+ rect(0,0,1440,1000,'url(#wallpaper)')
+ add('<path d="M430,-160 C1240,-170 1320,640 1870,310 L1870,1110 C970,1200 1360,240 430,-160Z" fill="#5360A2" opacity=".09"/>')
+ add('<path d="M640,-120 C1400,120 1050,750 1750,620" fill="none" stroke="#978ED1" stroke-opacity=".12"/>')
+ add('<path d="M-190,780 C510,430 400,1190 1200,1110" fill="none" stroke="#5DDDCE" stroke-opacity=".05" stroke-width="160"/>')
+ rect(24,16,1392,56,'#1B2433',20,EDGE)
+ rect(40,29,30,30,ACCENT,10);label(55,51,'N',20,'#171C29',600,'middle');label(80,50,'NEXUS',13,weight=600,spacing=1.2)
+ for x,w,title in [(168,90,'Desktop'),(262,126,'Workspaces'),(392,88,'Explore'),(484,78,'Study'),(566,70,'Apps'),(640,75,'More')]:
+  label(x+w/2,50,title,13,TEXT,anchor='middle')
+ label(1130,50,'Wed 14:56',12);icon('expand',1260,36,size=17);icon('settings',1308,36,size=17);icon('exit',1360,36,size=17)
+ label(39,110,'←',18,MUTED);label(76,110,'→',18,MUTED);label(112,111,'NEXUS  /  PERSONALIZE  /  STUDY',10,MUTED,spacing=1.2)
+ icon('search',1190,94,size=16);label(1216,108,'Search your orbit',12);label(1360,108,'Ctrl K',10,MUTED)
+def frame():
+ rect(32,162,126,30,'#2D3A4D',14);label(46,182,'25:00 · Focus',11,ACCENT)
+ label(32,223,'NEXUS AURA / PEARL',9,MUTED,spacing=1)
+ label(32,258,'Wednesday, 7 October',14,MUTED);label(27,346,'14:56',78)
+ label(32,392,'Good afternoon, Shan.',16)
+ rect(32,434,232,151,CARD,20,EDGE);icon('focus',52,454,ACCENT,22)
+ label(52,502,'Shan’s space',18);label(52,533,'A little space for your',13,MUTED);label(52,555,'next big idea.',13,MUTED)
+ label(46,625,'Open my files',13);label(46,668,'Windows settings',13)
 
-rect(297,802,1110,33,"#0E1525",22,opacity=.63);rect(297,802,1110,15,"#0E1525",opacity=.63)
-text(314,823,"6 visible windows · Refreshes while this view is active",11,"#A9B0C9");text(1389,823,"NEXUS  0.4",9,"#A9B0C9",anchor="end",spacing=.8)
-text(32,893,"Nexus · native desktop",11,"#A9B0C9");text(1268,893,"Control center",12)
-# Dock: stationary buttons contain moving icon chrome in the native app.
-pins=[("files","Files","#3B7085"),("browser","Firefox","#3B5691"),("code","VS Code","#625091"),("browser","Browser","#3B5691"),("terminal","Terminal","#625091")]
-rect(455,851,530,76,"#4C526D",23,"#DFDFFF",.69)
-rect(469,865,48,48,"#C4B5EB",13);text(493,899,"N",27,"#24243C",anchor="middle")
-add('<path d="M533 873v32" stroke="#D9DEFF" stroke-opacity=".3"/>')
-for i,(kind,label,color) in enumerate(pins[:5]):
-    x=549+i*61
-    rect(x,865,48,48,color,13,"#FFFFFF");icon(kind,x+13,878,size=22)
-rect(856,865,48,48,"#545078",13,"#FFFFFF");icon("search",869,878,size=22)
-rect(917,865,48,48,"#454C67",13,"#FFFFFF");icon("running",930,878,size=22)
-add('</g></svg>')
-out.mkdir(exist_ok=True)
-(out/"Nexus-Orbit-preview.svg").write_text("\n".join(svg),encoding="utf-8")
-print(out/"Nexus-Orbit-preview.svg")
-if __name__ == "__main__":
-    import argparse
-    parser=argparse.ArgumentParser()
-    parser.add_argument("--png",action="store_true")
-    args=parser.parse_args()
-    if args.png:
-        import cairosvg
-        cairosvg.svg2png(url=str(out/"Nexus-Orbit-preview.svg"),write_to=str(out/"Nexus-Orbit-preview.png"))
-        print(out/"Nexus-Orbit-preview.png")
+ # Dock width reflects two selected apps, three running entries, search and overview.
+ rect(445,902,550,76,'#1B2433',26,EDGE)
+ rect(458,915,48,48,ACCENT,16);label(482,949,'N',27,'#171C29',anchor='middle')
+ rect(517,925,1,30,EDGE)
+ for x,kind,col in [(530,'browser','#344E70'),(592,'code','#514766')]:rect(x,915,48,48,col,16,EDGE);icon(kind,x+13,928,size=22)
+ for x,t in [(655,'F'),(712,'C'),(769,'T')]:
+  rect(x,915,40,38,CARD,12);label(x+20,942,t,17,anchor='middle');rect(x+18,958,5,3,ACCENT,2)
+ for x,kind in [(834,'search'),(896,'running')]:rect(x,915,48,48,CARD,16,EDGE);icon(kind,x+13,928,size=22)
+ label(32,947,'Nexus · native desktop',11,MUTED);label(1240,947,'Control center',12)
+def finish(name):
+ label(32,992,'0.7.0 EXPERIENCE DESIGN REFERENCE · Illustrative data · Not a Windows screenshot',9,MUTED)
+ add('</g></svg>');path=out/name;path.write_text('\n'.join(svg));print(path)
+
+def toggle(x,y,title,on=True,caption=None):
+ label(x,y,title,14)
+ rect(x+425,y-15,42,22,ACCENT if on else CARD,11,EDGE)
+ rect(x+449 if on else x+429,y-11,14,14,'#171C29' if on else MUTED,7)
+ label(x,y+24,caption or ('On' if on else 'Off'),12,MUTED)
+def personalize():
+ add('<g clip-path="url(#viewport)">')
+ label(320,178,'Make Nexus yours.',30,weight=600)
+ label(320,211,'Choose your mood, shape the desktop, and keep what matters within reach.',14,MUTED)
+ label(320,245,'AURA MOODS',11,MUTED,spacing=1)
+ for i,(title,caption,accent,secondary,canvas) in enumerate([
+   ('Pearl · Current','Iris & charcoal',ACCENT,TEAL,'#121722'),
+   ('Lagoon','Deep teal','#8DDFD3','#AFBEF6','#101C22'),
+   ('Graphite','Cool blue','#AACCF4','#C3BBE8','#121820')]):
+  x=320+i*366;rect(x,263,354,128,CARD,20,ACCENT if i==0 else EDGE)
+  for j,col in enumerate([accent,secondary,canvas]):rect(x+20+j*31,283,24,24,col,12,EDGE)
+  label(x+20,337,title,17);label(x+20,366,caption,12,MUTED)
+ for x in [320,872]:rect(x,411,536,590,CARD,22,EDGE)
+ label(340,450,'Your desktop',21,weight=600)
+ for i,(title,caption) in enumerate([
+   ('Open desktop canvas','Floating desktop'),('Desktop widgets','On'),
+   ('Clock and date','On'),('Personal space card','On'),('Home essentials','On'),('Home quick notes','On')]):toggle(340,493+i*67,title,True,caption)
+ label(892,450,'Feel & interaction',21,weight=600)
+ toggle(892,493,'Native glass',False,'Pearl surfaces')
+ toggle(892,565,'Reduced effects',False,'Off')
+ toggle(892,637,'Compact dock',False,'Comfortable icons')
+ label(892,710,'Clock format',13)
+ rect(892,726,496,46,'#141B29',12,EDGE);label(908,756,'24-hour · 14:56',14);label(1362,755,'⌄',18,MUTED)
+ label(892,808,'Glass follows Windows availability.',12,MUTED)
+ label(892,831,'High contrast and reduced effects use simpler surfaces.',12,MUTED)
+ pill(892,851,186,'Open control center')
+ add('</g>')
+start('Nexus Shell 0.7.0 — Personalize design reference');frame();personalize();finish('Nexus-Experience-preview.svg')
+start('Nexus Shell 0.7.0 — categorized search design reference');frame();personalize()
+rect(0,80,1440,900,'#090E18',opacity=.76)
+rect(380,96,680,590,'#1B2433',26,EDGE)
+rect(404,120,560,56,'#141B29',12,EDGE);icon('search',422,138,ACCENT,21)
+label(457,155,'Search your orbit…',18,MUTED);label(991,154,'Esc',14,MUTED)
+x=404
+for title,width in [('All',40),('Apps',52),('Saved',61),('Workspaces',101),('Actions',71),('Tasks',57),('Windows',81)]:
+ if title=='All':rect(x,190,width,34,'#303D50',12)
+ label(x+width/2,212,title,12,ACCENT if title=='All' else TEXT,anchor='middle');x+=width+4
+label(404,253,'RECENT & SUGGESTED',10,MUTED,spacing=1);label(1036,253,'30 shown',11,MUTED,anchor='end')
+for i,(title,subtitle,kind) in enumerate([
+ ('Firefox','Recent · Windows app','browser'),('ICT learning resources','Recent · Study · Saved link','files'),
+ ('Study workspace','Recent · Make room for your A/L studies','focus'),('Home','Your personal desktop','home'),
+ ('Explore','Saved links, files and folders','files'),('Control center','Appearance and Windows settings','settings')]):
+ y=272+i*60
+ if i==0:rect(404,y,632,56,'#303D50',14)
+ rect(418,y+10,36,36,CARD,12);icon(kind,427,y+19,ACCENT,18)
+ label(470,y+26,title,14);label(470,y+44,subtitle,11,MUTED)
+label(404,662,'↑ ↓ choose     Enter open     Esc close',11,MUTED)
+label(380,737,'YOUR ORBIT, EASIER TO REACH',11,ACCENT,spacing=1.4)
+label(380,773,'Filter apps, saved things, workspaces, actions, tasks or open windows.',14)
+label(380,807,'Recent-item shortcuts can be cleared or disabled in Personalize.',13,MUTED)
+finish('Nexus-Experience-search.svg')
