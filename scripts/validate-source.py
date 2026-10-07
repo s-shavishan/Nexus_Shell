@@ -13,7 +13,8 @@ options = parser.parse_args()
 root = Path(__file__).resolve().parents[1]
 project = root / "src/Nexus.Shell"
 required = [
-    "App.xaml", "App.xaml.cs", "MainWindow.xaml", "MainWindow.xaml.cs",
+    "App.xaml", "App.xaml.cs", "MainWindow.xaml", "MainWindow.xaml.cs", "MainWindow.Workspaces.cs", "MainWindow.Orbit.cs",
+    "Services/FocusSession.cs", "Services/CommandSearch.cs", "Services/WorkspaceState.cs",
     "Nexus.Shell.csproj", "app.manifest", "Assets/Nexus.ico",
     "Interop/NativeMethods.cs", "Models/ShellState.cs", "Services/AppCatalog.cs",
     "Services/Log.cs", "Services/StartupRegistration.cs", "Services/StateStore.cs",
@@ -26,15 +27,43 @@ for path in [*project.glob("*.xaml"), project / "Nexus.Shell.csproj", project / 
     ET.parse(path)
     print("XML OK:", path.relative_to(root))
 
+# XAML's implicit content collection must form one contiguous block. XML alone
+# accepts content -> property element -> more content, but WinUI reports this
+# as WMC0035 (ResourceDictionary's implicit collection is named _Items).
+for path in project.glob("*.xaml"):
+    for node in ET.parse(path).getroot().iter():
+        seen_content = False
+        content_ended = False
+        for child in node:
+            local_name = child.tag.rsplit("}", 1)[-1]
+            if "." in local_name:
+                if seen_content:
+                    content_ended = True
+            else:
+                assert not content_ended, (
+                    f"Non-contiguous XAML content (WMC0035): {path.relative_to(root)}; "
+                    f"{node.tag.rsplit('}', 1)[-1]} resumes at {local_name}. "
+                    "Keep collection items together before or after property elements."
+                )
+                seen_content = True
+print("XAML content ordering OK")
+
+for path in project.glob("*.xaml"):
+    for node in ET.parse(path).getroot().iter():
+        tag = node.tag.rsplit("}", 1)[-1]
+        if tag in {"Border", "Window", "ScrollViewer", "Viewbox", "Flyout", "Button", "ContentControl"}:
+            children = [c for c in node if "." not in c.tag.rsplit("}", 1)[-1]]
+            assert len(children) <= 1, f"Multiple children in {tag}: {path}"
+
 xns = "{http://schemas.microsoft.com/winfx/2006/xaml}"
 window = ET.parse(project / "MainWindow.xaml").getroot()
-code = (project / "MainWindow.xaml.cs").read_text(encoding="utf-8")
+code = "\n".join(p.read_text(encoding="utf-8") for p in project.glob("MainWindow*.cs"))
 names = [node.attrib[xns + "Name"] for node in window.iter() if xns + "Name" in node.attrib]
 assert len(names) == len(set(names)), "Duplicate XAML names"
 handlers = set()
 for node in window.iter():
     for key, value in node.attrib.items():
-        if key in {"Click", "Toggled", "SizeChanged", "PointerPressed", "Loaded", "Opening", "Opened", "Closed", "ItemClick", "TextChanged", "ContainerContentChanging"}:
+        if key in {"Click", "Toggled", "SizeChanged", "PointerPressed", "Loaded", "Opening", "Opened", "Closed", "ItemClick", "TextChanged", "ContainerContentChanging", "SelectionChanged", "PreviewKeyDown"}:
             assert re.search(r"\b" + re.escape(value) + r"\s*\(", code), f"Missing handler: {value}"
             handlers.add(value)
 assert "AutomationProperties =" not in code, "Attached properties must use their setters"
@@ -68,11 +97,15 @@ assert used_theme_keys <= fallback_keys, f"Missing fallback resources: {used_the
 # Guard the library's finite viewport; an outer ScrollViewer/StackPanel would
 # reintroduce full realization of all discovered application tiles.
 parents = {child: parent for parent in window.iter() for child in parent}
-apps_grid = next(node for node in window.iter() if node.attrib.get(xns + "Name") == "AppsGrid")
-ancestor = parents[apps_grid]
-while ancestor is not window:
-    assert ancestor.tag.rsplit("}", 1)[-1] not in {"ScrollViewer", "StackPanel"}, "Unbounded app-library viewport"
-    ancestor = parents[ancestor]
+for grid_name in ["AppsGrid", "WindowsGrid"]:
+    grid = next(node for node in window.iter() if node.attrib.get(xns + "Name") == grid_name)
+    ancestor = parents[grid]
+    while ancestor is not window:
+        assert ancestor.tag.rsplit("}", 1)[-1] not in {"ScrollViewer", "StackPanel"}, f"Unbounded {grid_name} viewport"
+        ancestor = parents[ancestor]
+page_host = next(node for node in window.iter() if node.attrib.get(xns + "Name") == "PageHost")
+overview = next(node for node in window.iter() if node.attrib.get(xns + "Name") == "WindowOverviewView")
+assert parents[overview] is page_host, "Window overview must be inside the page host"
 assert "AppsGrid.ItemsSource =" in code and "grid.Items.Add(AppButton" not in code
 motion = (project / "UI/MotionController.cs").read_text(encoding="utf-8")
 assert "IterationBehavior.Forever" not in motion and "CompositionTarget.Rendering" not in motion
@@ -80,16 +113,30 @@ assert "IterationBehavior.Forever" not in motion and "CompositionTarget.Renderin
 json.loads((root / "global.json").read_text())
 reserved, icon_type, count = struct.unpack("<HHH", (project / "Assets/Nexus.ico").read_bytes()[:6])
 assert reserved == 0 and icon_type == 1 and count >= 5, "Invalid application icon"
-for relative in ["build.ps1", "package.ps1", "diagnostics.ps1", "disable-startup.ps1", "measure-resources.ps1"]:
+for relative in ["build.ps1", "package.ps1", "verify-resources.ps1", "package-update.ps1", "apply-update.ps1", "test-update.ps1", "diagnostics.ps1", "disable-startup.ps1", "measure-resources.ps1"]:
     assert (root / "scripts" / relative).is_file()
 for relative in ["TEST-WINDOWS.md", "RUN-PORTABLE.md", "VALIDATION.md", "DESIGN-AND-PERFORMANCE.md", "CHANGELOG.md"]:
     assert (root / "docs" / relative).is_file()
+assert (root / "docs/UPDATING.md").is_file()
+assert (root / "tests/Nexus.Core.Checks/Nexus.Core.Checks.csproj").is_file()
+assert (root / "tests/Nexus.Core.Checks/Program.cs").is_file()
 workflow = (root / ".github/workflows/build-windows.yml").read_text()
 assert "./scripts/build.ps1 -UseMSBuild" in workflow
 assert "./scripts/package.ps1" in workflow
 assert "contents: read" in workflow
 assert "windows-2022" in workflow
 assert "src\\Nexus.Shell\\Nexus.Shell.csproj" in (root / "Nexus.Shell.sln").read_text()
+# The project's own resource index must be carried into the unpackaged publish;
+# the native framework DLL/PRIs alone cannot resolve ms-appx:///MainWindow.xaml.
+project_xml = ET.parse(project / "Nexus.Shell.csproj").getroot()
+assert project_xml.findtext("PropertyGroup/EnableMsixTooling") == "true"
+assert project_xml.findtext("PropertyGroup/WindowsPackageType") == "None"
+resource_target = project_xml.find("Target[@Name='NexusPublishXamlResources']")
+assert resource_target is not None and resource_target.attrib.get("AfterTargets") == "Publish"
+resource_items = resource_target.find("ItemGroup/_NexusBuildResources").attrib["Include"]
+assert "*.pri" in resource_items and "*.xbf" in resource_items
+copy = resource_target.find("Copy[@SourceFiles='@(_NexusBuildResources)']")
+assert "%(RecursiveDir)" in copy.attrib["DestinationFiles"]
 if options.syntax:
     from tree_sitter import Language, Parser
     import tree_sitter_c_sharp

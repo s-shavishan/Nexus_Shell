@@ -41,6 +41,12 @@ public partial class App : Application
         }
         string? version = typeof(App).Assembly.GetName().Version?.ToString(3);
         Log.Write($"Nexus Shell {version} started; {Environment.OSVersion}; {System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}");
+        try
+        {
+            Log.Write("Root PRI files: " + string.Join(", ", Directory.EnumerateFiles(AppContext.BaseDirectory, "*.pri").Select(Path.GetFileName)));
+            Log.Write("Loose MainWindow.xbf present: " + File.Exists(Path.Combine(AppContext.BaseDirectory, "MainWindow.xbf")) + "; XBF may instead be embedded in the app PRI");
+        }
+        catch (Exception ex) { Log.Write("Could not inspect startup resource files", ex); }
         string stage = "constructing MainWindow";
         try
         {

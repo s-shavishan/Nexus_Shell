@@ -3,6 +3,8 @@
 image: Visual Studio 2022
 
 build_script:
+  - ps: dotnet run --project .\tests\Nexus.Core.Checks\Nexus.Core.Checks.csproj --configuration Release
+  - ps: .\scripts\test-update.ps1
   - ps: .\scripts\build.ps1 -UseMSBuild
   - ps: .\scripts\package.ps1
 
@@ -10,5 +12,9 @@ test: off
 deploy: off
 
 artifacts:
-  - path: artifacts\Nexus-Shell-0.2.1-win-x64.zip
-  - path: artifacts\Nexus-Shell-0.2.1-win-x64.zip.sha256
+  - path: artifacts\Nexus-Shell-0.4.0-win-x64.zip
+  - path: artifacts\Nexus-Shell-0.4.0-win-x64.zip.sha256
+  - path: artifacts\Nexus-Shell-0.4.0-Update-win-x64.zip
+  - path: artifacts\Nexus-Shell-0.4.0-Update-win-x64.zip.sha256
+  - path: artifacts\logs\resources-check.json
+  - path: artifacts\logs\app-resources.xml

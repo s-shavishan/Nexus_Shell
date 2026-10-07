@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1440" height="940" viewBox="0 0 1440 940" role="img">
 <title>Nexus Orbit design reference — not a Windows runtime screenshot</title><desc>Code-drawn reference using the native source palette and sample application pins.</desc>
-<defs><linearGradient id="wallpaper" x2="1" y2="1"><stop stop-color="#131529"/><stop offset=".52" stop-color="#1D2940"/><stop offset="1" stop-color="#0D222B"/></linearGradient><linearGradient id="hero" x2="1" y2="1"><stop stop-color="#494361"/><stop offset=".7" stop-color="#2A354E"/><stop offset="1" stop-color="#29474F"/></linearGradient></defs>
+<defs><linearGradient id="wallpaper" x2="1" y2="1"><stop stop-color="#18162B"/><stop offset=".52" stop-color="#262C47"/><stop offset="1" stop-color="#0F2A2F"/></linearGradient><linearGradient id="hero" x2="1" y2="1"><stop stop-color="#494361"/><stop offset=".7" stop-color="#2A354E"/><stop offset="1" stop-color="#29474F"/></linearGradient></defs>
 <g font-family="DejaVu Sans, sans-serif">
 <rect x="0" y="0" width="1440" height="940" rx="0" fill="url(#wallpaper)" fill-opacity="1"/>
 <g transform="translate(-32,0) scale(.94)" opacity=".85">
@@ -24,19 +24,23 @@
 <text x="33" y="29" font-size="19" fill="#24203B" font-weight="600" text-anchor="middle">N</text>
 <text x="55" y="28" font-size="14" fill="#F2F3FD" font-weight="600" text-anchor="start">Nexus</text>
 <text x="151" y="28" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Home</text>
-<text x="219" y="28" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Apps</text>
-<text x="278" y="28" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Games</text>
-<text x="349" y="28" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Activity</text>
-<text x="1210" y="28" font-size="12" fill="#F2F3FD" font-weight="400" text-anchor="end">Tue  00:19</text>
+<text x="219" y="28" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Explore</text>
+<text x="303" y="28" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Study</text>
+<text x="374" y="28" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Apps</text>
+<text x="434" y="28" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Games</text>
+<text x="502" y="28" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Activity</text>
+<text x="1210" y="28" font-size="12" fill="#F2F3FD" font-weight="400" text-anchor="end">Wed  08:35</text>
 <g transform="translate(1249,15) scale(0.6666666666666666)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9V2h7m6 0h7v7M2 15v7h7m6 0h7v-7"/></g>
 <g transform="translate(1294,15) scale(0.6666666666666666)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="m12 1 2 4 4-1 2 3-2 4 3 2-1 4-4 1-2 4-4-1-1-4-4-2 1-4-3-2 2-4 4 1 3-3Z"/></g>
 <g transform="translate(1341,15) scale(0.6666666666666666)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M5 19 19 5"/></g>
-<text x="32" y="81" font-size="10" fill="#A9B0C9" font-weight="400" text-anchor="start" letter-spacing="1.2">WHITE DREAMS  /  YOUR WORLD, CONNECTED</text>
-<g transform="translate(1220,66) scale(0.5833333333333334)" fill="none" stroke="#A9B0C9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7"/><path d="m15 15 7 7"/></g>
-<text x="1244" y="80" font-size="12" fill="#F2F3FD" font-weight="400" text-anchor="start">Find an app</text>
+<text x="32" y="81" font-size="10" fill="#A9B0C9" font-weight="400" text-anchor="start" letter-spacing="1.2">WHITE DREAMS  /  NEXUS ORBIT</text>
+<g transform="translate(1174,66) scale(0.5833333333333334)" fill="none" stroke="#A9B0C9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7"/><path d="m15 15 7 7"/></g>
+<text x="1198" y="80" font-size="12" fill="#F2F3FD" font-weight="400" text-anchor="start">Search your orbit</text>
 <text x="1340" y="80" font-size="11" fill="#A9B0C9" font-weight="400" text-anchor="start">Ctrl K</text>
-<text x="32" y="163" font-size="14" fill="#A9B0C9" font-weight="400" text-anchor="start">Tuesday, 6 October</text>
-<text x="26" y="251" font-size="78" fill="#F2F3FD" font-weight="300" text-anchor="start">00:19</text>
+<rect x="32" y="115" width="107" height="26" rx="10" fill="#3E4565" fill-opacity="0.35"/>
+<text x="44" y="133" font-size="11" fill="#C7BDFF" font-weight="400" text-anchor="start">Your orbit</text>
+<text x="32" y="163" font-size="14" fill="#A9B0C9" font-weight="400" text-anchor="start">Wednesday, 7 October</text>
+<text x="26" y="251" font-size="78" fill="#F2F3FD" font-weight="300" text-anchor="start">08:35</text>
 <text x="32" y="290" font-size="16" fill="#F2F3FD" font-weight="400" text-anchor="start">Good morning, Shan.</text>
 <rect x="32" y="335" width="232" height="154" rx="20" fill="#353C5C" fill-opacity="0.5" stroke="#D9DEFF" stroke-opacity=".25"/>
 <g transform="translate(51,356) scale(0.9166666666666666)" fill="none" stroke="#C7BDFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 18a9 9 0 0 1-13-13 9 9 0 1 0 13 13Z"/></g>
@@ -51,91 +55,100 @@
 <circle cx="322" cy="131" r="5.5" fill="#FF7F88"/>
 <circle cx="348" cy="131" r="5.5" fill="#F1CE80"/>
 <circle cx="374" cy="131" r="5.5" fill="#87DCC2"/>
-<text x="852" y="135" font-size="13" fill="#A9B0C9" font-weight="400" text-anchor="middle">Nexus Home</text>
+<text x="852" y="135" font-size="13" fill="#A9B0C9" font-weight="400" text-anchor="middle">Window overview</text>
 <g transform="translate(1367,121) scale(0.7083333333333334)" fill="none" stroke="#CBD0E8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/></g>
 <rect x="297" y="157" width="183" height="644" rx="0" fill="#0D1321" fill-opacity="0.5"/>
 <path d="M480 156v646" stroke="#D9DEFF" stroke-opacity=".1"/>
 <text x="322" y="192" font-size="10" fill="#A9B0C9" font-weight="400" text-anchor="start" letter-spacing="1.0">WORKSPACE</text>
-<rect x="310" y="210" width="156" height="42" rx="10" fill="#BEABF8" fill-opacity="0.16"/>
 <g transform="translate(322,222) scale(0.7083333333333334)" fill="none" stroke="#DEDFF1" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m2 10 10-8 10 8M5 9v13h14V9m-10 13v-8h6v8"/></g>
 <text x="351" y="237" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Home</text>
-<g transform="translate(322,269) scale(0.7083333333333334)" fill="none" stroke="#DEDFF1" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="8" height="8" rx="2"/><rect x="14" y="2" width="8" height="8" rx="2"/><rect x="2" y="14" width="8" height="8" rx="2"/><rect x="14" y="14" width="8" height="8" rx="2"/></g>
-<text x="351" y="284" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Apps</text>
-<g transform="translate(322,316) scale(0.7083333333333334)" fill="none" stroke="#DEDFF1" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12c5 0 8 14 4 15-2 1-4-4-6-4H8c-2 0-4 5-6 4C-2 21 1 7 6 7Z"/><path d="M7 10v7m-3-3.5h6m6-2h.2m3 3h.2"/></g>
-<text x="351" y="331" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Games</text>
-<g transform="translate(322,363) scale(0.7083333333333334)" fill="none" stroke="#DEDFF1" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 21h20M5 17v-6m7 6V3m7 14V7"/></g>
-<text x="351" y="378" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Activity</text>
-<text x="322" y="444" font-size="10" fill="#A9B0C9" font-weight="400" text-anchor="start" letter-spacing="1.0">YOUR SESSION</text>
-<g transform="translate(322,471) scale(0.7083333333333334)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="2" width="15" height="14" rx="2"/><rect x="7" y="8" width="16" height="14" rx="2"/></g>
-<text x="351" y="486" font-size="12" fill="#F2F3FD" font-weight="400" text-anchor="start">Running apps</text>
-<g transform="translate(322,518) scale(0.7083333333333334)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="m12 1 2 4 4-1 2 3-2 4 3 2-1 4-4 1-2 4-4-1-1-4-4-2 1-4-3-2 2-4 4 1 3-3Z"/></g>
-<text x="351" y="533" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Settings</text>
+<g transform="translate(322,266) scale(0.7083333333333334)" fill="none" stroke="#DEDFF1" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><ellipse cx="12" cy="12" rx="4.5" ry="10"/><path d="M2 12h20"/></g>
+<text x="351" y="281" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Explore</text>
+<g transform="translate(322,310) scale(0.7083333333333334)" fill="none" stroke="#DEDFF1" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 18a9 9 0 0 1-13-13 9 9 0 1 0 13 13Z"/></g>
+<text x="351" y="325" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Study</text>
+<g transform="translate(322,354) scale(0.7083333333333334)" fill="none" stroke="#DEDFF1" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="8" height="8" rx="2"/><rect x="14" y="2" width="8" height="8" rx="2"/><rect x="2" y="14" width="8" height="8" rx="2"/><rect x="14" y="14" width="8" height="8" rx="2"/></g>
+<text x="351" y="369" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Apps</text>
+<g transform="translate(322,398) scale(0.7083333333333334)" fill="none" stroke="#DEDFF1" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12c5 0 8 14 4 15-2 1-4-4-6-4H8c-2 0-4 5-6 4C-2 21 1 7 6 7Z"/><path d="M7 10v7m-3-3.5h6m6-2h.2m3 3h.2"/></g>
+<text x="351" y="413" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Games</text>
+<g transform="translate(322,442) scale(0.7083333333333334)" fill="none" stroke="#DEDFF1" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 21h20M5 17v-6m7 6V3m7 14V7"/></g>
+<text x="351" y="457" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Activity</text>
+<text x="322" y="505" font-size="10" fill="#A9B0C9" font-weight="400" text-anchor="start" letter-spacing="1.0">YOUR SESSION</text>
+<rect x="310" y="523" width="156" height="42" rx="10" fill="#BEABF8" fill-opacity="0.16"/>
+<g transform="translate(322,535) scale(0.7083333333333334)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="2" width="15" height="14" rx="2"/><rect x="7" y="8" width="16" height="14" rx="2"/></g>
+<text x="351" y="550" font-size="12" fill="#F2F3FD" font-weight="400" text-anchor="start">Window overview</text>
+<g transform="translate(322,578) scale(0.7083333333333334)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="m12 1 2 4 4-1 2 3-2 4 3 2-1 4-4 1-2 4-4-1-1-4-4-2 1-4-3-2 2-4 4 1 3-3Z"/></g>
+<text x="351" y="593" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Settings</text>
 <path d="M319 730h142" stroke="#D9DEFF" stroke-opacity=".2"/>
 <text x="319" y="759" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Shan</text>
 <text x="319" y="780" font-size="11" fill="#A9B0C9" font-weight="400" text-anchor="start">Personal workspace</text>
-<text x="504" y="197" font-size="14" fill="#A9B0C9" font-weight="400" text-anchor="start">Welcome back, Shan.</text>
-<rect x="504" y="213" width="880" height="196" rx="20" fill="url(#hero)" fill-opacity="1" stroke="#D2C7FF" stroke-opacity=".25"/>
-<text x="530" y="245" font-size="9" fill="#C7BDFF" font-weight="400" text-anchor="start" letter-spacing="1.2">THIS IS YOUR SPACE</text>
-<text x="530" y="294" font-size="34" fill="#F2F3FD" font-weight="600" text-anchor="start">Everything,</text>
-<text x="530" y="334" font-size="34" fill="#F2F3FD" font-weight="600" text-anchor="start">in your orbit.</text>
-<text x="530" y="369" font-size="12" fill="#A9B0C9" font-weight="400" text-anchor="start">Your apps. Your ideas. A calmer desktop.</text>
-<g transform="translate(1225,237) scale(.844)">
-<circle cx="80" cy="85" r="59" fill="#253941" stroke="#5BBAB7" stroke-opacity=".5"/>
-<ellipse cx="80" cy="85" rx="78" ry="28.5" transform="rotate(-32 80 85)" fill="none" stroke="#C6B9FF" stroke-opacity=".8" stroke-width="1.5"/>
-<ellipse cx="80" cy="85" rx="73.5" ry="23" transform="rotate(34 80 85)" fill="none" stroke="#7EE0D0" stroke-opacity=".38"/>
-<text x="80" y="109" font-size="68" fill="#F0E9FF" font-weight="300" text-anchor="middle">N</text>
-<circle cx="124" cy="18" r="4.5" fill="#D9D0FF"/></g>
-<text x="504" y="450" font-size="16" fill="#F2F3FD" font-weight="600" text-anchor="start">Your essentials</text>
-<text x="1340" y="448" font-size="12" fill="#C7BDFF" font-weight="400" text-anchor="start">See all</text>
-<rect x="535" y="471" width="56" height="56" rx="17" fill="#3B7085" fill-opacity="1" stroke="#FFFFFF" stroke-opacity=".25"/>
-<g transform="translate(551,487) scale(1.0416666666666667)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7V4h7l3 3h10v14H2Z"/></g>
-<text x="563" y="554" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="middle">Files</text>
-<rect x="657" y="471" width="56" height="56" rx="17" fill="#3B5691" fill-opacity="1" stroke="#FFFFFF" stroke-opacity=".25"/>
-<g transform="translate(673,487) scale(1.0416666666666667)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><ellipse cx="12" cy="12" rx="4.5" ry="10"/><path d="M2 12h20"/></g>
-<text x="685" y="554" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="middle">Firefox</text>
-<rect x="779" y="471" width="56" height="56" rx="17" fill="#625091" fill-opacity="1" stroke="#FFFFFF" stroke-opacity=".25"/>
-<g transform="translate(795,487) scale(1.0416666666666667)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m8 5-6 7 6 7m8-14 6 7-6 7m-3-15-3 18"/></g>
-<text x="807" y="554" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="middle">VS Code</text>
-<rect x="901" y="471" width="56" height="56" rx="17" fill="#3B5691" fill-opacity="1" stroke="#FFFFFF" stroke-opacity=".25"/>
-<g transform="translate(917,487) scale(1.0416666666666667)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><ellipse cx="12" cy="12" rx="4.5" ry="10"/><path d="M2 12h20"/></g>
-<text x="929" y="554" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="middle">Browser</text>
-<rect x="1023" y="471" width="56" height="56" rx="17" fill="#625091" fill-opacity="1" stroke="#FFFFFF" stroke-opacity=".25"/>
-<g transform="translate(1039,487) scale(1.0416666666666667)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="3" width="21" height="18" rx="3"/><path d="m5 8 4 4-4 4m7 0h6"/></g>
-<text x="1051" y="554" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="middle">Terminal</text>
-<rect x="1145" y="471" width="56" height="56" rx="17" fill="#3B7085" fill-opacity="1" stroke="#FFFFFF" stroke-opacity=".25"/>
-<g transform="translate(1161,487) scale(1.0416666666666667)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="m12 1 2 4 4-1 2 3-2 4 3 2-1 4-4 1-2 4-4-1-1-4-4-2 1-4-3-2 2-4 4 1 3-3Z"/></g>
-<text x="1173" y="554" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="middle">Settings</text>
-<rect x="504.0" y="591" width="286.67" height="80" rx="16" fill="#252D45" fill-opacity="0.71" stroke="#D9DEFF" stroke-opacity=".25"/>
-<g transform="translate(520.0,607) scale(0.8333333333333334)" fill="none" stroke="#C7BDFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7V4h7l3 3h10v14H2Z"/></g>
-<text x="520.0" y="653" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">My files</text>
-<rect x="800.6700000000001" y="591" width="286.67" height="80" rx="16" fill="#252D45" fill-opacity="0.71" stroke="#D9DEFF" stroke-opacity=".25"/>
-<g transform="translate(816.6700000000001,607) scale(0.8333333333333334)" fill="none" stroke="#C7BDFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12c5 0 8 14 4 15-2 1-4-4-6-4H8c-2 0-4 5-6 4C-2 21 1 7 6 7Z"/><path d="M7 10v7m-3-3.5h6m6-2h.2m3 3h.2"/></g>
-<text x="816.6700000000001" y="653" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Games</text>
-<rect x="1097.3400000000001" y="591" width="286.67" height="80" rx="16" fill="#252D45" fill-opacity="0.71" stroke="#D9DEFF" stroke-opacity=".25"/>
-<g transform="translate(1113.3400000000001,607) scale(0.8333333333333334)" fill="none" stroke="#C7BDFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 18a9 9 0 0 1-13-13 9 9 0 1 0 13 13Z"/></g>
-<text x="1113.3400000000001" y="653" font-size="13" fill="#F2F3FD" font-weight="400" text-anchor="start">Focus view</text>
-<text x="504" y="703" font-size="9" fill="#A9B0C9" font-weight="400" text-anchor="start" letter-spacing="0.8">LAST IN YOUR SESSION</text>
-<text x="504" y="725" font-size="12" fill="#A9B0C9" font-weight="400" text-anchor="start">Ready for your next idea.</text>
+<text x="504" y="210" font-size="28" fill="#F2F3FD" font-weight="600" text-anchor="start">Everything in your orbit.</text>
+<text x="504" y="239" font-size="12" fill="#A9B0C9" font-weight="400" text-anchor="start">Find an open window and return to it. Ctrl+4 opens this view.</text>
+<rect x="504" y="256" width="826" height="36" rx="10" fill="#141B30" fill-opacity="0.9" stroke="#D9DEFF" stroke-opacity=".25"/>
+<g transform="translate(518,267) scale(0.625)" fill="none" stroke="#A9B0C9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7"/><path d="m15 15 7 7"/></g>
+<text x="545" y="280" font-size="13" fill="#A9B0C9" font-weight="400" text-anchor="start">Find a window or app</text>
+<rect x="1340" y="256" width="44" height="36" rx="10" fill="#252D45" fill-opacity="0.8" stroke="#D9DEFF" stroke-opacity=".25"/>
+<text x="1362" y="281" font-size="22" fill="#D2C7FF" font-weight="400" text-anchor="middle">↻</text>
+<text x="504" y="319" font-size="11" fill="#A9B0C9" font-weight="400" text-anchor="start">6 of 6 open windows</text>
+<rect x="504" y="337" width="280" height="180" rx="18" fill="#252D45" fill-opacity="0.94" stroke="#D9DEFF" stroke-opacity=".25"/>
+<rect x="521" y="354" width="36" height="36" rx="11" fill="#151D30" fill-opacity="1"/>
+<g transform="translate(530,363) scale(0.75)" fill="none" stroke="#C7BDFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="2" width="15" height="14" rx="2"/><rect x="7" y="8" width="16" height="14" rx="2"/></g>
+<text x="568" y="377" font-size="11" fill="#A9B0C9" font-weight="400" text-anchor="start">Code</text>
+<text x="521" y="426" font-size="16" fill="#F2F3FD" font-weight="400" text-anchor="start">Nexus Shell —</text>
+<text x="521" y="449" font-size="16" fill="#F2F3FD" font-weight="400" text-anchor="start">MainWindow.xaml</text>
+<text x="521" y="495" font-size="10" fill="#C7BDFF" font-weight="400" text-anchor="start">Return to this window ↗</text>
+<rect x="796" y="337" width="280" height="180" rx="18" fill="#252D45" fill-opacity="0.94" stroke="#D9DEFF" stroke-opacity=".25"/>
+<rect x="813" y="354" width="36" height="36" rx="11" fill="#151D30" fill-opacity="1"/>
+<g transform="translate(822,363) scale(0.75)" fill="none" stroke="#C7BDFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="2" width="15" height="14" rx="2"/><rect x="7" y="8" width="16" height="14" rx="2"/></g>
+<text x="860" y="377" font-size="11" fill="#A9B0C9" font-weight="400" text-anchor="start">firefox</text>
+<text x="813" y="426" font-size="16" fill="#F2F3FD" font-weight="400" text-anchor="start">A little inspiration</text>
+<text x="813" y="449" font-size="16" fill="#F2F3FD" font-weight="400" text-anchor="start">— Firefox</text>
+<text x="813" y="495" font-size="10" fill="#C7BDFF" font-weight="400" text-anchor="start">Return to this window ↗</text>
+<rect x="1088" y="337" width="280" height="180" rx="18" fill="#252D45" fill-opacity="0.94" stroke="#D9DEFF" stroke-opacity=".25"/>
+<rect x="1105" y="354" width="36" height="36" rx="11" fill="#151D30" fill-opacity="1"/>
+<g transform="translate(1114,363) scale(0.75)" fill="none" stroke="#C7BDFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="2" width="15" height="14" rx="2"/><rect x="7" y="8" width="16" height="14" rx="2"/></g>
+<text x="1152" y="377" font-size="11" fill="#A9B0C9" font-weight="400" text-anchor="start">explorer</text>
+<text x="1105" y="426" font-size="16" fill="#F2F3FD" font-weight="400" text-anchor="start">Pictures</text>
+<text x="1105" y="495" font-size="10" fill="#C7BDFF" font-weight="400" text-anchor="start">Return to this window ↗</text>
+<rect x="504" y="529" width="280" height="180" rx="18" fill="#252D45" fill-opacity="0.94" stroke="#D9DEFF" stroke-opacity=".25"/>
+<rect x="521" y="546" width="36" height="36" rx="11" fill="#151D30" fill-opacity="1"/>
+<g transform="translate(530,555) scale(0.75)" fill="none" stroke="#C7BDFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="2" width="15" height="14" rx="2"/><rect x="7" y="8" width="16" height="14" rx="2"/></g>
+<text x="568" y="569" font-size="11" fill="#A9B0C9" font-weight="400" text-anchor="start">WindowsTerminal</text>
+<text x="521" y="618" font-size="16" fill="#F2F3FD" font-weight="400" text-anchor="start">PowerShell</text>
+<text x="521" y="687" font-size="10" fill="#C7BDFF" font-weight="400" text-anchor="start">Return to this window ↗</text>
+<rect x="796" y="529" width="280" height="180" rx="18" fill="#252D45" fill-opacity="0.94" stroke="#D9DEFF" stroke-opacity=".25"/>
+<rect x="813" y="546" width="36" height="36" rx="11" fill="#151D30" fill-opacity="1"/>
+<g transform="translate(822,555) scale(0.75)" fill="none" stroke="#C7BDFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="2" width="15" height="14" rx="2"/><rect x="7" y="8" width="16" height="14" rx="2"/></g>
+<text x="860" y="569" font-size="11" fill="#A9B0C9" font-weight="400" text-anchor="start">Notepad</text>
+<text x="813" y="618" font-size="16" fill="#F2F3FD" font-weight="400" text-anchor="start">Today’s ideas</text>
+<text x="813" y="687" font-size="10" fill="#C7BDFF" font-weight="400" text-anchor="start">Return to this window ↗</text>
+<rect x="1088" y="529" width="280" height="180" rx="18" fill="#252D45" fill-opacity="0.94" stroke="#D9DEFF" stroke-opacity=".25"/>
+<rect x="1105" y="546" width="36" height="36" rx="11" fill="#151D30" fill-opacity="1"/>
+<g transform="translate(1114,555) scale(0.75)" fill="none" stroke="#C7BDFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="2" width="15" height="14" rx="2"/><rect x="7" y="8" width="16" height="14" rx="2"/></g>
+<text x="1152" y="569" font-size="11" fill="#A9B0C9" font-weight="400" text-anchor="start">ApplicationFrameHost</text>
+<text x="1105" y="618" font-size="16" fill="#F2F3FD" font-weight="400" text-anchor="start">Personalization</text>
+<text x="1105" y="687" font-size="10" fill="#C7BDFF" font-weight="400" text-anchor="start">Return to this window ↗</text>
 <rect x="297" y="802" width="1110" height="33" rx="22" fill="#0E1525" fill-opacity="0.63"/>
 <rect x="297" y="802" width="1110" height="15" rx="0" fill="#0E1525" fill-opacity="0.63"/>
-<text x="314" y="823" font-size="11" fill="#A9B0C9" font-weight="400" text-anchor="start">Your personal workspace</text>
-<text x="1389" y="823" font-size="9" fill="#A9B0C9" font-weight="400" text-anchor="end" letter-spacing="0.8">NEXUS  0.2</text>
+<text x="314" y="823" font-size="11" fill="#A9B0C9" font-weight="400" text-anchor="start">6 visible windows · Refreshes while this view is active</text>
+<text x="1389" y="823" font-size="9" fill="#A9B0C9" font-weight="400" text-anchor="end" letter-spacing="0.8">NEXUS  0.4</text>
 <text x="32" y="893" font-size="11" fill="#A9B0C9" font-weight="400" text-anchor="start">Nexus · native desktop</text>
 <text x="1268" y="893" font-size="12" fill="#F2F3FD" font-weight="400" text-anchor="start">Control center</text>
-<rect x="490" y="851" width="460" height="76" rx="23" fill="#4C526D" fill-opacity="0.69" stroke="#DFDFFF" stroke-opacity=".25"/>
-<rect x="504" y="865" width="48" height="48" rx="13" fill="#C4B5EB" fill-opacity="1"/>
-<text x="528" y="899" font-size="27" fill="#24243C" font-weight="400" text-anchor="middle">N</text>
-<path d="M568 873v32" stroke="#D9DEFF" stroke-opacity=".3"/>
-<rect x="584" y="865" width="48" height="48" rx="13" fill="#3B7085" fill-opacity="1" stroke="#FFFFFF" stroke-opacity=".25"/>
-<g transform="translate(597,878) scale(0.9166666666666666)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7V4h7l3 3h10v14H2Z"/></g>
-<rect x="645" y="865" width="48" height="48" rx="13" fill="#3B5691" fill-opacity="1" stroke="#FFFFFF" stroke-opacity=".25"/>
-<g transform="translate(658,878) scale(0.9166666666666666)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><ellipse cx="12" cy="12" rx="4.5" ry="10"/><path d="M2 12h20"/></g>
-<rect x="706" y="865" width="48" height="48" rx="13" fill="#625091" fill-opacity="1" stroke="#FFFFFF" stroke-opacity=".25"/>
-<g transform="translate(719,878) scale(0.9166666666666666)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m8 5-6 7 6 7m8-14 6 7-6 7m-3-15-3 18"/></g>
-<rect x="767" y="865" width="48" height="48" rx="13" fill="#3B5691" fill-opacity="1" stroke="#FFFFFF" stroke-opacity=".25"/>
-<g transform="translate(780,878) scale(0.9166666666666666)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><ellipse cx="12" cy="12" rx="4.5" ry="10"/><path d="M2 12h20"/></g>
-<rect x="828" y="865" width="48" height="48" rx="13" fill="#625091" fill-opacity="1" stroke="#FFFFFF" stroke-opacity=".25"/>
-<g transform="translate(841,878) scale(0.9166666666666666)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="3" width="21" height="18" rx="3"/><path d="m5 8 4 4-4 4m7 0h6"/></g>
-<rect x="891" y="865" width="48" height="48" rx="13" fill="#454C67" fill-opacity="1" stroke="#FFFFFF" stroke-opacity=".25"/>
-<g transform="translate(904,878) scale(0.9166666666666666)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="2" width="15" height="14" rx="2"/><rect x="7" y="8" width="16" height="14" rx="2"/></g>
+<rect x="455" y="851" width="530" height="76" rx="23" fill="#4C526D" fill-opacity="0.69" stroke="#DFDFFF" stroke-opacity=".25"/>
+<rect x="469" y="865" width="48" height="48" rx="13" fill="#C4B5EB" fill-opacity="1"/>
+<text x="493" y="899" font-size="27" fill="#24243C" font-weight="400" text-anchor="middle">N</text>
+<path d="M533 873v32" stroke="#D9DEFF" stroke-opacity=".3"/>
+<rect x="549" y="865" width="48" height="48" rx="13" fill="#3B7085" fill-opacity="1" stroke="#FFFFFF" stroke-opacity=".25"/>
+<g transform="translate(562,878) scale(0.9166666666666666)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7V4h7l3 3h10v14H2Z"/></g>
+<rect x="610" y="865" width="48" height="48" rx="13" fill="#3B5691" fill-opacity="1" stroke="#FFFFFF" stroke-opacity=".25"/>
+<g transform="translate(623,878) scale(0.9166666666666666)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><ellipse cx="12" cy="12" rx="4.5" ry="10"/><path d="M2 12h20"/></g>
+<rect x="671" y="865" width="48" height="48" rx="13" fill="#625091" fill-opacity="1" stroke="#FFFFFF" stroke-opacity=".25"/>
+<g transform="translate(684,878) scale(0.9166666666666666)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m8 5-6 7 6 7m8-14 6 7-6 7m-3-15-3 18"/></g>
+<rect x="732" y="865" width="48" height="48" rx="13" fill="#3B5691" fill-opacity="1" stroke="#FFFFFF" stroke-opacity=".25"/>
+<g transform="translate(745,878) scale(0.9166666666666666)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><ellipse cx="12" cy="12" rx="4.5" ry="10"/><path d="M2 12h20"/></g>
+<rect x="793" y="865" width="48" height="48" rx="13" fill="#625091" fill-opacity="1" stroke="#FFFFFF" stroke-opacity=".25"/>
+<g transform="translate(806,878) scale(0.9166666666666666)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="3" width="21" height="18" rx="3"/><path d="m5 8 4 4-4 4m7 0h6"/></g>
+<rect x="856" y="865" width="48" height="48" rx="13" fill="#545078" fill-opacity="1" stroke="#FFFFFF" stroke-opacity=".25"/>
+<g transform="translate(869,878) scale(0.9166666666666666)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7"/><path d="m15 15 7 7"/></g>
+<rect x="917" y="865" width="48" height="48" rx="13" fill="#454C67" fill-opacity="1" stroke="#FFFFFF" stroke-opacity=".25"/>
+<g transform="translate(930,878) scale(0.9166666666666666)" fill="none" stroke="#EFF1FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="2" width="15" height="14" rx="2"/><rect x="7" y="8" width="16" height="14" rx="2"/></g>
 </g></svg>

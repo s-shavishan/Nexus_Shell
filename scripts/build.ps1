@@ -7,7 +7,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $projectFile = Join-Path $projectRoot 'src\Nexus.Shell\Nexus.Shell.csproj'
-$publishDirectory = Join-Path $projectRoot 'artifacts\Nexus-Shell-0.2.1-win-x64'
+$publishDirectory = Join-Path $projectRoot 'artifacts\Nexus-Shell-0.4.0-win-x64'
 $logDirectory = Join-Path $projectRoot 'artifacts\logs'
 
 if ($env:OS -ne 'Windows_NT') { throw 'WinUI must be built on Windows. Use an included Windows cloud-build route in START-HERE.md.' }
@@ -41,13 +41,22 @@ try {
     $exe = Join-Path $publishDirectory 'Nexus.Shell.exe'
     if (-not (Test-Path $exe)) { throw 'Build returned success without Nexus.Shell.exe.' }
     if (-not (Get-ChildItem $publishDirectory -Recurse -Filter 'Microsoft.UI.Xaml.dll')) { throw 'The native WinUI runtime is missing from the publish directory.' }
+    [xml]$projectXml = Get-Content $projectFile -Raw
+    $toolsReference = $projectXml.SelectSingleNode("//PackageReference[@Include='Microsoft.Windows.SDK.BuildTools']")
+    $packageRoot = if ($env:NUGET_PACKAGES) { $env:NUGET_PACKAGES } else { Join-Path ([Environment]::GetFolderPath('UserProfile')) '.nuget\packages' }
+    $buildTools = Join-Path $packageRoot ("microsoft.windows.sdk.buildtools\" + $toolsReference.GetAttribute('Version'))
+    $makePri = Get-ChildItem $buildTools -Recurse -File -Filter 'makepri.exe' | Where-Object { $_.FullName -match '[\\/]x64[\\/]' } | Sort-Object FullName -Descending | Select-Object -First 1
+    if ($null -eq $makePri) { throw 'The restored Windows SDK BuildTools package does not contain x64 MakePri.exe.' }
+    $appVersion = $projectXml.SelectSingleNode('//PropertyGroup/Version').InnerText
+    & (Join-Path $PSScriptRoot 'verify-resources.ps1') -PublishDirectory $publishDirectory -MakePri $makePri.FullName -DumpFile (Join-Path $logDirectory 'app-resources.xml') -AppVersion $appVersion
     Copy-Item (Join-Path $projectRoot 'docs\TEST-WINDOWS.md') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'docs\RUN-PORTABLE.md') (Join-Path $publishDirectory 'READ-ME-FIRST.md')
     Copy-Item (Join-Path $projectRoot 'scripts\diagnostics.ps1') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'scripts\disable-startup.ps1') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'scripts\measure-resources.ps1') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'docs\DESIGN-AND-PERFORMANCE.md') $publishDirectory
+    Copy-Item (Join-Path $projectRoot 'docs\UPDATING.md') $publishDirectory
     Set-Content (Join-Path $publishDirectory 'Launch-Nexus.bat') "@echo off`r`nstart `"`" `"%~dp0Nexus.Shell.exe`"" -Encoding ASCII
-    Write-Host 'Build complete. Keep the entire output folder together.' -ForegroundColor Green
+    Write-Host 'Build and MainWindow resource verification complete. Keep the entire output folder together.' -ForegroundColor Green
     if ($Run) { Start-Process $exe -WorkingDirectory $publishDirectory }
 } finally { Pop-Location }

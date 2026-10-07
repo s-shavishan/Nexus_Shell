@@ -1,4 +1,45 @@
+# Nexus Shell 0.4.0 — your everyday orbit
+
+- Searchable window overview with native card virtualization, responsive widths, background enumeration, active-view refresh, and Ctrl+4.
+- Local task checklist, task selection for focus, completion/reopening/removal, Home tasks and command search.
+- Paused timer recovery with monotonic resume, coalesced running checkpoints and exact normal-close persistence.
+- Saved-item favorites, named collections, filters, editing and Home favorite shortcuts.
+- Explicit startup-folder repair in Control center and an attempted one-time legacy-settings backup.
+- Stronger small-update payload/resource requirements and canonical manifest checks; expanded Windows CI behavior checks.
+- 0.4.0 artifact names and application version; footer now reflects the current release.
+- Reuses pinned dependencies and existing Windows minimum, resource-publishing repair, static vector assets, and finite motion.
+
+Windows compilation, new core/PowerShell test execution, launch, rendering, and performance remain pending.
+
+# Nexus Shell 0.3.0 — your orbit, expanded
+
+- Native command palette for apps, saved items, workspaces and actions. Ctrl+K, arrows, Enter, Esc; lazy Start-menu discovery; at most 30 results.
+- Explore board: save/open/search/remove links, files and folders. Up to 100 shortcut records, stored locally without a file index.
+- Study: monotonic 25/50-minute focus timer and 5-minute break; pause/resume/reset; daily completion count; shared Home/Study notes with debounced atomic persistence.
+- Home quick notes, summaries, workspace cards, extra sidebar/menu navigation, dock search, and Orbit/Aurora/Slate desktop moods. Finite compositor motion and reduced-effects support remain.
+- Small update ZIPs contain app code/assets/compiled UI and fingerprints for reused runtime files. The offline updater validates both sets, assembles a fresh folder using local copies, and retains the old folder.
+- CI adds behavioral checks for focus/search/snapshots and update compatibility/integrity. Both full and update archives are checked; MakePri verifies published MainWindow resources.
+- Version, manifest and artifact names move to 0.3.0. Existing direct dependency pins and Windows minimum stay the same.
+
+This is a source release. The new .NET/PowerShell behavior checks and WinUI startup still require the Windows CI run. The last user-supplied runtime log is the 0.2.1 unresolved MainWindow resource. No measured animation/frame-time/memory claim is made.
+
+# Nexus Shell 0.2.2 — published XAML resource repair
+
+The 0.2.1 diagnostics identified an unresolved `ms-appx:///MainWindow.xaml` resource (HRESULT 0x802B000A). This release repairs resource publishing and adds a packaging verification gate.
+
+- Enables MSIX build tooling while retaining `WindowsPackageType=None` and self-contained folder deployment.
+- Explicitly copies generated PRI/XBF resources into publish output with their paths preserved.
+- Uses build-server MakePri to verify the root MainWindow index entry and its embedded/loose candidates.
+- Records resource fingerprints and verifies their presence and exact bytes inside the portable ZIP.
+- Adds resource index/report artifacts and startup file inventory logging.
+- Corrects the CS8622 nullable event sender warning.
+- Updates the application/manifest/package version to 0.2.2; dependency versions and UI/motion policy are unchanged.
+
+The exact absent/indexed file in the user's existing bundle has not been inspected here. The repair targets the observed lookup failure and the documented unpackaged app-PRI publish omission. 0.2.2 needs a fresh Windows compile/resource/package check and launch test; it is not a verified runnable release yet.
+
 # Nexus Shell 0.2.1 — startup compatibility and diagnostics
+
+Build correction on 2026-10-06: the initial 0.2.1 source failed Windows XAML compilation with WMC0035 at App.xaml line 44. Moved the fallback brushes below `ResourceDictionary.ThemeDictionaries`, keeping all direct dictionary items together. Added a structural ordering check that rejects the original split collection. The app/package version stayed 0.2.1. The user subsequently confirmed successful compilation/publishing, followed by the unresolved MainWindow resource error addressed by 0.2.2.
 
 - Declares Windows 10 build 19041 or newer and Windows 11 x64 accurately in the run instructions.
 - Adds ordinary-resource fallback brushes and explicit Light/Dark/HighContrast dictionaries.

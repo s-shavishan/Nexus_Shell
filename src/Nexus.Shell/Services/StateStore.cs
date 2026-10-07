@@ -16,11 +16,27 @@ public sealed class StateStore
         {
             if (!File.Exists(FilePath)) return new();
             if (new FileInfo(FilePath).Length > 2 * 1024 * 1024) throw new InvalidDataException("Settings exceed the 2 MB limit.");
-            var state = JsonSerializer.Deserialize<ShellState>(File.ReadAllText(FilePath), _json) ?? new();
+            string json = File.ReadAllText(FilePath);
+            var state = JsonSerializer.Deserialize<ShellState>(json, _json) ?? new();
+            using (var document = JsonDocument.Parse(json))
+            {
+                if (document.RootElement.ValueKind == JsonValueKind.Object && !document.RootElement.TryGetProperty("Tasks", out _))
+                {
+                    string backup = Path.Combine(DirectoryPath, "settings.before-0.4.0.json");
+                    try { if (!File.Exists(backup)) File.Copy(FilePath, backup, false); }
+                    catch (Exception ex) { Log.Write("Could not create migration backup; keeping loaded settings", ex); }
+                }
+            }
             state.DisplayName = string.IsNullOrWhiteSpace(state.DisplayName) ? "Shan" : state.DisplayName.Trim();
             state.DisplayName = state.DisplayName[..Math.Min(state.DisplayName.Length, 40)];
             state.PinnedApps ??= [];
             state.Activity ??= [];
+            state.Wallpaper = state.Wallpaper is "Aurora" or "Slate" ? state.Wallpaper : "Orbit";
+            state.QuickNote ??= "";
+            state.QuickNote = state.QuickNote[..Math.Min(state.QuickNote.Length, 10_000)];
+            state.FocusDay ??= "";
+            state.FocusCompleted = Math.Clamp(state.FocusCompleted, 0, 1000);
+            WorkspaceState.Normalize(state);
             state.UsageSeconds = (state.UsageSeconds ?? []).Where(a => !string.IsNullOrWhiteSpace(a.Key) && a.Key.Length <= 260 &&
                     double.IsFinite(a.Value) && a.Value >= 0 && a.Value <= 1_000_000_000)
                 .DistinctBy(a => a.Key, StringComparer.OrdinalIgnoreCase)

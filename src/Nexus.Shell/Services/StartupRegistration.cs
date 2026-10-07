@@ -21,4 +21,12 @@ public static class StartupRegistration
         }
         else key.DeleteValue(Name, throwOnMissingValue: false);
     }
+    public static bool UsesCurrentVersion()
+    {
+        using var key = Registry.CurrentUser.OpenSubKey(RunKey);
+        string? value = key?.GetValue(Name) as string;
+        string? current = Environment.ProcessPath;
+        if (value is null || current is null) return false;
+        return value.Trim().Trim('"').Equals(current, StringComparison.OrdinalIgnoreCase);
+    }
 }

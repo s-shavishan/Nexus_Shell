@@ -4,9 +4,11 @@ Record your Windows build, monitor resolution/scaling, and whether this is a loc
 
 ## Startup regression
 
-1. Extract 0.2.1 into a fresh folder and start `Nexus.Shell.exe` on Windows 10 build 19045. Confirm the latest log says `Nexus Shell 0.2.1` and contains `MainWindow.xaml loaded; configuring window` and `MainWindow activation completed`.
+The AppVeyor build must first complete the MakePri MainWindow index check and compiled-resource ZIP hash check. Save the `resources-check.json` artifact; this is packaging evidence, not UI acceptance.
+
+1. Extract 0.4.0 into a fresh folder and start `Nexus.Shell.exe` on Windows 10 build 19045. Confirm the latest log says `Nexus Shell 0.4.0` and contains `MainWindow.xaml loaded; configuring window` and `MainWindow activation completed`.
 2. Confirm the actual desktop is visible and interactive; log markers alone are not UI acceptance. Try both Control center anchors and repeated app-tile context menus while scrolling/recycling the library.
-3. If startup fails, confirm a native dialog identifies the stage/HRESULT/log path. Close it, then collect the latest startup section, including `RestrictedDescription` and resource messages if present. Do not mark the XAML bug fixed on the strength of a compile alone.
+3. If startup fails, include the resource report and root-PRI log inventory along with the error. Confirm a native dialog identifies the stage/HRESULT/log path. Close it, then collect the latest startup section, including `RestrictedDescription` and resource messages if present. Do not mark the XAML bug fixed on the strength of a compile alone.
 
 ## Basic operation
 
@@ -81,3 +83,27 @@ The footer reports this process's working set and CPU sampled approximately ever
 Run `diagnostics.ps1` from the portable folder, or `scripts\diagnostics.ps1` from source. Send `environment.json`, `nexus.log`, the first build error if relevant, and a screenshot of the issue. Review the log before sharing: it may contain local file paths and application names.
 
 For build failures, the GitHub run uploads `Nexus-build-logs`; local builds write `artifacts\logs`.
+
+## 0.3.0 additions
+
+1. Confirm the build's .NET core checks and PowerShell update checks pass, followed by resource/package checks. The build's checks do not replace this UI test.
+2. Open Ctrl+K. Search a pinned app; select the second matching row with Down and open it with Enter. Search a workspace and a saved item; Esc closes only the palette. Open/close repeatedly during Start-menu discovery.
+3. In Explore, save a valid web link and a local file/folder. Check duplicate handling, search, open, remove, and persistence after restart. A removed board shortcut must leave the original file intact. An invalid web address must keep the save dialog open.
+4. Start a Study session, switch pages or apps, return and pause/resume. Change preset; verify it stops/resets. Complete a break and verify it does not increase focus completion count. Close/restart; no active timer should resume silently.
+5. Edit notes in Home and Study, navigate quickly, then close/restart. Check the latest text is preserved. Test multiline text near the 10,000-character limit.
+6. Change Orbit/Aurora/Slate, restart, and check persistence. Toggle Reduced effects and Windows animation settings. Check every action works with animation unavailable.
+7. Resize to narrow/short windows and test at 100/150/200% DPI. Notes headings, command panel, timer presets and saved-board controls must stay usable. Check High Contrast and keyboard navigation.
+8. Test the small update from an extracted prior full folder. Confirm old bytes remain unchanged, resources in the new folder match the report, and the new app opens. An incompatible runtime or damaged patch must fail without creating a usable partial destination. Reuse the new folder as the next update's base.
+9. If sign-in startup is in use, turn it off/on from the new folder so its registry entry points at the new executable. Verify after the next sign-in.
+
+## 0.4.0 acceptance
+
+1. Confirm Windows CI passes the .NET core checks, actual PowerShell fixture checks, compilation, MakePri and both archive checks before download. Treat this separately from native launch verification.
+2. Upgrade older settings with notes, pins and saved items. Confirm preservation, Personal collection defaults, and `settings.before-0.4.0.json` where backup succeeded. Close before copying/restoring settings.
+3. Add tasks with Add and Enter. Choose a task through its options or Ctrl+K; check Home and Study agree. Complete/reopen/remove it. Test empty, duplicate and 160-character titles, completed filtering, and the 100-task bound.
+4. Start focus, pause, change preset, reset and complete a session. Confirm break sessions do not increase the focus count, and completing focus does not check off a task. Close mid-session and reopen: the same remaining time is paused and does not advance while Nexus was closed. Resume it and confirm completion is recorded once. Exercise sleep/delayed ticks and day rollover.
+5. Save/edit links with valid and invalid URLs. Change collection and favorite state; filter and search; confirm favorite ordering, Home shortcuts and Ctrl+K task/item search. Removing a board item must leave the underlying file/folder intact.
+6. Open Ctrl+4 with several apps and multiple windows from one app. Search title and process, activate/minimize/restore/close a target, and refresh. Resize from 1440 to 1280/1024/800/640/320 logical pixels and test 100/125/150/200% scaling. Confirm cards wrap without horizontal clipping and selection survives refresh. Refreshes stop outside the active visible overview.
+7. Leave/re-enter overview while a refresh is pending; confirm older results do not replace another view. Check keyboard-only card invocation, native focus outlines, high contrast, reduced effects and rapid navigation. Study/Explore input must retain its text/caret when merely switching focus between apps.
+8. Use the small update with a matching base, then mismatched/corrupted files and an existing target. Confirm rejection does not change the base or publish an incomplete new folder. Confirm new EXE/DLL/PRI/XBF come from the update and startup-folder repair is offered only for an existing registration pointing elsewhere.
+9. Measure Home, Study (paused/running), Explore, overview, minimized and reduced-effects scenarios. Repeatedly navigate and inspect idle memory after ten minutes. Verify stable caches, inactive CPU and game impact on the actual machine.

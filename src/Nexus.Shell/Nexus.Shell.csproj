@@ -12,7 +12,7 @@
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <UseWinUI>true</UseWinUI>
     <WindowsPackageType>None</WindowsPackageType>
-    <EnableMsixTooling>false</EnableMsixTooling>
+    <EnableMsixTooling>true</EnableMsixTooling>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <WindowsAppSdkUndockedRegFreeWinRTInitialize>true</WindowsAppSdkUndockedRegFreeWinRTInitialize>
     <SelfContained>true</SelfContained>
@@ -20,7 +20,7 @@
     <PublishTrimmed>false</PublishTrimmed>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>0.2.1</Version>
+    <Version>0.4.0</Version>
     <Product>White Dreams Nexus Shell</Product>
     <Description>Native Windows desktop surface — first-look build.</Description>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
@@ -33,4 +33,18 @@
   <ItemGroup>
     <Content Include="Assets\Nexus.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
+  <!-- An unpackaged publish can omit the app PRI even when native runtime PRIs
+       are present. Copy the actual build resources, preserving XBF paths. -->
+  <Target Name="NexusPublishXamlResources" AfterTargets="Publish" Condition="'$(PublishDir)' != ''">
+    <ItemGroup>
+      <_NexusBuildResources Include="$(TargetDir)**\*.pri;$(TargetDir)**\*.xbf" />
+      <_NexusProjectPri Include="$(ProjectPriFullPath)" Condition="'$(ProjectPriFullPath)' != '' and Exists('$(ProjectPriFullPath)')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_NexusBuildResources)"
+          DestinationFiles="@(_NexusBuildResources->'$(PublishDir)%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_NexusProjectPri)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
+    <Error Condition="!Exists('$(PublishDir)resources.pri') and !Exists('$(PublishDir)$(TargetName).pri')"
+           Text="The app resource index is missing from publish output. Nexus cannot load MainWindow.xaml without its generated PRI/XBF resources." />
+  </Target>
 </Project>

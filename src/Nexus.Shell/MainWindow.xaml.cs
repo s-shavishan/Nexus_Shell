@@ -58,7 +58,7 @@ public sealed partial class MainWindow : Window
             _state.CatalogInitialized = true;
             _dirty = true;
         }
-        _navigation = [NavHome, NavApps, NavGames, NavActivity, NavRunning];
+        _navigation = [NavHome, NavExplore, NavStudy, NavApps, NavGames, NavActivity, NavRunning];
         _shortcutCards = [FilesCard, GamesCard, FocusCard];
         _wallpaper = DesktopRoot.Background;
         _heroBackground = HeroCard.Background;
@@ -79,20 +79,26 @@ public sealed partial class MainWindow : Window
         var icon = Path.Combine(AppContext.BaseDirectory, "Assets", "Nexus.ico");
         if (File.Exists(icon)) _appWindow.SetIcon(icon);
         DisplayNameBox.Text = _state.DisplayName;
+        InitializeWorkspaces();
         TrackingSwitch.IsOn = _state.UsageTracking;
         FocusSwitch.IsOn = _state.FocusMode;
         EffectsSwitch.IsOn = _state.ReducedEffects;
-        try { StartupSwitch.IsOn = StartupRegistration.IsEnabled(); }
+        try { StartupSwitch.IsOn = StartupRegistration.IsEnabled(); RefreshStartupRepair(); }
         catch (Exception ex) { Log.Write("Could not inspect login startup", ex); StartupSwitch.IsEnabled = false; }
 
         AddAccelerator(VirtualKey.Escape, VirtualKeyModifiers.None, () =>
         {
-            if (_controlsOpen) ControlsFlyout.Hide();
+            if (_commandOpen) CloseCommands();
+            else if (_controlsOpen) ControlsFlyout.Hide();
             else if (_state.FullScreen) SetFullScreen(false);
             else Minimize();
         });
         AddAccelerator(VirtualKey.F11, VirtualKeyModifiers.None, () => SetFullScreen(!_state.FullScreen));
         AddAccelerator(VirtualKey.K, VirtualKeyModifiers.Control, SearchApps);
+        AddAccelerator(VirtualKey.Number2, VirtualKeyModifiers.Control, () => Navigate("Explore"));
+        AddAccelerator(VirtualKey.Number3, VirtualKeyModifiers.Control, () => Navigate("Study"));
+        AddAccelerator(VirtualKey.Number1, VirtualKeyModifiers.Control, () => Navigate("Home"));
+        AddAccelerator(VirtualKey.Number4, VirtualKeyModifiers.Control, () => Navigate("Running apps"));
         _uiTimer.Tick += Ui_Tick;
         _usageTimer.Tick += Usage_Tick;
         _searchTimer.Tick += Search_Tick;
@@ -145,20 +151,24 @@ public sealed partial class MainWindow : Window
         if (!_ready) return;
         bool changed = _page != page || HomeBorder.Visibility != Visibility.Visible;
         _page = page;
+        if (_commandOpen) CloseCommands();
         _searchTimer.Stop();
         ControlsFlyout.Hide();
         HomeBorder.Visibility = Visibility.Visible;
         ReopenHomeButton.Visibility = Visibility.Collapsed;
         HomeView.Visibility = page == "Home" ? Visibility.Visible : Visibility.Collapsed;
         AppLibraryView.Visibility = page is "Apps" or "Gaming" ? Visibility.Visible : Visibility.Collapsed;
-        PageScroller.Visibility = page is "Activity" or "Running apps" ? Visibility.Visible : Visibility.Collapsed;
+        WindowOverviewView.Visibility = page == "Running apps" ? Visibility.Visible : Visibility.Collapsed;
+        PageScroller.Visibility = page is "Activity" or "Explore" or "Study" ? Visibility.Visible : Visibility.Collapsed;
+        if (page != "Running apps") ReleaseWindowOverview();
+        ReleaseWorkspaceControls();
         PageContent.Children.Clear();
         if (page is not ("Apps" or "Gaming"))
         {
             AppsGrid.ItemsSource = null; // release off-page realized library containers
             DiscoveryProgress.IsActive = false;
         }
-        PageTitle.Text = page switch { "Home" => "Nexus Home", "Gaming" => "Nexus Games", _ => page };
+        PageTitle.Text = page switch { "Home" => "Nexus Home", "Gaming" => "Nexus Games", "Running apps" => "Window overview", _ => page };
         foreach (var button in _navigation)
         {
             bool selected = (string)button.Tag == page;
@@ -170,11 +180,13 @@ public sealed partial class MainWindow : Window
             case "Apps":
             case "Gaming": ShowLibrary(changed); break;
             case "Activity": BuildActivity(); break;
-            case "Running apps": BuildRunning(); break;
+            case "Running apps": ShowWindowOverview(changed); break;
+            case "Explore": BuildExplore(); break;
+            case "Study": BuildStudy(); break;
             default: RefreshHome(); PageStatus.Text = "Your personal workspace"; break;
         }
         if (changed && animate)
-            _motion?.Enter(page is "Apps" or "Gaming" ? AppLibraryView : page == "Home" ? HomeView : PageScroller);
+            _motion?.Enter(page is "Apps" or "Gaming" ? AppLibraryView : page == "Home" ? HomeView : page == "Running apps" ? WindowOverviewView : PageScroller);
     }
 
     private void RefreshHome()
@@ -183,7 +195,8 @@ public sealed partial class MainWindow : Window
         HomePinsEmpty.Visibility = _state.PinnedApps.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         HomePins.Visibility = _state.PinnedApps.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
         HomeRecentText.Text = _state.Activity.FirstOrDefault()?.Message ?? "Ready for your next idea.";
-        FocusCardLabel.Text = _state.FocusMode ? "Leave focus" : "Focus view";
+        RefreshWorkspaceSummary();
+        RenderHomeWorkspace();
     }
     private void RebuildCatalog()
     {
@@ -225,7 +238,11 @@ public sealed partial class MainWindow : Window
         if (!_ready || _page is not ("Apps" or "Gaming")) return;
         _searchTimer.Stop(); _searchTimer.Start();
     }
-    private void Search_Tick(object? sender, object args) { _searchTimer.Stop(); FilterLibrary(); }
+    private void Search_Tick(object? sender, object args)
+    {
+        _searchTimer.Stop();
+        if (_commandOpen) RenderCommands(); else FilterLibrary();
+    }
     private void AppGrid_ItemClick(object sender, ItemClickEventArgs args)
     {
         if (args.ClickedItem is AppEntry app) Launch(app);
@@ -251,9 +268,9 @@ public sealed partial class MainWindow : Window
         item.ContextFlyout = menu;
     }
 
-    private void AppContext_Opening(object sender, object args)
+    private void AppContext_Opening(object? sender, object args)
     {
-        var menu = (MenuFlyout)sender;
+        if (sender is not MenuFlyout menu) return;
         menu.Items.Clear();
         var app = menu.Target?.DataContext as AppEntry;
         if (app is null && menu.Target is GridViewItem item) app = item.Content as AppEntry;
@@ -295,31 +312,6 @@ public sealed partial class MainWindow : Window
         if (_page is "Apps" or "Gaming") FilterLibrary();
     }
 
-    private void BuildRunning()
-    {
-        PageContent.Children.Add(Text("Running applications", 27));
-        PageContent.Children.Add(ActionButton("Refresh windows", () => Navigate("Running apps", false)));
-        var windows = NativeMethods.RunningWindows(_handle);
-        if (windows.Count == 0) PageContent.Children.Add(Text("No other visible application windows.", 14, true));
-        foreach (var window in windows)
-        {
-            var title = new StackPanel { Spacing = 4 };
-            title.Children.Add(Text(window.Title, 14));
-            title.Children.Add(Text(window.ProcessName, 11, true));
-            var button = new Button
-            {
-                Content = title, HorizontalAlignment = HorizontalAlignment.Stretch,
-                HorizontalContentAlignment = HorizontalAlignment.Left, Padding = new Thickness(16),
-                CornerRadius = new CornerRadius(14), Background = Resource("NexusCard")
-            };
-            button.Click += (_, _) =>
-            {
-                if (!NativeMethods.Activate(window.Handle)) ShowStatus("Windows did not allow focus switching. Select the app through Alt+Tab.");
-            };
-            PageContent.Children.Add(button);
-        }
-        PageStatus.Text = windows.Count + " visible windows · Current session";
-    }
     private void BuildActivity()
     {
         PageContent.Children.Add(Text("Your activity", 27));
@@ -341,7 +333,7 @@ public sealed partial class MainWindow : Window
     }
     private Button ActionButton(string title, Action action)
     {
-        var button = new Button { Content = title, CornerRadius = new CornerRadius(10), Padding = new Thickness(14, 9, 14, 9) };
+        var button = new Button { Content = Text(title), CornerRadius = new CornerRadius(10), Padding = new Thickness(14, 9, 14, 9) };
         button.Click += (_, _) => { try { action(); } catch (Exception ex) { Error(title, ex); } };
         return button;
     }
@@ -402,6 +394,7 @@ public sealed partial class MainWindow : Window
                 RefreshAppsButton.IsEnabled = true;
                 DiscoveryProgress.IsActive = false; DiscoveryProgress.Visibility = Visibility.Collapsed;
                 if (_page == "Apps") FilterLibrary();
+                if (_commandOpen) RenderCommands();
             }
         }
     }
@@ -433,12 +426,12 @@ public sealed partial class MainWindow : Window
             DockApps.Children.Add(button); _motion?.AttachHover(button);
         }
     }
-    private void Record(string message)
+    private void Record(string message, bool updateUi = true)
     {
         _state.Activity.Insert(0, new(DateTimeOffset.Now, message));
         if (_state.Activity.Count > 200) _state.Activity.RemoveRange(200, _state.Activity.Count - 200);
         _dirty = true;
-        HomeRecentText.Text = message;
+        if (updateUi) HomeRecentText.Text = message;
         Log.Write(message);
     }
     private void SaveState()
@@ -451,7 +444,7 @@ public sealed partial class MainWindow : Window
         _saveTimer.Stop();
         if (!_ready || !_dirty || _saveInFlight) return;
         _saveInFlight = true; _dirty = false;
-        var snapshot = _state.Snapshot();
+        var snapshot = CaptureWorkspaceSnapshot();
         bool succeeded = false;
         try { await Task.Run(() => _store.Save(snapshot)); succeeded = true; }
         catch (Exception ex)
@@ -481,6 +474,9 @@ public sealed partial class MainWindow : Window
     {
         if (!_ready || !_isActive) return;
         UpdateClock();
+        RefreshWorkspaceSummary();
+        if (_page == "Running apps" && HomeBorder.Visibility == Visibility.Visible && !_commandOpen && !_dialogOpen)
+            _ = RefreshWindowsAsync();
         if (ResourceText.Visibility != Visibility.Visible) return;
         try
         {
@@ -532,6 +528,9 @@ public sealed partial class MainWindow : Window
         if (_dockCapacity != capacity) { _dockCapacity = capacity; RefreshDock(); }
         ControlPanel.Width = Math.Clamp(width - 72, 260, 356);
         ControlScroller.MaxHeight = Math.Max(120, DesktopRoot.ActualHeight - 160);
+        CommandPanel.MaxHeight = Math.Max(180, DesktopRoot.ActualHeight - 72);
+        CommandList.MaxHeight = Math.Max(60, Math.Min(360, DesktopRoot.ActualHeight - 220));
+        DockSearchButton.Visibility = width < 650 ? Visibility.Collapsed : Visibility.Visible;
         UpdateHero();
     }
     private void UpdateHero()
@@ -550,17 +549,23 @@ public sealed partial class MainWindow : Window
     private void ApplyEffects()
     {
         bool highContrast = _accessibility.HighContrast;
+        bool colorsChanged = _renderedHighContrast != highContrast;
+        _renderedHighContrast = highContrast;
         bool simple = _state.ReducedEffects || highContrast;
         bool animation = !simple && _isActive && _uiSettings.AnimationsEnabled;
         _motion?.SetEnabled(animation);
         WallpaperAccents.Visibility = simple ? Visibility.Collapsed : Visibility.Visible;
-        DesktopRoot.Background = highContrast ? new SolidColorBrush(_uiSettings.GetColorValue(UIColorType.Background)) : _wallpaper;
+        DesktopRoot.Background = highContrast ? new SolidColorBrush(_uiSettings.GetColorValue(UIColorType.Background)) : _chosenWallpaper ?? _wallpaper;
         foreach (var surface in _surfaceDefaults)
             surface.Key.Background = highContrast ? Resource("NexusPanel") : simple ? _solidPanel : surface.Value;
         HeroCard.Background = highContrast ? Resource("NexusCard") : simple ? _solidCard : _heroBackground;
         UpdateHero();
-        if (_page == "Activity") { PageContent.Children.Clear(); BuildActivity(); }
-        else if (_page == "Running apps") { PageContent.Children.Clear(); BuildRunning(); }
+        if (colorsChanged)
+        {
+            if (_page == "Activity") { PageContent.Children.Clear(); BuildActivity(); }
+            if (_page is "Study" or "Explore") Navigate(_page, false);
+            RenderHomeWorkspace();
+        }
     }
     private void Desktop_Loaded(object sender, RoutedEventArgs args)
     {
@@ -568,7 +573,7 @@ public sealed partial class MainWindow : Window
         try
         {
             _motion = new MotionController(DesktopRoot);
-            foreach (var control in new FrameworkElement[] { DockHomeButton, DockRunningButton, FilesCard, GamesCard, FocusCard })
+            foreach (var control in new FrameworkElement[] { DockHomeButton, DockRunningButton, DockSearchButton, FilesCard, GamesCard, FocusCard })
                 _motion.AttachHover(control);
             foreach (var control in DockApps.Children.OfType<FrameworkElement>()) _motion.AttachHover(control);
             ApplyEffects();
@@ -582,7 +587,8 @@ public sealed partial class MainWindow : Window
         _isActive = args.WindowActivationState != WindowActivationState.Deactivated;
         if (_isActive)
         {
-            UpdateClock(true); _resources.Reset(); _uiTimer.Start(); ApplyEffects();
+            UpdateClock(true); RenderFocus(); RefreshWorkspaceSummary(); _resources.Reset(); _uiTimer.Start(); ApplyEffects();
+            if (_page == "Running apps") _ = RefreshWindowsAsync();
         }
         else { _uiTimer.Stop(); _motion?.SetEnabled(false); }
     }
@@ -629,8 +635,7 @@ public sealed partial class MainWindow : Window
 
     private void SearchApps()
     {
-        Navigate("Apps");
-        DispatcherQueue.TryEnqueue(() => { if (_ready && _page == "Apps") AppsSearchBox.Focus(FocusState.Programmatic); });
+        OpenCommands();
     }
     private void Navigate_Click(object sender, RoutedEventArgs args) => Navigate((string)((Button)sender).Tag);
     private void NavigateMenu_Click(object sender, RoutedEventArgs args) => Navigate((string)((MenuFlyoutItem)sender).Tag);
@@ -658,7 +663,7 @@ public sealed partial class MainWindow : Window
     private void PageHost_SizeChanged(object sender, SizeChangedEventArgs args)
     {
         ((Grid)sender).Clip = new RectangleGeometry { Rect = new Windows.Foundation.Rect(0, 0, args.NewSize.Width, args.NewSize.Height) };
-        if (_ready) UpdateHero();
+        if (_ready) { UpdateHero(); UpdateWorkspaceLayout(); }
     }
     private void DragArea_PointerPressed(object sender, PointerRoutedEventArgs args)
     {
@@ -702,6 +707,7 @@ public sealed partial class MainWindow : Window
         try
         {
             StartupRegistration.SetEnabled(StartupSwitch.IsOn);
+            RefreshStartupRepair();
             Record(StartupSwitch.IsOn ? "Startup after sign-in enabled" : "Startup after sign-in disabled"); SaveState();
         }
         catch (Exception ex) { _ready = false; StartupSwitch.IsOn = !StartupSwitch.IsOn; _ready = true; Error("Could not change login startup", ex); }
@@ -710,7 +716,23 @@ public sealed partial class MainWindow : Window
     {
         if (!_ready) return; _state.FocusMode = FocusSwitch.IsOn; ApplyWidgetLayout(); RefreshHome(); SaveState();
     }
-    private void FocusCard_Click(object sender, RoutedEventArgs args) => FocusSwitch.IsOn = !FocusSwitch.IsOn;
+    private void RefreshStartupRepair()
+    {
+        bool repair = StartupRegistration.IsEnabled() && !StartupRegistration.UsesCurrentVersion();
+        StartupRepairHint.Visibility = repair ? Visibility.Visible : Visibility.Collapsed;
+        StartupRepairButton.Visibility = repair ? Visibility.Visible : Visibility.Collapsed;
+    }
+    private void StartupRepair_Click(object sender, RoutedEventArgs args)
+    {
+        try
+        {
+            StartupRegistration.SetEnabled(true); RefreshStartupRepair();
+            Record("Sign-in startup updated to this Nexus version"); SaveState();
+            ShowStatus("This version will start after Windows sign-in.");
+        }
+        catch (Exception ex) { Error("Could not update sign-in startup", ex); }
+    }
+    private void FocusCard_Click(object sender, RoutedEventArgs args) => Navigate("Study");
     private void Effects_Toggled(object sender, RoutedEventArgs args)
     {
         if (!_ready) return; _state.ReducedEffects = EffectsSwitch.IsOn; ApplyEffects(); SaveState();
@@ -720,14 +742,18 @@ public sealed partial class MainWindow : Window
 
     private void Window_Closed(object sender, WindowEventArgs args)
     {
+        if (_focusSession.CompleteIfDue()) FinishFocusSession(updateUi: false);
+        _focusSession.Pause();
+        var finalSnapshot = CaptureWorkspaceSnapshot();
         _ready = false;
         _uiTimer.Stop(); _usageTimer.Stop(); _searchTimer.Stop(); _saveTimer.Stop();
+        _focusTimer.Stop();
         _discoveryCancellation.Cancel();
         _accessibility.HighContrastChanged -= HighContrast_Changed;
         try { _motion?.Dispose(); } catch (Exception ex) { Log.Write("Motion cleanup skipped", ex); }
         _resources.Dispose();
         // An atomic final save also preserves mutations made after the latest snapshot.
-        try { _store.SaveFinal(_state.Snapshot()); } catch (Exception ex) { Log.Write("Final settings save failed", ex); }
+        try { _store.SaveFinal(finalSnapshot); } catch (Exception ex) { Log.Write("Final settings save failed", ex); }
         _discoveryCancellation.Dispose();
     }
 }

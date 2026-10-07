@@ -24,7 +24,7 @@ Windows animation preference is read at load/reactivation. High-contrast changes
 
 The discovered catalog contains at most 500 shortcuts from each Start-menu root. Records are lightweight names/paths/glyphs. The full app library is a GridView with a finite star-row viewport and native container virtualization. It sits outside any outer ScrollViewer. When leaving the library, its ItemsSource is cleared; WinUI can retain a bounded recycling cache. Home displays at most six pin records, and the dock shows at most five. No executable-icon bitmap cache is maintained.
 
-Settings accept at most 100 pins, 200 activity entries, 300 usage records, and a 2 MB settings file. Usage is approximate process foreground time sampled every five seconds, with idle and long-gap exclusion. The tracking timer is stopped when tracking is disabled. While minimized with tracking off, Nexus has no recurring visual or tracking timer; a pending settings write or discovery task can finish.
+Settings accept at most 100 pins, 200 activity entries, 300 usage records, and a 2 MB settings file. Usage is approximate process foreground time sampled every five seconds, with idle and long-gap exclusion. The tracking timer is stopped when tracking is disabled. While minimized with tracking off and no running focus session, Nexus has no recurring visual or tracking timer; a pending settings write or discovery task can finish.
 
 The on-screen resource footer samples only while the window is active and the footer is visible. It shows this process's working set and CPU normalized across available logical processors. CPU uses actual monotonic elapsed time; the first/resume sample has no CPU estimate. The tooltip adds private bytes. GPU allocations and Windows DWM memory are excluded.
 
@@ -55,3 +55,19 @@ There are **no measured MB, FPS, or Electron comparison claims** in this source 
 - [Windows animation preference](https://learn.microsoft.com/en-us/uwp/api/windows.ui.viewmanagement.uisettings.animationsenabled)
 
 `Nexus-Orbit-preview.svg` is a code-drawn design reference with sample pins, not a Windows runtime screenshot. Font rendering, native flyouts, focus outlines, and window scaling must be assessed in the Windows build.
+
+## 0.3.0 workspace additions
+
+Command results are capped at 30 and the ListView viewport is finite. Explore stores at most 100 user-created shortcut records; it does not crawl folders or index the PC. New page controls are constructed on navigation and released when leaving the page. Home and Study share one bounded 10,000-character note, saved using the existing debounce/snapshot/atomic store.
+
+The focus timer is based on monotonic elapsed time, with a one-second dispatcher tick only while a session runs. Switching or minimizing apps does not stop the session. Inactive ticks avoid repainting timer UI; completion is recorded once. Wallpaper presets are small vector/gradient changes. The new palette entrance uses the same finite compositor controller and reduced-motion fallback.
+
+Runtime-reusing update downloads trade local disk copying for less network transfer. Every reused byte is checked before publishing a fresh destination; old binaries remain in their original folder. Native performance remains unmeasured until Windows testing.
+
+## 0.4.0 everyday workspaces
+
+Window overview uses a GridView in its own finite star-row viewport with ItemsWrapGrid virtualization. It holds up to 80 lightweight records, does not capture live thumbnails, enumerates off the UI thread, permits one refresh at a time, and refreshes every five seconds only when the view and window are active. Leaving releases the records and item source; a navigation epoch discards results from an older view. Unchanged results do not rebuild the grid. Title search operates on the bounded in-memory snapshot. Card widths adapt to the page; native focus switching remains subject to Windows policy.
+
+Tasks and saved items are each bounded at 100. Their programmatic page controls are released on navigation. Home realizes only three task rows and four favorite shortcuts. Collections are short string labels, not folders on disk. Persistent records stay in the existing local settings store. A legacy-settings backup is attempted once before migration.
+
+A running timer still uses the monotonic session clock. Checkpoints save approximately every 30 seconds through the coalesced store, and a normal close captures the exact remaining time. Restoring stays paused and does not credit closed-app time. A crash may recover an older checkpoint. Task completion remains a separate user action. Native performance must still be measured; these bounds are design controls, not MB/FPS guarantees.

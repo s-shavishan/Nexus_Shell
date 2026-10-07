@@ -9,7 +9,11 @@ Start with **[START-HERE.md](START-HERE.md)**. It includes AppVeyor and GitHub A
 | Path | Responsibility |
 |---|---|
 | `src/Nexus.Shell/MainWindow.xaml` | Native desktop composition and controls |
-| `src/Nexus.Shell/MainWindow.xaml.cs` | UI actions, navigation, dock, and application integration |
+| `src/Nexus.Shell/MainWindow.xaml.cs` | Window lifecycle, app library, dock, and Windows integration |
+| `src/Nexus.Shell/MainWindow.Workspaces.cs` | Command palette, Explore board, Study timer/notes, and desktop moods |
+| `src/Nexus.Shell/MainWindow.Orbit.cs` | Tasks, favorites/collections, paused recovery, and virtualized window overview |
+| `Services/WorkspaceState.cs` | Bounded workspace migration and validation |
+| `tests/Nexus.Core.Checks` | Timing, recovery, search, migration, JSON, and snapshot behavioral checks |
 | `Models` | Preferences, app entries, and session records |
 | `Services/AppCatalog.cs` | Known app detection, bounded Start menu discovery, launches |
 | `Services/StateStore.cs` | Atomic local JSON preferences |
@@ -19,7 +23,7 @@ Start with **[START-HERE.md](START-HERE.md)**. It includes AppVeyor and GitHub A
 | `UI/AppAccentConverter.cs` | Reused vector-tile color brushes |
 | `Services/StartupRegistration.cs` | Explicit current-user login startup |
 | `Interop/NativeMethods.cs` | Win32 window enumeration, activation, and idle detection |
-| `scripts` | Build, package, diagnostics, and startup cleanup |
+| `scripts` | Build, compiled-resource checks, full/small packages, update checks, diagnostics, and startup cleanup |
 | `appveyor.yml` | AppVeyor Windows compile/publish/package configuration |
 | `.github/workflows` | Windows compile/publish workflow |
 
@@ -35,6 +39,8 @@ Usage totals are approximate foreground time, exclude periods idle for at least 
 
 ## Verification
 
+0.4.0 connects Home to a task checklist and favorite items, adds collections and editing to Explore, restores focus timers paused, and introduces a searchable virtualized window overview. Small update downloads reuse compatible runtimes and require the new app resource set. The published PRI/XBF repair is retained. Windows build and launch checks remain required.
+
 See `docs/VALIDATION.md` for the checks performed while preparing this source and the Windows verification still required. There is no prebuilt executable in this source ZIP.
 
-See `docs/CHANGELOG.md` for 0.2 changes, `docs/DESIGN-AND-PERFORMANCE.md` for motion/resource policy, and `docs/Nexus-Orbit-preview.svg` for a design reference. None of these documents establishes a measured Windows memory reduction.
+See `docs/CHANGELOG.md` for release changes, `docs/DESIGN-AND-PERFORMANCE.md` for motion/resource policy, and `docs/Nexus-Orbit-preview.svg` for a design reference. None of these documents establishes a measured Windows memory reduction.
