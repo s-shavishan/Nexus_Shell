@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Nexus.Shell.Interop;
 using Nexus.Shell.Models;
 using Nexus.Shell.Services;
 using System.Diagnostics;
