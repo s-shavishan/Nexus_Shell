@@ -188,3 +188,15 @@ For build failures, the GitHub run uploads `Nexus-build-logs`; local builds writ
 10. Fully exit Nexus and apply the small binary update; verify runtime checks, old-folder preservation and sign-in startup repair. Measure memory/CPU using the existing resource script after native acceptance.
 
 Automated CI compilation and packaging cannot establish how the UI renders or performs on this PC.
+
+## 0.9.0 acceptance
+
+1. Build the exact 0.9.0 commit in AppVeyor. Require core/native/updater checks, C# and XAML compilation, publishing, the thirteen SVG asset checks, MakePri and both archive checks to succeed. Confirm all artifact names use 0.9.0.
+2. Extract the complete binary into a fresh folder on Windows 10 build 19045 and Windows 11. Confirm version 0.9.0, visible interactive startup and all dock/desktop icons loading. Keep the Assets directory with the executable.
+3. In desktop mode, open My files, Explore, Study and App Library from the canvas, using mouse and keyboard. Favorite/unfavorite saved cards and verify up to four desktop favorites update and open the intended Explore selection. Check long titles, context menus and Tab/focus states.
+4. Change workspace from the compact desktop card and spaces widget. Set up an empty workspace, then open a configured one. Start/pause focus from its widget and verify Study shows the same session. Close/reopen panels with the traffic lights and dock. Home panel mode must still show its configured cards.
+5. Compare Explore board and list modes with notes, links, files and folders. List rows must fit title, single-line subtitle and kind without clipping. Check selection, hover, keyboard focus, Space/Enter Quick Look, long paths and multiline notes. Board, capture, import/export and scrolling must retain their behavior.
+6. Test 320×480, 1024×600, 1366×768 and 1920×1080 logical windows at 100/125/150/200% scaling and increased text size. Check narrow shortcut wrapping, scroll access, widget visibility, workspace-card fit, sidebar/inspector collapse and compact dock. No required navigation or exit action may become unreachable.
+7. Switch every mood, native glass, reduced effects and Windows transparency/animation preferences. Deactivate/reactivate the window and toggle high contrast. Check clock, shortcuts, toolbar pills, text fields, menus, disabled controls and dialogs; high contrast must use the panel fallback and system colors.
+8. Upgrade a compatible existing full folder with the small binary update. Confirm new SVGs and compiled resources are present, runtime checks pass and the old folder remains intact. Reopen with existing notes, tasks, pins and spaces intact. Repair the sign-in path if it pointed at an older folder.
+9. After acceptance, measure idle, minimized, Explore scrolling, rapid navigation and glass-on/off resource use with the existing measurement script. Record native screenshots and failures rather than treating the included layout illustrations as rendered-app evidence.

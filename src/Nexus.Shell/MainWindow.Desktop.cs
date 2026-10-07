@@ -148,11 +148,11 @@ public sealed partial class MainWindow
     }
     private void ApplyDesktopLayout()
     {
-        bool desktop = _page == "Home" && _state.DesktopLayout && !_highContrast;
+        bool desktop = IsDesktopCanvas;
         WindowChrome.Visibility = WindowFooter.Visibility = desktop ? Visibility.Collapsed : Visibility.Visible;
-        ChromeRow.Height = new GridLength(desktop ? 0 : 48);
+        ChromeRow.Height = new GridLength(desktop ? 0 : 44);
         FooterRow.Height = new GridLength(desktop ? 0 : 30);
-        HomeBorder.MaxWidth = _expanded ? double.PositiveInfinity : 1300;
+        HomeBorder.MaxWidth = desktop || _expanded ? double.PositiveInfinity : 1180;
         HomeBorder.BorderThickness = new Thickness(desktop ? 0 : 1);
         HomeBorder.Background = desktop ? _transparent : _highContrast ? Resource("NexusPanel")
             : _state.ReducedEffects ? _solidPanel : (Brush?)_auraGlass ?? Resource("NexusShell");
@@ -161,6 +161,9 @@ public sealed partial class MainWindow
             Sidebar.Visibility = Visibility.Collapsed; SidebarColumn.Width = new GridLength(0);
             HomeBorder.Shadow = null; HomeBorder.Translation = new(0, 0, 0);
         }
+        HomeView.Visibility = _page == "Home" && !desktop ? Visibility.Visible : Visibility.Collapsed;
+        DesktopCanvas.Visibility = desktop ? Visibility.Visible : Visibility.Collapsed;
+        UpdateDesktopCanvasLayout();
         HomeGreeting.Visibility = HomeWorkspacesButton.Visibility = desktop ? Visibility.Collapsed : Visibility.Visible;
         HomeWindowsSummary.Foreground = HomeRecentText.Foreground = Resource(desktop ? "NexusDesktopMuted" : "NexusMuted");
         HomeOverviewButton.Foreground = Resource(desktop ? "NexusDesktopText" : "NexusText");
@@ -198,6 +201,7 @@ public sealed partial class MainWindow
         ProfileDestinationButton.Content = profile.Page == "Home" ? "Your apps" : "Go to " + profile.Page;
         ProfileSummary.Text = profile.Apps.Count + " apps · " + profile.SavedItemIds.Count + " saved items";
         RenderProfileStrip();
+        RenderDesktopCanvas();
     }
     private void RenderProfileStrip()
     {

@@ -73,8 +73,8 @@ public sealed partial class MainWindow
                 face.Children.Add(Text(space.Name, 12));
                 face.Children.Add(Text(_state.SavedItems.Count(a => a.SpaceId == space.Id).ToString(), 10, true));
                 var button = new Button { Content = face, Tag = space.Id,
-                    Style = (Style)Application.Current.Resources["QuietButton"], Padding = new Thickness(12, 8),
-                    Background = space.Id == ActiveExploreSpace.Id ? _selection : _transparent };
+                    Style = (Style)Application.Current.Resources["QuietButton"], CornerRadius = new CornerRadius(8), Padding = new Thickness(12, 6, 12, 6),
+                    Background = space.Id == ActiveExploreSpace.Id ? _highContrast ? _selection : Resource("NexusCard") : _transparent };
                 if (_highContrast && space.Id == ActiveExploreSpace.Id)
                     foreach (var text in face.Children.OfType<TextBlock>()) text.Foreground = Resource("NexusAccentText");
                 Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, "Explore space: " + space.Name);
@@ -190,7 +190,7 @@ public sealed partial class MainWindow
         double width = Math.Max(160, ExploreGrid.ActualWidth - 12);
         bool list = _state.ExploreView == "List";
         int columns = list ? 1 : Math.Clamp((int)(width / 222), 1, 4);
-        panel.ItemWidth = Math.Floor(width / columns); panel.ItemHeight = list ? 106 : 212;
+        panel.ItemWidth = Math.Floor(width / columns); panel.ItemHeight = list ? 66 : 212;
     }
     private void UpdateExploreLayout()
     {
@@ -225,7 +225,7 @@ public sealed partial class MainWindow
         {
             var close = ActionButton("×", () =>
             { _state.ExploreSelectedItemId = ""; ExploreGrid.SelectedItem = null; SaveState(); RenderExploreDetails(null); });
-            close.Padding = new Thickness(8, 2);
+            close.Padding = new Thickness(8, 2, 8, 2);
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(close, "Close item preview");
             Grid.SetColumn(close, 1); title.Children.Add(close);
         }

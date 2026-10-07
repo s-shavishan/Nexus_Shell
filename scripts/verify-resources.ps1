@@ -8,6 +8,14 @@ param(
 $ErrorActionPreference = 'Stop'
 $publishRoot = [IO.Path]::GetFullPath($PublishDirectory).TrimEnd([char[]]'\/')
 $rootPrefix = $publishRoot + [IO.Path]::DirectorySeparatorChar
+if ([version]$AppVersion -ge [version]'0.9.0') {
+    foreach ($name in @('Nexus','Explore','Study','Files','Apps','Browser','Search','Settings','Windows','Note','Document','Terminal','Game')) {
+        $asset = Join-Path $publishRoot ("Assets\Icons\" + $name + '.svg')
+        if (-not (Test-Path $asset -PathType Leaf)) { throw "The desktop vector asset is missing: $name.svg" }
+        [xml]$vector = Get-Content $asset -Raw
+        if ($vector.DocumentElement.LocalName -ne 'svg') { throw "The desktop vector asset is invalid: $name.svg" }
+    }
+}
 $pri = Join-Path $publishRoot 'resources.pri'
 if (-not (Test-Path $pri -PathType Leaf)) { $pri = Join-Path $publishRoot 'Nexus.Shell.pri' }
 if (-not (Test-Path $pri -PathType Leaf)) {

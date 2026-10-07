@@ -57,8 +57,8 @@ public sealed partial class MainWindow
         try
         {
             _auraGlass ??= new AcrylicBrush();
-            _auraGlass.TintOpacity = palette.Name == "Opal" ? .72 : .68;
-            _auraGlass.TintLuminosityOpacity = palette.Name == "Opal" ? .86 : .52;
+            _auraGlass.TintOpacity = palette.Name == "Opal" ? .62 : .68;
+            _auraGlass.TintLuminosityOpacity = palette.Name == "Opal" ? .82 : .52;
             _auraGlass.TintColor = AuraColorValue("FF" + palette.Panel[2..]);
             _auraGlass.FallbackColor = AuraColorValue("FF" + palette.Panel[2..]);
             _auraGlass.AlwaysUseFallback = false;
@@ -93,6 +93,12 @@ public sealed partial class MainWindow
             MenuBar.Background = floating; DockBorder.Background = floating;
             ControlPanel.Background = floating; CommandPanel.Background = floating;
             HomeBorder.Background = floating;
+            foreach (var widget in new[] { DesktopClockCard, SpaceCard, DesktopFocusCard, DesktopWorkspaceCard })
+            {
+                widget.Background = floating;
+                widget.Shadow = simple ? null : _workspaceShadow;
+                widget.Translation = new(0, 0, simple ? 0 : 12);
+            }
             Sidebar.Background = _highContrast ? Resource("NexusPanel") : simple ? _solidPanel : Resource("NexusSidebar");
             WindowChrome.Background = _highContrast ? Resource("NexusPanel") : simple ? _solidPanel : Resource("NexusSidebar");
         }
@@ -103,6 +109,8 @@ public sealed partial class MainWindow
             MenuBar.Background = _solidPanel; DockBorder.Background = _solidPanel;
             ControlPanel.Background = _solidPanel; CommandPanel.Background = _solidPanel;
             HomeBorder.Background = _solidPanel;
+            foreach (var widget in new[] { DesktopClockCard, SpaceCard, DesktopFocusCard, DesktopWorkspaceCard })
+                widget.Background = _solidPanel;
         }
         AuraFocusPill.Background = _highContrast ? Resource("NexusPanel") : Resource("NexusCard");
         UpdateNavigation();

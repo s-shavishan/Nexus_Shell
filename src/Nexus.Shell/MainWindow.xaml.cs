@@ -205,7 +205,7 @@ public sealed partial class MainWindow : Window
         }
         ApplyWidgetLayout();
         if (changed && animate)
-            _motion?.Enter(page is "Apps" or "Gaming" ? AppLibraryView : page == "Home" ? HomeView : page == "Running apps" ? WindowOverviewView : page == "Explore" ? ExploreView : PageScroller);
+            _motion?.Enter(page is "Apps" or "Gaming" ? AppLibraryView : page == "Home" ? IsDesktopCanvas ? DesktopCanvas : HomeView : page == "Running apps" ? WindowOverviewView : page == "Explore" ? ExploreView : PageScroller);
     }
 
     private void RefreshHome()
@@ -427,17 +427,11 @@ public sealed partial class MainWindow : Window
     private void RefreshDock()
     {
         DockApps.Children.Clear();
-        var accent = (AppAccentConverter)DesktopRoot.Resources["AppAccent"];
         foreach (var app in (ActiveProfile.Apps.Count > 0 ? ActiveProfile.Apps : _state.PinnedApps).Take(_dockCapacity))
         {
             var button = new Button
             {
-                Content = new Border
-                {
-                    Width = 48, Height = 48, CornerRadius = new CornerRadius(16), BorderThickness = new Thickness(1),
-                    BorderBrush = Resource("NexusBorder"), Child = new FontIcon { Glyph = app.Glyph, FontFamily = new FontFamily("Segoe MDL2 Assets"), Foreground = Resource("NexusDesktopText"), FontSize = 22 },
-                    Background = (Brush)accent.Convert(app.Category, typeof(Brush), "", "")
-                },
+                Content = NexusIcons.Image(NexusIcons.ForApp(app)),
                 Style = (Style)Application.Current.Resources["DockButton"],
                 Background = _transparent, BorderBrush = _transparent
             };
@@ -539,6 +533,7 @@ public sealed partial class MainWindow : Window
     {
         double width = DesktopRoot.ActualWidth;
         DateText.Visibility = ClockText.Visibility = _state.ShowClockWidget ? Visibility.Visible : Visibility.Collapsed;
+        DesktopClockCard.Visibility = _state.ShowClockWidget ? Visibility.Visible : Visibility.Collapsed;
         ClockPeriod.Visibility = !_state.Clock24Hour && _state.ShowClockWidget ? Visibility.Visible : Visibility.Collapsed;
         SpaceCard.Visibility = _state.ShowSpaceWidget ? Visibility.Visible : Visibility.Collapsed;
         bool hidden = _page != "Home" || _expanded || _state.FocusMode || !_state.DesktopLayout || width < 1120 || DesktopRoot.ActualHeight < 650;
@@ -557,7 +552,10 @@ public sealed partial class MainWindow : Window
         FullScreenButton.Visibility = width < 500 ? Visibility.Collapsed : Visibility.Visible;
         SearchLabel.Visibility = width < 650 ? Visibility.Collapsed : Visibility.Visible;
         SearchShortcut.Visibility = width < 650 ? Visibility.Collapsed : Visibility.Visible;
-        MenuBar.Margin = new Thickness(width < 600 ? 8 : 12, 8, width < 600 ? 8 : 12, 2);
+        MenuBar.Margin = new Thickness(width < 600 ? 8 : 12, 5, width < 600 ? 8 : 12, 1);
+        Brush desktopCaption = _highContrast ? Resource("NexusPanel") : MakeBrush(32, 37, 65, 200);
+        DesktopPathPill.Background = DesktopTrailPill.Background = DesktopSearchButton.Background = desktopCaption;
+        DesktopTrailPill.Visibility = width < 760 ? Visibility.Collapsed : Visibility.Visible;
         Workspace.Margin = new Thickness(width < 600 ? 12 : _state.DesktopLayout ? 36 : 20, 6, width < 600 ? 12 : _state.DesktopLayout ? 36 : 20, 4);
         int capacity = width < 550 ? 1 : width < 720 ? 2 : width < 1120 ? 4 : 5;
         DockRunningApps.Visibility = width >= 1200 ? Visibility.Visible : Visibility.Collapsed;
@@ -618,11 +616,12 @@ public sealed partial class MainWindow : Window
         try
         {
             _motion = new MotionController(DesktopRoot);
-            foreach (var control in new FrameworkElement[] { DockHomeButton, DockExploreButton, DockRunningButton, DockSearchButton, FilesCard, GamesCard, FocusCard })
+            foreach (var control in new FrameworkElement[] { DockHomeButton, DockExploreButton, DockStudyButton, DockRunningButton, DockSearchButton, FilesCard, GamesCard, FocusCard })
                 _motion.AttachHover(control);
             foreach (var control in DockApps.Children.OfType<FrameworkElement>()) _motion.AttachHover(control);
             ApplyEffects();
-            _motion.Enter(HomeView);
+            RenderDesktopCanvas();
+            _motion.Enter(IsDesktopCanvas ? DesktopCanvas : HomeView);
         }
         catch (Exception ex) { Log.Write("Custom motion unavailable; using native controls", ex); }
     }

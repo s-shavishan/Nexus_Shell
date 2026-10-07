@@ -360,6 +360,6 @@ public sealed partial class MainWindow
     private void SelectWallpaper()
     {
         ApplyAuraPalette();
-        WallpaperAccents.Opacity = _state.Wallpaper == "Slate" ? .35 : .7;
+        WallpaperAccents.Opacity = _state.Wallpaper == "Opal" ? .94 : _state.Wallpaper == "Slate" ? .35 : .7;
     }
 }

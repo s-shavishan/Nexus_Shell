@@ -41,7 +41,7 @@ public sealed record AuraPalette(string Name, string Canvas, string Panel, strin
     public const string Input = "F0141B29";
     public static AuraPalette For(string mood) => mood switch
     {
-        "Opal" => new("Opal", "FF243856", "ECE4EDF8", "C4F8FAFF", "FF2454AA", "FF285F70", "FF4B5B73", "FFE0E9FC", "FFD8EFED", "FF244C61"),
+        "Opal" => new("Opal", "FF293668", "DAF0F1F8", "EAF8F8FC", "FF3163BC", "FF526E99", "FF4E5A70", "FFF0F2FB", "FFE3EAFB", "FF3F2B67"),
         "Aurora" => new("Lagoon", "FF101C22", "EF1B2E35", "E5233941", "FF8DDFD3", "FFAFBEF6", "FFBACDD2", "FF294751", "FF254E4B", "FF17343C"),
         "Slate" => new("Graphite", "FF121820", "EF202A36", "E52B3643", "FFAACCF4", "FFC3BBE8", "FFB9C5D4", "FF2D3D50", "FF243340", "FF192A36"),
         _ => new("Pearl", "FF121722", "EF222A39", "E52B3445", "FFC7BEF7", "FF9BDED8", "FFB8C3D6", "FF343B54", "FF29494C", "FF1B2C3A")
@@ -54,8 +54,8 @@ public sealed record AuraPalette(string Name, string Canvas, string Panel, strin
        {
         ["NexusText"] = Name == "Opal" ? "FF1B273D" : Text, ["NexusMuted"] = Muted, ["NexusAccent"] = Accent, ["NexusAccentText"] = Name == "Opal" ? "FFFFFFFF" : AccentText,
         ["NexusSecondary"] = Secondary, ["NexusPanel"] = Panel, ["NexusCard"] = Card, ["NexusBorder"] = Border,
-        ["NexusSidebar"] = Name == "Opal" ? "C8DEE8F6" : "B01B2335", ["NexusInput"] = Name == "Opal" ? "E8F8FAFF" : Input, ["NexusSelection"] = Name == "Opal" ? "253B62B7" : "384F657F",
-        ["NexusShell"] = Name == "Opal" ? "D9E6EDF9" : "D61A2331", ["NexusIcon"] = "FF34465C", ["NexusHeroStart"] = HeroStart,
+        ["NexusSidebar"] = Name == "Opal" ? "D8E8EAF3" : "B01B2335", ["NexusInput"] = Name == "Opal" ? "E8F8FAFF" : Input, ["NexusSelection"] = Name == "Opal" ? "253B62B7" : "384F657F",
+        ["NexusShell"] = Name == "Opal" ? "D2F0F0F8" : "D61A2331", ["NexusIcon"] = "FF34465C", ["NexusHeroStart"] = HeroStart,
         ["NexusDesktopText"] = "FFF5F8FF", ["NexusDesktopMuted"] = "FFD2DDED",
         ["NexusHeroEnd"] = HeroEnd, ["NexusOverlay"] = "BC090E18"
        };

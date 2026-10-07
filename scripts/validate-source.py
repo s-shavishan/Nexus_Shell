@@ -13,7 +13,7 @@ options = parser.parse_args()
 root = Path(__file__).resolve().parents[1]
 project = root / "src/Nexus.Shell"
 required = [
-    "App.xaml", "App.xaml.cs", "MainWindow.xaml", "MainWindow.xaml.cs", "MainWindow.Workspaces.cs", "MainWindow.Orbit.cs", "MainWindow.Desktop.cs", "MainWindow.Appearance.cs", "MainWindow.Experience.cs", "MainWindow.Explore.cs", "Services/ExploreWorkspace.cs", "UI/SavedKindConverter.cs", "Services/NavigationTrail.cs", "Services/ShellExperience.cs", "Services/AuraPalette.cs", "Services/DesktopWorkspace.cs", "Interop/DesktopIntegration.cs",
+    "App.xaml", "App.xaml.cs", "MainWindow.xaml", "MainWindow.xaml.cs", "MainWindow.Workspaces.cs", "MainWindow.Orbit.cs", "MainWindow.Desktop.cs", "MainWindow.Canvas.cs", "MainWindow.Appearance.cs", "MainWindow.Experience.cs", "MainWindow.Explore.cs", "Services/ExploreWorkspace.cs", "UI/SavedKindConverter.cs", "UI/NexusIcons.cs", "Services/NavigationTrail.cs", "Services/ShellExperience.cs", "Services/AuraPalette.cs", "Services/DesktopWorkspace.cs", "Interop/DesktopIntegration.cs",
     "Services/FocusSession.cs", "Services/CommandSearch.cs", "Services/WorkspaceState.cs",
     "Nexus.Shell.csproj", "app.manifest", "Assets/Nexus.ico",
     "Interop/NativeMethods.cs", "Models/ShellState.cs", "Services/AppCatalog.cs",
@@ -76,6 +76,13 @@ for source in project.rglob("*.cs"):
         f"Unsupported desktop WinRT event subscription: {source.relative_to(root)}"
     )
 print("Desktop WinRT event compatibility OK")
+
+# WinUI Thickness has uniform and four-side constructors. The two-value WPF
+# overload is not available and caused CS7036 in the 0.8.0 Windows build.
+for source in project.rglob("*.cs"):
+    for match in re.finditer(r"\bnew\s+Thickness\s*\(([^()\n]*)\)", source.read_text(encoding="utf-8")):
+        assert len(match[1].split(",")) in {1, 4}, f"Unsupported WinUI Thickness overload: {source.relative_to(root)}: {match[0]}"
+print("WinUI Thickness constructors OK")
 
 application = ET.parse(project / "App.xaml").getroot()
 app_resources = {node.attrib[xns + "Key"] for node in application.iter() if xns + "Key" in node.attrib}
@@ -141,6 +148,19 @@ assert "src\\Nexus.Shell\\Nexus.Shell.csproj" in (root / "Nexus.Shell.sln").read
 project_xml = ET.parse(project / "Nexus.Shell.csproj").getroot()
 assert project_xml.findtext("PropertyGroup/EnableMsixTooling") == "true"
 assert project_xml.findtext("PropertyGroup/WindowsPackageType") == "None"
+icon_content = project_xml.find("ItemGroup/Content[@Include='Assets\\Icons\\*.svg']")
+assert icon_content is not None and icon_content.attrib.get("CopyToPublishDirectory") == "PreserveNewest", "Native vector icons must be published"
+icon_names = {p.stem for p in (project / "Assets/Icons").glob("*.svg")}
+assert {"Nexus", "Explore", "Study", "Files", "Apps", "Browser", "Search", "Settings", "Windows", "Note", "Document", "Terminal", "Game"} <= icon_names
+for path in (project / "Assets/Icons").glob("*.svg"):
+    for node in ET.parse(path).getroot().iter():
+        assert node.tag.rsplit("}", 1)[-1] not in {"script", "image", "filter", "animate", "text"}, f"Unsupported/external vector content: {path}"
+for source in project.glob("*.xaml"):
+    for node in ET.parse(source).getroot().iter():
+        uri = node.attrib.get("UriSource", "")
+        if uri.startswith("ms-appx:///Assets/Icons/"):
+            assert uri.rsplit("/", 1)[-1].removesuffix(".svg") in icon_names, f"Missing icon: {uri}"
+print("Native vector assets and publish wiring OK")
 resource_target = project_xml.find("Target[@Name='NexusPublishXamlResources']")
 assert resource_target is not None and resource_target.attrib.get("AfterTargets") == "Publish"
 resource_items = resource_target.find("ItemGroup/_NexusBuildResources").attrib["Include"]

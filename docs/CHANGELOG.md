@@ -1,5 +1,15 @@
 # NEXUS Shell changes
 
+## 0.9.0 — A softer desktop
+
+- Fixed the two CS7036 build failures in Explore by using four-sided WinUI Thickness constructors; added a regression guard.
+- Replaced the large Home dashboard in desktop mode with a shortcut canvas, compact workspace card and smaller clock/spaces/focus widgets. Panel mode and high contrast keep the Home cards.
+- Added thirteen original, cached SVG illustrations to the desktop, dock, app categories and Explore cards. Assets are included in full and small-update publishing checks.
+- Added peach/coral/lilac/blue wallpaper waves, lighter Opal materials, smaller traffic lights and compact controls. Existing glass, motion, accessibility and inactive fallbacks remain.
+- Made Explore list rows 66 pixels tall with a single-line note/path subtitle; retained board view, capture, search, spaces, previews and import/export.
+- Updated versioned CI artifacts and added clearly labeled source-based layout illustrations.
+- All application C# compiles against the pinned WinUI/Windows references with generated XAML field declarations. Core and source checks pass locally. Native Windows XAML compilation, startup, rendering and performance remain pending.
+
 ## 0.8.0 — Opal & Explore
 
 - Added the Opal palette, folded vector wallpaper, an open Home desktop, floating focus/spaces widgets and framed work panels.

@@ -20,7 +20,7 @@
     <PublishTrimmed>false</PublishTrimmed>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>0.8.0</Version>
+    <Version>0.9.0</Version>
     <Product>White Dreams Nexus Shell</Product>
     <Description>Native Windows desktop surface — first-look build.</Description>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
@@ -31,6 +31,7 @@
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.4654" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Assets\Icons\*.svg" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="Assets\Nexus.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
   <!-- An unpackaged publish can omit the app PRI even when native runtime PRIs

@@ -140,8 +140,8 @@ public sealed partial class MainWindow
         desktop.Children.Add(PersonalizeToggle("Desktop widgets", () => !_state.FocusMode, v => _state.FocusMode = !v));
         desktop.Children.Add(PersonalizeToggle("Clock and date", () => _state.ShowClockWidget, v => _state.ShowClockWidget = v));
         desktop.Children.Add(PersonalizeToggle("Personal space card", () => _state.ShowSpaceWidget, v => _state.ShowSpaceWidget = v));
-        desktop.Children.Add(PersonalizeToggle("Home essentials", () => _state.ShowHomeEssentials, v => _state.ShowHomeEssentials = v));
-        desktop.Children.Add(PersonalizeToggle("Home quick notes", () => _state.ShowHomeNotes, v => _state.ShowHomeNotes = v));
+        desktop.Children.Add(PersonalizeToggle("Home panel app card", () => _state.ShowHomeEssentials, v => _state.ShowHomeEssentials = v));
+        desktop.Children.Add(PersonalizeToggle("Home panel note card", () => _state.ShowHomeNotes, v => _state.ShowHomeNotes = v));
         desktop.Children.Add(Text("Widgets also adapt to window size. Notes and app pins stay saved when their cards are hidden.", 12, true));
         var interfacePanel = new StackPanel { Spacing = 18 };
         interfacePanel.Children.Add(Text("Feel & interaction", 21));
@@ -225,11 +225,13 @@ public sealed partial class MainWindow
         DockBorder.Padding = new Thickness(compact ? 8 : 10, compact ? 6 : 7, compact ? 8 : 10, compact ? 6 : 7);
         if (DockBorder.Child is StackPanel dock) dock.Spacing = compact ? 4 : 6;
         DockApps.Spacing = compact ? 5 : 9; DockRunningApps.Spacing = compact ? 2 : 4;
-        foreach (var button in new[] { DockHomeButton, DockExploreButton, DockSearchButton, DockRunningButton }
+        foreach (var button in new[] { DockHomeButton, DockExploreButton, DockStudyButton, DockSearchButton, DockRunningButton }
             .Concat(DockApps.Children.OfType<Button>()).Concat(DockRunningApps.Children.OfType<Button>()))
         {
             button.Width = compact ? 46 : 54; button.Height = compact ? 48 : 56;
-            if (button.Content is Border tile)
+            if (button.Content is Image image)
+            { image.Width = compact ? 40 : 48; image.Height = compact ? 40 : 48; }
+            else if (button.Content is Border tile)
             {
                 tile.Width = compact ? 40 : 48; tile.Height = compact ? 40 : 48;
                 tile.CornerRadius = new CornerRadius(compact ? 14 : 16);

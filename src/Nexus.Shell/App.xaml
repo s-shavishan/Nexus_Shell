@@ -213,15 +213,15 @@
    <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPressed" Color="#FFB8C3D6"/>
    <Style x:Key="QuietButton" TargetType="Button">
     <Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/>
-    <Setter Property="CornerRadius" Value="12"/><Setter Property="Padding" Value="13,10"/>
-    <Setter Property="FontSize" Value="14"/><Setter Property="Foreground" Value="{ThemeResource NexusText}"/>
+    <Setter Property="CornerRadius" Value="8"/><Setter Property="Padding" Value="11,8"/>
+    <Setter Property="FontSize" Value="13"/><Setter Property="Foreground" Value="{ThemeResource NexusText}"/>
    </Style>
    <Style x:Key="AuraSurfaceButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
     <Setter Property="Background" Value="{ThemeResource NexusCard}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusBorder}"/>
     <Setter Property="BorderThickness" Value="1"/><Setter Property="Padding" Value="15,11"/>
    </Style>
    <Style x:Key="AuraPrimaryButton" TargetType="Button" BasedOn="{StaticResource AccentButtonStyle}">
-    <Setter Property="CornerRadius" Value="12"/><Setter Property="Padding" Value="18,12"/><Setter Property="FontSize" Value="14"/>
+    <Setter Property="CornerRadius" Value="8"/><Setter Property="Padding" Value="14,9"/><Setter Property="FontSize" Value="13"/>
     <Setter Property="FontWeight" Value="SemiBold"/>
    </Style>
    <Style x:Key="IconButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
@@ -235,14 +235,20 @@
     <Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/>
     <Setter Property="Foreground" Value="{ThemeResource NexusText}"/>
    </Style>
+   <Style x:Key="DesktopIconButton" TargetType="Button">
+    <Setter Property="Width" Value="108"/><Setter Property="MinHeight" Value="108"/><Setter Property="Padding" Value="6"/><Setter Property="CornerRadius" Value="14"/>
+    <Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="Transparent"/><Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="HorizontalContentAlignment" Value="Center"/><Setter Property="VerticalContentAlignment" Value="Top"/>
+    <Setter Property="Foreground" Value="{ThemeResource NexusDesktopText}"/>
+   </Style>
    <Style x:Key="ShortcutCard" TargetType="Button">
     <Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="HorizontalContentAlignment" Value="Left"/>
     <Setter Property="Padding" Value="20,18"/><Setter Property="CornerRadius" Value="20"/>
     <Setter Property="Background" Value="{ThemeResource NexusCard}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusBorder}"/>
     <Setter Property="BorderThickness" Value="1"/><Setter Property="Foreground" Value="{ThemeResource NexusText}"/>
    </Style>
-   <Style TargetType="TextBox"><Setter Property="CornerRadius" Value="12"/><Setter Property="Padding" Value="13,11"/><Setter Property="FontSize" Value="14"/><Setter Property="Background" Value="{ThemeResource NexusInput}"/><Setter Property="Foreground" Value="{ThemeResource NexusText}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusBorder}"/></Style>
-   <Style TargetType="ComboBox"><Setter Property="CornerRadius" Value="12"/><Setter Property="Padding" Value="13,10"/><Setter Property="FontSize" Value="14"/><Setter Property="Background" Value="{ThemeResource NexusInput}"/><Setter Property="Foreground" Value="{ThemeResource NexusText}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusBorder}"/></Style>
+   <Style TargetType="TextBox"><Setter Property="CornerRadius" Value="8"/><Setter Property="Padding" Value="11,8"/><Setter Property="FontSize" Value="13"/><Setter Property="Background" Value="{ThemeResource NexusInput}"/><Setter Property="Foreground" Value="{ThemeResource NexusText}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusBorder}"/></Style>
+   <Style TargetType="ComboBox"><Setter Property="CornerRadius" Value="8"/><Setter Property="Padding" Value="11,8"/><Setter Property="FontSize" Value="13"/><Setter Property="Background" Value="{ThemeResource NexusInput}"/><Setter Property="Foreground" Value="{ThemeResource NexusText}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusBorder}"/></Style>
   </ResourceDictionary>
  </Application.Resources>
 </Application>
