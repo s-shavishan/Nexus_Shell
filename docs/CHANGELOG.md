@@ -1,3 +1,14 @@
+# Nexus Shell 0.4.1 — desktop startup repair
+
+- Removes the unsupported `AccessibilitySettings.HighContrastChanged` event that aborted 0.4.0 startup on Windows 10 build 19045 after XAML had loaded.
+- Replaces startup-created WinRT appearance objects with guarded desktop Win32 high-contrast and animation preference queries.
+- Checks preferences on startup, activation and the existing active-only five-second UI tick; no extra background timer. Retains last known values on query failure, with custom motion initially disabled.
+- Keeps the existing high-contrast resources and finite animations; unchanged settings do not rebuild pages.
+- Adds a source guard for unsupported UWP event subscriptions and actual Win32 query smoke checks in Windows CI.
+- Updates application, manifest, resource report and full/small artifact versions to 0.4.1. Direct package pins and the published PRI/XBF repair are retained.
+
+The supplied 0.4.0 log confirms MainWindow XAML loading on Windows 10, followed by this event failure. The 0.4.1 source has not yet been compiled or launched in the authoring workspace; a successful AppVeyor build and a visible, interactive desktop on the user's PC are still required.
+
 # Nexus Shell 0.4.0 — your everyday orbit
 
 - Searchable window overview with native card virtualization, responsive widths, background enumeration, active-view refresh, and Ctrl+4.

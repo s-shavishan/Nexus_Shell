@@ -31,10 +31,10 @@ try {
         $file = Join-Path $pub $_
         [ordered]@{ File = $_; Length = (Get-Item $file).Length; SHA256 = (Get-FileHash $file -Algorithm SHA256).Hash.ToLowerInvariant() }
     }
-    [ordered]@{ FormatVersion = 1; AppVersion = '0.4.0'; ResourceFiles = @($resources) } |
+    [ordered]@{ FormatVersion = 1; AppVersion = '0.4.1'; ResourceFiles = @($resources) } |
         ConvertTo-Json -Depth 6 | Set-Content (Join-Path $pub 'Nexus.resources.json') -Encoding UTF8
     $zip = Join-Path $fixture 'Update.zip'
-    & (Join-Path $PSScriptRoot 'package-update.ps1') -PublishDirectory $pub -OutputZip $zip -AppVersion '0.4.0'
+    & (Join-Path $PSScriptRoot 'package-update.ps1') -PublishDirectory $pub -OutputZip $zip -AppVersion '0.4.1'
     Expand-Archive $zip $unpacked
     Assert-Check (-not (Test-Path (Join-Path $unpacked 'payload\coreclr.dll'))) 'Runtime bytes must be omitted from the update.'
     Copy-Item (Join-Path $pub 'coreclr.dll'), (Join-Path $pub 'Microsoft.UI.Xaml.dll') $base

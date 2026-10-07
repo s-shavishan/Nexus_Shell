@@ -22,7 +22,7 @@ Start with **[START-HERE.md](START-HERE.md)**. It includes AppVeyor and GitHub A
 | `UI/MotionController.cs` | Shared finite compositor animations, cancellation, and cleanup |
 | `UI/AppAccentConverter.cs` | Reused vector-tile color brushes |
 | `Services/StartupRegistration.cs` | Explicit current-user login startup |
-| `Interop/NativeMethods.cs` | Win32 window enumeration, activation, and idle detection |
+| `Interop/NativeMethods.cs` | Win32 accessibility/animation preferences, window enumeration, activation, and idle detection |
 | `scripts` | Build, compiled-resource checks, full/small packages, update checks, diagnostics, and startup cleanup |
 | `appveyor.yml` | AppVeyor Windows compile/publish/package configuration |
 | `.github/workflows` | Windows compile/publish workflow |
@@ -38,6 +38,8 @@ The current dock is part of the Nexus window. It is not a system taskbar replace
 Usage totals are approximate foreground time, exclude periods idle for at least 90 seconds, and stop when Nexus exits. Sampling avoids crediting long gaps across sleep or a blocked UI thread. It collects process names, not screenshots, keyboard input, or browsing history.
 
 ## Verification
+
+0.4.1 replaces the unsupported UWP high-contrast event with guarded Win32 preference queries, using the existing active-window timer and an activation refresh. The user-supplied 0.4.0 log confirms the app XAML loads on Windows 10 build 19045, then startup fails at that event subscription. The fix still needs a Windows build and launch test.
 
 0.4.0 connects Home to a task checklist and favorite items, adds collections and editing to Explore, restores focus timers paused, and introduces a searchable virtualized window overview. Small update downloads reuse compatible runtimes and require the new app resource set. The published PRI/XBF repair is retained. Windows build and launch checks remain required.
 

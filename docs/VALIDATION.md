@@ -1,6 +1,6 @@
 # Validation record
 
-Prepared on 2026-10-07 for Windows 10 build 19041 or newer and Windows 11, x64. Current source version: **0.4.0**.
+Prepared on 2026-10-07 for Windows 10 build 19041 or newer and Windows 11, x64. Current source version: **0.4.1**.
 
 ## Windows evidence supplied by the user
 
@@ -73,4 +73,19 @@ Local checks: XML/XAML collection order and single-child content controls; 94 un
 
 Expanded core checks cover paused recovery without time-away credit or repeated completion, older settings migration, bounded/unique task and saved-item records, JSON round-trip and independent snapshots. Expanded PowerShell fixture checks reject reused app binaries/resources, invalid hashes, path aliases and traversal, alongside prior compatibility/corruption/destination checks. These are wired into Windows CI and **have not executed in this authoring workspace**.
 
-No successful Windows 0.2.2/0.3.0/0.4.0 launch has been supplied. .NET compilation, native PowerShell parsing/execution, WinUI load/rendering, keyboard/accessibility/DPI behavior, actual update size, animations, and memory/CPU measurements remain required on Windows.
+At the time of the 0.4.0 source preparation, no successful native launch had been supplied. The later 0.4.0 runtime evidence is recorded below. .NET compilation, native PowerShell parsing/execution, WinUI load/rendering, keyboard/accessibility/DPI behavior, actual update size, animations, and memory/CPU measurements remain required on Windows.
+
+
+## 0.4.1 desktop startup repair
+
+The user's 2026-10-07 10:15:14 (+05:30) log records Nexus Shell 0.4.0 on Windows 10 Pro x64 build 19045. The root app PRI and loose MainWindow.xbf are present, and `MainWindow.xaml loaded; configuring window` completes. Startup then fails in `Windows.UI.ViewManagement.AccessibilitySettings.add_HighContrastChanged`, at MainWindow constructor line 108, with COMException 0x80070490. This is direct evidence that this build passes the earlier MainWindow resource lookup; it is not evidence of a completed native window launch.
+
+Microsoft explicitly lists `AccessibilitySettings.HighContrastChanged` as unsupported in desktop applications: [WinRT APIs not supported in desktop apps](https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/winrt-api-desktop-app-support#events). The application must not subscribe to that event. This is an application integration error, not evidence that Windows 10 needs replacement or that the user must install developer tools.
+
+The fix removes the subscription, callback, cleanup unsubscription, and the startup-created WinRT UISettings/AccessibilitySettings objects. Guarded Win32 `SystemParametersInfoW` calls retrieve `SPI_GETHIGHCONTRAST` and `SPI_GETCLIENTAREAANIMATION`. HIGHCONTRAST includes its native structure size and pointer-sized scheme member; Win32 BOOL is marshaled as a four-byte integer. Background colors use the existing high-contrast Nexus resource dictionary.
+
+Preferences are cached once at startup, refreshed on activation, and checked during the existing five-second UI timer while the app is active. Failed queries retain the last successful values; custom animations begin disabled until their preference is read. Optional settings queries cannot abort construction. Unchanged preferences do not rebuild programmatic pages. No new timer, global hook, service, or package dependency is added.
+
+The source validator now rejects subscriptions to the documented unsupported desktop events throughout the application. Windows CI's core-check executable also performs the actual two Win32 queries, in addition to the existing behavior and packaging checks.
+
+Local authoring verification: source XML/XAML/resource/event/viewport checks; direct package pins unchanged; C# source and native signature review; version and CI artifact paths; both YAML configurations; structural guard rejects the previous startup source and accepts the repaired source; archive CRC and changed-file byte checks. This workspace has no .NET compiler, PowerShell host, or Windows UI runtime. The new native CI checks and 0.4.1 compilation/launch, rendered accessibility changes, normal-close behavior, and resource measurements have not run here. Test the resulting Windows artifact using TEST-WINDOWS.md.

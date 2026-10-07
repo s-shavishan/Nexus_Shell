@@ -68,6 +68,15 @@ for node in window.iter():
             handlers.add(value)
 assert "AutomationProperties =" not in code, "Attached properties must use their setters"
 
+# These UWP-only events can compile yet terminate desktop startup. Check the
+# entire app source so the regression cannot move to another partial/helper.
+for source in project.rglob("*.cs"):
+    source_text = source.read_text(encoding="utf-8")
+    assert not re.search(r"\b(?:HighContrastChanged|ColorValuesChanged)\s*[+-]=", source_text), (
+        f"Unsupported desktop WinRT event subscription: {source.relative_to(root)}"
+    )
+print("Desktop WinRT event compatibility OK")
+
 application = ET.parse(project / "App.xaml").getroot()
 app_resources = {node.attrib[xns + "Key"] for node in application.iter() if xns + "Key" in node.attrib}
 local_resources = {node.attrib[xns + "Key"] for node in window.iter() if xns + "Key" in node.attrib}

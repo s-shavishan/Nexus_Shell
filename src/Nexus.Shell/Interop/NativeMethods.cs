@@ -24,6 +24,33 @@ internal static class NativeMethods
     [DllImport("user32.dll", EntryPoint = "MessageBoxW", CharSet = CharSet.Unicode, ExactSpelling = true)]
     private static extern int MessageBox(IntPtr owner, string text, string caption, uint type);
     [StructLayout(LayoutKind.Sequential)] private struct LastInputInfo { public uint Size; public uint Tick; }
+    [StructLayout(LayoutKind.Sequential)] private struct HighContrastInfo
+    {
+        public uint Size;
+        public uint Flags;
+        public IntPtr DefaultScheme;
+    }
+    [DllImport("user32.dll", EntryPoint = "SystemParametersInfoW", ExactSpelling = true, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool ReadHighContrast(uint action, uint size, ref HighContrastInfo value, uint flags);
+    [DllImport("user32.dll", EntryPoint = "SystemParametersInfoW", ExactSpelling = true, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool ReadBooleanPreference(uint action, uint parameter, out int value, uint flags);
+
+    internal static bool TryGetHighContrast(out bool enabled)
+    {
+        var value = new HighContrastInfo { Size = (uint)Marshal.SizeOf<HighContrastInfo>() };
+        bool success = ReadHighContrast(0x0042, value.Size, ref value, 0); // SPI_GETHIGHCONTRAST
+        enabled = success && (value.Flags & 0x00000001) != 0; // HCF_HIGHCONTRASTON
+        return success;
+    }
+    internal static bool TryGetAnimationsEnabled(out bool enabled)
+    {
+        // Win32 BOOL is a four-byte integer, including on x64.
+        bool success = ReadBooleanPreference(0x1042, 0, out int value, 0); // SPI_GETCLIENTAREAANIMATION
+        enabled = success && value != 0;
+        return success;
+    }
 
     internal static void ShowStartupError(string message) =>
         MessageBox(IntPtr.Zero, message, "Nexus startup error", 0x00000010); // MB_OK | MB_ICONERROR

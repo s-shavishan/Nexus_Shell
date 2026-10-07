@@ -7,6 +7,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../src/Nexus.Shell/Interop/NativeMethods.cs" Link="NativeMethods.cs" />
     <Compile Include="../../src/Nexus.Shell/Models/ShellState.cs" Link="ShellState.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/FocusSession.cs" Link="FocusSession.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/CommandSearch.cs" Link="CommandSearch.cs" />

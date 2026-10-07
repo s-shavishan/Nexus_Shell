@@ -180,7 +180,7 @@
        <ScrollViewer x:Name="PageScroller" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel x:Name="PageContent" Spacing="16" Padding="24"/></ScrollViewer>
       </Grid>
      </Grid>
-     <Border x:Name="WindowFooter" Grid.Row="2" Background="#A00E1525" CornerRadius="0,0,23,23" Padding="18,0"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock x:Name="PageStatus" Text="Your personal workspace" VerticalAlignment="Center" FontSize="11" TextTrimming="CharacterEllipsis" Foreground="{ThemeResource NexusMuted}"/><TextBlock Grid.Column="1" Text="NEXUS  0.4" VerticalAlignment="Center" Foreground="{ThemeResource NexusMuted}" FontSize="9" CharacterSpacing="90" Margin="12,0,0,0"/></Grid></Border>
+     <Border x:Name="WindowFooter" Grid.Row="2" Background="#A00E1525" CornerRadius="0,0,23,23" Padding="18,0"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock x:Name="PageStatus" Text="Your personal workspace" VerticalAlignment="Center" FontSize="11" TextTrimming="CharacterEllipsis" Foreground="{ThemeResource NexusMuted}"/><TextBlock Grid.Column="1" Text="NEXUS  0.4.1" VerticalAlignment="Center" Foreground="{ThemeResource NexusMuted}" FontSize="9" CharacterSpacing="90" Margin="12,0,0,0"/></Grid></Border>
     </Grid>
    </Border>
    <Button Grid.Column="1" x:Name="ReopenHomeButton" Content="Open Nexus Home" Click="Reopen_Click" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="22,14" CornerRadius="14"/>

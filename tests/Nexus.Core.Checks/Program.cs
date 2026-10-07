@@ -1,10 +1,17 @@
 using Nexus.Shell.Models;
 using Nexus.Shell.Services;
+using Nexus.Shell.Interop;
 using System.Text.Json;
 
 static void Check(bool condition, string message)
 {
     if (!condition) throw new Exception(message);
+}
+if (OperatingSystem.IsWindows())
+{
+    Check(NativeMethods.TryGetHighContrast(out _), "The desktop high-contrast query must succeed on Windows.");
+    Check(NativeMethods.TryGetAnimationsEnabled(out _), "The desktop animation preference query must succeed on Windows.");
+    Console.WriteLine("PASS: Win32 desktop accessibility queries (actual user32 calls).");
 }
 long ticks = 0;
 var focus = new FocusSession(() => ticks, 1000);

@@ -1,6 +1,6 @@
 # Smaller Nexus downloads
 
-The build emits a full app ZIP and a separate `Nexus-Shell-0.4.0-Update-win-x64.zip`. The full ZIP carries all self-contained runtimes; the Update ZIP omits their bytes and records the exact runtime files needed from a base folder. CI prints its actual size.
+The build emits a full app ZIP and a separate `Nexus-Shell-0.4.1-Update-win-x64.zip`. The full ZIP carries all self-contained runtimes; the Update ZIP omits their bytes and records the exact runtime files needed from a base folder. CI prints its actual size.
 
 Extract the Update ZIP separately and double-click `Apply-Update.bat`. Choose your old extracted app folder. Before creating anything, the updater checks downloaded payload hashes and reused runtime hashes. It then uses local copies to assemble a fresh version folder and verifies the copied bytes. The original folder is retained. No SDK, global .NET installation, or runtime installer is added.
 

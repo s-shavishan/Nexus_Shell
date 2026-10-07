@@ -6,9 +6,18 @@ Record your Windows build, monitor resolution/scaling, and whether this is a loc
 
 The AppVeyor build must first complete the MakePri MainWindow index check and compiled-resource ZIP hash check. Save the `resources-check.json` artifact; this is packaging evidence, not UI acceptance.
 
-1. Extract 0.4.0 into a fresh folder and start `Nexus.Shell.exe` on Windows 10 build 19045. Confirm the latest log says `Nexus Shell 0.4.0` and contains `MainWindow.xaml loaded; configuring window` and `MainWindow activation completed`.
+1. Extract 0.4.1 into a fresh folder and start `Nexus.Shell.exe` on Windows 10 build 19045. Confirm the latest log says `Nexus Shell 0.4.1` and contains `MainWindow.xaml loaded; configuring window` and `MainWindow activation completed`.
 2. Confirm the actual desktop is visible and interactive; log markers alone are not UI acceptance. Try both Control center anchors and repeated app-tile context menus while scrolling/recycling the library.
 3. If startup fails, include the resource report and root-PRI log inventory along with the error. Confirm a native dialog identifies the stage/HRESULT/log path. Close it, then collect the latest startup section, including `RestrictedDescription` and resource messages if present. Do not mark the XAML bug fixed on the strength of a compile alone.
+
+## Desktop accessibility regression (0.4.1)
+
+1. On Windows 10 build 19045, confirm `Desktop settings ready` is logged, followed by `MainWindow activation completed`, and that Home is actually visible and interactive. The previous fatal `AccessibilitySettings.add_HighContrastChanged` call must be absent.
+2. Toggle high contrast in Windows Settings while Nexus is active. Within the existing five-second UI tick, programmatically created Study/Explore/Activity text and cards must use high-contrast resources and custom motion must stop. Toggle it off and confirm the Nexus theme returns.
+3. Change the Windows animation preference. Custom motion must follow the preference within five seconds while Nexus is active. This does not override Nexus's Reduced effects setting.
+4. Minimize or deactivate Nexus, change the preferences, and return. The preferences must refresh on activation; no additional background appearance timer is used.
+5. With unchanged settings, type into notes or a saved-item dialog for longer than five seconds. Polling must not rebuild the page, lose text, or reset the caret. Test normal close and reopen with notes/tasks retained.
+6. CI's core-check executable calls the actual Win32 high-contrast and animation query functions on Windows. That validates native interop access on the build host; it does not validate WinUI rendering on this PC.
 
 ## Basic operation
 

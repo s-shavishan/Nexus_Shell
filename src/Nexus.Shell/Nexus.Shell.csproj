@@ -20,7 +20,7 @@
     <PublishTrimmed>false</PublishTrimmed>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>0.4.0</Version>
+    <Version>0.4.1</Version>
     <Product>White Dreams Nexus Shell</Product>
     <Description>Native Windows desktop surface — first-look build.</Description>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>

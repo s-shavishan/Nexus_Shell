@@ -12,7 +12,6 @@ using System.Diagnostics;
 using Windows.Graphics;
 using Windows.Storage.Pickers;
 using Windows.System;
-using Windows.UI.ViewManagement;
 
 namespace Nexus.Shell;
 
@@ -22,8 +21,6 @@ public sealed partial class MainWindow : Window
     private readonly ShellState _state;
     private readonly UsageTracker _usage;
     private readonly ResourceSampler _resources = new();
-    private readonly UISettings _uiSettings = new();
-    private readonly AccessibilitySettings _accessibility = new();
     private readonly CancellationTokenSource _discoveryCancellation = new();
     private readonly DispatcherTimer _uiTimer = new() { Interval = TimeSpan.FromSeconds(5) };
     private readonly DispatcherTimer _usageTimer = new() { Interval = TimeSpan.FromSeconds(5) };
@@ -40,6 +37,7 @@ public sealed partial class MainWindow : Window
     private string _page = "", _lastClockMinute = "";
     private bool _ready, _isActive, _expanded, _discovering, _catalogReady;
     private bool _controlsOpen, _picking, _dialogOpen, _dirty, _saveInFlight;
+    private bool _highContrast, _animationsEnabled, _appearanceReadFailed;
     private int _usageTicks, _dockCapacity = 5;
     private readonly SolidColorBrush _selection = MakeBrush(190, 171, 248, 40);
     private readonly SolidColorBrush _solidPanel = MakeBrush(25, 32, 51), _solidCard = MakeBrush(37, 45, 69);
@@ -52,6 +50,9 @@ public sealed partial class MainWindow : Window
         Log.Write("MainWindow.xaml loaded; configuring window");
         _state = _store.Load();
         _usage = new UsageTracker(_state);
+        Log.Write("Reading desktop accessibility settings");
+        RefreshSystemAppearance();
+        Log.Write($"Desktop settings ready; high contrast: {_highContrast}; animations: {_animationsEnabled}");
         if (!_state.CatalogInitialized)
         {
             _state.PinnedApps = AppCatalog.Defaults();
@@ -105,7 +106,6 @@ public sealed partial class MainWindow : Window
         _saveTimer.Tick += Save_Tick;
         Activated += Window_Activated;
         Closed += Window_Closed;
-        _accessibility.HighContrastChanged += HighContrast_Changed;
         _ready = true;
         RebuildCatalog();
         UpdateClock(true);
@@ -128,7 +128,7 @@ public sealed partial class MainWindow : Window
     private static SolidColorBrush MakeBrush(byte r, byte g, byte b, byte alpha = 255) => new(Windows.UI.Color.FromArgb(alpha, r, g, b));
     private Brush Resource(string key)
     {
-        var theme = _accessibility.HighContrast ? "HighContrast" : "Dark";
+        var theme = _highContrast ? "HighContrast" : "Dark";
         return (Brush)((ResourceDictionary)Application.Current.Resources.ThemeDictionaries[theme])[key];
     }
     private TextBlock Text(string value, double size = 14, bool muted = false) => new()
@@ -473,6 +473,7 @@ public sealed partial class MainWindow : Window
     private void Ui_Tick(object? sender, object args)
     {
         if (!_ready || !_isActive) return;
+        if (RefreshSystemAppearance()) ApplyEffects();
         UpdateClock();
         RefreshWorkspaceSummary();
         if (_page == "Running apps" && HomeBorder.Visibility == Visibility.Visible && !_commandOpen && !_dialogOpen)
@@ -535,7 +536,7 @@ public sealed partial class MainWindow : Window
     }
     private void UpdateHero()
     {
-        HomeHeroArt.Visibility = !_state.ReducedEffects && !_accessibility.HighContrast && PageHost.ActualWidth >= 560
+        HomeHeroArt.Visibility = !_state.ReducedEffects && !_highContrast && PageHost.ActualWidth >= 560
             ? Visibility.Visible : Visibility.Collapsed;
         bool compact = PageHost.ActualWidth < 480;
         ShortcutRow.RowSpacing = compact ? 10 : 0;
@@ -548,14 +549,14 @@ public sealed partial class MainWindow : Window
     }
     private void ApplyEffects()
     {
-        bool highContrast = _accessibility.HighContrast;
+        bool highContrast = _highContrast;
         bool colorsChanged = _renderedHighContrast != highContrast;
         _renderedHighContrast = highContrast;
         bool simple = _state.ReducedEffects || highContrast;
-        bool animation = !simple && _isActive && _uiSettings.AnimationsEnabled;
+        bool animation = !simple && _isActive && _animationsEnabled;
         _motion?.SetEnabled(animation);
         WallpaperAccents.Visibility = simple ? Visibility.Collapsed : Visibility.Visible;
-        DesktopRoot.Background = highContrast ? new SolidColorBrush(_uiSettings.GetColorValue(UIColorType.Background)) : _chosenWallpaper ?? _wallpaper;
+        DesktopRoot.Background = highContrast ? Resource("NexusPanel") : _chosenWallpaper ?? _wallpaper;
         foreach (var surface in _surfaceDefaults)
             surface.Key.Background = highContrast ? Resource("NexusPanel") : simple ? _solidPanel : surface.Value;
         HeroCard.Background = highContrast ? Resource("NexusCard") : simple ? _solidCard : _heroBackground;
@@ -587,14 +588,31 @@ public sealed partial class MainWindow : Window
         _isActive = args.WindowActivationState != WindowActivationState.Deactivated;
         if (_isActive)
         {
-            UpdateClock(true); RenderFocus(); RefreshWorkspaceSummary(); _resources.Reset(); _uiTimer.Start(); ApplyEffects();
+            UpdateClock(true); RenderFocus(); RefreshWorkspaceSummary(); _resources.Reset(); _uiTimer.Start();
+            RefreshSystemAppearance(); ApplyEffects();
             if (_page == "Running apps") _ = RefreshWindowsAsync();
         }
         else { _uiTimer.Stop(); _motion?.SetEnabled(false); }
     }
-    private void HighContrast_Changed(AccessibilitySettings sender, object args)
+    private bool RefreshSystemAppearance()
     {
-        DispatcherQueue.TryEnqueue(() => { if (_ready) ApplyEffects(); });
+        // HighContrastChanged is unsupported in desktop apps. Read Win32
+        // preferences on startup, activation, and the existing active UI tick.
+        bool priorContrast = _highContrast, priorAnimations = _animationsEnabled;
+        bool failed = false;
+        Exception? error = null;
+        try
+        {
+            if (NativeMethods.TryGetHighContrast(out bool contrast)) _highContrast = contrast;
+            else failed = true;
+            if (NativeMethods.TryGetAnimationsEnabled(out bool animations)) _animationsEnabled = animations;
+            else failed = true;
+        }
+        catch (Exception ex) { failed = true; error = ex; }
+        if (failed && !_appearanceReadFailed)
+            Log.Write("Desktop appearance query unavailable; retaining last known preferences", error);
+        _appearanceReadFailed = failed;
+        return priorContrast != _highContrast || priorAnimations != _animationsEnabled;
     }
     private void SetFullScreen(bool enabled)
     {
@@ -749,7 +767,6 @@ public sealed partial class MainWindow : Window
         _uiTimer.Stop(); _usageTimer.Stop(); _searchTimer.Stop(); _saveTimer.Stop();
         _focusTimer.Stop();
         _discoveryCancellation.Cancel();
-        _accessibility.HighContrastChanged -= HighContrast_Changed;
         try { _motion?.Dispose(); } catch (Exception ex) { Log.Write("Motion cleanup skipped", ex); }
         _resources.Dispose();
         // An atomic final save also preserves mutations made after the latest snapshot.
