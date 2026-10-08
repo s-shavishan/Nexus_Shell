@@ -3,14 +3,9 @@ param([string]$BaseDirectory, [string]$TargetDirectory, [switch]$NoOpenFolder)
 $ErrorActionPreference = 'Stop'
 if ($env:OS -ne 'Windows_NT') { throw 'This update is for Windows x64.' }
 if (-not $BaseDirectory) {
-    Add-Type -AssemblyName System.Windows.Forms
-    $picker = New-Object System.Windows.Forms.FolderBrowserDialog
-    $picker.Description = 'Choose your existing full Nexus folder containing Nexus.Shell.exe'
-    $picker.ShowNewFolderButton = $false
-    try {
-        if ($picker.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) { return }
-        $BaseDirectory = $picker.SelectedPath
-    } finally { $picker.Dispose() }
+    $BaseDirectory = Read-Host 'Paste the full path to your existing Nexus folder (containing Nexus.Shell.exe)'
+    if ([string]::IsNullOrWhiteSpace($BaseDirectory)) { return }
+    $BaseDirectory = $BaseDirectory.Trim().Trim('"')
 }
 $base = [IO.Path]::GetFullPath($BaseDirectory).TrimEnd([char[]]'\/')
 if (-not (Test-Path (Join-Path $base 'Nexus.Shell.exe') -PathType Leaf)) { throw 'Choose the extracted app folder, not a ZIP or source folder.' }
@@ -48,12 +43,12 @@ foreach ($record in @($manifest.PayloadFiles) + @($manifest.RuntimeFiles)) {
     $seen[$key] = $true
 }
 foreach ($record in $manifest.PayloadFiles) { $payloadFiles[([string]$record.File).Replace('\', '/')] = $record }
-foreach ($required in @('Nexus.Shell.exe', 'Nexus.Shell.dll', 'Nexus.resources.json')) {
+foreach ($required in @('Nexus.Shell.exe', 'Nexus.Shell.dll', 'Nexus.DesktopHost.exe', 'Nexus.DesktopHost.dll', 'Nexus.DesktopHost.deps.json', 'Nexus.DesktopHost.runtimeconfig.json', 'Nexus.resources.json')) {
     if (-not $payloadFiles.ContainsKey($required)) { throw "The update payload is missing $required." }
 }
 foreach ($record in $manifest.RuntimeFiles) {
     $relative = ([string]$record.File).Replace('\', '/')
-    if ($relative -like 'Nexus.Shell.*' -or $relative -eq 'Nexus.resources.json' -or $relative -eq 'resources.pri' -or
+    if ($relative -like 'Nexus.Shell.*' -or $relative -like 'Nexus.DesktopHost.*' -or $relative -eq 'Nexus.resources.json' -or $relative -eq 'resources.pri' -or
         $relative -like 'Assets/*' -or [IO.Path]::GetExtension($relative) -eq '.xbf') {
         throw "App-owned files must come from the new payload: $relative"
     }
@@ -101,7 +96,7 @@ try {
     }
     Move-Item $stage $target
     Write-Host "Nexus $($manifest.AppVersion) is ready in: $target" -ForegroundColor Green
-    if (-not $NoOpenFolder) { Invoke-Item $target }
+    Write-Host 'Open Nexus.Shell.exe from the new folder to preview it. Select the new host in Personalize before your next sign-in.'
 } finally {
     if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
 }

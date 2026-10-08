@@ -62,6 +62,12 @@ internal static class NativeMethods
         if (IsIconic(window)) ShowWindowAsync(window, 9);
         return SetForegroundWindow(window);
     }
+    internal static bool Activate(RunningWindow window)
+    {
+        if (window.Handle == IntPtr.Zero || window.ProcessId <= 0 ||
+            GetWindowThreadProcessId(window.Handle, out uint processId) == 0 || processId != window.ProcessId) return false;
+        return Activate(window.Handle);
+    }
     internal static void BeginDrag(IntPtr window)
     {
         ReleaseCapture();

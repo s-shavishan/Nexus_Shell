@@ -6,7 +6,7 @@ namespace Nexus.Shell;
 
 public partial class App : Application
 {
-    private Window? _window;
+    private Desktop.DesktopEnvironment? _environment;
     private Mutex? _instance;
     public App()
     {
@@ -34,9 +34,10 @@ public partial class App : Application
         _instance = new Mutex(true, @"Local\WhiteDreams.Nexus.Shell." + user, out bool first);
         if (!first)
         {
-            var handle = Interop.NativeMethods.FindWindow(null, MainWindow.NativeWindowTitle);
+            var handle = Interop.NativeMethods.FindWindow(null, Desktop.DesktopWindow.NativeWindowTitle);
             if (handle != IntPtr.Zero)
                 Interop.DesktopIntegration.PostMessage(handle, Interop.DesktopIntegration.SummonMessage, UIntPtr.Zero, IntPtr.Zero);
+            _instance.Dispose(); _instance = null;
             Exit();
             return;
         }
@@ -48,14 +49,22 @@ public partial class App : Application
             Log.Write("Loose MainWindow.xbf present: " + File.Exists(Path.Combine(AppContext.BaseDirectory, "MainWindow.xbf")) + "; XBF may instead be embedded in the app PRI");
         }
         catch (Exception ex) { Log.Write("Could not inspect startup resource files", ex); }
-        string stage = "constructing MainWindow";
+        string stage = "constructing the desktop environment";
         try
         {
-            _window = new MainWindow();
-            _window.Closed += (_, _) => { _instance?.Dispose(); _instance = null; Log.Write("Nexus Shell closed"); };
-            stage = "activating MainWindow";
-            _window.Activate();
-            Log.Write("MainWindow activation completed");
+            var command = Environment.GetCommandLineArgs();
+            var mode = command.Contains("--desktop-shell") ? DesktopSessionMode.DesktopShell : DesktopSessionMode.Preview;
+            int tokenIndex = Array.IndexOf(command, "--host-token");
+            string? token = tokenIndex >= 0 && tokenIndex + 1 < command.Length ? command[tokenIndex + 1] : null;
+            _environment = new Desktop.DesktopEnvironment(mode, token);
+            stage = "starting the desktop and taskbar";
+            _environment.Stopped += () =>
+            {
+                _instance?.Dispose(); _instance = null;
+                Log.Write("Nexus desktop closed"); Exit();
+            };
+            _environment.Start();
+            Log.Write("Desktop and taskbar started; Sections opens on demand");
         }
         catch (Exception ex)
         {

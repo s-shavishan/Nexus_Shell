@@ -10,124 +10,127 @@ using Nexus.Shell.Services;
 using Nexus.Shell.UI;
 using System.Diagnostics;
 using Windows.Graphics;
-using Windows.Storage.Pickers;
 using Windows.System;
 
 namespace Nexus.Shell;
 
 public sealed partial class MainWindow : Window
 {
-    internal const string NativeWindowTitle = "White Dreams Nexus Shell";
-    private readonly StateStore _store = new();
+    internal const string NativeWindowTitle = "Nexus Sections";
+    private readonly StateStore _store;
+    private readonly Desktop.DesktopEnvironment _environment;
     private readonly ShellState _state;
-    private readonly UsageTracker _usage;
-    private readonly ResourceSampler _resources = new();
     private readonly CancellationTokenSource _discoveryCancellation = new();
     private readonly DispatcherTimer _uiTimer = new() { Interval = TimeSpan.FromSeconds(5) };
-    private readonly DispatcherTimer _usageTimer = new() { Interval = TimeSpan.FromSeconds(5) };
     private readonly DispatcherTimer _searchTimer = new() { Interval = TimeSpan.FromMilliseconds(160) };
-    private readonly DispatcherTimer _saveTimer = new() { Interval = TimeSpan.FromSeconds(2) };
+    
     private readonly AppWindow _appWindow;
     private readonly IntPtr _handle;
-    private readonly Brush _wallpaper;
-    private readonly Dictionary<Border, Brush> _surfaceDefaults;
+    
     private readonly Button[] _navigation;
     private readonly Button[] _shortcutCards;
     private MotionController? _motion;
     private List<AppEntry> _catalog = [], _orderedCatalog = [];
-    private string _page = "", _lastClockMinute = "";
-    private bool _ready, _isActive, _expanded, _discovering, _catalogReady;
-    private bool _controlsOpen, _picking, _dialogOpen, _dirty, _saveInFlight;
+    private string _page = "";
+    private bool _ready, _isActive, _discovering, _catalogReady;
+    private bool _controlsOpen, _picking, _dialogOpen, _dirty;
     private bool _highContrast, _animationsEnabled, _appearanceReadFailed;
-    private int _usageTicks, _dockCapacity = 5;
     private readonly SolidColorBrush _selection = MakeBrush(190, 171, 248, 40);
     private readonly SolidColorBrush _solidPanel = MakeBrush(25, 32, 51), _solidCard = MakeBrush(37, 45, 69);
     private readonly SolidColorBrush _transparent = MakeBrush(0, 0, 0, 0);
 
-    public MainWindow()
+    internal MainWindow(Desktop.DesktopEnvironment environment)
     {
-        Log.Write("Loading MainWindow.xaml");
-        InitializeComponent();
-        Log.Write("MainWindow.xaml loaded; configuring window");
-        _state = _store.Load();
-        _usage = new UsageTracker(_state);
-        Log.Write("Reading desktop accessibility settings");
-        RefreshSystemAppearance();
-        Log.Write($"Desktop settings ready; high contrast: {_highContrast}; animations: {_animationsEnabled}");
-        if (!_state.CatalogInitialized)
+        try
         {
-            _state.PinnedApps = AppCatalog.Defaults();
-            _state.CatalogInitialized = true;
-            _dirty = true;
+            Log.Write("Loading MainWindow.xaml");
+            InitializeComponent();
+            Log.Write("MainWindow.xaml loaded; configuring window");
+            _environment = environment; _store = environment.Session.Store; _state = environment.Session.State;
+            Log.Write("Reading desktop accessibility settings");
+            RefreshSystemAppearance();
+            Log.Write($"Desktop settings ready; high contrast: {_highContrast}; animations: {_animationsEnabled}");
+            if (!_state.CatalogInitialized)
+            {
+                _state.PinnedApps = AppCatalog.Defaults();
+                _state.CatalogInitialized = true;
+                _dirty = true;
+            }
+            _navigation = [NavPcControls, NavPersonalize, NavProfiles, NavHome, NavExplore, NavStudy, NavApps, NavGames, NavActivity, NavRunning];
+            _shortcutCards = [FilesCard, GamesCard, FocusCard];
+            
+            _state.FullScreen = false;
+            _handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
+            _appWindow = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(_handle));
+            _appWindow.Title = NativeWindowTitle;
+            var workArea = DisplayArea.GetFromWindowId(_appWindow.Id, DisplayAreaFallback.Nearest).WorkArea;
+            int initialWidth = Math.Max(320, Math.Min(1180, workArea.Width - 80));
+            int initialHeight = Math.Max(420, Math.Min(800, workArea.Height - 80));
+            _appWindow.MoveAndResize(new RectInt32(workArea.X + (workArea.Width - initialWidth) / 2,
+                workArea.Y + (workArea.Height - initialHeight) / 2, initialWidth, initialHeight));
+            if (_appWindow.Presenter is OverlappedPresenter presenter) presenter.SetBorderAndTitleBar(true, false);
+            var icon = Path.Combine(AppContext.BaseDirectory, "Assets", "Nexus.ico");
+            if (File.Exists(icon)) _appWindow.SetIcon(icon);
+            DisplayNameBox.Text = _state.DisplayName;
+            ExploreWorkspace.Normalize(_state);
+            InitializeWorkspaces();
+            InitializeDesktop();
+            GlassSwitch.IsOn = _state.NativeGlass;
+            TrackingSwitch.IsOn = _state.UsageTracking;
+            
+            EffectsSwitch.IsOn = _state.ReducedEffects;
+            try { StartupSwitch.IsOn = StartupRegistration.IsEnabled(); RefreshStartupRepair(); }
+            catch (Exception ex) { Log.Write("Could not inspect login startup", ex); StartupSwitch.IsEnabled = false; }
+    
+            AddAccelerator(VirtualKey.Escape, VirtualKeyModifiers.None, () =>
+            {
+                if (_commandOpen) CloseCommands();
+                else if (_controlsOpen) ControlsFlyout.Hide();
+                else if (_state.FullScreen) SetFullScreen(false);
+                else Minimize();
+            });
+            AddAccelerator(VirtualKey.F11, VirtualKeyModifiers.None, () => SetFullScreen(!_state.FullScreen));
+            AddAccelerator(VirtualKey.K, VirtualKeyModifiers.Control, SearchApps);
+            AddAccelerator(VirtualKey.N, VirtualKeyModifiers.Control, NewExploreNote);
+            AddAccelerator(VirtualKey.Number2, VirtualKeyModifiers.Control, () => Navigate("Explore"));
+            AddAccelerator(VirtualKey.Number3, VirtualKeyModifiers.Control, () => Navigate("Study"));
+            AddAccelerator(VirtualKey.Number1, VirtualKeyModifiers.Control, () => Navigate("Home"));
+            AddAccelerator(VirtualKey.Number4, VirtualKeyModifiers.Control, () => Navigate("Running apps"));
+            AddAccelerator(VirtualKey.Number5, VirtualKeyModifiers.Control, () => Navigate("PC controls"));
+            AddAccelerator(VirtualKey.Left, VirtualKeyModifiers.Menu, GoBack);
+            AddAccelerator(VirtualKey.Right, VirtualKeyModifiers.Menu, GoForward);
+            _uiTimer.Tick += Ui_Tick;
+            _searchTimer.Tick += Search_Tick;
+            
+            _audioWriteTimer.Tick += AudioWrite_Tick;
+            Activated += Window_Activated;
+            Closed += Window_Closed;
+            _ready = true;
+            RebuildCatalog();
+            UpdateClock(true);
+            RefreshDock();
+            Navigate(_state.ResumeWorkspace ? _state.LastPage : "Explore", animate: false);
+            ApplyWidgetLayout();
+            ApplyEffects();
+            
+            if (_dirty) SaveState();
+            
+            if (_store.RecoveryMessage.Length > 0) ShowStatus(_store.RecoveryMessage, true);
+            _environment.Session.AttachSnapshot(CaptureWorkspaceSnapshot);
+            // Sections does not own desktop, taskbar, tray or session lifetime.
         }
-        _navigation = [TopNavHome, TopNavProfiles, TopNavExplore, TopNavStudy, TopNavApps, NavPcControls, NavPersonalize, NavProfiles, NavHome, NavExplore, NavStudy, NavApps, NavGames, NavActivity, NavRunning];
-        _shortcutCards = [FilesCard, GamesCard, FocusCard];
-        _wallpaper = DesktopRoot.Background;
-        _surfaceDefaults = new()
+        catch
         {
-            [HomeBorder] = HomeBorder.Background, [SpaceCard] = SpaceCard.Background,
-            [MenuBar] = MenuBar.Background, [DockBorder] = DockBorder.Background,
-            [WindowChrome] = WindowChrome.Background, [WindowFooter] = WindowFooter.Background
-        };
-        _handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
-        _appWindow = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(_handle));
-        _appWindow.Title = NativeWindowTitle;
-        var workArea = DisplayArea.GetFromWindowId(_appWindow.Id, DisplayAreaFallback.Nearest).WorkArea;
-        int initialWidth = Math.Max(320, Math.Min(1440, workArea.Width - 48));
-        int initialHeight = Math.Max(420, Math.Min(940, workArea.Height - 48));
-        _appWindow.MoveAndResize(new RectInt32(workArea.X + (workArea.Width - initialWidth) / 2,
-            workArea.Y + (workArea.Height - initialHeight) / 2, initialWidth, initialHeight));
-        if (_appWindow.Presenter is OverlappedPresenter presenter) presenter.SetBorderAndTitleBar(true, false);
-        var icon = Path.Combine(AppContext.BaseDirectory, "Assets", "Nexus.ico");
-        if (File.Exists(icon)) _appWindow.SetIcon(icon);
-        DisplayNameBox.Text = _state.DisplayName;
-        ExploreWorkspace.Normalize(_state);
-        InitializeWorkspaces();
-        InitializeDesktop();
-        GlassSwitch.IsOn = _state.NativeGlass;
-        TrackingSwitch.IsOn = _state.UsageTracking;
-        FocusSwitch.IsOn = _state.FocusMode;
-        EffectsSwitch.IsOn = _state.ReducedEffects;
-        try { StartupSwitch.IsOn = StartupRegistration.IsEnabled(); RefreshStartupRepair(); }
-        catch (Exception ex) { Log.Write("Could not inspect login startup", ex); StartupSwitch.IsEnabled = false; }
+            try { Close(); } catch (Exception cleanup) { Log.Write("Could not close a failed Sections window", cleanup); }
+            throw;
+        }
+    }
 
-        AddAccelerator(VirtualKey.Escape, VirtualKeyModifiers.None, () =>
-        {
-            if (_commandOpen) CloseCommands();
-            else if (_controlsOpen) ControlsFlyout.Hide();
-            else if (_state.FullScreen) SetFullScreen(false);
-            else Minimize();
-        });
-        AddAccelerator(VirtualKey.F11, VirtualKeyModifiers.None, () => SetFullScreen(!_state.FullScreen));
-        AddAccelerator(VirtualKey.K, VirtualKeyModifiers.Control, SearchApps);
-        AddAccelerator(VirtualKey.N, VirtualKeyModifiers.Control, NewExploreNote);
-        AddAccelerator(VirtualKey.Number2, VirtualKeyModifiers.Control, () => Navigate("Explore"));
-        AddAccelerator(VirtualKey.Number3, VirtualKeyModifiers.Control, () => Navigate("Study"));
-        AddAccelerator(VirtualKey.Number1, VirtualKeyModifiers.Control, () => Navigate("Home"));
-        AddAccelerator(VirtualKey.Number4, VirtualKeyModifiers.Control, () => Navigate("Running apps"));
-        AddAccelerator(VirtualKey.Number5, VirtualKeyModifiers.Control, () => Navigate("PC controls"));
-        AddAccelerator(VirtualKey.Left, VirtualKeyModifiers.Menu, GoBack);
-        AddAccelerator(VirtualKey.Right, VirtualKeyModifiers.Menu, GoForward);
-        _uiTimer.Tick += Ui_Tick;
-        _usageTimer.Tick += Usage_Tick;
-        _searchTimer.Tick += Search_Tick;
-        _saveTimer.Tick += Save_Tick;
-        _audioWriteTimer.Tick += AudioWrite_Tick;
-        Activated += Window_Activated;
-        Closed += Window_Closed;
-        _ready = true;
-        RebuildCatalog();
-        UpdateClock(true);
-        RefreshDock();
-        Navigate(_state.ResumeWorkspace ? _state.LastPage : "Home", animate: false);
-        ApplyWidgetLayout();
-        ApplyEffects();
-        if (_state.FullScreen) SetFullScreen(true);
-        if (_state.UsageTracking) _usageTimer.Start();
-        if (_dirty) SaveState();
-        InitializeDesktopIntegration();
-        if (_store.RecoveryMessage.Length > 0) ShowStatus(_store.RecoveryMessage, true);
-        // No Start-menu scan until the app library is opened.
+    internal void OpenSection(string? page)
+    {
+        if (!_ready) return;
+        if (page is not null) Navigate(page);
+        ShowNexus();
     }
 
     private void AddAccelerator(VirtualKey key, VirtualKeyModifiers modifiers, Action action)
@@ -170,7 +173,7 @@ public sealed partial class MainWindow : Window
         _searchTimer.Stop();
         ControlsFlyout.Hide();
         HomeBorder.Visibility = Visibility.Visible;
-        ReopenHomeButton.Visibility = Visibility.Collapsed;
+        
         HomeView.Visibility = page == "Home" ? Visibility.Visible : Visibility.Collapsed;
         AppLibraryView.Visibility = page is "Apps" or "Gaming" ? Visibility.Visible : Visibility.Collapsed;
         WindowOverviewView.Visibility = page == "Running apps" ? Visibility.Visible : Visibility.Collapsed;
@@ -186,7 +189,7 @@ public sealed partial class MainWindow : Window
             AppsGrid.ItemsSource = null; // release off-page realized library containers
             DiscoveryProgress.IsActive = false;
         }
-        PageTitle.Text = page switch { "Home" => "Nexus Home", "Gaming" => "Nexus Games", "Running apps" => "Window overview", _ => page };
+        PageTitle.Text = page switch { "Home" => "Overview", "Gaming" => "Nexus Games", "Running apps" => "Window overview", _ => page };
         UpdateNavigation();
         foreach (var button in _navigation)
         {
@@ -210,7 +213,7 @@ public sealed partial class MainWindow : Window
         ApplyWidgetLayout();
         if (page != "PC controls") _ = SuspendAudioAsync();
         if (changed && animate)
-            _motion?.Enter(page is "Apps" or "Gaming" ? AppLibraryView : page == "Home" ? IsDesktopCanvas ? DesktopCanvas : HomeView : page == "Running apps" ? WindowOverviewView : page == "Explore" ? ExploreView : page == "PC controls" ? PcView : PageScroller);
+            _motion?.Enter(page is "Apps" or "Gaming" ? AppLibraryView : page == "Home" ? HomeView : page == "Running apps" ? WindowOverviewView : page == "Explore" ? ExploreView : page == "PC controls" ? PcView : PageScroller);
     }
 
     private void RefreshHome()
@@ -379,17 +382,14 @@ public sealed partial class MainWindow : Window
     {
         if (_picking) return;
         _picking = true; AddAppButton.IsEnabled = false;
-        // Capture the page before awaiting a native picker. Do not pull the user
+        // Capture the page before awaiting a Nexus picker. Do not pull the user
         // back to that page if they navigated elsewhere while it was open.
         string category = _page == "Gaming" ? "Game" : "App";
         try
         {
-            var picker = new FileOpenPicker();
-            WinRT.Interop.InitializeWithWindow.Initialize(picker, _handle);
-            picker.FileTypeFilter.Add(".exe"); picker.FileTypeFilter.Add(".lnk");
-            var file = await picker.PickSingleFileAsync();
-            if (!_ready || file is null) return;
-            var app = AppCatalog.FromFile(file.Path, category);
+            var paths = await _environment.PickAsync(new(FileSelectionKind.OpenFile, "Choose an app", [".exe", ".lnk"]));
+            if (!_ready || paths.Count == 0) return;
+            var app = AppCatalog.FromFile(paths[0], category);
             if (!Pin(app)) return;
             Record("Added " + app.Name + (category == "Game" ? " to games" : " to Nexus"));
             PinsChanged();
@@ -406,7 +406,7 @@ public sealed partial class MainWindow : Window
         FilterLibrary();
         try
         {
-            var apps = await Task.Run(() => AppCatalog.DiscoverShortcuts(_discoveryCancellation.Token), _discoveryCancellation.Token);
+            var apps = await _environment.GetCatalogAsync(refresh: _catalogReady);
             if (!_ready) return;
             _catalog = apps; _catalogReady = true; RebuildCatalog();
         }
@@ -426,27 +426,10 @@ public sealed partial class MainWindow : Window
     }
     private void Launch(AppEntry app)
     {
-        try { AppCatalog.Launch(app); Record("Opened " + app.Name); SaveState(); }
+        try { _environment.OpenTargetChecked(app.Target); Record("Opened " + app.Name); SaveState(); }
         catch (Exception ex) { Error("Could not launch " + app.Name, ex); }
     }
-    private void RefreshDock()
-    {
-        DockApps.Children.Clear();
-        foreach (var app in (ActiveProfile.Apps.Count > 0 ? ActiveProfile.Apps : _state.PinnedApps).Take(_dockCapacity))
-        {
-            var button = new Button
-            {
-                Content = NexusIcons.Image(NexusIcons.ForApp(app)),
-                Style = (Style)Application.Current.Resources["DockButton"],
-                Background = _transparent, BorderBrush = _transparent
-            };
-            button.Click += (_, _) => Launch(app);
-            ToolTipService.SetToolTip(button, app.Name);
-            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, "Open " + app.Name);
-            DockApps.Children.Add(button); _motion?.AttachHover(button);
-        }
-        ApplyDockDensity();
-    }
+    private void RefreshDock() => _environment.UpdateTaskbar();
     private void Record(string message, bool updateUi = true)
     {
         _state.Activity.Insert(0, new(DateTimeOffset.Now, message));
@@ -455,30 +438,8 @@ public sealed partial class MainWindow : Window
         if (updateUi) HomeRecentText.Text = message;
         Log.Write(message);
     }
-    private void SaveState()
-    {
-        if (!_ready) return;
-        _dirty = true; _saveTimer.Stop(); _saveTimer.Start();
-    }
-    private async void Save_Tick(object? sender, object args)
-    {
-        _saveTimer.Stop();
-        if (!_ready || !_dirty || _saveInFlight) return;
-        _saveInFlight = true; _dirty = false;
-        var snapshot = CaptureWorkspaceSnapshot();
-        bool succeeded = false;
-        try { await Task.Run(() => _store.Save(snapshot)); succeeded = true; }
-        catch (Exception ex)
-        {
-            _dirty = true;
-            if (_ready) Error("Could not save settings", ex); else Log.Write("Settings write failed", ex);
-        }
-        finally
-        {
-            _saveInFlight = false;
-            if (_ready && _dirty && succeeded) _saveTimer.Start();
-        }
-    }
+    private void SaveState() { if (!_ready) return; _dirty = false; _environment.SaveState(); }
+    
     private void ShowStatus(string message, bool error = false)
     {
         if (!_ready) return;
@@ -499,85 +460,17 @@ public sealed partial class MainWindow : Window
         RefreshWorkspaceSummary();
         if (!_commandOpen && !_dialogOpen) _ = RefreshDesktopWindowsAsync();
         if (PcVisible) _ = RefreshPcAsync();
-        if (ResourceText.Visibility != Visibility.Visible) return;
-        try
-        {
-            var sample = _resources.Sample();
-            string cpu = sample.CpuPercent is double percent ? $"{percent:0.0}%" : "—";
-            ResourceText.Text = $"Nexus · {sample.WorkingSetMB:0} MB\nCPU {cpu}";
-            ToolTipService.SetToolTip(ResourceText, $"Process working set: {sample.WorkingSetMB:0} MB\nPrivate bytes: {sample.PrivateMB:0} MB\nCPU normalized across {Environment.ProcessorCount} logical processors.\nGPU/DWM memory is not included.");
-        }
-        catch (Exception ex) { Log.Write("Resource sample skipped", ex); ResourceText.Text = "Nexus · native desktop"; }
+
     }
-    private void Usage_Tick(object? sender, object args)
-    {
-        if (!_ready || !_state.UsageTracking) return;
-        _dirty |= _usage.Tick();
-        if (++_usageTicks >= 12)
-        {
-            _usageTicks = 0;
-            if (_dirty) SaveState();
-        }
-    }
-    private void UpdateClock(bool force = false)
-    {
-        string minute = DateTime.Now.ToString("yyyyMMddHHmm");
-        if (!force && minute == _lastClockMinute) return;
-        _lastClockMinute = minute;
-        var now = DateTime.Now;
-        string timeFormat = _state.Clock24Hour ? "HH:mm" : "h:mm tt";
-        DateText.Text = now.ToString("dddd, d MMMM"); ClockText.Text = now.ToString(_state.Clock24Hour ? "HH:mm" : "h:mm");
-        ClockPeriod.Text = now.ToString("tt");
-        ClockPeriod.Visibility = !_state.Clock24Hour && _state.ShowClockWidget ? Visibility.Visible : Visibility.Collapsed;
-        MenuClock.Text = now.ToString("ddd  " + timeFormat);
-        string greeting = now.Hour < 12 ? "Good morning" : now.Hour < 18 ? "Good afternoon" : "Good evening";
-        GreetingText.Text = greeting + ", " + _state.DisplayName + ".";
-        HomeGreeting.Text = "Welcome back, " + _state.DisplayName + ".";
-        SpaceName.Text = _state.DisplayName + "’s space"; SidebarName.Text = _state.DisplayName;
-    }
+    private void UpdateClock(bool force = false) { HomeGreeting.Text = "Welcome back, " + _state.DisplayName + "."; SidebarName.Text = _state.DisplayName; }
     private void ApplyWidgetLayout()
     {
         double width = DesktopRoot.ActualWidth;
-        DateText.Visibility = ClockText.Visibility = _state.ShowClockWidget ? Visibility.Visible : Visibility.Collapsed;
-        DesktopClockCard.Visibility = _state.ShowClockWidget ? Visibility.Visible : Visibility.Collapsed;
-        ClockPeriod.Visibility = !_state.Clock24Hour && _state.ShowClockWidget ? Visibility.Visible : Visibility.Collapsed;
-        SpaceCard.Visibility = _state.ShowSpaceWidget ? Visibility.Visible : Visibility.Collapsed;
-        bool hidden = _page != "Home" || _expanded || _state.FocusMode || !_state.DesktopLayout || width < 1120 || DesktopRoot.ActualHeight < 650;
-        DesktopWidgets.Visibility = hidden ? Visibility.Collapsed : Visibility.Visible;
-        DesktopColumn.Width = new GridLength(hidden ? 0 : 252);
-        Workspace.ColumnSpacing = hidden ? 0 : 28;
-        bool sidebar = width >= 760 && DesktopRoot.ActualHeight >= 580;
-        Sidebar.Visibility = sidebar ? Visibility.Visible : Visibility.Collapsed;
-        SidebarColumn.Width = new GridLength(sidebar ? 176 : 0);
-        ResourceText.Visibility = width < 1120 ? Visibility.Collapsed : Visibility.Visible;
-        FooterSettingsButton.Visibility = width < 1120 ? Visibility.Collapsed : Visibility.Visible;
-        MenuLinks.Visibility = width < 1060 ? Visibility.Collapsed : Visibility.Visible;
-        CompactNavigation.Visibility = width < 1060 ? Visibility.Visible : Visibility.Collapsed;
-        MenuClock.Visibility = width < 630 ? Visibility.Collapsed : Visibility.Visible;
-        BrandingText.Visibility = width < 500 ? Visibility.Collapsed : Visibility.Visible;
-        FullScreenButton.Visibility = width < 500 ? Visibility.Collapsed : Visibility.Visible;
-        SearchLabel.Visibility = width < 650 ? Visibility.Collapsed : Visibility.Visible;
-        SearchShortcut.Visibility = width < 650 ? Visibility.Collapsed : Visibility.Visible;
-        MenuBar.Margin = new Thickness(width < 600 ? 8 : 12, 5, width < 600 ? 8 : 12, 1);
-        Brush desktopCaption = _highContrast ? Resource("NexusPanel") : Resource("NexusDesktopLabel");
-        DesktopPathPill.Background = DesktopTrailPill.Background = DesktopSearchButton.Background = desktopCaption;
-        DesktopTrailPill.Visibility = width < 760 ? Visibility.Collapsed : Visibility.Visible;
-        Workspace.Margin = new Thickness(width < 600 ? 12 : _state.DesktopLayout ? 36 : 20, 6, width < 600 ? 12 : _state.DesktopLayout ? 36 : 20, 4);
-        int capacity = width < 550 ? 1 : width < 720 ? 2 : width < 1120 ? 4 : 5;
-        DockRunningApps.Visibility = width >= 1200 ? Visibility.Visible : Visibility.Collapsed;
-        if (_dockCapacity != capacity) { _dockCapacity = capacity; RefreshDock(); }
-        UpdateDockSelection();
-        ControlPanel.Width = Math.Clamp(width - 64, 256, 400);
-        ControlScroller.MaxHeight = Math.Max(120, DesktopRoot.ActualHeight - 160);
-        CommandPanel.MaxHeight = Math.Max(180, DesktopRoot.ActualHeight - 128);
-        CommandList.MaxHeight = Math.Max(60, Math.Min(360, DesktopRoot.ActualHeight - 360));
-        DockSearchButton.Visibility = width < 650 ? Visibility.Collapsed : Visibility.Visible;
-        ApplyDesktopLayout();
-        ApplyDockDensity();
-        UpdateExperienceLayout();
-        UpdateHomeColumns();
-        UpdateHero();
-        UpdateExploreLayout();
+        bool sidebar = width >= 760 && DesktopRoot.ActualHeight >= 460;
+        Sidebar.Visibility = sidebar ? Visibility.Visible : Visibility.Collapsed; SidebarColumn.Width = new GridLength(sidebar ? 176 : 0);
+        ControlPanel.Width = Math.Clamp(width - 48, 256, 400); ControlScroller.MaxHeight = Math.Max(120, DesktopRoot.ActualHeight - 110);
+        CommandPanel.MaxHeight = Math.Max(180, DesktopRoot.ActualHeight - 64); CommandList.MaxHeight = Math.Max(60, Math.Min(360, DesktopRoot.ActualHeight - 260));
+        UpdateExperienceLayout(); UpdateHomeColumns(); UpdateHero(); UpdateExploreLayout();
     }
     private void UpdateHero()
     {
@@ -603,8 +496,8 @@ public sealed partial class MainWindow : Window
         bool simple = _state.ReducedEffects || highContrast;
         bool animation = !simple && _isActive && _animationsEnabled;
         _motion?.SetEnabled(animation);
-        WallpaperAccents.Visibility = simple ? Visibility.Collapsed : Visibility.Visible;
-        DesktopRoot.Background = highContrast ? Resource("NexusPanel") : _chosenWallpaper ?? _wallpaper;
+        
+        DesktopRoot.Background = Resource("NexusPanel");
         ApplyAuraSurfaces(simple);
         ApplyDesktopLayout();
         RefreshPersonalizationControls();
@@ -618,27 +511,14 @@ public sealed partial class MainWindow : Window
         }
     }
     private void Desktop_Loaded(object sender, RoutedEventArgs args)
-    {
-        if (!_ready || _motion is not null) return;
-        try
-        {
-            _motion = new MotionController(DesktopRoot);
-            foreach (var control in new FrameworkElement[] { DockHomeButton, DockExploreButton, DockStudyButton, DockPcButton, DockRunningButton, DockSearchButton, FilesCard, GamesCard, FocusCard })
-                _motion.AttachHover(control);
-            foreach (var control in DockApps.Children.OfType<FrameworkElement>()) _motion.AttachHover(control);
-            ApplyEffects();
-            RenderDesktopCanvas();
-            _motion.Enter(IsDesktopCanvas ? DesktopCanvas : HomeView);
-        }
-        catch (Exception ex) { Log.Write("Custom motion unavailable; using native controls", ex); }
-    }
+    { if (!_ready || _motion is not null) return; try { _motion = new MotionController(DesktopRoot); foreach (var c in _shortcutCards) _motion.AttachHover(c); ApplyEffects(); } catch (Exception ex) { Log.Write("Sections motion unavailable", ex); } }
     private void Window_Activated(object sender, WindowActivatedEventArgs args)
     {
         if (!_ready) return;
         _isActive = args.WindowActivationState != WindowActivationState.Deactivated;
         if (_isActive)
         {
-            UpdateClock(true); RenderFocus(); RefreshWorkspaceSummary(); _resources.Reset(); _pcCpuTimes = null; _uiTimer.Start();
+            UpdateClock(true); RenderFocus(); RefreshWorkspaceSummary(); _pcCpuTimes = null; _uiTimer.Start();
             RefreshSystemAppearance(); ApplyEffects();
             _ = RefreshDesktopWindowsAsync();
             if (PcVisible) _ = RefreshPcAsync();
@@ -672,7 +552,7 @@ public sealed partial class MainWindow : Window
             _appWindow.SetPresenter(enabled ? AppWindowPresenterKind.FullScreen : AppWindowPresenterKind.Overlapped);
             if (!enabled && _appWindow.Presenter is OverlappedPresenter p) p.SetBorderAndTitleBar(true, false);
             _state.FullScreen = enabled;
-            ToolTipService.SetToolTip(FullScreenButton, enabled ? "Return to windowed · F11" : "Full screen · F11");
+            
             SaveState();
         }
         catch (Exception ex) { Error("Could not change display mode", ex); }
@@ -696,7 +576,7 @@ public sealed partial class MainWindow : Window
             };
             PolishDialog(dialog);
             if (await dialog.ShowAsync() != ContentDialogResult.Primary || !_ready) return;
-            _state.Activity.Clear(); _state.UsageSeconds.Clear(); _usage.ResetSample();
+            _state.Activity.Clear(); _state.UsageSeconds.Clear(); _environment.ResetUsageSample();
             SaveState(); RefreshHome();
             if (_page == "Activity") Navigate("Activity", false);
         }
@@ -711,7 +591,7 @@ public sealed partial class MainWindow : Window
     private void NavigateMenu_Click(object sender, RoutedEventArgs args) => Navigate((string)((MenuFlyoutItem)sender).Tag);
     private void SearchApps_Click(object sender, RoutedEventArgs args) => SearchApps();
     private void Running_Click(object sender, RoutedEventArgs args) => Navigate("Running apps");
-    private void Reopen_Click(object sender, RoutedEventArgs args) => Navigate("Home");
+    private void CloseSections_Click(object sender, RoutedEventArgs args) => Close();
     private void Controls_Click(object sender, RoutedEventArgs args)
     {
         if (_controlsOpen) ControlsFlyout.Hide();
@@ -724,11 +604,8 @@ public sealed partial class MainWindow : Window
     private void Exit_Click(object sender, RoutedEventArgs args) => ExitNexus();
     private void FullScreen_Click(object sender, RoutedEventArgs args) => SetFullScreen(!_state.FullScreen);
     private void Minimize_Click(object sender, RoutedEventArgs args) => Minimize();
-    private void HideHome_Click(object sender, RoutedEventArgs args)
-    {
-        Navigate("Home");
-    }
-    private void ExpandHome_Click(object sender, RoutedEventArgs args) { _expanded = !_expanded; ApplyWidgetLayout(); }
+    
+    private void ExpandHome_Click(object sender, RoutedEventArgs args) { if (_appWindow.Presenter is OverlappedPresenter p) { if (p.State == OverlappedPresenterState.Maximized) p.Restore(); else p.Maximize(); } }
     private void Desktop_SizeChanged(object sender, SizeChangedEventArgs args) { if (_ready) ApplyWidgetLayout(); }
     private void PageHost_SizeChanged(object sender, SizeChangedEventArgs args)
     {
@@ -753,7 +630,7 @@ public sealed partial class MainWindow : Window
         try
         {
             Directory.CreateDirectory(StateStore.DirectoryPath);
-            Process.Start(new ProcessStartInfo(StateStore.DirectoryPath) { UseShellExecute = true }); ControlsFlyout.Hide();
+            _environment.OpenTargetChecked(StateStore.DirectoryPath); ControlsFlyout.Hide();
         }
         catch (Exception ex) { Error("Could not open the data folder", ex); }
     }
@@ -766,8 +643,7 @@ public sealed partial class MainWindow : Window
     private void Tracking_Toggled(object sender, RoutedEventArgs args)
     {
         if (!_ready) return;
-        _state.UsageTracking = TrackingSwitch.IsOn; _usage.ResetSample(); _usageTicks = 0;
-        if (_state.UsageTracking) _usageTimer.Start(); else _usageTimer.Stop();
+        _state.UsageTracking = TrackingSwitch.IsOn; _environment.ResetUsageSample();
         Record("Usage tracking " + (_state.UsageTracking ? "enabled" : "disabled")); SaveState();
         if (_page == "Activity") Navigate("Activity", false);
     }
@@ -782,13 +658,12 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex) { _ready = false; StartupSwitch.IsOn = !StartupSwitch.IsOn; _ready = true; Error("Could not change login startup", ex); }
     }
-    private void Focus_Toggled(object sender, RoutedEventArgs args)
-    {
-        if (!_ready || _syncingPersonalization) return; _state.FocusMode = FocusSwitch.IsOn; ApplyWidgetLayout(); RefreshHome(); SaveState();
-    }
+    
     private void RefreshStartupRepair()
     {
-        bool repair = StartupRegistration.IsEnabled() && !StartupRegistration.UsesCurrentVersion();
+        bool desktop = _environment.Mode == DesktopSessionMode.DesktopShell || new DesktopShellRegistration(new WindowsDesktopSettings(), DesktopShellRegistration.DefaultBackupPath).OwnsCurrentSetting;
+        StartupSwitch.IsEnabled = !desktop;
+        bool repair = !desktop && StartupRegistration.IsEnabled() && !StartupRegistration.UsesCurrentVersion();
         StartupRepairHint.Visibility = repair ? Visibility.Visible : Visibility.Collapsed;
         StartupRepairButton.Visibility = repair ? Visibility.Visible : Visibility.Collapsed;
     }
@@ -813,18 +688,11 @@ public sealed partial class MainWindow : Window
     private void Window_Closed(object sender, WindowEventArgs args)
     {
         if (_focusSession.CompleteIfDue()) FinishFocusSession(updateUi: false);
-        _focusSession.Pause();
-        var finalSnapshot = CaptureWorkspaceSnapshot();
-        _ready = false;
-        try { _desktopIntegration?.Dispose(); } catch (Exception ex) { Log.Write("Desktop cleanup skipped", ex); }
-        _uiTimer.Stop(); _usageTimer.Stop(); _searchTimer.Stop(); _saveTimer.Stop();
-        _audioWriteTimer.Stop(); _audio?.Dispose();
-        _focusTimer.Stop();
-        _discoveryCancellation.Cancel();
-        try { _motion?.Dispose(); } catch (Exception ex) { Log.Write("Motion cleanup skipped", ex); }
-        _resources.Dispose();
-        // An atomic final save also preserves mutations made after the latest snapshot.
-        try { _store.SaveFinal(finalSnapshot); } catch (Exception ex) { Log.Write("Final settings save failed", ex); }
+        _focusSession.Pause(); CaptureWorkspaceSnapshot(); _environment.Session.DetachSnapshot(CaptureWorkspaceSnapshot);
+        _ready = false; _uiTimer.Stop(); _searchTimer.Stop();
+        _audioWriteTimer.Stop(); _audio?.Dispose(); _focusTimer.Stop(); _discoveryCancellation.Cancel();
+        try { _motion?.Dispose(); } catch (Exception ex) { Log.Write("Sections motion cleanup skipped", ex); }
         _discoveryCancellation.Dispose();
+        if (!_environment.IsStopping) _environment.SaveState();
     }
 }

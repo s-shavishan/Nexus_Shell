@@ -55,6 +55,8 @@ internal static class DesktopNativeChecks
         {
             window = CreateWindowEx(0, className, "Nexus desktop control check", 0, 100, 100, 240, 160, IntPtr.Zero, IntPtr.Zero, definition.Instance, IntPtr.Zero);
             if (window == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
+            if (NativeMethods.Activate(new RunningWindow(window, "Wrong owner", "test", Environment.ProcessId + 1)))
+                throw new Exception("Taskbar/window activation must reject a stale process identity.");
             var layouts = new WindowLayouts();
             if (!GetWindowRect(window, out var original)) throw new Exception("The native window bounds could not be read.");
             bool rejected = false;

@@ -16,6 +16,8 @@ public static class StartupRegistration
         using var key = Registry.CurrentUser.CreateSubKey(RunKey);
         if (enabled)
         {
+            if (new DesktopShellRegistration(new WindowsDesktopSettings(), DesktopShellRegistration.DefaultBackupPath).OwnsCurrentSetting)
+                throw new InvalidOperationException("Nexus is already selected as the desktop. Change the sign-in version in Personalize.");
             string path = Environment.ProcessPath ?? throw new InvalidOperationException("The running executable path is unavailable.");
             key.SetValue(Name, '"' + path + '"');
         }

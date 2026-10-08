@@ -9,6 +9,9 @@ $root = [IO.Path]::GetFullPath($PublishDirectory).TrimEnd([char[]]'\/')
 $prefix = $root + [IO.Path]::DirectorySeparatorChar
 if (-not (Test-Path (Join-Path $root 'Nexus.Shell.exe') -PathType Leaf)) { throw 'The published executable is missing.' }
 if (-not (Test-Path (Join-Path $root 'Nexus.Shell.dll') -PathType Leaf)) { throw 'The published app assembly is missing.' }
+foreach ($name in @('Nexus.DesktopHost.exe', 'Nexus.DesktopHost.dll', 'Nexus.DesktopHost.deps.json', 'Nexus.DesktopHost.runtimeconfig.json')) {
+    if (-not (Test-Path (Join-Path $root $name) -PathType Leaf)) { throw "The published desktop host is missing $name." }
+}
 $report = Get-Content (Join-Path $root 'Nexus.resources.json') -Raw | ConvertFrom-Json
 if ($report.FormatVersion -ne 1 -or $report.AppVersion -ne $AppVersion -or @($report.ResourceFiles).Count -eq 0) { throw 'Run the compiled-resource check before creating an update.' }
 $payload = @(); $runtime = @()
@@ -18,7 +21,7 @@ foreach ($file in $all) {
     $record = [ordered]@{ File = $relative; Length = $file.Length; SHA256 = (Get-FileHash $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant() }
     # Ship app binaries, loose compiled XAML and app assets. All other files
     # must already exist with these exact bytes in the user's full base folder.
-    $owned = $relative -like 'Nexus.Shell.*' -or $relative -eq 'Nexus.resources.json' -or
+    $owned = $relative -like 'Nexus.Shell.*' -or $relative -like 'Nexus.DesktopHost.*' -or $relative -eq 'Nexus.resources.json' -or
         $relative -eq 'resources.pri' -or $relative -like 'Assets/*' -or
         $file.Extension -eq '.xbf' -or $file.Extension -in @('.md', '.ps1', '.bat')
     if ($owned) { $payload += $record } else { $runtime += $record }
@@ -46,15 +49,15 @@ NEXUS SMALL UPDATE
 
 1. Extract the entire Update ZIP into a new folder.
 2. Close Nexus, then double-click Apply-Update.bat.
-3. Choose your existing full Nexus folder containing Nexus.Shell.exe.
+3. Paste the path of your existing full Nexus folder containing Nexus.Shell.exe.
 4. The updater checks the runtime files and creates a NEW version folder.
 5. Run Nexus.Shell.exe from that new folder. Your old folder is retained.
 
 No SDK or separate runtime installation is needed.
 If runtime files are missing or different, use this release's full ZIP instead.
 Do not copy only the EXE or mix UI resource files from different builds.
-If sign-in startup points to your old folder, use "Use this version at sign-in"
-in the new version's Control center.
+If desktop sign-in points to your old folder, select "Use this version at sign-in"
+in the new version's Personalize page. Keep the old folder until this succeeds.
 '@ | Set-Content (Join-Path $stage 'UPDATE-README.txt') -Encoding UTF8
     New-Item (Split-Path ([IO.Path]::GetFullPath($OutputZip)) -Parent) -ItemType Directory -Force | Out-Null
     Compress-Archive -Path "$stage\*" -DestinationPath $OutputZip -Force

@@ -1,0 +1,9 @@
+PASS: Windows Pro capability, backup-before-policy, upgrade rollback, foreign-policy preservation, partial recovery retry, file I/O/filtering/bounds, shell shortcuts and restart/heartbeat policy.
+PASS: desktop session saves after Sections closes/reopens, ordered/final writes, scaled Start bounds, native appbar layout and desktop shortcuts.
+PASS: Explore migration, capture, note/tag search, persistent selection, independent snapshots, archive round-trip, reference deduplication, atomic import capacity and note launch exclusion.
+PASS: separate-space references, case-sensitive URLs, null imported fields, damaged/missing settings recovery, final-save ordering and atomic oversized-save rejection.
+PASS: PC CPU counter semantics, bounded monitor layouts, stale-window rejection and workspace recovery.
+PASS: Aura palette contrast, safe default and glass preference persistence.
+PASS: navigation branching/bounds, categorized search, live recent resolution, privacy opt-out and personalization migration.
+PASS: timing, paused recovery, command search, legacy migration, bounded workspace data, JSON round-trip, and independent snapshots.
+PASS: desktop migration, bounded profiles, launch-plan deduplication, nested snapshots, native structure layout, and atomic persistence.

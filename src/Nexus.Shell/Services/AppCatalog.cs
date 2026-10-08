@@ -12,7 +12,7 @@ public static class AppCatalog
     {
         var apps = new List<AppEntry>
         {
-            new("files", "Files", Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe"), "\uE8B7", "System"),
+            new("files", "Files", "nexus:files", "\uE8B7", "System"),
             new("browser", "Browser", "https://www.google.com", "\uE774", "Browser"),
             new("terminal", "Terminal", Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "cmd.exe"), "\uE756", "Development"),
             new("settings", "Settings", "ms-settings:", "\uE713", "System")
@@ -71,17 +71,6 @@ public static class AppCatalog
     {
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(path.ToUpperInvariant())))[..16];
         return new(hash, Path.GetFileNameWithoutExtension(path), path, category == "Game" ? "\uE7FC" : "\uE8A5", category);
-    }
-
-    public static void Launch(AppEntry app)
-    {
-        if (!Uri.TryCreate(app.Target, UriKind.Absolute, out var uri) || uri.IsFile)
-        {
-            if (!File.Exists(app.Target)) throw new FileNotFoundException("This app has moved or is no longer installed. Remove the pin and add it again.", app.Target);
-        }
-        var start = new ProcessStartInfo(app.Target) { UseShellExecute = true };
-        if (File.Exists(app.Target)) start.WorkingDirectory = Path.GetDirectoryName(app.Target)!;
-        Process.Start(start);
     }
 
     public static void OpenSettings(string uri)

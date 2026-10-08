@@ -13,14 +13,20 @@ options = parser.parse_args()
 root = Path(__file__).resolve().parents[1]
 project = root / "src/Nexus.Shell"
 required = [
+    "Desktop/DesktopEnvironment.cs", "Desktop/DesktopWindow.cs", "Desktop/TaskbarWindow.cs", "Desktop/MenuWindow.cs",
+    "UI/Desktop/DesktopSurface.cs", "UI/Taskbar/TaskbarView.cs", "UI/Menus/DesktopMenus.cs", "UI/Menus/StartMenuView.cs", "UI/ShellTheme.cs",
+    "Services/ShellSession.cs", "Services/DesktopLayout.cs", "Services/DesktopCatalog.cs", "Interop/ShellLayerInterop.cs", "Interop/TaskbarRegistration.cs",
     "MainWindow.Polish.cs", "MainWindow.PcControls.cs", "Services/AudioController.cs", "Services/PcMetrics.cs", "Services/WindowLayouts.cs",
-    "App.xaml", "App.xaml.cs", "MainWindow.xaml", "MainWindow.xaml.cs", "MainWindow.Workspaces.cs", "MainWindow.Orbit.cs", "MainWindow.Desktop.cs", "MainWindow.Canvas.cs", "MainWindow.Appearance.cs", "MainWindow.Experience.cs", "MainWindow.Explore.cs", "Services/ExploreWorkspace.cs", "UI/SavedKindConverter.cs", "UI/NexusIcons.cs", "Services/NavigationTrail.cs", "Services/ShellExperience.cs", "Services/AuraPalette.cs", "Services/DesktopWorkspace.cs", "Interop/DesktopIntegration.cs",
+    "App.xaml", "App.xaml.cs", "MainWindow.xaml", "MainWindow.xaml.cs", "MainWindow.Workspaces.cs", "MainWindow.Orbit.cs", "MainWindow.Desktop.cs", "MainWindow.Appearance.cs", "MainWindow.Experience.cs", "MainWindow.Explore.cs", "Services/ExploreWorkspace.cs", "UI/SavedKindConverter.cs", "UI/NexusIcons.cs", "Services/NavigationTrail.cs", "Services/ShellExperience.cs", "Services/AuraPalette.cs", "Services/DesktopWorkspace.cs", "Interop/DesktopIntegration.cs",
     "Services/FocusSession.cs", "Services/CommandSearch.cs", "Services/WorkspaceState.cs",
     "Nexus.Shell.csproj", "app.manifest", "Assets/Nexus.ico",
     "Interop/NativeMethods.cs", "Models/ShellState.cs", "Services/AppCatalog.cs",
     "Services/Log.cs", "Services/StartupRegistration.cs", "Services/StateStore.cs",
     "Services/UsageTracker.cs",
     "Services/ResourceSampler.cs", "UI/MotionController.cs", "UI/AppAccentConverter.cs",
+    "Desktop/FilesWindow.cs", "Desktop/SwitcherWindow.cs", "UI/Files/FilesView.cs", "MainWindow.DesktopMode.cs",
+    "Services/FileCatalog.cs", "Services/DesktopShellPolicy.cs", "Services/DesktopShellRegistration.cs",
+    "Interop/ExclusiveTaskbarRegistration.cs", "Interop/ShellKeyboardHook.cs", "Interop/NexusDesktopToggle.cs", "Interop/ShortcutResolver.cs", "Interop/RecycleBinService.cs",
 ]
 for relative in required:
     assert (project / relative).is_file(), f"Missing file: {relative}"
@@ -88,6 +94,12 @@ print("WinUI Thickness constructors OK")
 application = ET.parse(project / "App.xaml").getroot()
 app_resources = {node.attrib[xns + "Key"] for node in application.iter() if xns + "Key" in node.attrib}
 local_resources = {node.attrib[xns + "Key"] for node in window.iter() if xns + "Key" in node.attrib}
+# C#-composed windows need the same resource-key validation as XAML.
+for source in project.rglob("*.cs"):
+    for match in re.finditer(r'\.Brush\("(Nexus[^"\s]+)"\)', source.read_text()):
+        assert match[1] in app_resources, f"Missing C# UI brush: {source.relative_to(root)}: {match[1]}"
+print("C# UI brush resources OK")
+
 for node in window.iter():
     for value in node.attrib.values():
         for match in re.finditer(r"\{StaticResource\s+([^}\s,]+)\}", value):
@@ -162,6 +174,43 @@ for source in project.glob("*.xaml"):
         if uri.startswith("ms-appx:///Assets/Icons/"):
             assert uri.rsplit("/", 1)[-1].removesuffix(".svg") in icon_names, f"Missing icon: {uri}"
 print("Native vector assets and publish wiring OK")
+# Desktop composition must not regress into the Sections XAML root.
+assert not (project / "MainWindow.Canvas.cs").exists(), "Obsolete packed desktop partial remains"
+assert not {"MenuBar", "DockBorder", "DesktopCanvas", "DesktopClockCard", "DesktopWorkspaceCard", "WallpaperAccents"} & set(names), "Desktop UI must not be embedded in Sections"
+startup = (project / "App.xaml.cs").read_text()
+assert "new MainWindow(" not in startup and "DesktopEnvironment" in startup, "Startup must create the environment without Sections"
+for layer in ["DesktopWindow", "TaskbarWindow", "MenuWindow"]:
+    body = (project / "Desktop" / (layer + ".cs")).read_text()
+    assert re.search(r"class\s+" + layer + r"\s*:\s*Window", body), f"{layer} must own a native Window"
+closed = code[code.index("private void Window_Closed("):]
+assert "SaveFinal(" not in closed and "DetachSnapshot(" in closed, "Closing Sections must not finalize the desktop session"
+for file in [root / "appveyor.yml", root / ".github/workflows/build-windows.yml", root / "scripts/package.ps1", root / "scripts/build.ps1"]:
+    body = file.read_text()
+    assert "Nexus-Shell-1.3.0" in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
+print("Independent desktop ownership, Sections lifetime and CI versions OK")
+# Desktop replacement cannot silently instantiate Explorer or common picker UI.
+environment = (project / "Desktop/DesktopEnvironment.cs").read_text()
+assert "ExplorerDesktopPresent()" in environment and "DesktopSessionMode.DesktopShell" in environment
+for source in project.rglob("*.cs"):
+    body = source.read_text()
+    assert "Shell.Application" not in body, f"Explorer automation remains: {source}"
+    assert not re.search(r"\bnew\s+(?:FileOpenPicker|FileSavePicker|FolderPicker)\b", body), f"Windows picker UI remains: {source}"
+assert 'new("files", "Files", "nexus:files"' in (project / "Services/AppCatalog.cs").read_text()
+assert "new ExclusiveTaskbarRegistration" in (project / "Desktop/TaskbarWindow.cs").read_text()
+for layer in ["FilesWindow", "SwitcherWindow"]:
+    assert re.search(r"class\s+" + layer + r"\s*:\s*Window", (project / "Desktop" / (layer + ".cs")).read_text())
+for relative in ["src/Nexus.DesktopHost/Nexus.DesktopHost.csproj", "src/Nexus.DesktopHost/Program.cs", "docs/NEXUS-DESKTOP-MODE.md", "docs/TEST-DESKTOP-MODE.md", "scripts/restore-windows-desktop.ps1"]:
+    assert (root / relative).is_file(), f"Missing desktop-mode deliverable: {relative}"
+ET.parse(root / "src/Nexus.DesktopHost/Nexus.DesktopHost.csproj")
+host = (root / "src/Nexus.DesktopHost/Program.cs").read_text()
+assert "--host-token" in host and "EventWaitHandle" in host and "entireProcessTree: false" in host
+assert "budget.IsUnresponsive" in host and "DesktopExitCode.RestoreWindows" in host
+build = (root / "scripts/build.ps1").read_text()
+assert "Nexus.DesktopHost.csproj" in build and "Restore-Windows-Desktop.bat" in build and "host runtime differs" in build
+for relative in ["scripts/package-update.ps1", "scripts/apply-update.ps1"]:
+    assert "Nexus.DesktopHost.*" in (root / relative).read_text(), f"Host must remain app-owned payload: {relative}"
+assert "FolderBrowserDialog" not in (root / "scripts/apply-update.ps1").read_text()
+print("Nexus desktop mode, Files/pickers, switcher, host recovery and build/update ownership OK")
 resource_target = project_xml.find("Target[@Name='NexusPublishXamlResources']")
 assert resource_target is not None and resource_target.attrib.get("AfterTargets") == "Publish"
 resource_items = resource_target.find("ItemGroup/_NexusBuildResources").attrib["Include"]
@@ -177,7 +226,7 @@ if options.syntax:
     from tree_sitter import Language, Parser
     import tree_sitter_c_sharp
     syntax_parser = Parser(Language(tree_sitter_c_sharp.language()))
-    for source in sorted([*project.rglob("*.cs"), *(root / "tests").rglob("*.cs")]):
+    for source in sorted([*project.rglob("*.cs"), *(root / "src/Nexus.DesktopHost").rglob("*.cs"), *(root / "tests").rglob("*.cs")]):
         tree = syntax_parser.parse(source.read_bytes())
         assert not tree.root_node.has_error, f"C# syntax error: {source}"
     print("C# syntax OK (tree-sitter; API/type resolution NOT checked)")

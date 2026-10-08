@@ -1,38 +1,26 @@
-# Nexus Shell 1.1.0 — Windows build handoff
+# Nexus Shell 1.3.0 — Windows build handoff
 
-## Confirmed repository baseline
+The source includes the independent desktop/Sections foundation plus the Pro desktop sign-in route, supervising host, Nexus Files/pickers, keyboard/window switching and recovery script. It is not a runnable Windows artifact.
 
-Repository: https://github.com/s-shavishan/Nexus_Shell
+On 8 October 2026, [s-shavishan/Nexus_Shell](https://github.com/s-shavishan/Nexus_Shell) main was `b8a5071857241ea115012d2e2bf68c8460c31f65` (1.1.0). All 124 repository files matched the saved 1.1.0 source by Git blob hash. Its [AppVeyor Windows build](https://ci.appveyor.com/project/s-shavishan/nexus-shell/builds/54856956) has a successful commit status. This validates the older baseline, not 1.3.0.
 
-Default branch: `main`
+The [GitHub Actions run for that commit](https://github.com/s-shavishan/Nexus_Shell/actions/runs/37723254387) failed before any steps ran: no runner was assigned, and no artifacts or job logs were available. The retrieved evidence does not identify the cause. Use the existing AppVeyor route for this upgrade.
 
-Checked commit: `531c55f517eb4eba828806f923dcb058de2c231b`
+The connected GitHub integration previously rejected branch creation with HTTP 403, “Resource not accessible by integration.” The current read-only connection check returned no GitHub App installations. No upload or new Windows build for 1.3.0 has been performed here.
 
-Source version: **1.0.0**
+Use the complete Source ZIP in a new folder, or exactly one Git patch matching your unchanged source baseline: 1.0.0→1.3.0, 1.1.0→1.3.0 or 1.2.0→1.3.0. Check `src/Nexus.Shell/Nexus.Shell.csproj` for the version and run `git apply --check` before applying. The cumulative older patches delete the obsolete MainWindow.Canvas.cs; the 1.2 patch does not need that deletion. Preserve local edits and stop if the check fails.
 
-All 111 tracked files in that repository match the saved complete 1.0.0 baseline. There were no conflicting source edits, missing baseline files or repository-only files when checked on 8 October 2026.
+For the verified repository commit, extract `Nexus-1.1.0-to-1.3.0.patch` from the Source-Patch ZIP. Follow [SOURCE-PATCH.md](../SOURCE-PATCH.md), review the resulting changes, then commit and push them to main. AppVeyor can build the pushed source using the included `appveyor.yml`. Keep the patch outside the repository so it is not committed as source.
 
-GitHub reports the AppVeyor check for that 1.0.0 commit as successful: https://ci.appveyor.com/project/s-shavishan/nexus-shell/builds/54856850
+Both Windows CI configurations name 1.3.0 artifacts and run core checks, PowerShell updater/parser checks, WinUI publishing and resource/package verification. `build.ps1` also publishes the host and rejects any shared .NET runtime file that differs from the shell publish. The full and small-update packages must contain the new host, and the full package contains the independent recovery BAT/script.
 
-This status applies to **1.0.0**. The 1.1.0 source has not been uploaded or built through Windows CI. GitHub rejected creating the review branch with HTTP 403, “Resource not accessible by integration.” No repository write succeeded.
+```powershell
+.\scripts\build.ps1 -UseMSBuild
+.\scripts\package.ps1
+```
 
-## Apply and build
+A successful run creates `Nexus-Shell-1.3.0-win-x64.zip`, its SHA-256 file, and the runtime-compatible `Nexus-Shell-1.3.0-Update-win-x64.zip` with SHA-256. Keep the entire runnable output folder together. Small updates reuse only hash-matching runtime files and create a separate version folder; otherwise use the full runnable ZIP.
 
-1. Extract `Nexus-Shell-1.1.0-Source-Patch.zip`.
-2. Merge the **contents of `files/`** into the existing repository root, preserving relative paths and replacing matching files. Do not upload only the ZIP or add an extra `files/` directory inside the repository.
-3. Commit the merged source. Check that `src/Nexus.Shell/Nexus.Shell.csproj` says `1.1.0`, `MainWindow.Polish.cs` exists and the AppVeyor artifact filenames say `1.1.0`.
-4. Open the existing AppVeyor project and run **New build** for that exact commit if it has not started automatically.
-5. Wait for the complete pipeline, including core checks, updater checks, native XAML build, resource verification and packaging. A local source-check pass does not replace this step.
-6. Download `Nexus-Shell-1.1.0-Update-win-x64.zip`, fully exit Nexus, then apply it to the existing complete application folder. Source ZIPs cannot be passed to the binary updater.
-7. Choose **Personalize → Solstice** or **Ember**, then follow the visual acceptance list in UI-POLISH.md. Test at 100%, 125% and 150% scaling and with keyboard, mouse and touch/pen where available.
+Preview with Nexus.Shell.exe first. Complete TEST-DESKTOP-MODE.md on Windows Pro before selecting Nexus at sign-in through Personalize. Recovery is in NEXUS-DESKTOP-MODE.md. No Windows account or registry setting changed during source preparation here.
 
-## Follow-up corrections included
-
-| Check | Original 1.1.0 source | Reviewed 1.1.0 source |
-|---|---|---|
-| Solstice selected sidebar label | 3.81:1 calculated contrast | 9.36:1 using selected text |
-| Opal selected sidebar label | 3.92:1 calculated contrast | 9.74:1 using selected text |
-| Native button press feedback | Ordinary pointer handlers can be skipped after ButtonBase handles the event | Handled events are observed for visuals; native click/capture behavior remains authoritative |
-| Touch/pen press feedback | Mouse-left-button filter | Contact-based check with the left-button restriction applied to mouse input |
-
-Contrast values use representative composited palette backgrounds without native acrylic. Core checks now cover selected rows across all six moods. Core execution, source validation and C# API compilation pass after these corrections. Actual XAML compilation requires Windows; invoking its compiler on Linux stopped at the kernel32 metadata-file dependency.
+Local evidence: executed .NET 8 core suite, app API compilation with XAML stand-ins, standalone host C# compilation, source/XML/resource/C# syntax validation and byte-checked source patches/ZIPs. Actual Windows XAML generation, launching, policy permissions, sign-in/recovery, low-level keyboard hooks, fullscreen/work area, DPI and native visual/performance acceptance remain pending.

@@ -1,18 +1,18 @@
-# 1.1.0 validation
+# 1.3.0 validation
 
-Completed locally:
+Completed locally on the final prepared source:
 
-- .NET 8/Roslyn compilation and execution of the linked core checks. Explore capture, import/export, independent spaces, settings recovery, save ordering, navigation, command search, timer recovery and PC layout/counter behavior pass.
-- Body and secondary text contrast at least 4.5:1 in all six mood families on panels, cards, inputs, sidebars, selected segments, tinted selected rows and hero surfaces. A dark selected-segment failure was corrected before packaging. Native acrylic is not part of this calculation.
-- Each mood round-trips through real settings files without losing notes or the compact-dock preference.
-- Application C# compiles against Microsoft.WinUI 1.8.260803003, Windows App SDK Foundation/InteractiveExperiences projections, Microsoft.Windows.SDK.NET.Ref 10.0.19041.56 and .NET 8 reference assemblies. Temporary declarations stand in for XAML-generated fields. Native style setter property names are checked as C# assignments too. The direct compiler emits expected cross-version reference-unification warnings and unused-field warnings for generated stand-ins; there are no C# errors.
-- XAML/XML structure, contiguous content, named elements, handlers, resources, Thickness constructors, interop imports, SVG integrity and publish wiring pass source validation. C# syntax is parsed independently with tree-sitter.
-- Four layout references export from the source paths, shipped icons and runtime palette values. Their rendered images were inspected.
+- .NET 8 core tests execute. New checks cover Windows Pro/build eligibility, recovery data saved before policy writes, initial/upgrade rollback, preserving foreign desktop and startup values, partial recovery retry, invalid backup/path rejection, actual folder I/O/filtering/cancellation/list bounds and reserved file names.
+- Shell keyboard policy checks cover Win/Win+E, key-repeat suppression, release handling, Win+L/security pass-through, modifier chords, Alt+Tab/Shift+Tab selection and Win+Tab. Restart-budget and startup/UI heartbeat timeouts execute as pure policy checks.
+- Existing shared-session save/Sections detach/reopen checks, atomic ordered/final writes, Explore import/export/migration/capacity/search, task/timer recovery, workspace snapshots, accessibility palette contrast, PC counter/window-layout and source structure checks pass.
+- All application C# compiles against Microsoft.WinUI 1.8.260803003, Foundation/InteractiveExperiences projections, Windows SDK NET refs 10.0.19041.56 and .NET 8 refs, with temporary XAML fields/InitializeComponent stand-ins. Reference-unification and unused stand-in warnings remain; no C# errors.
+- Desktop host C# compiles separately against .NET 8 references with compiler warnings treated as errors. It is not executed as a Windows host here.
+- Source checks validate XML, XAML collection ordering/resources/names/handlers, supported Thickness constructors, native vector asset/publish wiring, C# syntax (including host), independent surfaces, Explorer-free routing/pickers, desktop-mode ownership, host/recovery build/update inclusion and artifact versions.
+- Updated source-derived desktop/Files+Start illustrations are rendered and visually inspected. They are sample layouts, not native screenshots.
+- Git source patches are applied to all three saved baselines and compared byte-for-byte with the final complete source. Source/patch ZIP file lists, bytes and SHA-256 values are checked.
 
-The native button press/release AddHandler and RemoveHandler wiring also compiles against the pinned WinUI APIs. Retained matching delegates clean up on unloading; mouse-only button filtering allows touch and pen contacts too. Input behavior still needs Windows testing.
+Native WinUI XAML generation/XamlReader templates, Windows launching, sign-in/registry permissions, actual low-level keyboard handling, switcher focus, work-area/fullscreen cleanup, Recycle Bin APIs, DPI, accessibility and performance are **pending**. This Linux host cannot run Windows-native dependencies; direct C# API compilation does not produce XBF/PRI resources or prove desktop operation.
 
-Invoking the actual managed WinUI XAML compiler reaches metadata loading and fails because kernel32.dll is unavailable on Linux. This is a host limitation, not a successful XAML validation or a diagnosed application error.
+Windows CI must run the real PowerShell parser/updater tests, XAML compiler and portable-package resource checks. Manual acceptance in TEST-DESKTOP-MODE.md must finish on Windows Pro. No desktop policy was written during local preparation.
 
-The direct checks bypass Windows XAML compilation. They do not create PRI/XBF, publish or run the application. Windows-only native audio/window/desktop checks, updater PowerShell tests and resource/package verification must run through the existing Windows CI pipeline for the exact installed commit.
-
-Native startup, font rendering, acrylic, DPI scaling, focus/input, tray/hotkeys, audio/mixer, window arrangement/Undo and performance still need Windows acceptance. See UI-POLISH.md for the visual review and TEST-WINDOWS.md for the broader workflow.
+Evidence files: Core-checks.txt, CSharp-API-check.txt, Host-API-check.txt and Source-checks.txt. Historical foundation/design notes describe their original versions; current scope is NEXUS-DESKTOP-MODE.md.

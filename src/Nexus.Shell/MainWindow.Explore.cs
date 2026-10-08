@@ -8,7 +8,6 @@ using Nexus.Shell.Services;
 using System.Text;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
-using Windows.Storage.Pickers;
 using Windows.System;
 
 namespace Nexus.Shell;
@@ -27,26 +26,6 @@ public sealed partial class MainWindow
         try { Navigate("Explore"); await EditExploreItemAsync(null, "Note"); }
         catch (Exception ex) { Error("Could not create a note", ex); }
     }
-    private void RefreshDesktopSpaceShortcuts()
-    {
-        DesktopSpaceShortcuts.Children.Clear();
-        foreach (var space in _state.ExploreSpaces.Take(3))
-        {
-            var row = new Grid { ColumnSpacing = 8 };
-            row.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) });
-            row.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
-            var name = Text(space.Name, 13); name.TextWrapping = TextWrapping.NoWrap; name.TextTrimming = TextTrimming.CharacterEllipsis;
-            row.Children.Add(name);
-            var count = Text(_state.SavedItems.Count(a => a.SpaceId == space.Id).ToString(), 11, true);
-            Grid.SetColumn(count, 1); row.Children.Add(count);
-            var button = new Button { Content = row, Style = (Style)Application.Current.Resources["QuietButton"],
-                HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch };
-            button.Click += (_, _) => EnterExploreSpace(space.Id);
-            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, "Open " + space.Name + " space");
-            DesktopSpaceShortcuts.Children.Add(button);
-        }
-    }
-
     private void ReleaseExploreControls()
     {
         _explorePreviewEpoch++;
@@ -391,19 +370,9 @@ public sealed partial class MainWindow
         try
         {
             var additions = new List<SavedItem>();
-            if (folder)
-            {
-                var picker = new FolderPicker(); WinRT.Interop.InitializeWithWindow.Initialize(picker, _handle);
-                picker.FileTypeFilter.Add("*"); var result = await picker.PickSingleFolderAsync();
-                if (result is not null) additions.Add(new(Guid.NewGuid().ToString("N"), result.Name, result.Path, "Folder", SpaceId: spaceId));
-            }
-            else
-            {
-                var picker = new FileOpenPicker(); WinRT.Interop.InitializeWithWindow.Initialize(picker, _handle);
-                picker.FileTypeFilter.Add("*");
-                foreach (var file in await picker.PickMultipleFilesAsync())
-                    additions.Add(new(Guid.NewGuid().ToString("N"), file.Name, file.Path, "File", SpaceId: spaceId));
-            }
+            var paths = await _environment.PickAsync(new(folder ? FileSelectionKind.Folder : FileSelectionKind.OpenFiles, folder ? "Choose a folder" : "Choose files"));
+            foreach (var path in paths)
+                additions.Add(new(Guid.NewGuid().ToString("N"), Path.GetFileName(path), path, folder ? "Folder" : "File", SpaceId: spaceId));
             if (_ready) AddExploreBatch(additions);
         }
         finally { _picking = false; }
@@ -574,12 +543,9 @@ public sealed partial class MainWindow
         try
         {
             string json = ExploreWorkspace.Export(_state);
-            var picker = new FileSavePicker { SuggestedFileName = "Nexus-Space-" + string.Concat(ActiveExploreSpace.Name.Split(Path.GetInvalidFileNameChars())) };
-            WinRT.Interop.InitializeWithWindow.Initialize(picker, _handle);
-            picker.FileTypeChoices.Add("NEXUS space", new List<string> { ".json" });
-            var file = await picker.PickSaveFileAsync();
-            if (!_ready || file is null) return;
-            await FileIO.WriteTextAsync(file, json);
+            var paths = await _environment.PickAsync(new(FileSelectionKind.SaveFile, "Export space", [".json"], "Nexus-Space-" + string.Concat(ActiveExploreSpace.Name.Split(Path.GetInvalidFileNameChars()))));
+            if (!_ready || paths.Count == 0) return;
+            await File.WriteAllTextAsync(paths[0], json);
             ShowStatus("Space exported with notes, links and shortcuts. Original files stay on this PC.");
         }
         finally { _picking = false; }
@@ -590,12 +556,10 @@ public sealed partial class MainWindow
         _picking = true;
         try
         {
-            var picker = new FileOpenPicker(); WinRT.Interop.InitializeWithWindow.Initialize(picker, _handle);
-            picker.FileTypeFilter.Add(".json"); var file = await picker.PickSingleFileAsync();
-            if (!_ready || file is null) return;
-            var properties = await file.GetBasicPropertiesAsync();
-            if (properties.Size > ExploreWorkspace.ImportByteLimit) throw new InvalidDataException("Space files must be smaller than 2 MB.");
-            var data = ExploreWorkspace.ReadImport(await FileIO.ReadTextAsync(file));
+            var paths = await _environment.PickAsync(new(FileSelectionKind.OpenFile, "Import space", [".json"]));
+            if (!_ready || paths.Count == 0) return;
+            if (new FileInfo(paths[0]).Length > ExploreWorkspace.ImportByteLimit) throw new InvalidDataException("Space files must be smaller than 2 MB.");
+            var data = ExploreWorkspace.ReadImport(await File.ReadAllTextAsync(paths[0]));
             if (!_ready) return;
             _dialogOpen = true;
             var dialog = new ContentDialog { XamlRoot = DesktopRoot.XamlRoot, RequestedTheme = DesktopRoot.RequestedTheme,

@@ -6,7 +6,6 @@ using Nexus.Shell.Interop;
 using Nexus.Shell.Models;
 using Nexus.Shell.Services;
 using System.Diagnostics;
-using Windows.Storage.Pickers;
 using Windows.System;
 
 namespace Nexus.Shell;
@@ -22,7 +21,7 @@ public sealed partial class MainWindow
     private Button? _focusAction;
     private TextBox? _studyNote;
     private StackPanel? _focusPresets;
-    private Brush? _chosenWallpaper;
+    
     private int _focusCheckpointTicks;
 
     private void InitializeWorkspaces()
@@ -46,21 +45,11 @@ public sealed partial class MainWindow
         ReleaseExploreControls();
         _personalizationSync.Clear(); _moodChoices.Clear(); _moodGrid = null; _personalizeSections = null;
     }
-    private void DesktopFocus_Click(object sender, RoutedEventArgs args)
-    {
-        if (_ready && !_dialogOpen && !_picking) ToggleFocusSession();
-    }
-    private void RefreshDesktopFocus()
-    {
-        DesktopFocusTime.Text = FormatRemaining();
-        DesktopFocusAction.Content = _focusSession.IsRunning ? "Pause" : "Start focus";
-        DesktopFocusTitle.Text = _focusSession.IsRunning
-            ? _state.Tasks.FirstOrDefault(t => t.Id == _state.FocusTaskId && !t.Completed)?.Title ?? "Your focus session"
-            : "A moment of focus";
-    }
+    
+    
     private void RefreshWorkspaceSummary()
     {
-        RefreshDesktopFocus();
+        
         string day = DateTime.Now.ToString("yyyy-MM-dd");
         if (_state.FocusDay != day)
         {
@@ -130,9 +119,7 @@ public sealed partial class MainWindow
             SaveState();
         };
         PageContent.Children.Add(_studyNote);
-        PageContent.Children.Add(ActionButton(_state.FocusMode ? "Show desktop widgets" : "Hide desktop widgets",
-            () => { FocusSwitch.IsOn = !FocusSwitch.IsOn; Navigate("Study", false); }));
-        PageStatus.Text = "Local tasks and notes · Closing Nexus saves the timer paused";
+        PageStatus.Text = "Local tasks and notes · Closing Sections saves the timer paused";
         RenderFocus(); RefreshWorkspaceSummary();
     }
     private void ToggleFocusSession()
@@ -144,7 +131,7 @@ public sealed partial class MainWindow
     }
     private void RenderFocus()
     {
-        RefreshDesktopFocus();
+        
         if (_focusClock is not null) _focusClock.Text = FormatRemaining();
         if (_focusProgress is not null)
             _focusProgress.Value = 100 * (1 - _focusSession.Remaining.TotalSeconds / _focusSession.Duration.TotalSeconds);
@@ -208,7 +195,7 @@ public sealed partial class MainWindow
             }
             else if (!File.Exists(item.Target) && !Directory.Exists(item.Target))
                 throw new FileNotFoundException("This item moved or is unavailable.", item.Target);
-            Process.Start(new ProcessStartInfo(item.Target) { UseShellExecute = true });
+            _environment.OpenTargetChecked(item.Target);
             Record("Opened " + item.Title); SaveState();
         }
         catch (Exception ex) { Error("Could not open " + item.Title, ex); }
@@ -219,7 +206,7 @@ public sealed partial class MainWindow
         foreach (var space in _state.ExploreSpaces)
             yield return new(space.Name + " space", space.Description + " · Explore", "\uE8B7", "Space", space.Id);
         foreach (var item in new[] {
-            ("Home", "Your personal desktop", "\uE80F"),
+            ("Home", "Your workspace overview", "\uE80F"),
             ("Explore", "Spaces, links, notes and file shortcuts", "\uE8B7"),
             ("Study", "Tasks, focus timer and local notes", "\uE916"),
             ("Apps", "Start-menu apps and pins", "\uE71D"),
@@ -227,14 +214,14 @@ public sealed partial class MainWindow
             ("Window overview", "Switch to an open window · Ctrl+4", "\uE7F4"),
             ("PC controls", "Master volume, app mixer, PC status and window layouts · Ctrl+5", "\uE713"),
             ("Activity", "Your local session", "\uE9D9"),
-            ("Personalize", "Moods, desktop widgets and dock", "\uE790") })
+            ("Personalize", "Desktop moods and taskbar settings", "\uE790") })
             yield return new(item.Item1, item.Item2, item.Item3, "Workspace", item.Item1 == "Window overview" ? "Running apps" : item.Item1);
         yield return new("Control center", "Quick audio controls and shell preferences", "\uE713", "Action", "controls");
         yield return new(_focusSession.IsRunning ? "Pause focus" : "Start focus", "Study session", "\uE916", "Action", "focus");
-        yield return new("Toggle full screen", "Nexus desktop view", "\uE740", "Action", "screen");
+        yield return new("Toggle full screen", "Sections window", "\uE740", "Action", "screen");
         foreach (var profile in _state.Profiles)
             yield return new(profile.Name + " workspace", profile.Description, profile.Glyph, "Profile", profile.Id);
-        yield return new("Workspaces", "Configure your personal desktop presets", "\uE8F1", "Workspace", "Workspaces");
+        yield return new("Workspaces", "Configure your workspaces", "\uE8F1", "Workspace", "Workspaces");
         yield return new("Hide Nexus", "Return to your other apps", "\uE8BB", "Action", "hide");
         foreach (var app in _orderedCatalog)
             yield return new(app.Name, app.Category == "Game" ? "Installed game" : "Windows app", app.Glyph, "App", app.Target);
@@ -336,7 +323,7 @@ public sealed partial class MainWindow
         else if (entry.Kind == "Window")
         {
             var window = _desktopWindows.FirstOrDefault(w => w.Handle.ToInt64().ToString(System.Globalization.CultureInfo.InvariantCulture) == entry.Target);
-            if (window is null || !NativeMethods.Activate(window.Handle)) ShowStatus("This window is unavailable. Refresh window overview.");
+            if (window is null || !NativeMethods.Activate(window)) ShowStatus("This window is unavailable. Refresh window overview.");
         }
         else if (entry.Kind == "Task") SelectFocusTask(entry.Target);
         else if (entry.Target == "hide") HideNexus();
@@ -358,9 +345,5 @@ public sealed partial class MainWindow
         _state.Wallpaper = AuraPalette.Moods[Math.Clamp(WallpaperBox.SelectedIndex, 0, AuraPalette.Moods.Length - 1)];
         SelectWallpaper(); ApplyEffects(); SaveState();
     }
-    private void SelectWallpaper()
-    {
-        ApplyAuraPalette();
-        WallpaperAccents.Opacity = 1;
-    }
+    private void SelectWallpaper() => ApplyAuraPalette();
 }

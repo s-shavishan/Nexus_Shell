@@ -31,7 +31,7 @@ public sealed partial class MainWindow
     {
         BackButton.IsEnabled = _pageTrail.CanGoBack;
         ForwardButton.IsEnabled = _pageTrail.CanGoForward;
-        string pageName = _page == "Home" ? "Desktop" : _page == "Running apps" ? "Windows" : _page == "Gaming" ? "Entertainment" : _page;
+        string pageName = _page == "Home" ? "Overview" : _page == "Running apps" ? "Windows" : _page == "Gaming" ? "Entertainment" : _page;
         ActiveProfileText.Text = pageName + "  /  " + ActiveProfile.Name;
     }
     private void Personalize_Click(object sender, RoutedEventArgs args) => Navigate("Personalize");
@@ -68,7 +68,7 @@ public sealed partial class MainWindow
         try
         {
             GlassSwitch.IsOn = _state.NativeGlass; EffectsSwitch.IsOn = _state.ReducedEffects;
-            DesktopLayoutSwitch.IsOn = _state.DesktopLayout; FocusSwitch.IsOn = _state.FocusMode;
+            
             foreach (var update in _personalizationSync) update();
         }
         finally { _syncingPersonalization = false; }
@@ -97,6 +97,7 @@ public sealed partial class MainWindow
     {
         PageContent.Children.Add(Text("Make Nexus yours.", 30));
         PageContent.Children.Add(Text("Choose your mood, shape the desktop, and keep what matters within reach.", 14, true));
+        PageContent.Children.Add(Card(DesktopModeCard()));
         PageContent.Children.Add(Text("DESKTOP MOODS", 11, true));
         _moodGrid = new Grid { ColumnSpacing = 12, RowSpacing = 12 };
         foreach (string mood in AuraPalette.Moods)
@@ -134,21 +135,16 @@ public sealed partial class MainWindow
         PageContent.Children.Add(_moodGrid);
         var desktop = new StackPanel { Spacing = 18 };
         desktop.Children.Add(Text("Your desktop", 21));
-        desktop.Children.Add(PersonalizeToggle("Open desktop canvas", () => _state.DesktopLayout, v => _state.DesktopLayout = v,
-            "Floating desktop", "Workspace panel"));
-        desktop.Children.Add(PersonalizeToggle("Desktop widgets", () => !_state.FocusMode, v => _state.FocusMode = !v));
-        desktop.Children.Add(PersonalizeToggle("Clock and date", () => _state.ShowClockWidget, v => _state.ShowClockWidget = v));
-        desktop.Children.Add(PersonalizeToggle("Personal space card", () => _state.ShowSpaceWidget, v => _state.ShowSpaceWidget = v));
-        desktop.Children.Add(PersonalizeToggle("Home panel app card", () => _state.ShowHomeEssentials, v => _state.ShowHomeEssentials = v));
-        desktop.Children.Add(PersonalizeToggle("Home panel note card", () => _state.ShowHomeNotes, v => _state.ShowHomeNotes = v));
-        desktop.Children.Add(Text("Widgets also adapt to window size. Notes and app pins stay saved when their cards are hidden.", 12, true));
+        desktop.Children.Add(Text("Choose a mood for your desktop and taskbar. Open Sections from its desktop icon; your desktop stays available when this window closes.", 13, true));
+        desktop.Children.Add(PersonalizeToggle("Overview app card", () => _state.ShowHomeEssentials, v => _state.ShowHomeEssentials = v));
+        desktop.Children.Add(PersonalizeToggle("Overview note card", () => _state.ShowHomeNotes, v => _state.ShowHomeNotes = v));
         var interfacePanel = new StackPanel { Spacing = 18 };
         interfacePanel.Children.Add(Text("Feel & interaction", 21));
         interfacePanel.Children.Add(PersonalizeToggle("Native glass", () => _state.NativeGlass, v => _state.NativeGlass = v,
             "Windows acrylic", "Layered surfaces"));
         interfacePanel.Children.Add(PersonalizeToggle("Reduced effects", () => _state.ReducedEffects, v => _state.ReducedEffects = v));
-        interfacePanel.Children.Add(PersonalizeToggle("Compact dock", () => _state.CompactDock, v => _state.CompactDock = v,
-            "Smaller icons & spacing", "Comfortable icons"));
+        interfacePanel.Children.Add(PersonalizeToggle("Compact taskbar", () => _state.CompactDock, v => _state.CompactDock = v,
+            "Compact taskbar height", "Comfortable taskbar height"));
         var format = new ComboBox { Header = "Clock format", HorizontalAlignment = HorizontalAlignment.Stretch };
         format.Items.Add("24-hour · 14:56"); format.Items.Add("12-hour · 2:56 PM");
         format.SelectedIndex = _state.Clock24Hour ? 0 : 1;
@@ -217,35 +213,5 @@ public sealed partial class MainWindow
             }
         }
     }
-    private void ApplyDockDensity()
-    {
-        bool compact = _state.CompactDock || DesktopRoot.ActualWidth < 900;
-        DockStudyButton.Visibility = DesktopRoot.ActualWidth < 650 ? Visibility.Collapsed : Visibility.Visible;
-        DockPcButton.Visibility = DesktopRoot.ActualWidth < 460 ? Visibility.Collapsed : Visibility.Visible;
-        DockBorder.CornerRadius = new CornerRadius(compact ? 18 : 24);
-        DockBorder.Padding = new Thickness(compact ? 8 : 12, compact ? 6 : 8, compact ? 8 : 12, compact ? 6 : 8);
-        if (DockBorder.Child is StackPanel dock) dock.Spacing = compact ? 3 : 4;
-        DockApps.Spacing = compact ? 3 : 4; DockRunningApps.Spacing = compact ? 3 : 4;
-        foreach (var button in new[] { DockHomeButton, DockExploreButton, DockStudyButton, DockPcButton, DockSearchButton, DockRunningButton }
-            .Concat(DockApps.Children.OfType<Button>()).Concat(DockRunningApps.Children.OfType<Button>()))
-        {
-            button.Width = compact ? 44 : 60; button.Height = compact ? 48 : 64;
-            if (button.Content is Image image)
-            { image.Width = compact ? 38 : 52; image.Height = compact ? 38 : 52; }
-            else if (button.Content is Grid iconFace)
-            {
-                foreach (var icon in iconFace.Children.OfType<Image>())
-                { icon.Width = compact ? 38 : 52; icon.Height = compact ? 38 : 52; }
-            }
-            else if (button.Content is Border tile)
-            {
-                tile.Width = compact ? 40 : 48; tile.Height = compact ? 40 : 48;
-                tile.CornerRadius = new CornerRadius(compact ? 14 : 16);
-            }
-            else if (button.Content is StackPanel face && face.Children.FirstOrDefault() is Border running)
-            {
-                running.Width = compact ? 34 : 40; running.Height = compact ? 30 : 38;
-            }
-        }
-    }
+    
 }

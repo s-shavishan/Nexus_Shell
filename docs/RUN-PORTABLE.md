@@ -1,15 +1,13 @@
-# Run Nexus Shell 0.5.0
+# Run Nexus Shell 1.3.0
 
-Extract the full runnable ZIP completely into a new folder. Keep all DLL, PRI, XBF and Assets files together. Run Nexus.Shell.exe.
+Extract the full runnable Windows ZIP into a new folder. Keep all DLL, PRI, XBF, runtime/deps files and Assets together with both Nexus executables. Run **Nexus.Shell.exe** to preview the desktop alongside Explorer. Sections opens only through its shortcut or Start.
 
-F11 enables fullscreen. Ctrl+K searches locally; Ctrl+Alt+Space summons search from another app while Nexus runs and the shortcut is enabled/available.
+After Windows acceptance, choose **Sections → Personalize → Use Nexus at sign-in** to make Nexus the desktop for this user. The full selected folder must stay in place. Save work and sign out when ready; setup does not sign out automatically.
 
-Workspaces lets you configure presets. Enter changes Home; Open previews the items before launching them. Notes and study tasks stay shared.
+In a Nexus desktop session, use **Start → Session…** to restart Nexus, return to Windows, or sign out. Closing Sections/Files does not close the shell. Settings, Control Panel and Task Manager are in PC controls. See NEXUS-DESKTOP-MODE.md for keyboard behavior, scope and recovery.
 
-Keep Nexus available in Control center enables the notification-area icon. While enabled, Windows close/Alt+F4 hides Nexus. Use Exit Nexus in Control center or right-click the tray icon to fully exit. Exit completely before applying a binary update.
+If the UI fails, run **Restore-Windows-Desktop.bat**. Use Ctrl+Alt+Delete → Task Manager → Run new task to reach it from an empty desktop. This restores the saved sign-in policy. Running explorer.exe alone does not repair future sign-in.
 
-Existing data lives under %LOCALAPPDATA%\WhiteDreams\NexusShell. This release attempts settings.before-0.5.0.json before migrating pre-workspace settings.
+Data and recovery records live under `%LOCALAPPDATA%\WhiteDreams\NexusShell`. Updates create a separate version folder; preview it and select its host in Personalize before removing the old folder.
 
-For updates, use the binary Update ZIP and select an existing full binary folder. Source ZIPs cannot run directly or serve as the updater base.
-
-Source preparation checks pass. Windows runtime behavior and performance still need acceptance testing.
+Source ZIPs cannot run directly or serve as a binary updater base. Native Windows compilation and acceptance are still required for the prepared source.

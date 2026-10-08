@@ -18,6 +18,7 @@ public static class DesktopWorkspace
     public static bool IsAppTarget(string target)
     {
         if (string.IsNullOrWhiteSpace(target) || target.Length > 4096) return false;
+        if (target is "nexus:files" or "nexus:sections" or "nexus:recycle") return true;
         if (Uri.TryCreate(target, UriKind.Absolute, out var uri) && !uri.IsFile)
             return uri.Scheme is "https" or "http" || target.Equals("ms-settings:", StringComparison.OrdinalIgnoreCase);
         return Path.IsPathFullyQualified(target) && Path.GetExtension(target).ToLowerInvariant() is ".exe" or ".lnk";

@@ -1,3 +1,21 @@
+# 1.3.0 — Nexus desktop mode
+
+- Supported per-user desktop sign-in on Windows Pro, with independent host, heartbeat/restart supervision, durable original-policy backup and recovery script.
+- Nexus Files, file/folder/open/save pickers, folder/shortcut routing, native Show desktop and a separate Alt+Tab/Win+Tab switcher.
+- Explorer-independent desktop taskbar work area, session restart/return-to-Windows/sign-out, Settings/Control Panel/Task Manager access.
+- Portable and compatible-runtime update packages include the new desktop host and recovery tools; shared host/runtime bytes must agree.
+- Source/core/API checks pass; native Windows build, visual review and sign-in acceptance remain pending.
+
+# 1.2.0 — independent desktop foundation
+
+- Split startup into dedicated desktop and taskbar native windows, with Start created separately on demand.
+- Replace built-in section navigation/widgets/dock on the desktop with a Sections shortcut and bounded real desktop-file shortcuts.
+- Move existing tools into a normal Sections window with independent close/reopen lifetime.
+- Add native appbar work-area registration, fullscreen/restart notifications, desktop anchoring and complete cleanup.
+- Centralize shared state, snapshot providers, ordered saving, final shutdown saving and opt-in usage sampling.
+- Preserve moods, accessibility, notes, profiles, app pins and existing tools.
+- Update both Windows CI artifact configurations to 1.2.0. Local core/source/API checks pass; Windows build and native acceptance remain pending.
+
 # NEXUS Shell changes
 
 ## 1.1.0 — Solstice UI polish

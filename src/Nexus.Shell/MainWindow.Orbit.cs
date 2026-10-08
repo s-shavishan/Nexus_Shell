@@ -218,7 +218,7 @@ public sealed partial class MainWindow
     private void Window_ItemClick(object sender, ItemClickEventArgs args)
     {
         if (args.ClickedItem is not RunningWindow window) return;
-        if (!NativeMethods.Activate(window.Handle))
+        if (!NativeMethods.Activate(window))
             ShowStatus("The window closed or Windows declined the switch. Try Alt+Tab.");
     }
     private void UpdateWindowTileSize()

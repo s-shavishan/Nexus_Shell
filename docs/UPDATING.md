@@ -1,3 +1,11 @@
+# Desktop-mode updates — 1.3.0
+
+The new release includes Nexus.DesktopHost.exe and its DLL/deps/runtimeconfig. They are app-owned update payload, not reusable runtime files. The full release also includes Restore-Windows-Desktop.bat and its independent PowerShell script.
+
+Extract a new full build or apply the compatible-runtime update to create a separate version folder. The updater requests the base path in its console and never opens Explorer. It checks all runtime/payload hashes. Keep the old selected folder. If its Nexus desktop is active, use Session → Return to Windows to close it; only one Nexus version runs in a user session. Preview the new version. In the new build, choose Personalize → Use this version at sign-in, then save work and sign out. The original pre-Nexus desktop backup is retained across version changes. See NEXUS-DESKTOP-MODE.md.
+
+The historical updater implementation notes below remain useful for hash and resource checks; current desktop sign-in controls are in Personalize.
+
 # Updating Nexus 0.7.0
 
 ## Small binary update

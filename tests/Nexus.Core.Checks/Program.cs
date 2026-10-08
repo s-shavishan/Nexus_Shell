@@ -3,6 +3,8 @@ using Nexus.Shell.Services;
 using Nexus.Shell.Interop;
 using System.Text.Json;
 
+DesktopModeChecks.Run();
+
 static void Check(bool condition, string message)
 {
     if (!condition) throw new Exception(message);
@@ -55,6 +57,7 @@ try
     }
 }
 finally { if (Directory.Exists(moodDirectory)) Directory.Delete(moodDirectory, true); }
+DesktopFoundationChecks.Run(Check);
 ExploreChecks.Run(Check);
 ReliabilityChecks.Run(Check);
 PcControlChecks.Run(Check);

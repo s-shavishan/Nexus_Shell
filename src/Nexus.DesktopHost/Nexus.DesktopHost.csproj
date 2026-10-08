@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <Version>1.3.0</Version>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishTrimmed>false</PublishTrimmed>
+    <ApplicationIcon>../Nexus.Shell/Assets/Nexus.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../Nexus.Shell/Services/DesktopShellPolicy.cs" Link="DesktopShellPolicy.cs" />
+    <Compile Include="../Nexus.Shell/Services/DesktopShellRegistration.cs" Link="DesktopShellRegistration.cs" />
+  </ItemGroup>
+</Project>

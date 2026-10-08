@@ -60,7 +60,7 @@ public sealed partial class MainWindow
 
         var arrangement = new StackPanel { Spacing = 12 };
         arrangement.Children.Add(Text("Arrange your windows", 20));
-        arrangement.Children.Add(Text("Select one to four windows. The layout uses the first window’s display and leaves the Windows taskbar clear.", 12, true));
+        arrangement.Children.Add(Text("Select one to four windows. The layout uses the first window’s display and leaves the desktop taskbar clear.", 12, true));
         for (int i = 0; i < 4; i++)
         {
             var choice = new ComboBox { Header = "Window " + (i + 1), DisplayMemberPath = "Label", HorizontalAlignment = HorizontalAlignment.Stretch };
@@ -90,6 +90,8 @@ public sealed partial class MainWindow
         shell.Children.Add(ActionButton("Workspaces", () => Navigate("Workspaces")));
         shell.Children.Add(ActionButton("Personalize Nexus", () => Navigate("Personalize")));
         shell.Children.Add(ActionButton("Advanced Windows settings", () => AppCatalog.OpenSettings("ms-settings:")));
+        shell.Children.Add(ActionButton("Control Panel", () => _environment.OpenTargetChecked(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "control.exe"))));
+        shell.Children.Add(ActionButton("Task Manager", () => _environment.OpenTargetChecked(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "Taskmgr.exe"))));
         shell.Children.Add(Text("Live data refreshes every five seconds while this view is active. Audio changes are applied only when you use a slider or mute button.", 11, true));
         AddPcCard(shell, 1, 1);
         ApplyAudioSnapshot(_audioSnapshot); UpdatePcLayout(); _ = RefreshPcAsync();

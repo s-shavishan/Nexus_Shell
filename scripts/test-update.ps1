@@ -23,6 +23,7 @@ function Reject-Update([string]$Target) {
 try {
     Set-Content (Join-Path $pub 'Nexus.Shell.exe') 'new app' -Encoding ASCII
     Set-Content (Join-Path $pub 'Nexus.Shell.dll') 'new app assembly' -Encoding ASCII
+    foreach ($name in @('Nexus.DesktopHost.exe', 'Nexus.DesktopHost.dll', 'Nexus.DesktopHost.deps.json', 'Nexus.DesktopHost.runtimeconfig.json')) { Set-Content (Join-Path $pub $name) 'new host' -Encoding ASCII }
     Set-Content (Join-Path $pub 'resources.pri') 'app index' -Encoding ASCII
     Set-Content (Join-Path $pub 'MainWindow.xbf') 'compiled UI' -Encoding ASCII
     Set-Content (Join-Path $pub 'coreclr.dll') 'same runtime' -Encoding ASCII
@@ -46,6 +47,7 @@ try {
     Assert-Check ((Get-Content (Join-Path $base 'Nexus.Shell.exe') -Raw).Trim() -eq 'old app') 'The old folder must remain intact.'
     Assert-Check ((Get-Content (Join-Path $target 'resources.pri') -Raw).Trim() -eq 'app index') 'The new app resource index is required.'
     Assert-Check (Test-Path (Join-Path $target 'MainWindow.xbf')) 'Loose compiled UI was omitted.'
+    Assert-Check ((Get-Content (Join-Path $target 'Nexus.DesktopHost.dll') -Raw).Trim() -eq 'new host') 'The new desktop host must be shipped as app payload.'
     Reject-Update $target
     Set-Content (Join-Path $base 'coreclr.dll') 'different runtime' -Encoding ASCII
     $bad = Join-Path $fixture 'bad-runtime'

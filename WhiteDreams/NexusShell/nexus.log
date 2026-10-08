@@ -1,0 +1,21 @@
+2026-10-08T11:00:51.4620609+07:00 Settings could not be read; checking recovery copy
+System.Text.Json.JsonReaderException: 'b' is an invalid start of a property name. Expected a '"'. LineNumber: 0 | BytePositionInLine: 1.
+   at System.Text.Json.ThrowHelper.ThrowJsonReaderException(Utf8JsonReader& json, ExceptionResource resource, Byte nextByte, ReadOnlySpan`1 bytes)
+   at System.Text.Json.Utf8JsonReader.ReadSingleSegment()
+   at System.Text.Json.Utf8JsonReader.Read()
+   at System.Text.Json.JsonDocument.Parse(ReadOnlySpan`1 utf8JsonSpan, JsonReaderOptions readerOptions, MetadataDb& database, StackRowStack& stack)
+   at System.Text.Json.JsonDocument.Parse(ReadOnlyMemory`1 utf8Json, JsonReaderOptions readerOptions, Byte[] extraRentedArrayPoolBytes, PooledByteBufferWriter extraPooledByteBufferWriter)
+   at System.Text.Json.JsonDocument.Parse(ReadOnlyMemory`1 json, JsonDocumentOptions options)
+   at Nexus.Shell.Services.StateStore.ReadState(String json)
+   at Nexus.Shell.Services.StateStore.Load()
+HRESULT[0]: 0x80131500
+2026-10-08T11:00:51.4984774+07:00 Settings could not be read; checking recovery copy
+System.IO.InvalidDataException: Settings must contain a workspace object.
+   at Nexus.Shell.Services.StateStore.ReadState(String json)
+   at Nexus.Shell.Services.StateStore.Load()
+HRESULT[0]: 0x80131501
+2026-10-08T11:00:51.4987319+07:00 No readable settings recovery copy
+System.IO.InvalidDataException: Settings must contain a workspace object.
+   at Nexus.Shell.Services.StateStore.ReadState(String json)
+   at Nexus.Shell.Services.StateStore.Load()
+HRESULT[0]: 0x80131501

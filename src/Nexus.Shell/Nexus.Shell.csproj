@@ -20,9 +20,9 @@
     <PublishTrimmed>false</PublishTrimmed>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>1.1.0</Version>
+    <Version>1.3.0</Version>
     <Product>White Dreams Nexus Shell</Product>
-    <Description>Nexus Solstice desktop, refined native controls and PC control surface.</Description>
+    <Description>Nexus desktop shell, native file browsing and Windows-backed system controls.</Description>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
   <ItemGroup>

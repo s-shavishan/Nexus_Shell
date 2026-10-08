@@ -1,68 +1,66 @@
-# NEXUS Shell 1.1.0 — Solstice
+# Nexus Shell 1.3.0 — Nexus desktop, Windows underneath
 
-A native Windows desktop surface with a coordinated visual system for your apps, study, saved resources and PC controls.
+Nexus can be selected as the visible desktop at sign-in on supported **Windows Pro** builds. Windows supplies the operating system and services; Nexus supplies the desktop, taskbar, Start, context menus, file browsing, file pickers and window switcher. Settings, Control Panel, Task Manager and secure system prompts remain available.
 
-## What's new
+This is a **source upgrade**. Full Windows compilation and desktop sign-in acceptance are pending. It has not been installed on your Windows account.
 
-- **Solstice and Ember.** Warm light and dark moods inspired by the supplied macOS boards and orange controls. Each mood has matching wallpaper colors, fields, menus and selected states. Existing saved moods stay selected. Selected sidebar labels use readable text over the warm tint.
-- **Native control polish.** The shared palette reaches buttons, focused inputs, dropdowns, context menus, sliders, switches and progress controls. Dialog buttons and keyboard focus use the same design.
-- **Refined workspace chrome.** Compact traffic lights, history controls, search and note capture; a quiet sidebar with original colorful icons and clear selected rows.
-- **A balanced dock.** Comfortable and compact modes resize all icons consistently. Active-page marks and running-window indicators make the dock readable; running windows use category artwork rather than letter tiles.
-- **Different surface depths.** Windows, widgets and floating bars have separate acrylic strengths, with opaque fallbacks.
-- **Quick control center.** Audio and quick tiles stay visible; session preferences use a collapsible section.
-- **Consistent motion.** Restrained entrances, dock lift and press feedback follow reduced-effects and Windows animation preferences. Native handled pointer events are observed for press feedback, including touch and pen contacts. Wallpaper remains static vector artwork.
+## The desktop foundation
 
-Select **Personalize → Solstice** after updating to try the new light mood, or choose **Ember** for the warm dark direction. The complete design analysis, implementation mapping and Windows review instructions are in [UI-POLISH.md](docs/UI-POLISH.md).
+Desktop, taskbar, Start, Files, window switcher and Sections have independent native Windows. Sections opens from its desktop shortcut; it is never embedded in the desktop or opened automatically. Closing it preserves the live desktop and saves shared state.
 
-## Existing tools
+- **Desktop mode:** a per-user Custom User Interface policy starts `Nexus.DesktopHost.exe` in place of Explorer. The host starts Nexus, watches its UI heartbeat, retries short failures twice and then restores the previous desktop setting.
+- **Preview mode:** opening `Nexus.Shell.exe` directly keeps Explorer available for build review. No sign-in setting changes at launch.
+- **Nexus Files:** folders, known places, drives, filtering, new folders and file launching. Nexus file/folder selection replaces the Windows common pickers used by Sections. Read work happens off the UI thread, cancellation discards old navigation and lists have a finite viewport and a 1,000-entry bound.
+- **Window switcher:** a separate Nexus window for Alt+Tab and Win+Tab, also available from the taskbar. Window activation validates the process identity.
+- **Taskbar:** its desktop-mode work area uses user32 directly, without Explorer's appbar manager. Fullscreen apps can cover it; preview mode retains normal appbar coexistence.
+- **Show desktop:** Nexus minimizes and restores matching app windows using their native placement, without `Shell.Application`.
+- **System access:** PC controls expose Settings, Control Panel, Task Manager, audio, window arrangement and live system data.
+- **Session controls:** restart Nexus, return to Windows or sign out. An accidental shell close requests recovery rather than leaving an empty desktop.
+- **Appearance:** Solstice's warm pearl/orange treatment, Ember, the existing moods, native vector icons, high contrast and reduced effects remain shared across surfaces.
 
-- **A desktop canvas.** My files, Explore, Study, App Library, PC controls and up to four favorite saved cards appear as working shortcuts beside compact clock, spaces and focus widgets. A small workspace card replaces the large Home dashboard in desktop mode. Panel mode and high contrast retain the Home cards.
-- **Original colorful icons.** Thirteen static vector illustrations give the dock, desktop, app categories and saved cards consistent folder, notebook, compass and app artwork. Installed apps use category illustrations rather than extracted application logos.
-- **Desktop moods.** Static vector wallpaper and floating acrylic cards adapt to Solstice, Ember, Opal, Pearl, Lagoon and Graphite. Glass and motion retain reduced-effects, system-preference and high-contrast fallbacks.
-- **Build correction.** Fixed both unsupported two-argument WinUI `Thickness` calls from the supplied 0.8.0 build log. Source validation now checks those constructors, and publishing checks require the new vector assets.
-- **Explore spaces.** Create up to 12 spaces, keep links, notes, files and folders together, group them into collections, favorite cards and search titles, notes and tags.
-- **Quick capture.** Paste a web address or a note, drop files or folders, or press Ctrl+N to write a note. Space/Enter opens Quick Look on a selected card.
-- **Previews.** Read the first 16 KB of supported text files and inspect supported local images. Open other resources in their Windows app or default browser.
-- **Continue and move.** Restore the last Explore space, view and selected card; move cards between spaces. The same link can belong to different spaces.
-- **Export/import.** A space can be exported to a `.nexus-space.json` file and imported as an independent space. Import validates format, addresses and capacity before changing the board.
-- **Focus on the desktop.** Start or pause your study session without opening Study.
-- **Settings recovery.** Atomic saves keep a readable backup. A damaged or missing settings file can recover the previous save, with a visible recovery message. Unreadable copies are preserved.
+## Build and configure
 
-References to local files do not move the originals. Board capacity is 100 cards across all spaces; notes allow 2,000 characters and five tags. URLs and local paths are opened only when you choose Open or confirm a configured workspace launch. File and image previews run locally.
+On a Windows build host with .NET 8 and the WinUI C# tools:
+
+```powershell
+.\scripts\build.ps1 -UseMSBuild -Run
+.\scripts\package.ps1
+```
+
+The full portable ZIP includes both executables and their dependencies. Preview the build first. After native acceptance, open **Sections → Personalize → Use Nexus at sign-in**. It saves the previous per-user desktop and Nexus startup values before selecting this version. Save work and sign out when ready; Nexus never signs out automatically during setup.
+
+The recovery BAT/PowerShell script works independently of the WinUI UI. Keep the complete version folder in place while selected for sign-in.
 
 ## Shortcuts
 
-| Shortcut | Action |
+| Shortcut | Desktop mode |
 |---|---|
-| Ctrl+K | Search apps, saved cards, spaces, tasks and actions |
-| Ctrl+Alt+Space | Summon search from another app while Nexus runs and the shortcut is enabled |
-| Ctrl+N | Create a note in Explore |
-| Ctrl+1 / 2 / 3 / 4 | Desktop / Explore / Study / Window overview |
-| Ctrl+5 | PC controls |
-| Space or Enter on an Explore card | Quick Look |
-| Alt+Left / Alt+Right | Previous / next Nexus page |
-| F11 | Full screen / windowed |
-| Escape | Close search or controls, leave full screen, or minimize |
+| Win | Nexus Start |
+| Win+E | Nexus Files |
+| Win+D | Minimize/restore app windows |
+| Win+I | Windows Settings |
+| Win+R / Win+S | Nexus app search |
+| Win+A | Nexus PC controls |
+| Alt+Tab / Alt+Shift+Tab | Cycle Nexus window switcher; release Alt to select |
+| Win+Tab / Ctrl+Alt+Tab | Nexus window overview; Enter selects, Esc cancels |
+| Win+L / Ctrl+Alt+Delete | Windows secure session controls |
+| Ctrl+Alt+Space, when enabled | Nexus Start search |
 
-## Build and update
+Preview mode leaves Windows' global shell shortcuts with Windows. The taskbar's window-switch button remains available.
 
-See [BUILD-HANDOFF.md](docs/BUILD-HANDOFF.md) for the confirmed repository baseline and current build handoff. Commit this source to the repository and let AppVeyor build it. The pipeline runs the core/native and updater checks, publishes the app, verifies its compiled XAML resources, and packages the outputs.
+## Scope and validation
 
-After a successful build, download `Nexus-Shell-1.1.0-Update-win-x64.zip`. Fully exit Nexus, extract it and run `Apply-Update.bat`, selecting your existing full app folder. It verifies the runtime files and creates a fresh version folder. If runtime checks fail, download the full `Nexus-Shell-1.1.0-win-x64.zip` once. Runtime dependencies are unchanged.
+The sign-in route is **Custom User Interface**, supported on Pro. It does not use the Enterprise-only Shell Launcher optional feature. This is a desktop replacement, not an access-restriction policy: other apps and OS facilities can still display their own UI. Nexus does not disable services or suppress secure prompts.
 
-Source files require a Windows build. To build locally with the C# WinUI tools installed, run `.\scripts\build.ps1 -UseMSBuild -Run`.
+This foundation covers one desktop/taskbar display. The Recycle Bin view shows count/size and supports emptying after a Nexus confirmation; individual item browsing/restoration is not implemented. Files does not yet implement copy/move/delete, drag/drop or shell extensions. Windows namespace-only/UWP shortcuts without a resolvable executable target need a supported app target. A replacement for other applications' Windows notification-area icons and all Windows overlays is not implemented.
 
-## Validation and previews
+Core checks execute locally. All app C# compiles against the pinned WinUI/Windows API references with XAML field stand-ins; desktop-host C# compiles against .NET 8 APIs. Native XAML generation, sign-in, keyboard hooks, fullscreen, DPI and runtime appearance still require Windows testing.
 
-Core behavior checks compile and execute locally, including six-mood contrast and actual settings-file persistence. All application C# and native style setter property names compile against the pinned WinUI/Windows references using temporary XAML field declarations. Source checks validate XAML structure, resources, handlers, asset publishing and C# syntax.
+- [Setup, recovery and architecture](docs/NEXUS-DESKTOP-MODE.md)
+- [Windows acceptance](docs/TEST-DESKTOP-MODE.md)
+- [Evidence and limits](docs/VALIDATION.md)
+- [Windows build handoff](docs/BUILD-HANDOFF.md)
+- [Desktop illustration](docs/Nexus-1.3.0-Desktop-reference.png)
+- [Files and Start illustration](docs/Nexus-1.3.0-Files-and-Start-reference.png)
 
-**The full Windows XAML build and native UI acceptance are still pending.** The checks above do not generate PRI/XBF or prove acrylic appearance, font metrics, input or frame pacing. See [VALIDATION.md](docs/VALIDATION.md) and [UI-POLISH.md](docs/UI-POLISH.md).
-
-- [Solstice desktop layout](docs/Nexus-1.1.0-Solstice-desktop-reference.png)
-- [Solstice Explore layout](docs/Nexus-1.1.0-Solstice-explore-reference.png)
-- [Ember desktop layout](docs/Nexus-1.1.0-Ember-desktop-reference.png)
-- [Ember Explore layout](docs/Nexus-1.1.0-Ember-explore-reference.png)
-
-These are source-derived **layout illustrations with sample data**, not Windows screenshots. They read source wallpaper paths, shipped vector artwork and exported runtime palette values. Regenerate with `python scripts/solstice-preview.py` using Python and cairosvg. Those preview dependencies are not application dependencies. Historical previews remain in `docs` for reference.
-
-See [PC-CONTROLS.md](docs/PC-CONTROLS.md) for the native audio, app mixer, metrics, window arrangement and Undo capabilities introduced in 1.0.0.
+Illustrations use the source palette, wallpaper and icons with sample content. They are not Windows screenshots. Earlier design references and version notes remain in `docs` as history.

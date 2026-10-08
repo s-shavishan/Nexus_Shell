@@ -12,163 +12,28 @@ namespace Nexus.Shell;
 
 public sealed partial class MainWindow
 {
-    private DesktopIntegration? _desktopIntegration;
-    private bool _explicitExit, _desktopWindowsBusy, _launchingWorkspace;
+    
+    private bool _desktopWindowsBusy, _launchingWorkspace;
     private IReadOnlyList<RunningWindow> _desktopWindows = [];
-    private bool _syncingDesktopSwitches;
     private WorkspaceProfile ActiveProfile => _state.Profiles.First(p => p.Id == _state.ActiveProfileId);
 
-    private void InitializeDesktop()
-    {
-        DesktopWorkspace.Normalize(_state);
-        DesktopLayoutSwitch.IsOn = _state.DesktopLayout;
-        GlobalShortcutSwitch.IsOn = _state.GlobalShortcut;
-        ResidentSwitch.IsOn = _state.KeepAvailable;
-        ResumeWorkspaceSwitch.IsOn = _state.ResumeWorkspace;
-        RenderProfileStrip();
-    }
-    private void InitializeDesktopIntegration()
-    {
-        try
-        {
-            _desktopIntegration = new DesktopIntegration(_handle, action => DispatcherQueue.TryEnqueue(() =>
-            {
-                if (!_ready) return;
-                try
-                {
-                if (action == "exit") ExitNexus();
-                else if (action == "tray-lost")
-                {
-                    _desktopIntegration?.SetResident(false);
-                    _state.KeepAvailable = false;
-                    _syncingDesktopSwitches = true; ResidentSwitch.IsOn = false; _syncingDesktopSwitches = false;
-                    ShowNexus(); SaveState(); ShowStatus("The notification-area icon is unavailable. Nexus is visible again.");
-                }
-                else
-                {
-                    ShowNexus();
-                    if (action == "search" && !_commandOpen) OpenCommands();
-                }
-                }
-                catch (Exception ex) { Error("Could not use the desktop control", ex); }
-            }));
-            _appWindow.Closing += AppWindow_Closing;
-            if (!_desktopIntegration.SetHotkey(_state.GlobalShortcut))
-                Log.Write("Ctrl+Alt+Space is already assigned or unavailable. Local Ctrl+K remains available.");
-            if (!_desktopIntegration.SetResident(_state.KeepAvailable))
-            {
-                _desktopIntegration.SetResident(false);
-                _state.KeepAvailable = false;
-                _syncingDesktopSwitches = true; ResidentSwitch.IsOn = false; _syncingDesktopSwitches = false;
-                SaveState();
-                ShowStatus("The notification-area icon could not be created. Nexus will close normally.");
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.Write("Optional desktop controls unavailable; window remains usable", ex);
-            try { _desktopIntegration?.Dispose(); } catch (Exception cleanup) { Log.Write("Desktop control cleanup failed", cleanup); }
-            _desktopIntegration = null;
-            ResidentSwitch.IsEnabled = false; GlobalShortcutSwitch.IsEnabled = false;
-        }
-        RefreshDesktopControls();
-    }
-    private void RefreshDesktopControls()
-    {
-        DesktopShortcutStatus.Text = _desktopIntegration?.HotkeyAvailable == true
-            ? "Ctrl+Alt+Space opens search from your other apps."
-            : _state.GlobalShortcut ? "Global shortcut unavailable. Use Ctrl+K inside Nexus or open Nexus again."
-            : "Global shortcut is off. Ctrl+K still works inside Nexus.";
-    }
-    private void AppWindow_Closing(AppWindow sender, AppWindowClosingEventArgs args)
-    {
-        if (!_explicitExit && _state.KeepAvailable && _desktopIntegration?.TrayAvailable == true && !_dialogOpen && !_picking)
-        {
-            args.Cancel = true;
-            HideNexus();
-        }
-    }
-    private void ShowNexus()
-    {
-        _appWindow.Show();
-        if (_appWindow.Presenter is OverlappedPresenter presenter && presenter.State == OverlappedPresenterState.Minimized) presenter.Restore();
-        Activate();
-        NativeMethods.Activate(_handle);
-        UpdateClock(true);
-    }
-    private void HideNexus()
-    {
-        if (_dialogOpen || _picking) return;
-        if (_commandOpen) CloseCommands();
-        ControlsFlyout.Hide(); SaveState();
-        if (_state.KeepAvailable && _desktopIntegration?.TrayAvailable == true) _appWindow.Hide();
-        else Minimize();
-        _uiTimer.Stop(); _motion?.SetEnabled(false); _isActive = false;
-        _desktopWindows = []; DockRunningApps.Children.Clear();
-    }
-    private void ExitNexus()
-    {
-        _explicitExit = true;
-        Close();
-    }
+    private void InitializeDesktop() { DesktopWorkspace.Normalize(_state); GlobalShortcutSwitch.IsOn = _state.GlobalShortcut; ResidentSwitch.IsOn = _state.KeepAvailable && _environment.Mode == DesktopSessionMode.Preview; ResidentSwitch.IsEnabled = _environment.Mode == DesktopSessionMode.Preview; ResumeWorkspaceSwitch.IsOn = _state.ResumeWorkspace; RenderProfileStrip(); RefreshDesktopControls(); }
+    
+    private void RefreshDesktopControls() { DesktopShortcutStatus.Text = _environment.HotkeyAvailable ? "Ctrl+Alt+Space opens the Start menu." : "Use taskbar search to open the Start menu."; }
+    
+    private void ShowNexus() { _appWindow.Show(); if (_appWindow.Presenter is OverlappedPresenter p && p.State == OverlappedPresenterState.Minimized) p.Restore(); Activate(); NativeMethods.Activate(_handle); }
+    private void HideNexus() { if (_dialogOpen || _picking) return; Close(); }
+    private void ExitNexus() => _environment.Shutdown();
     private void HideNexus_Click(object sender, RoutedEventArgs args) => HideNexus();
-    private void DesktopLayout_Toggled(object sender, RoutedEventArgs args)
-    {
-        if (!_ready || _syncingPersonalization) return;
-        _state.DesktopLayout = DesktopLayoutSwitch.IsOn;
-        ApplyWidgetLayout(); ApplyEffects(); SaveState();
-    }
-    private void GlobalShortcut_Toggled(object sender, RoutedEventArgs args)
-    {
-        if (!_ready || _syncingDesktopSwitches) return;
-        _state.GlobalShortcut = GlobalShortcutSwitch.IsOn;
-        if (_desktopIntegration?.SetHotkey(_state.GlobalShortcut) == false && _state.GlobalShortcut)
-            ShowStatus("Ctrl+Alt+Space is already assigned or unavailable. Ctrl+K still works inside Nexus.");
-        RefreshDesktopControls(); SaveState();
-    }
-    private void Resident_Toggled(object sender, RoutedEventArgs args)
-    {
-        if (!_ready || _syncingDesktopSwitches) return;
-        bool enabled = ResidentSwitch.IsOn;
-        if (_desktopIntegration is null || !_desktopIntegration.SetResident(enabled))
-        {
-            _desktopIntegration?.SetResident(false);
-            _syncingDesktopSwitches = true; ResidentSwitch.IsOn = false; _syncingDesktopSwitches = false;
-            _state.KeepAvailable = false;
-            ShowStatus("The notification-area icon is unavailable. Nexus will close normally."); SaveState(); return;
-        }
-        _state.KeepAvailable = enabled;
-        ShowStatus(enabled ? "Nexus stays available when you close its window. Right-click its notification-area icon to exit."
-            : "Closing the Nexus window will exit the app.");
-        SaveState();
-    }
+    
+    private void GlobalShortcut_Toggled(object sender, RoutedEventArgs args) { if (!_ready) return; _state.GlobalShortcut = GlobalShortcutSwitch.IsOn; SaveState(); RefreshDesktopControls(); }
+    private void Resident_Toggled(object sender, RoutedEventArgs args) { if (!_ready) return; _state.KeepAvailable = ResidentSwitch.IsOn; SaveState(); ShowStatus("Desktop and taskbar remain running when Sections closes."); }
     private void ResumeWorkspace_Toggled(object sender, RoutedEventArgs args)
     {
         if (!_ready) return;
         _state.ResumeWorkspace = ResumeWorkspaceSwitch.IsOn; SaveState();
     }
-    private void ApplyDesktopLayout()
-    {
-        bool desktop = IsDesktopCanvas;
-        WindowChrome.Visibility = WindowFooter.Visibility = desktop ? Visibility.Collapsed : Visibility.Visible;
-        ChromeRow.Height = new GridLength(desktop ? 0 : 52);
-        FooterRow.Height = new GridLength(desktop ? 0 : 30);
-        HomeBorder.MaxWidth = desktop || _expanded ? double.PositiveInfinity : 1180;
-        HomeBorder.BorderThickness = new Thickness(desktop ? 0 : 1);
-        HomeBorder.Background = desktop ? _transparent : _highContrast ? Resource("NexusPanel")
-            : _state.ReducedEffects ? _solidPanel : (Brush?)_auraGlass ?? Resource("NexusShell");
-        if (desktop)
-        {
-            Sidebar.Visibility = Visibility.Collapsed; SidebarColumn.Width = new GridLength(0);
-            HomeBorder.Shadow = null; HomeBorder.Translation = new(0, 0, 0);
-        }
-        HomeView.Visibility = _page == "Home" && !desktop ? Visibility.Visible : Visibility.Collapsed;
-        DesktopCanvas.Visibility = desktop ? Visibility.Visible : Visibility.Collapsed;
-        UpdateDesktopCanvasLayout();
-        HomeGreeting.Visibility = HomeWorkspacesButton.Visibility = desktop ? Visibility.Collapsed : Visibility.Visible;
-        HomeWindowsSummary.Foreground = HomeRecentText.Foreground = Resource(desktop ? "NexusDesktopMuted" : "NexusMuted");
-        HomeOverviewButton.Foreground = Resource(desktop ? "NexusDesktopText" : "NexusText");
-    }
+    private void ApplyDesktopLayout() { HomeView.Visibility = _page == "Home" ? Visibility.Visible : Visibility.Collapsed; }
     private void UpdateHomeColumns()
     {
         bool wide = PageHost.ActualWidth >= 780;
@@ -192,7 +57,7 @@ public sealed partial class MainWindow
     }
     private void RenderDesktopIdentity()
     {
-        RefreshDesktopSpaceShortcuts();
+        
         var profile = ActiveProfile;
         HeroTitle.Text = profile.Id == "personal" ? "Your day, your space." : profile.Name + ". A space to begin.";
         HeroDescription.Text = profile.Description;
@@ -202,7 +67,7 @@ public sealed partial class MainWindow
         ProfileDestinationButton.Content = profile.Page == "Home" ? "Your apps" : "Go to " + profile.Page;
         ProfileSummary.Text = profile.Apps.Count + " apps · " + profile.SavedItemIds.Count + " saved items";
         RenderProfileStrip();
-        RenderDesktopCanvas();
+        
     }
     private void RenderProfileStrip()
     {
@@ -216,7 +81,7 @@ public sealed partial class MainWindow
             content.Children.Add(glyph); content.Children.Add(label);
             var button = new Button { Content = content, HorizontalAlignment = HorizontalAlignment.Stretch,
                 HorizontalContentAlignment = HorizontalAlignment.Left, CornerRadius = new CornerRadius(18), Padding = new Thickness(16, 14, 16, 14),
-                Background = selected && !(_page == "Home" && _state.DesktopLayout && !_highContrast) ? _selection : Resource("NexusCard"),
+                Background = selected ? _selection : Resource("NexusCard"),
                 BorderBrush = profile.Id == _state.ActiveProfileId ? Resource("NexusAccent") : Resource("NexusBorder"), BorderThickness = new Thickness(1) };
             button.Click += (_, _) => EnterProfile(profile.Id);
             ToolTipService.SetToolTip(button, profile.Description);
@@ -261,7 +126,7 @@ public sealed partial class MainWindow
     private void BuildProfiles()
     {
         PageContent.Children.Add(Text("A place for every part of your day.", 28));
-        PageContent.Children.Add(Text("Choose the apps and saved items you want together. Entering a workspace changes your desktop; Open asks before launching anything.", 13, true));
+        PageContent.Children.Add(Text("Choose the apps and saved items you want together. Entering a workspace selects it in Sections; Open asks before launching anything.", 13, true));
         foreach (var profile in _state.Profiles)
         {
             var panel = new StackPanel { Spacing = 12 };
@@ -371,7 +236,7 @@ public sealed partial class MainWindow
                 if (!_ready) break;
                 try
                 {
-                    if (item.Kind == "App") AppCatalog.Launch(new("workspace", item.Title, item.Target, "\uE8A5"));
+                    if (item.Kind == "App") _environment.OpenTargetChecked(item.Target);
                     else
                     {
                         if (item.Kind == "Link")
@@ -380,7 +245,7 @@ public sealed partial class MainWindow
                                 throw new InvalidDataException("Invalid web address.");
                         }
                         else if (!File.Exists(item.Target) && !Directory.Exists(item.Target)) throw new FileNotFoundException("Item moved or unavailable.");
-                        Process.Start(new ProcessStartInfo(item.Target) { UseShellExecute = true });
+                        _environment.OpenTargetChecked(item.Target);
                     }
                     requested++;
                 }
@@ -416,21 +281,5 @@ public sealed partial class MainWindow
         catch (Exception ex) { Log.Write("Running dock refresh skipped", ex); }
         finally { _desktopWindowsBusy = false; }
     }
-    private void RenderRunningDock()
-    {
-        DockRunningApps.Children.Clear();
-        foreach (var window in _desktopWindows.Take(3))
-        {
-            var face = RunningDockFace(NexusIcons.ForProcess(window.ProcessName));
-            var button = new Button { Content = face, Style = (Style)Application.Current.Resources["DockButton"],
-                Background = _transparent, BorderBrush = _transparent };
-            button.Click += (_, _) => { if (!NativeMethods.Activate(window.Handle)) ShowStatus("This window is unavailable. Refresh window overview."); };
-            ToolTipService.SetToolTip(button, window.ProcessName + " · " + window.Title);
-            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, "Return to " + window.Title);
-            DockRunningApps.Children.Add(button);
-            _motion?.AttachHover(button);
-        }
-        ApplyDockDensity();
-        HomeWindowsSummary.Text = _desktopWindows.Count + " open windows · Return through the dock or window overview";
-    }
+    private void RenderRunningDock() { HomeWindowsSummary.Text = _desktopWindows.Count + " open windows · Return through the taskbar"; }
 }

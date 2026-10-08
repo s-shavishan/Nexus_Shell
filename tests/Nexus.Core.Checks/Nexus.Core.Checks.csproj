@@ -7,6 +7,15 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../src/Nexus.Shell/Services/DesktopShellPolicy.cs" Link="DesktopShellPolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/DesktopShellRegistration.cs" Link="DesktopShellRegistration.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/FileCatalog.cs" Link="FileCatalog.cs" />
+    <Compile Include="../../src/Nexus.Shell/Interop/ExclusiveTaskbarRegistration.cs" Link="ExclusiveTaskbarRegistration.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/ShellSession.cs" Link="ShellSession.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/DesktopLayout.cs" Link="DesktopLayout.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/DesktopCatalog.cs" Link="DesktopCatalog.cs" />
+    <Compile Include="../../src/Nexus.Shell/Interop/ShellLayerInterop.cs" Link="ShellLayerInterop.cs" />
+    <Compile Include="../../src/Nexus.Shell/Interop/TaskbarRegistration.cs" Link="TaskbarRegistration.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/AudioController.cs" Link="AudioController.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/PcMetrics.cs" Link="PcMetrics.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/WindowLayouts.cs" Link="WindowLayouts.cs" />
