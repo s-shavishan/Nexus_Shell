@@ -25,6 +25,18 @@ public static class NexusIcons
     { Source = Source(name), Width = size, Height = size, Stretch = Stretch.Uniform };
     public static string ForKind(string kind) => kind switch
     { "Note" => "Note", "Folder" => "Files", "Link" => "Browser", _ => "Document" };
+    // Category artwork avoids loading arbitrary executable icons on the UI
+    // thread. Window titles remain available through the native tooltip.
+    public static string ForProcess(string process)
+    {
+        string name = process.ToLowerInvariant();
+        if (name.Contains("firefox") || name.Contains("chrome") || name.Contains("edge") || name.Contains("browser")) return "Browser";
+        if (name.Contains("explorer")) return "Files";
+        if (name.Contains("terminal") || name.Contains("powershell") || name.Contains("code") || name == "cmd") return "Terminal";
+        if (name.Contains("settings")) return "Settings";
+        if (name.Contains("notepad") || name.Contains("word")) return "Document";
+        return "Windows";
+    }
     public static string ForApp(AppEntry app) => app.Id switch
     {
         "files" => "Files", "settings" => "Settings", "terminal" => "Terminal",

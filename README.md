@@ -1,19 +1,24 @@
-# NEXUS Shell 1.0.0 — PC control surface
+# NEXUS Shell 1.1.0 — Solstice
 
-A native Windows desktop surface for your apps, study sessions, resources and live PC controls.
+A native Windows desktop surface with a coordinated visual system for your apps, study, saved resources and PC controls.
 
 ## What's new
 
-- **PC controls workspace.** Open it from the desktop, dock, menus, search or Ctrl+5. Live CPU, physical memory, power, local network link, storage and uptime appear inside Nexus. Readings refresh every five seconds while the view is active.
-- **Native audio.** Change the default output's master level and mute from the quick control panel. The full workspace includes up to 32 app audio sessions on that output, with individual level and mute controls. Windows Core Audio runs on a dedicated MTA worker; slider writes are coalesced and missing/unresponsive devices show an unavailable state.
-- **Window layouts.** Choose one to four existing windows, arrange them in columns, a vertical stack or a grid on the first window's display, and Undo the last arrangement. Native actions verify window/process ownership. Optional minimization reveals the arranged apps. Lock PC also works directly.
-- **Actual WinUI polish.** Nexus button templates define hover, pressed and disabled states with system keyboard focus visuals. Comfortable dock icons are larger; a responsive compact layout keeps navigation reachable. The toolbar uses the original Nexus mark and the clock uses a fuller text weight.
+- **Solstice and Ember.** Warm light and dark moods inspired by the supplied macOS boards and orange controls. Each mood has matching wallpaper colors, fields, menus and selected states. Existing saved moods stay selected. Selected sidebar labels use readable text over the warm tint.
+- **Native control polish.** The shared palette reaches buttons, focused inputs, dropdowns, context menus, sliders, switches and progress controls. Dialog buttons and keyboard focus use the same design.
+- **Refined workspace chrome.** Compact traffic lights, history controls, search and note capture; a quiet sidebar with original colorful icons and clear selected rows.
+- **A balanced dock.** Comfortable and compact modes resize all icons consistently. Active-page marks and running-window indicators make the dock readable; running windows use category artwork rather than letter tiles.
+- **Different surface depths.** Windows, widgets and floating bars have separate acrylic strengths, with opaque fallbacks.
+- **Quick control center.** Audio and quick tiles stay visible; session preferences use a collapsible section.
+- **Consistent motion.** Restrained entrances, dock lift and press feedback follow reduced-effects and Windows animation preferences. Native handled pointer events are observed for press feedback, including touch and pen contacts. Wallpaper remains static vector artwork.
+
+Select **Personalize → Solstice** after updating to try the new light mood, or choose **Ember** for the warm dark direction. The complete design analysis, implementation mapping and Windows review instructions are in [UI-POLISH.md](docs/UI-POLISH.md).
 
 ## Existing tools
 
 - **A desktop canvas.** My files, Explore, Study, App Library, PC controls and up to four favorite saved cards appear as working shortcuts beside compact clock, spaces and focus widgets. A small workspace card replaces the large Home dashboard in desktop mode. Panel mode and high contrast retain the Home cards.
 - **Original colorful icons.** Thirteen static vector illustrations give the dock, desktop, app categories and saved cards consistent folder, notebook, compass and app artwork. Installed apps use category illustrations rather than extracted application logos.
-- **Softer Opal.** Peach, coral, lilac and blue vector waves, floating acrylic cards, compact traffic lights, smaller controls and a 66-pixel Explore list. Orbit, Aurora and Slate remain available. Glass and custom motion retain reduced-effects, system-preference and high-contrast fallbacks.
+- **Desktop moods.** Static vector wallpaper and floating acrylic cards adapt to Solstice, Ember, Opal, Pearl, Lagoon and Graphite. Glass and motion retain reduced-effects, system-preference and high-contrast fallbacks.
 - **Build correction.** Fixed both unsupported two-argument WinUI `Thickness` calls from the supplied 0.8.0 build log. Source validation now checks those constructors, and publishing checks require the new vector assets.
 - **Explore spaces.** Create up to 12 spaces, keep links, notes, files and folders together, group them into collections, favorite cards and search titles, notes and tags.
 - **Quick capture.** Paste a web address or a note, drop files or folders, or press Ctrl+N to write a note. Space/Enter opens Quick Look on a selected card.
@@ -41,21 +46,23 @@ References to local files do not move the originals. Board capacity is 100 cards
 
 ## Build and update
 
-Commit this source to the repository and let AppVeyor build it. The pipeline runs the core/native and updater checks, publishes the app, verifies its compiled XAML resources, and packages the outputs.
+See [BUILD-HANDOFF.md](docs/BUILD-HANDOFF.md) for the confirmed repository baseline and current build handoff. Commit this source to the repository and let AppVeyor build it. The pipeline runs the core/native and updater checks, publishes the app, verifies its compiled XAML resources, and packages the outputs.
 
-After a successful build, download `Nexus-Shell-1.0.0-Update-win-x64.zip`. Fully exit Nexus, extract it and run `Apply-Update.bat`, selecting your existing full app folder. It verifies the runtime files and creates a fresh version folder. If runtime checks fail, download the full `Nexus-Shell-1.0.0-win-x64.zip` once. Runtime dependencies are unchanged.
+After a successful build, download `Nexus-Shell-1.1.0-Update-win-x64.zip`. Fully exit Nexus, extract it and run `Apply-Update.bat`, selecting your existing full app folder. It verifies the runtime files and creates a fresh version folder. If runtime checks fail, download the full `Nexus-Shell-1.1.0-win-x64.zip` once. Runtime dependencies are unchanged.
 
 Source files require a Windows build. To build locally with the C# WinUI tools installed, run `.\scripts\build.ps1 -UseMSBuild -Run`.
 
-## Validation
+## Validation and previews
 
-All application C# compiles locally against the project's pinned WinUI/Windows API references, using generated field declarations in place of compiled XAML. The core behavior checks also compile and run, including Explore migration, imports, independent spaces, timer recovery, settings backups and final-save ordering. XAML structure, resources, assets and event wiring pass source checks. Native Windows XAML compilation, packaging, startup, layout, input, glass rendering and performance still need the Windows build and acceptance checks in [TEST-WINDOWS.md](docs/TEST-WINDOWS.md). See [VALIDATION.md](docs/VALIDATION.md) for the exact limits.
+Core behavior checks compile and execute locally, including six-mood contrast and actual settings-file persistence. All application C# and native style setter property names compile against the pinned WinUI/Windows references using temporary XAML field declarations. Source checks validate XAML structure, resources, handlers, asset publishing and C# syntax.
 
-The 0.9.0 design references in `docs` are historical layout illustrations, not screenshots of 1.0.0. The supplied real screenshot informed this release's native controls, typography and dock changes. Compare the built Windows app at the same resolution and scaling; illustration rendering is not native UI acceptance.
+**The full Windows XAML build and native UI acceptance are still pending.** The checks above do not generate PRI/XBF or prove acrylic appearance, font metrics, input or frame pacing. See [VALIDATION.md](docs/VALIDATION.md) and [UI-POLISH.md](docs/UI-POLISH.md).
 
-- [Desktop layout](docs/Nexus-0.9.0-Desktop-reference.png)
-- [Explore layout](docs/Nexus-0.9.0-Explore-reference.png)
+- [Solstice desktop layout](docs/Nexus-1.1.0-Solstice-desktop-reference.png)
+- [Solstice Explore layout](docs/Nexus-1.1.0-Solstice-explore-reference.png)
+- [Ember desktop layout](docs/Nexus-1.1.0-Ember-desktop-reference.png)
+- [Ember Explore layout](docs/Nexus-1.1.0-Ember-explore-reference.png)
 
-Regenerate the SVG references with `python scripts/desktop-preview.py`, then export them with Inkscape or another SVG renderer. They use the source wallpaper and original icon assets with sample content. The supplied macOS component boards and Windows concept informed spacing, materials and hierarchy; their artwork is not bundled.
+These are source-derived **layout illustrations with sample data**, not Windows screenshots. They read source wallpaper paths, shipped vector artwork and exported runtime palette values. Regenerate with `python scripts/solstice-preview.py` using Python and cairosvg. Those preview dependencies are not application dependencies. Historical previews remain in `docs` for reference.
 
-See [PC-CONTROLS.md](docs/PC-CONTROLS.md) for supported capabilities and Windows acceptance. Files and websites still use their configured Windows applications when you choose Open; the new in-shell control layer covers audio, window arrangement, system status and locking.
+See [PC-CONTROLS.md](docs/PC-CONTROLS.md) for the native audio, app mixer, metrics, window arrangement and Undo capabilities introduced in 1.0.0.

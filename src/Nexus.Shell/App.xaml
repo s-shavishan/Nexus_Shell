@@ -4,229 +4,619 @@
    <ResourceDictionary.MergedDictionaries><XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls"/></ResourceDictionary.MergedDictionaries>
    <ResourceDictionary.ThemeDictionaries>
     <ResourceDictionary x:Key="Light">
-   <SolidColorBrush x:Key="NexusDesktopText" Color="#FFF5F8FF"/><SolidColorBrush x:Key="NexusDesktopMuted" Color="#FFD2DDED"/>
-   <SolidColorBrush x:Key="NexusText" Color="#FFF4F7FE"/>
-   <SolidColorBrush x:Key="NexusMuted" Color="#FFB8C3D6"/>
-   <SolidColorBrush x:Key="NexusAccent" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="NexusAccentText" Color="#FF171C29"/>
-   <SolidColorBrush x:Key="NexusSecondary" Color="#FF9BDED8"/>
-   <SolidColorBrush x:Key="NexusPanel" Color="#EF222A39"/>
-   <SolidColorBrush x:Key="NexusCard" Color="#E52B3445"/>
-   <SolidColorBrush x:Key="NexusBorder" Color="#406D809A"/>
-   <SolidColorBrush x:Key="NexusSidebar" Color="#B0121A27"/>
-   <SolidColorBrush x:Key="NexusInput" Color="#F0141B29"/>
-   <SolidColorBrush x:Key="NexusSelection" Color="#384F657F"/>
-   <SolidColorBrush x:Key="NexusShell" Color="#E61A2331"/>
-   <SolidColorBrush x:Key="NexusIcon" Color="#FF34465C"/>
-   <SolidColorBrush x:Key="NexusHeroStart" Color="#FF343B54"/>
-   <SolidColorBrush x:Key="NexusHeroEnd" Color="#FF29494C"/>
-   <SolidColorBrush x:Key="NexusOverlay" Color="#BC090E18"/>
-   <SolidColorBrush x:Key="AccentButtonBackground" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="AccentButtonForeground" Color="#FF171C29"/>
-   <SolidColorBrush x:Key="AccentButtonBorderBrush" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="#FF171C29"/>
-   <SolidColorBrush x:Key="AccentButtonBorderBrushPointerOver" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#384F657F"/>
-   <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#FFF4F7FE"/>
-   <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#406D809A"/>
-   <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="#FF171C29"/>
-   <SolidColorBrush x:Key="AccentButtonBorderBrushPressed" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#384F657F"/>
-   <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#FFF4F7FE"/>
-   <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#406D809A"/>
-   <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="ToggleSwitchStrokeOn" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="#FF171C29"/>
-   <SolidColorBrush x:Key="ToggleSwitchFillOff" Color="#E52B3445"/>
-   <SolidColorBrush x:Key="ToggleSwitchStrokeOff" Color="#406D809A"/>
-   <SolidColorBrush x:Key="ToggleSwitchKnobFillOff" Color="#FFB8C3D6"/>
-   <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="ToggleSwitchStrokeOnPointerOver" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="#FF171C29"/>
-   <SolidColorBrush x:Key="ToggleSwitchFillOffPointerOver" Color="#E52B3445"/>
-   <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="#406D809A"/>
-   <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPointerOver" Color="#FFB8C3D6"/>
-   <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="ToggleSwitchStrokeOnPressed" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPressed" Color="#FF171C29"/>
-   <SolidColorBrush x:Key="ToggleSwitchFillOffPressed" Color="#E52B3445"/>
-   <SolidColorBrush x:Key="ToggleSwitchStrokeOffPressed" Color="#406D809A"/>
-   <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPressed" Color="#FFB8C3D6"/>
+     <SolidColorBrush x:Key="NexusDesktopText" Color="#FFF5F8FF"/>
+     <SolidColorBrush x:Key="NexusDesktopMuted" Color="#FFD2DDED"/>
+     <SolidColorBrush x:Key="NexusText" Color="#FF302923"/>
+     <SolidColorBrush x:Key="NexusMuted" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="NexusAccent" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="NexusAccentText" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="NexusSecondary" Color="#FF805643"/>
+     <SolidColorBrush x:Key="NexusPanel" Color="#F5FFF8F1"/>
+     <SolidColorBrush x:Key="NexusCard" Color="#F8FFFCF8"/>
+     <SolidColorBrush x:Key="NexusBorder" Color="#383F332D"/>
+     <SolidColorBrush x:Key="NexusSidebar" Color="#F0F1E5DA"/>
+     <SolidColorBrush x:Key="NexusInput" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="NexusSelection" Color="#29AA461F"/>
+     <SolidColorBrush x:Key="NexusShell" Color="#E3FFF5EB"/>
+     <SolidColorBrush x:Key="NexusIcon" Color="#FF34465C"/>
+     <SolidColorBrush x:Key="NexusHeroStart" Color="#FFFFF5E9"/>
+     <SolidColorBrush x:Key="NexusHeroEnd" Color="#FFF3E5D6"/>
+     <SolidColorBrush x:Key="NexusOverlay" Color="#820E0B18"/>
+     <SolidColorBrush x:Key="NexusDesktopLabel" Color="#CF241B2B"/>
+     <SolidColorBrush x:Key="NexusHover" Color="#FF251E24"/>
+     <SolidColorBrush x:Key="NexusHighlight" Color="#90FFFFFF"/>
+     <SolidColorBrush x:Key="NexusSelectedText" Color="#FF302923"/>
+     <SolidColorBrush x:Key="NexusSegment" Color="#E6FFFFFF"/>
+     <SolidColorBrush x:Key="NexusTrack" Color="#52463E39"/>
+     <SolidColorBrush x:Key="FlyoutPresenterBackground" Color="#F5FFF8F1"/>
+     <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="#F5FFF8F1"/>
+     <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#F5FFF8F1"/>
+     <SolidColorBrush x:Key="FlyoutPresenterBorderBrush" Color="#383F332D"/>
+     <SolidColorBrush x:Key="MenuFlyoutPresenterBorderBrush" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ListViewItemBackgroundSelected" Color="#29AA461F"/>
+     <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPointerOver" Color="#29AA461F"/>
+     <SolidColorBrush x:Key="ListViewItemForegroundSelected" Color="#FF302923"/>
+     <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="TextControlPlaceholderForegroundDisabled" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="TextControlHeaderForeground" Color="#FF302923"/>
+     <SolidColorBrush x:Key="ComboBoxHeaderForeground" Color="#FF302923"/>
+     <SolidColorBrush x:Key="TextControlForeground" Color="#FF302923"/>
+     <SolidColorBrush x:Key="TextControlBackground" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="TextControlBorderBrush" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ComboBoxForeground" Color="#FF302923"/>
+     <SolidColorBrush x:Key="ComboBoxBackground" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="#383F332D"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemForeground" Color="#FF302923"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemBackground" Color="#00000000"/>
+     <SolidColorBrush x:Key="SliderTrackValueFill" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="SliderTrackFill" Color="#52463E39"/>
+     <SolidColorBrush x:Key="SliderThumbBackground" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="SliderThumbBorderBrush" Color="#383F332D"/>
+     <SolidColorBrush x:Key="CheckBoxForeground" Color="#FF302923"/>
+     <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillChecked" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundChecked" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="TextControlForegroundPointerOver" Color="#FF302923"/>
+     <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ComboBoxForegroundPointerOver" Color="#FF302923"/>
+     <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="#383F332D"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemForegroundPointerOver" Color="#FF302923"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPointerOver" Color="#29AA461F"/>
+     <SolidColorBrush x:Key="SliderTrackValueFillPointerOver" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="SliderTrackFillPointerOver" Color="#52463E39"/>
+     <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="SliderThumbBorderBrushPointerOver" Color="#383F332D"/>
+     <SolidColorBrush x:Key="CheckBoxForegroundPointerOver" Color="#FF302923"/>
+     <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillCheckedPointerOver" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedPointerOver" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="TextControlForegroundPressed" Color="#FF302923"/>
+     <SolidColorBrush x:Key="TextControlBackgroundPressed" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="TextControlBorderBrushPressed" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ComboBoxForegroundPressed" Color="#FF302923"/>
+     <SolidColorBrush x:Key="ComboBoxBackgroundPressed" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="#383F332D"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemForegroundPressed" Color="#FF302923"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPressed" Color="#29AA461F"/>
+     <SolidColorBrush x:Key="SliderTrackValueFillPressed" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="SliderTrackFillPressed" Color="#52463E39"/>
+     <SolidColorBrush x:Key="SliderThumbBackgroundPressed" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="SliderThumbBorderBrushPressed" Color="#383F332D"/>
+     <SolidColorBrush x:Key="CheckBoxForegroundPressed" Color="#FF302923"/>
+     <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillCheckedPressed" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedPressed" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="TextControlForegroundFocused" Color="#FF302923"/>
+     <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="ComboBoxForegroundFocused" Color="#FF302923"/>
+     <SolidColorBrush x:Key="ComboBoxBackgroundFocused" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="ComboBoxBorderBrushFocused" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemForegroundFocused" Color="#FF302923"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemBackgroundFocused" Color="#00000000"/>
+     <SolidColorBrush x:Key="SliderTrackValueFillFocused" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="SliderTrackFillFocused" Color="#52463E39"/>
+     <SolidColorBrush x:Key="SliderThumbBackgroundFocused" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="SliderThumbBorderBrushFocused" Color="#383F332D"/>
+     <SolidColorBrush x:Key="CheckBoxForegroundFocused" Color="#FF302923"/>
+     <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillCheckedFocused" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedFocused" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="TextControlForegroundDisabled" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="TextControlBackgroundDisabled" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="TextControlBorderBrushDisabled" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ComboBoxForegroundDisabled" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="ComboBoxBackgroundDisabled" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="ComboBoxBorderBrushDisabled" Color="#383F332D"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemForegroundDisabled" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemBackgroundDisabled" Color="#00000000"/>
+     <SolidColorBrush x:Key="SliderTrackValueFillDisabled" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="SliderTrackFillDisabled" Color="#52463E39"/>
+     <SolidColorBrush x:Key="SliderThumbBackgroundDisabled" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="SliderThumbBorderBrushDisabled" Color="#383F332D"/>
+     <SolidColorBrush x:Key="CheckBoxForegroundDisabled" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillCheckedDisabled" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedDisabled" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="AccentButtonBackground" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="AccentButtonBorderBrush" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="AccentButtonForeground" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="ToggleSwitchStrokeOn" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="ToggleSwitchFillOff" Color="#F8FFFCF8"/>
+     <SolidColorBrush x:Key="ToggleSwitchStrokeOff" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ToggleSwitchKnobFillOff" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="AccentButtonBorderBrushPointerOver" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="ToggleSwitchStrokeOnPointerOver" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="ToggleSwitchFillOffPointerOver" Color="#F8FFFCF8"/>
+     <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPointerOver" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#29AA461F"/>
+     <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#FF302923"/>
+     <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#383F332D"/>
+     <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="AccentButtonBorderBrushPressed" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="ToggleSwitchStrokeOnPressed" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPressed" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="ToggleSwitchFillOffPressed" Color="#F8FFFCF8"/>
+     <SolidColorBrush x:Key="ToggleSwitchStrokeOffPressed" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPressed" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#29AA461F"/>
+     <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#FF302923"/>
+     <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#383F332D"/>
     </ResourceDictionary>
     <ResourceDictionary x:Key="Dark">
-   <SolidColorBrush x:Key="NexusDesktopText" Color="#FFF5F8FF"/><SolidColorBrush x:Key="NexusDesktopMuted" Color="#FFD2DDED"/>
-   <SolidColorBrush x:Key="NexusText" Color="#FFF4F7FE"/>
-   <SolidColorBrush x:Key="NexusMuted" Color="#FFB8C3D6"/>
-   <SolidColorBrush x:Key="NexusAccent" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="NexusAccentText" Color="#FF171C29"/>
-   <SolidColorBrush x:Key="NexusSecondary" Color="#FF9BDED8"/>
-   <SolidColorBrush x:Key="NexusPanel" Color="#EF222A39"/>
-   <SolidColorBrush x:Key="NexusCard" Color="#E52B3445"/>
-   <SolidColorBrush x:Key="NexusBorder" Color="#406D809A"/>
-   <SolidColorBrush x:Key="NexusSidebar" Color="#B0121A27"/>
-   <SolidColorBrush x:Key="NexusInput" Color="#F0141B29"/>
-   <SolidColorBrush x:Key="NexusSelection" Color="#384F657F"/>
-   <SolidColorBrush x:Key="NexusShell" Color="#E61A2331"/>
-   <SolidColorBrush x:Key="NexusIcon" Color="#FF34465C"/>
-   <SolidColorBrush x:Key="NexusHeroStart" Color="#FF343B54"/>
-   <SolidColorBrush x:Key="NexusHeroEnd" Color="#FF29494C"/>
-   <SolidColorBrush x:Key="NexusOverlay" Color="#BC090E18"/>
-   <SolidColorBrush x:Key="AccentButtonBackground" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="AccentButtonForeground" Color="#FF171C29"/>
-   <SolidColorBrush x:Key="AccentButtonBorderBrush" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="#FF171C29"/>
-   <SolidColorBrush x:Key="AccentButtonBorderBrushPointerOver" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#384F657F"/>
-   <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#FFF4F7FE"/>
-   <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#406D809A"/>
-   <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="#FF171C29"/>
-   <SolidColorBrush x:Key="AccentButtonBorderBrushPressed" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#384F657F"/>
-   <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#FFF4F7FE"/>
-   <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#406D809A"/>
-   <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="ToggleSwitchStrokeOn" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="#FF171C29"/>
-   <SolidColorBrush x:Key="ToggleSwitchFillOff" Color="#E52B3445"/>
-   <SolidColorBrush x:Key="ToggleSwitchStrokeOff" Color="#406D809A"/>
-   <SolidColorBrush x:Key="ToggleSwitchKnobFillOff" Color="#FFB8C3D6"/>
-   <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="ToggleSwitchStrokeOnPointerOver" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="#FF171C29"/>
-   <SolidColorBrush x:Key="ToggleSwitchFillOffPointerOver" Color="#E52B3445"/>
-   <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="#406D809A"/>
-   <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPointerOver" Color="#FFB8C3D6"/>
-   <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="ToggleSwitchStrokeOnPressed" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPressed" Color="#FF171C29"/>
-   <SolidColorBrush x:Key="ToggleSwitchFillOffPressed" Color="#E52B3445"/>
-   <SolidColorBrush x:Key="ToggleSwitchStrokeOffPressed" Color="#406D809A"/>
-   <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPressed" Color="#FFB8C3D6"/>
+     <SolidColorBrush x:Key="NexusDesktopText" Color="#FFF5F8FF"/>
+     <SolidColorBrush x:Key="NexusDesktopMuted" Color="#FFD2DDED"/>
+     <SolidColorBrush x:Key="NexusText" Color="#FF302923"/>
+     <SolidColorBrush x:Key="NexusMuted" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="NexusAccent" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="NexusAccentText" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="NexusSecondary" Color="#FF805643"/>
+     <SolidColorBrush x:Key="NexusPanel" Color="#F5FFF8F1"/>
+     <SolidColorBrush x:Key="NexusCard" Color="#F8FFFCF8"/>
+     <SolidColorBrush x:Key="NexusBorder" Color="#383F332D"/>
+     <SolidColorBrush x:Key="NexusSidebar" Color="#F0F1E5DA"/>
+     <SolidColorBrush x:Key="NexusInput" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="NexusSelection" Color="#29AA461F"/>
+     <SolidColorBrush x:Key="NexusShell" Color="#E3FFF5EB"/>
+     <SolidColorBrush x:Key="NexusIcon" Color="#FF34465C"/>
+     <SolidColorBrush x:Key="NexusHeroStart" Color="#FFFFF5E9"/>
+     <SolidColorBrush x:Key="NexusHeroEnd" Color="#FFF3E5D6"/>
+     <SolidColorBrush x:Key="NexusOverlay" Color="#820E0B18"/>
+     <SolidColorBrush x:Key="NexusDesktopLabel" Color="#CF241B2B"/>
+     <SolidColorBrush x:Key="NexusHover" Color="#FF251E24"/>
+     <SolidColorBrush x:Key="NexusHighlight" Color="#90FFFFFF"/>
+     <SolidColorBrush x:Key="NexusSelectedText" Color="#FF302923"/>
+     <SolidColorBrush x:Key="NexusSegment" Color="#E6FFFFFF"/>
+     <SolidColorBrush x:Key="NexusTrack" Color="#52463E39"/>
+     <SolidColorBrush x:Key="FlyoutPresenterBackground" Color="#F5FFF8F1"/>
+     <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="#F5FFF8F1"/>
+     <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#F5FFF8F1"/>
+     <SolidColorBrush x:Key="FlyoutPresenterBorderBrush" Color="#383F332D"/>
+     <SolidColorBrush x:Key="MenuFlyoutPresenterBorderBrush" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ListViewItemBackgroundSelected" Color="#29AA461F"/>
+     <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPointerOver" Color="#29AA461F"/>
+     <SolidColorBrush x:Key="ListViewItemForegroundSelected" Color="#FF302923"/>
+     <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="TextControlPlaceholderForegroundDisabled" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="TextControlHeaderForeground" Color="#FF302923"/>
+     <SolidColorBrush x:Key="ComboBoxHeaderForeground" Color="#FF302923"/>
+     <SolidColorBrush x:Key="TextControlForeground" Color="#FF302923"/>
+     <SolidColorBrush x:Key="TextControlBackground" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="TextControlBorderBrush" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ComboBoxForeground" Color="#FF302923"/>
+     <SolidColorBrush x:Key="ComboBoxBackground" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="#383F332D"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemForeground" Color="#FF302923"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemBackground" Color="#00000000"/>
+     <SolidColorBrush x:Key="SliderTrackValueFill" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="SliderTrackFill" Color="#52463E39"/>
+     <SolidColorBrush x:Key="SliderThumbBackground" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="SliderThumbBorderBrush" Color="#383F332D"/>
+     <SolidColorBrush x:Key="CheckBoxForeground" Color="#FF302923"/>
+     <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillChecked" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundChecked" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="TextControlForegroundPointerOver" Color="#FF302923"/>
+     <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ComboBoxForegroundPointerOver" Color="#FF302923"/>
+     <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="#383F332D"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemForegroundPointerOver" Color="#FF302923"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPointerOver" Color="#29AA461F"/>
+     <SolidColorBrush x:Key="SliderTrackValueFillPointerOver" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="SliderTrackFillPointerOver" Color="#52463E39"/>
+     <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="SliderThumbBorderBrushPointerOver" Color="#383F332D"/>
+     <SolidColorBrush x:Key="CheckBoxForegroundPointerOver" Color="#FF302923"/>
+     <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillCheckedPointerOver" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedPointerOver" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="TextControlForegroundPressed" Color="#FF302923"/>
+     <SolidColorBrush x:Key="TextControlBackgroundPressed" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="TextControlBorderBrushPressed" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ComboBoxForegroundPressed" Color="#FF302923"/>
+     <SolidColorBrush x:Key="ComboBoxBackgroundPressed" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="#383F332D"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemForegroundPressed" Color="#FF302923"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPressed" Color="#29AA461F"/>
+     <SolidColorBrush x:Key="SliderTrackValueFillPressed" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="SliderTrackFillPressed" Color="#52463E39"/>
+     <SolidColorBrush x:Key="SliderThumbBackgroundPressed" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="SliderThumbBorderBrushPressed" Color="#383F332D"/>
+     <SolidColorBrush x:Key="CheckBoxForegroundPressed" Color="#FF302923"/>
+     <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillCheckedPressed" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedPressed" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="TextControlForegroundFocused" Color="#FF302923"/>
+     <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="ComboBoxForegroundFocused" Color="#FF302923"/>
+     <SolidColorBrush x:Key="ComboBoxBackgroundFocused" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="ComboBoxBorderBrushFocused" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemForegroundFocused" Color="#FF302923"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemBackgroundFocused" Color="#00000000"/>
+     <SolidColorBrush x:Key="SliderTrackValueFillFocused" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="SliderTrackFillFocused" Color="#52463E39"/>
+     <SolidColorBrush x:Key="SliderThumbBackgroundFocused" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="SliderThumbBorderBrushFocused" Color="#383F332D"/>
+     <SolidColorBrush x:Key="CheckBoxForegroundFocused" Color="#FF302923"/>
+     <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillCheckedFocused" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedFocused" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="TextControlForegroundDisabled" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="TextControlBackgroundDisabled" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="TextControlBorderBrushDisabled" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ComboBoxForegroundDisabled" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="ComboBoxBackgroundDisabled" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="ComboBoxBorderBrushDisabled" Color="#383F332D"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemForegroundDisabled" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemBackgroundDisabled" Color="#00000000"/>
+     <SolidColorBrush x:Key="SliderTrackValueFillDisabled" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="SliderTrackFillDisabled" Color="#52463E39"/>
+     <SolidColorBrush x:Key="SliderThumbBackgroundDisabled" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="SliderThumbBorderBrushDisabled" Color="#383F332D"/>
+     <SolidColorBrush x:Key="CheckBoxForegroundDisabled" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillCheckedDisabled" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedDisabled" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="AccentButtonBackground" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="AccentButtonBorderBrush" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="AccentButtonForeground" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="ToggleSwitchStrokeOn" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="ToggleSwitchFillOff" Color="#F8FFFCF8"/>
+     <SolidColorBrush x:Key="ToggleSwitchStrokeOff" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ToggleSwitchKnobFillOff" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="AccentButtonBorderBrushPointerOver" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="ToggleSwitchStrokeOnPointerOver" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="ToggleSwitchFillOffPointerOver" Color="#F8FFFCF8"/>
+     <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPointerOver" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#29AA461F"/>
+     <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#FF302923"/>
+     <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#383F332D"/>
+     <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="AccentButtonBorderBrushPressed" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="ToggleSwitchStrokeOnPressed" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPressed" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="ToggleSwitchFillOffPressed" Color="#F8FFFCF8"/>
+     <SolidColorBrush x:Key="ToggleSwitchStrokeOffPressed" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPressed" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#29AA461F"/>
+     <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#FF302923"/>
+     <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#383F332D"/>
     </ResourceDictionary>
     <ResourceDictionary x:Key="HighContrast">
-   <SolidColorBrush x:Key="NexusDesktopText" Color="{ThemeResource SystemColorWindowTextColor}"/><SolidColorBrush x:Key="NexusDesktopMuted" Color="{ThemeResource SystemColorWindowTextColor}"/>
-   <SolidColorBrush x:Key="NexusText" Color="{ThemeResource SystemColorWindowTextColor}"/>
-   <SolidColorBrush x:Key="NexusMuted" Color="{ThemeResource SystemColorWindowTextColor}"/>
-   <SolidColorBrush x:Key="NexusAccent" Color="{ThemeResource SystemColorHighlightColor}"/>
-   <SolidColorBrush x:Key="NexusAccentText" Color="{ThemeResource SystemColorHighlightTextColor}"/>
-   <SolidColorBrush x:Key="NexusSecondary" Color="{ThemeResource SystemColorWindowTextColor}"/>
-   <SolidColorBrush x:Key="NexusPanel" Color="{ThemeResource SystemColorWindowColor}"/>
-   <SolidColorBrush x:Key="NexusCard" Color="{ThemeResource SystemColorWindowColor}"/>
-   <SolidColorBrush x:Key="NexusBorder" Color="{ThemeResource SystemColorWindowTextColor}"/>
-   <SolidColorBrush x:Key="NexusSidebar" Color="{ThemeResource SystemColorWindowColor}"/>
-   <SolidColorBrush x:Key="NexusInput" Color="{ThemeResource SystemColorWindowColor}"/>
-   <SolidColorBrush x:Key="NexusSelection" Color="{ThemeResource SystemColorHighlightColor}"/>
-   <SolidColorBrush x:Key="NexusShell" Color="{ThemeResource SystemColorWindowColor}"/>
-   <SolidColorBrush x:Key="NexusIcon" Color="{ThemeResource SystemColorWindowColor}"/>
-   <SolidColorBrush x:Key="NexusHeroStart" Color="{ThemeResource SystemColorWindowColor}"/>
-   <SolidColorBrush x:Key="NexusHeroEnd" Color="{ThemeResource SystemColorWindowColor}"/>
-   <SolidColorBrush x:Key="NexusOverlay" Color="{ThemeResource SystemColorWindowColor}"/>
-   <SolidColorBrush x:Key="AccentButtonBackground" Color="{ThemeResource SystemColorHighlightColor}"/>
-   <SolidColorBrush x:Key="AccentButtonForeground" Color="{ThemeResource SystemColorHighlightTextColor}"/>
-   <SolidColorBrush x:Key="AccentButtonBorderBrush" Color="{ThemeResource SystemColorHighlightColor}"/>
-   <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="{ThemeResource SystemColorHighlightColor}"/>
-   <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="{ThemeResource SystemColorHighlightTextColor}"/>
-   <SolidColorBrush x:Key="AccentButtonBorderBrushPointerOver" Color="{ThemeResource SystemColorHighlightColor}"/>
-   <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{ThemeResource SystemColorWindowColor}"/>
-   <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="{ThemeResource SystemColorWindowTextColor}"/>
-   <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="{ThemeResource SystemColorWindowTextColor}"/>
-   <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="{ThemeResource SystemColorHighlightColor}"/>
-   <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="{ThemeResource SystemColorHighlightTextColor}"/>
-   <SolidColorBrush x:Key="AccentButtonBorderBrushPressed" Color="{ThemeResource SystemColorHighlightColor}"/>
-   <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{ThemeResource SystemColorWindowColor}"/>
-   <SolidColorBrush x:Key="ButtonForegroundPressed" Color="{ThemeResource SystemColorWindowTextColor}"/>
-   <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="{ThemeResource SystemColorWindowTextColor}"/>
-   <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="{ThemeResource SystemColorHighlightColor}"/>
-   <SolidColorBrush x:Key="ToggleSwitchStrokeOn" Color="{ThemeResource SystemColorHighlightColor}"/>
-   <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="{ThemeResource SystemColorHighlightTextColor}"/>
-   <SolidColorBrush x:Key="ToggleSwitchFillOff" Color="{ThemeResource SystemColorWindowColor}"/>
-   <SolidColorBrush x:Key="ToggleSwitchStrokeOff" Color="{ThemeResource SystemColorWindowTextColor}"/>
-   <SolidColorBrush x:Key="ToggleSwitchKnobFillOff" Color="{ThemeResource SystemColorWindowTextColor}"/>
-   <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="{ThemeResource SystemColorHighlightColor}"/>
-   <SolidColorBrush x:Key="ToggleSwitchStrokeOnPointerOver" Color="{ThemeResource SystemColorHighlightColor}"/>
-   <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="{ThemeResource SystemColorHighlightTextColor}"/>
-   <SolidColorBrush x:Key="ToggleSwitchFillOffPointerOver" Color="{ThemeResource SystemColorWindowColor}"/>
-   <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="{ThemeResource SystemColorWindowTextColor}"/>
-   <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPointerOver" Color="{ThemeResource SystemColorWindowTextColor}"/>
-   <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="{ThemeResource SystemColorHighlightColor}"/>
-   <SolidColorBrush x:Key="ToggleSwitchStrokeOnPressed" Color="{ThemeResource SystemColorHighlightColor}"/>
-   <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPressed" Color="{ThemeResource SystemColorHighlightTextColor}"/>
-   <SolidColorBrush x:Key="ToggleSwitchFillOffPressed" Color="{ThemeResource SystemColorWindowColor}"/>
-   <SolidColorBrush x:Key="ToggleSwitchStrokeOffPressed" Color="{ThemeResource SystemColorWindowTextColor}"/>
-   <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPressed" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="NexusDesktopText" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="NexusDesktopMuted" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="NexusText" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="NexusMuted" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="NexusAccent" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="NexusAccentText" Color="{ThemeResource SystemColorHighlightTextColor}"/>
+     <SolidColorBrush x:Key="NexusSecondary" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="NexusPanel" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="NexusCard" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="NexusBorder" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="NexusSidebar" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="NexusInput" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="NexusSelection" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="NexusShell" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="NexusIcon" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="NexusHeroStart" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="NexusHeroEnd" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="NexusOverlay" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="NexusDesktopLabel" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="NexusHover" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="NexusHighlight" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="NexusSelectedText" Color="{ThemeResource SystemColorHighlightTextColor}"/>
+     <SolidColorBrush x:Key="NexusSegment" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="NexusTrack" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="FlyoutPresenterBackground" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="FlyoutPresenterBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="MenuFlyoutPresenterBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="ListViewItemBackgroundSelected" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPointerOver" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="ListViewItemForegroundSelected" Color="{ThemeResource SystemColorHighlightTextColor}"/>
+     <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="TextControlPlaceholderForegroundDisabled" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="TextControlHeaderForeground" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="ComboBoxHeaderForeground" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="TextControlForeground" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="TextControlBackground" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="TextControlBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="ComboBoxForeground" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="ComboBoxBackground" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemForeground" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemBackground" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="SliderTrackValueFill" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="SliderTrackFill" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="SliderThumbBackground" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="SliderThumbBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="CheckBoxForeground" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillChecked" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundChecked" Color="{ThemeResource SystemColorHighlightTextColor}"/>
+     <SolidColorBrush x:Key="TextControlForegroundPointerOver" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="ComboBoxForegroundPointerOver" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemForegroundPointerOver" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPointerOver" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="SliderTrackValueFillPointerOver" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="SliderTrackFillPointerOver" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="SliderThumbBorderBrushPointerOver" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="CheckBoxForegroundPointerOver" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillCheckedPointerOver" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedPointerOver" Color="{ThemeResource SystemColorHighlightTextColor}"/>
+     <SolidColorBrush x:Key="TextControlForegroundPressed" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="TextControlBackgroundPressed" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="TextControlBorderBrushPressed" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="ComboBoxForegroundPressed" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="ComboBoxBackgroundPressed" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemForegroundPressed" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPressed" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="SliderTrackValueFillPressed" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="SliderTrackFillPressed" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="SliderThumbBackgroundPressed" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="SliderThumbBorderBrushPressed" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="CheckBoxForegroundPressed" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillCheckedPressed" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedPressed" Color="{ThemeResource SystemColorHighlightTextColor}"/>
+     <SolidColorBrush x:Key="TextControlForegroundFocused" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="ComboBoxForegroundFocused" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="ComboBoxBackgroundFocused" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="ComboBoxBorderBrushFocused" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemForegroundFocused" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemBackgroundFocused" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="SliderTrackValueFillFocused" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="SliderTrackFillFocused" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="SliderThumbBackgroundFocused" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="SliderThumbBorderBrushFocused" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="CheckBoxForegroundFocused" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillCheckedFocused" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedFocused" Color="{ThemeResource SystemColorHighlightTextColor}"/>
+     <SolidColorBrush x:Key="TextControlForegroundDisabled" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="TextControlBackgroundDisabled" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="TextControlBorderBrushDisabled" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="ComboBoxForegroundDisabled" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="ComboBoxBackgroundDisabled" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="ComboBoxBorderBrushDisabled" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemForegroundDisabled" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemBackgroundDisabled" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="SliderTrackValueFillDisabled" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="SliderTrackFillDisabled" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="SliderThumbBackgroundDisabled" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="SliderThumbBorderBrushDisabled" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="CheckBoxForegroundDisabled" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillCheckedDisabled" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedDisabled" Color="{ThemeResource SystemColorHighlightTextColor}"/>
+     <SolidColorBrush x:Key="AccentButtonBackground" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="AccentButtonBorderBrush" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="AccentButtonForeground" Color="{ThemeResource SystemColorHighlightTextColor}"/>
+     <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="ToggleSwitchStrokeOn" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="{ThemeResource SystemColorHighlightTextColor}"/>
+     <SolidColorBrush x:Key="ToggleSwitchFillOff" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="ToggleSwitchStrokeOff" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="ToggleSwitchKnobFillOff" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="AccentButtonBorderBrushPointerOver" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="{ThemeResource SystemColorHighlightTextColor}"/>
+     <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="ToggleSwitchStrokeOnPointerOver" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="{ThemeResource SystemColorHighlightTextColor}"/>
+     <SolidColorBrush x:Key="ToggleSwitchFillOffPointerOver" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPointerOver" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="AccentButtonBorderBrushPressed" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="{ThemeResource SystemColorHighlightTextColor}"/>
+     <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="ToggleSwitchStrokeOnPressed" Color="{ThemeResource SystemColorHighlightColor}"/>
+     <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPressed" Color="{ThemeResource SystemColorHighlightTextColor}"/>
+     <SolidColorBrush x:Key="ToggleSwitchFillOffPressed" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="ToggleSwitchStrokeOffPressed" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPressed" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{ThemeResource SystemColorWindowColor}"/>
+     <SolidColorBrush x:Key="ButtonForegroundPressed" Color="{ThemeResource SystemColorWindowTextColor}"/>
+     <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="{ThemeResource SystemColorWindowTextColor}"/>
     </ResourceDictionary>
    </ResourceDictionary.ThemeDictionaries>
-   <!-- Fallback resources remain contiguous after dictionary property elements. -->
-   <SolidColorBrush x:Key="NexusDesktopText" Color="#FFF5F8FF"/><SolidColorBrush x:Key="NexusDesktopMuted" Color="#FFD2DDED"/>
-   <SolidColorBrush x:Key="NexusText" Color="#FFF4F7FE"/>
-   <SolidColorBrush x:Key="NexusMuted" Color="#FFB8C3D6"/>
-   <SolidColorBrush x:Key="NexusAccent" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="NexusAccentText" Color="#FF171C29"/>
-   <SolidColorBrush x:Key="NexusSecondary" Color="#FF9BDED8"/>
-   <SolidColorBrush x:Key="NexusPanel" Color="#EF222A39"/>
-   <SolidColorBrush x:Key="NexusCard" Color="#E52B3445"/>
-   <SolidColorBrush x:Key="NexusBorder" Color="#406D809A"/>
-   <SolidColorBrush x:Key="NexusSidebar" Color="#B0121A27"/>
-   <SolidColorBrush x:Key="NexusInput" Color="#F0141B29"/>
-   <SolidColorBrush x:Key="NexusSelection" Color="#384F657F"/>
-   <SolidColorBrush x:Key="NexusShell" Color="#E61A2331"/>
-   <SolidColorBrush x:Key="NexusIcon" Color="#FF34465C"/>
-   <SolidColorBrush x:Key="NexusHeroStart" Color="#FF343B54"/>
-   <SolidColorBrush x:Key="NexusHeroEnd" Color="#FF29494C"/>
-   <SolidColorBrush x:Key="NexusOverlay" Color="#BC090E18"/>
-   <SolidColorBrush x:Key="AccentButtonBackground" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="AccentButtonForeground" Color="#FF171C29"/>
-   <SolidColorBrush x:Key="AccentButtonBorderBrush" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="#FF171C29"/>
-   <SolidColorBrush x:Key="AccentButtonBorderBrushPointerOver" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#384F657F"/>
-   <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#FFF4F7FE"/>
-   <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#406D809A"/>
-   <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="#FF171C29"/>
-   <SolidColorBrush x:Key="AccentButtonBorderBrushPressed" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#384F657F"/>
-   <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#FFF4F7FE"/>
-   <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#406D809A"/>
-   <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="ToggleSwitchStrokeOn" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="#FF171C29"/>
-   <SolidColorBrush x:Key="ToggleSwitchFillOff" Color="#E52B3445"/>
-   <SolidColorBrush x:Key="ToggleSwitchStrokeOff" Color="#406D809A"/>
-   <SolidColorBrush x:Key="ToggleSwitchKnobFillOff" Color="#FFB8C3D6"/>
-   <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="ToggleSwitchStrokeOnPointerOver" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="#FF171C29"/>
-   <SolidColorBrush x:Key="ToggleSwitchFillOffPointerOver" Color="#E52B3445"/>
-   <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="#406D809A"/>
-   <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPointerOver" Color="#FFB8C3D6"/>
-   <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="ToggleSwitchStrokeOnPressed" Color="#FFC7BEF7"/>
-   <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPressed" Color="#FF171C29"/>
-   <SolidColorBrush x:Key="ToggleSwitchFillOffPressed" Color="#E52B3445"/>
-   <SolidColorBrush x:Key="ToggleSwitchStrokeOffPressed" Color="#406D809A"/>
-   <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPressed" Color="#FFB8C3D6"/>
+   <!-- Startup defaults; live palette updates mutate shared brushes. -->
+     <SolidColorBrush x:Key="NexusDesktopText" Color="#FFF5F8FF"/>
+     <SolidColorBrush x:Key="NexusDesktopMuted" Color="#FFD2DDED"/>
+     <SolidColorBrush x:Key="NexusText" Color="#FF302923"/>
+     <SolidColorBrush x:Key="NexusMuted" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="NexusAccent" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="NexusAccentText" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="NexusSecondary" Color="#FF805643"/>
+     <SolidColorBrush x:Key="NexusPanel" Color="#F5FFF8F1"/>
+     <SolidColorBrush x:Key="NexusCard" Color="#F8FFFCF8"/>
+     <SolidColorBrush x:Key="NexusBorder" Color="#383F332D"/>
+     <SolidColorBrush x:Key="NexusSidebar" Color="#F0F1E5DA"/>
+     <SolidColorBrush x:Key="NexusInput" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="NexusSelection" Color="#29AA461F"/>
+     <SolidColorBrush x:Key="NexusShell" Color="#E3FFF5EB"/>
+     <SolidColorBrush x:Key="NexusIcon" Color="#FF34465C"/>
+     <SolidColorBrush x:Key="NexusHeroStart" Color="#FFFFF5E9"/>
+     <SolidColorBrush x:Key="NexusHeroEnd" Color="#FFF3E5D6"/>
+     <SolidColorBrush x:Key="NexusOverlay" Color="#820E0B18"/>
+     <SolidColorBrush x:Key="NexusDesktopLabel" Color="#CF241B2B"/>
+     <SolidColorBrush x:Key="NexusHover" Color="#FF251E24"/>
+     <SolidColorBrush x:Key="NexusHighlight" Color="#90FFFFFF"/>
+     <SolidColorBrush x:Key="NexusSelectedText" Color="#FF302923"/>
+     <SolidColorBrush x:Key="NexusSegment" Color="#E6FFFFFF"/>
+     <SolidColorBrush x:Key="NexusTrack" Color="#52463E39"/>
+     <SolidColorBrush x:Key="FlyoutPresenterBackground" Color="#F5FFF8F1"/>
+     <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="#F5FFF8F1"/>
+     <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#F5FFF8F1"/>
+     <SolidColorBrush x:Key="FlyoutPresenterBorderBrush" Color="#383F332D"/>
+     <SolidColorBrush x:Key="MenuFlyoutPresenterBorderBrush" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ListViewItemBackgroundSelected" Color="#29AA461F"/>
+     <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPointerOver" Color="#29AA461F"/>
+     <SolidColorBrush x:Key="ListViewItemForegroundSelected" Color="#FF302923"/>
+     <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="TextControlPlaceholderForegroundDisabled" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="TextControlHeaderForeground" Color="#FF302923"/>
+     <SolidColorBrush x:Key="ComboBoxHeaderForeground" Color="#FF302923"/>
+     <SolidColorBrush x:Key="TextControlForeground" Color="#FF302923"/>
+     <SolidColorBrush x:Key="TextControlBackground" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="TextControlBorderBrush" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ComboBoxForeground" Color="#FF302923"/>
+     <SolidColorBrush x:Key="ComboBoxBackground" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="#383F332D"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemForeground" Color="#FF302923"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemBackground" Color="#00000000"/>
+     <SolidColorBrush x:Key="SliderTrackValueFill" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="SliderTrackFill" Color="#52463E39"/>
+     <SolidColorBrush x:Key="SliderThumbBackground" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="SliderThumbBorderBrush" Color="#383F332D"/>
+     <SolidColorBrush x:Key="CheckBoxForeground" Color="#FF302923"/>
+     <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillChecked" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundChecked" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="TextControlForegroundPointerOver" Color="#FF302923"/>
+     <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ComboBoxForegroundPointerOver" Color="#FF302923"/>
+     <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="#383F332D"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemForegroundPointerOver" Color="#FF302923"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPointerOver" Color="#29AA461F"/>
+     <SolidColorBrush x:Key="SliderTrackValueFillPointerOver" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="SliderTrackFillPointerOver" Color="#52463E39"/>
+     <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="SliderThumbBorderBrushPointerOver" Color="#383F332D"/>
+     <SolidColorBrush x:Key="CheckBoxForegroundPointerOver" Color="#FF302923"/>
+     <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillCheckedPointerOver" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedPointerOver" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="TextControlForegroundPressed" Color="#FF302923"/>
+     <SolidColorBrush x:Key="TextControlBackgroundPressed" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="TextControlBorderBrushPressed" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ComboBoxForegroundPressed" Color="#FF302923"/>
+     <SolidColorBrush x:Key="ComboBoxBackgroundPressed" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="#383F332D"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemForegroundPressed" Color="#FF302923"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPressed" Color="#29AA461F"/>
+     <SolidColorBrush x:Key="SliderTrackValueFillPressed" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="SliderTrackFillPressed" Color="#52463E39"/>
+     <SolidColorBrush x:Key="SliderThumbBackgroundPressed" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="SliderThumbBorderBrushPressed" Color="#383F332D"/>
+     <SolidColorBrush x:Key="CheckBoxForegroundPressed" Color="#FF302923"/>
+     <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillCheckedPressed" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedPressed" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="TextControlForegroundFocused" Color="#FF302923"/>
+     <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="ComboBoxForegroundFocused" Color="#FF302923"/>
+     <SolidColorBrush x:Key="ComboBoxBackgroundFocused" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="ComboBoxBorderBrushFocused" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemForegroundFocused" Color="#FF302923"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemBackgroundFocused" Color="#00000000"/>
+     <SolidColorBrush x:Key="SliderTrackValueFillFocused" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="SliderTrackFillFocused" Color="#52463E39"/>
+     <SolidColorBrush x:Key="SliderThumbBackgroundFocused" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="SliderThumbBorderBrushFocused" Color="#383F332D"/>
+     <SolidColorBrush x:Key="CheckBoxForegroundFocused" Color="#FF302923"/>
+     <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillCheckedFocused" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedFocused" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="TextControlForegroundDisabled" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="TextControlBackgroundDisabled" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="TextControlBorderBrushDisabled" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ComboBoxForegroundDisabled" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="ComboBoxBackgroundDisabled" Color="#F8FFFFFF"/>
+     <SolidColorBrush x:Key="ComboBoxBorderBrushDisabled" Color="#383F332D"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemForegroundDisabled" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="MenuFlyoutItemBackgroundDisabled" Color="#00000000"/>
+     <SolidColorBrush x:Key="SliderTrackValueFillDisabled" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="SliderTrackFillDisabled" Color="#52463E39"/>
+     <SolidColorBrush x:Key="SliderThumbBackgroundDisabled" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="SliderThumbBorderBrushDisabled" Color="#383F332D"/>
+     <SolidColorBrush x:Key="CheckBoxForegroundDisabled" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillCheckedDisabled" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedDisabled" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="AccentButtonBackground" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="AccentButtonBorderBrush" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="AccentButtonForeground" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="ToggleSwitchStrokeOn" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="ToggleSwitchFillOff" Color="#F8FFFCF8"/>
+     <SolidColorBrush x:Key="ToggleSwitchStrokeOff" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ToggleSwitchKnobFillOff" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="AccentButtonBorderBrushPointerOver" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="ToggleSwitchStrokeOnPointerOver" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="ToggleSwitchFillOffPointerOver" Color="#F8FFFCF8"/>
+     <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPointerOver" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#29AA461F"/>
+     <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#FF302923"/>
+     <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#383F332D"/>
+     <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="AccentButtonBorderBrushPressed" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="ToggleSwitchStrokeOnPressed" Color="#FFAA461F"/>
+     <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPressed" Color="#FFFFFFFF"/>
+     <SolidColorBrush x:Key="ToggleSwitchFillOffPressed" Color="#F8FFFCF8"/>
+     <SolidColorBrush x:Key="ToggleSwitchStrokeOffPressed" Color="#383F332D"/>
+     <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPressed" Color="#FF665C56"/>
+     <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#29AA461F"/>
+     <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#FF302923"/>
+     <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#383F332D"/>
    <ControlTemplate x:Key="NexusButtonTemplate" TargetType="Button">
     <Grid x:Name="NexusButtonRoot" Background="Transparent">
      <VisualStateManager.VisualStateGroups><VisualStateGroup x:Name="CommonStates">
       <VisualState x:Name="Normal"/>
-      <VisualState x:Name="PointerOver"><VisualState.Setters><Setter Target="NexusHoverWash.Opacity" Value="0.06"/></VisualState.Setters></VisualState>
-      <VisualState x:Name="Pressed"><VisualState.Setters><Setter Target="NexusHoverWash.Opacity" Value="0.12"/></VisualState.Setters></VisualState>
-      <VisualState x:Name="Disabled"><VisualState.Setters><Setter Target="NexusButtonChrome.Background" Value="{ThemeResource NexusCard}"/><Setter Target="NexusButtonContent.Foreground" Value="{ThemeResource NexusMuted}"/></VisualState.Setters></VisualState>
+      <VisualState x:Name="PointerOver"><VisualState.Setters><Setter Target="NexusHoverWash.Opacity" Value="0.07"/></VisualState.Setters></VisualState>
+      <VisualState x:Name="Pressed"><VisualState.Setters><Setter Target="NexusHoverWash.Opacity" Value="0.13"/></VisualState.Setters></VisualState>
+      <VisualState x:Name="Disabled"><VisualState.Setters><Setter Target="NexusButtonRoot.Opacity" Value="0.45"/><Setter Target="NexusButtonChrome.Background" Value="{ThemeResource NexusCard}"/><Setter Target="NexusButtonContent.Foreground" Value="{ThemeResource NexusMuted}"/></VisualState.Setters></VisualState>
      </VisualStateGroup></VisualStateManager.VisualStateGroups>
      <Border x:Name="NexusButtonChrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}">
-      <Grid><Border x:Name="NexusHoverWash" Background="Black" Opacity="0" CornerRadius="{TemplateBinding CornerRadius}" IsHitTestVisible="False"/>
+      <Grid><Border x:Name="NexusHoverWash" Background="{ThemeResource NexusHover}" Opacity="0" CornerRadius="{TemplateBinding CornerRadius}" IsHitTestVisible="False"/>
        <ContentPresenter x:Name="NexusButtonContent" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" Foreground="{TemplateBinding Foreground}" FontSize="{TemplateBinding FontSize}" FontWeight="{TemplateBinding FontWeight}"/>
       </Grid>
      </Border>
     </Grid>
    </ControlTemplate>
    <Style x:Key="QuietButton" TargetType="Button">
+    <Setter Property="FontFamily" Value="Segoe UI"/>
+    <Setter Property="MinHeight" Value="32"/><Setter Property="FocusVisualPrimaryBrush" Value="{ThemeResource NexusAccent}"/>
     <Setter Property="Template" Value="{StaticResource NexusButtonTemplate}"/><Setter Property="UseSystemFocusVisuals" Value="True"/>
     <Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/>
     <Setter Property="CornerRadius" Value="8"/><Setter Property="Padding" Value="11,8"/>
@@ -235,11 +625,12 @@
    <Style x:Key="AuraSurfaceButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
     <Setter Property="Template" Value="{StaticResource NexusButtonTemplate}"/><Setter Property="UseSystemFocusVisuals" Value="True"/>
     <Setter Property="Background" Value="{ThemeResource NexusCard}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusBorder}"/>
-    <Setter Property="BorderThickness" Value="1"/><Setter Property="Padding" Value="15,11"/>
+    <Setter Property="BorderThickness" Value="1"/><Setter Property="Padding" Value="14,9"/>
    </Style>
    <Style x:Key="AuraPrimaryButton" TargetType="Button" BasedOn="{StaticResource AccentButtonStyle}">
+    <Setter Property="FocusVisualPrimaryBrush" Value="{ThemeResource NexusAccent}"/>
     <Setter Property="Template" Value="{StaticResource NexusButtonTemplate}"/><Setter Property="UseSystemFocusVisuals" Value="True"/>
-    <Setter Property="CornerRadius" Value="8"/><Setter Property="Padding" Value="14,9"/><Setter Property="FontSize" Value="13"/>
+    <Setter Property="CornerRadius" Value="10"/><Setter Property="Padding" Value="15,9"/><Setter Property="FontSize" Value="13"/>
     <Setter Property="FontWeight" Value="SemiBold"/>
        <Setter Property="Background" Value="{ThemeResource NexusAccent}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusAccent}"/><Setter Property="Foreground" Value="{ThemeResource NexusAccentText}"/>
 </Style>
@@ -247,15 +638,17 @@
     <Setter Property="Width" Value="38"/><Setter Property="Height" Value="36"/><Setter Property="Padding" Value="0"/>
    </Style>
    <Style x:Key="SidebarButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
-    <Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Height" Value="38"/>
+    <Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Height" Value="34"/>
    </Style>
    <Style x:Key="DockButton" TargetType="Button">
+    <Setter Property="FocusVisualPrimaryBrush" Value="{ThemeResource NexusAccent}"/>
     <Setter Property="Template" Value="{StaticResource NexusButtonTemplate}"/><Setter Property="UseSystemFocusVisuals" Value="True"/>
     <Setter Property="Width" Value="62"/><Setter Property="Height" Value="64"/><Setter Property="CornerRadius" Value="16"/><Setter Property="Padding" Value="0"/>
     <Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/>
     <Setter Property="Foreground" Value="{ThemeResource NexusText}"/>
    </Style>
    <Style x:Key="DesktopIconButton" TargetType="Button">
+    <Setter Property="FocusVisualPrimaryBrush" Value="{ThemeResource NexusAccent}"/>
     <Setter Property="Template" Value="{StaticResource NexusButtonTemplate}"/><Setter Property="UseSystemFocusVisuals" Value="True"/>
     <Setter Property="Width" Value="108"/><Setter Property="MinHeight" Value="108"/><Setter Property="Padding" Value="6"/><Setter Property="CornerRadius" Value="14"/>
     <Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="Transparent"/><Setter Property="BorderThickness" Value="1"/>
@@ -263,14 +656,34 @@
     <Setter Property="Foreground" Value="{ThemeResource NexusDesktopText}"/>
    </Style>
    <Style x:Key="ShortcutCard" TargetType="Button">
+    <Setter Property="FocusVisualPrimaryBrush" Value="{ThemeResource NexusAccent}"/>
     <Setter Property="Template" Value="{StaticResource NexusButtonTemplate}"/><Setter Property="UseSystemFocusVisuals" Value="True"/>
     <Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="HorizontalContentAlignment" Value="Left"/>
-    <Setter Property="Padding" Value="20,18"/><Setter Property="CornerRadius" Value="20"/>
+    <Setter Property="Padding" Value="18,16"/><Setter Property="CornerRadius" Value="20"/>
     <Setter Property="Background" Value="{ThemeResource NexusCard}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusBorder}"/>
     <Setter Property="BorderThickness" Value="1"/><Setter Property="Foreground" Value="{ThemeResource NexusText}"/>
    </Style>
-   <Style TargetType="TextBox"><Setter Property="CornerRadius" Value="8"/><Setter Property="Padding" Value="11,8"/><Setter Property="FontSize" Value="13"/><Setter Property="Background" Value="{ThemeResource NexusInput}"/><Setter Property="Foreground" Value="{ThemeResource NexusText}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusBorder}"/></Style>
-   <Style TargetType="ComboBox"><Setter Property="CornerRadius" Value="8"/><Setter Property="Padding" Value="11,8"/><Setter Property="FontSize" Value="13"/><Setter Property="Background" Value="{ThemeResource NexusInput}"/><Setter Property="Foreground" Value="{ThemeResource NexusText}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusBorder}"/></Style>
+   <Style TargetType="Button" BasedOn="{StaticResource AuraSurfaceButton}"/>
+   <Style x:Key="SegmentButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
+    <Setter Property="CornerRadius" Value="7"/><Setter Property="Padding" Value="12,6"/><Setter Property="MinHeight" Value="30"/><Setter Property="FontSize" Value="12"/>
+   </Style>
+   <Style TargetType="FlyoutPresenter">
+    <Setter Property="Background" Value="{ThemeResource NexusPanel}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusBorder}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="18"/><Setter Property="Padding" Value="8"/>
+   </Style>
+   <Style TargetType="MenuFlyoutPresenter">
+    <Setter Property="Background" Value="{ThemeResource NexusPanel}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusBorder}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="16"/><Setter Property="Padding" Value="6"/>
+   </Style>
+   <Style TargetType="MenuFlyoutItem">
+    <Setter Property="FontSize" Value="13"/><Setter Property="MinHeight" Value="32"/><Setter Property="Padding" Value="12,6"/><Setter Property="CornerRadius" Value="7"/>
+   </Style>
+   <Style TargetType="ToggleSwitch"><Setter Property="Foreground" Value="{ThemeResource NexusText}"/><Setter Property="FontSize" Value="13"/></Style>
+   <Style TargetType="Slider"><Setter Property="MinHeight" Value="32"/></Style>
+   <Style TargetType="CheckBox"><Setter Property="Foreground" Value="{ThemeResource NexusText}"/><Setter Property="FontSize" Value="13"/><Setter Property="MinHeight" Value="32"/></Style>
+   <Style TargetType="ProgressBar"><Setter Property="Foreground" Value="{ThemeResource NexusAccent}"/><Setter Property="Background" Value="{ThemeResource NexusTrack}"/></Style>
+   <Style TargetType="ProgressRing"><Setter Property="Foreground" Value="{ThemeResource NexusAccent}"/></Style>
+   <Style TargetType="TextBlock"><Setter Property="FontFamily" Value="Segoe UI"/></Style>
+   <Style TargetType="TextBox"><Setter Property="FontFamily" Value="Segoe UI"/><Setter Property="CornerRadius" Value="10"/><Setter Property="Padding" Value="12,8"/><Setter Property="FontSize" Value="13"/><Setter Property="MinHeight" Value="34"/><Setter Property="Background" Value="{ThemeResource NexusInput}"/><Setter Property="Foreground" Value="{ThemeResource NexusText}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusBorder}"/></Style>
+   <Style TargetType="ComboBox"><Setter Property="FontFamily" Value="Segoe UI"/><Setter Property="CornerRadius" Value="10"/><Setter Property="Padding" Value="12,8"/><Setter Property="FontSize" Value="13"/><Setter Property="MinHeight" Value="34"/><Setter Property="Background" Value="{ThemeResource NexusInput}"/><Setter Property="Foreground" Value="{ThemeResource NexusText}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusBorder}"/></Style>
   </ResourceDictionary>
  </Application.Resources>
 </Application>

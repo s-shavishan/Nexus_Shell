@@ -28,13 +28,13 @@ public sealed partial class MainWindow
     }
     private void AddDesktopShortcut(string label, string icon, Action action)
     {
-        var face = new StackPanel { Spacing = 5, HorizontalAlignment = HorizontalAlignment.Center };
+        var face = new StackPanel { Spacing = 8, HorizontalAlignment = HorizontalAlignment.Center };
         face.Children.Add(NexusIcons.Image(icon, 64));
-        var caption = new TextBlock { Text = label, FontSize = 12, TextAlignment = TextAlignment.Center,
+        var caption = new TextBlock { Text = label, FontSize = 13, TextAlignment = TextAlignment.Center,
             MaxLines = 2, TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis,
             Foreground = Resource("NexusDesktopText") };
         face.Children.Add(new Border { Child = caption, Padding = new Thickness(6, 3, 6, 3),
-            CornerRadius = new CornerRadius(6), Background = MakeBrush(20, 25, 55, 160) });
+            CornerRadius = new CornerRadius(7), Background = Resource("NexusDesktopLabel") });
         var button = new Button { Content = face, Style = (Style)Application.Current.Resources["DesktopIconButton"] };
         button.Click += (_, _) => action();
         var menu = new MenuFlyout();

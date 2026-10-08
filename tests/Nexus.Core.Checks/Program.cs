@@ -14,13 +14,15 @@ if (OperatingSystem.IsWindows())
     Console.WriteLine("PASS: Win32 desktop accessibility queries (actual user32 calls).");
 }
 // Check small body text on the actual palette surfaces, including translucent cards.
-foreach (string mood in new[] { "Opal", "Orbit", "Aurora", "Slate" })
+foreach (string mood in AuraPalette.Moods)
 {
     var palette = AuraPalette.For(mood);
     var canvas = AuraColor.Parse(palette.Canvas);
     var panel = AuraColor.Parse(palette.Panel).Over(canvas);
     var card = AuraColor.Parse(palette.Card).Over(panel);
-    foreach (var background in new[] { panel, card, AuraColor.Parse(palette.HeroStart), AuraColor.Parse(palette.HeroEnd) })
+    foreach (var background in new[] { panel, card, AuraColor.Parse(palette.HeroStart), AuraColor.Parse(palette.HeroEnd),
+        AuraColor.Parse(palette.Tokens["NexusInput"]).Over(panel), AuraColor.Parse(palette.Tokens["NexusSidebar"]).Over(canvas),
+        AuraColor.Parse(palette.Tokens["NexusSegment"]).Over(panel) })
     {
         Check(AuraColor.Contrast(AuraColor.Parse(palette.Tokens["NexusText"]), background) >= 4.5,
             palette.Name + " body text must meet 4.5:1 contrast.");
@@ -29,7 +31,30 @@ foreach (string mood in new[] { "Opal", "Orbit", "Aurora", "Slate" })
     }
     Check(AuraColor.Contrast(AuraColor.Parse(palette.Tokens["NexusAccentText"]), AuraColor.Parse(palette.Accent)) >= 4.5,
         palette.Name + " primary button text must meet 4.5:1 contrast.");
+    foreach (var surface in new[] { panel, card, AuraColor.Parse(palette.Tokens["NexusSidebar"]).Over(canvas),
+        AuraColor.Parse(palette.Tokens["NexusSidebar"]).Over(panel) })
+    {
+        var selected = AuraColor.Parse(palette.Tokens["NexusSelection"]).Over(surface);
+        Check(AuraColor.Contrast(AuraColor.Parse(palette.Tokens["NexusSelectedText"]), selected) >= 4.5,
+            palette.Name + " selected navigation and popup text must meet 4.5:1 contrast.");
+    }
 }
+// Persist each new mood through the actual state store, and keep an existing
+// chosen mood when loading settings from the previous release.
+var moodDirectory = Path.Combine(Path.GetTempPath(), "Nexus-mood-" + Guid.NewGuid().ToString("N"));
+try
+{
+    var moodStore = new StateStore(moodDirectory);
+    foreach (string mood in AuraPalette.Moods)
+    {
+        var moodState = new ShellState { Wallpaper = mood, QuickNote = "My notes", CompactDock = true };
+        moodStore.Save(moodState);
+        var loadedMood = moodStore.Load();
+        Check(loadedMood.Wallpaper == mood && loadedMood.QuickNote == "My notes" && loadedMood.CompactDock,
+            "Mood changes must preserve content and dock preferences through the actual settings file.");
+    }
+}
+finally { if (Directory.Exists(moodDirectory)) Directory.Delete(moodDirectory, true); }
 ExploreChecks.Run(Check);
 ReliabilityChecks.Run(Check);
 PcControlChecks.Run(Check);

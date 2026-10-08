@@ -1,5 +1,18 @@
 # NEXUS Shell changes
 
+## 1.1.0 — Solstice UI polish
+
+- Added Solstice and Ember moods with coordinated static vector wallpaper; preserved existing saved mood choices.
+- Extended shared palette colors to native control states, menus, focused fields, sliders, switches and progress controls.
+- Refined workspace chrome, sidebar artwork, location labels and segmented selections.
+- Unified dock icon sizes, active-page marks and running-window artwork.
+- Split window, widget and floating-bar material strengths; cached palette updates.
+- Made quick controls more compact and grouped session preferences in an expander.
+- Refined finite compositor feedback and entrance motion.
+- Added six-mood settings/contrast checks, source-derived layout references and a detailed UI analysis.
+- Follow-up review: selected sidebar labels meet calculated small-text contrast in light moods; press/release feedback observes native handled events and includes touch/pen contacts.
+- Full Windows XAML build and native rendering remain pending.
+
 ## 1.0.0 — PC control surface
 
 - Added an in-shell PC controls workspace with Ctrl+5, desktop/dock/menu/search entry points and optional workspace destinations.

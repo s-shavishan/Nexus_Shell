@@ -1,31 +1,15 @@
-# 1.0.0 quick start
+# Nexus Shell 1.1.0 — start here
 
-Apply the contents of the 1.0.0 source patch's `files/` directory to the repository root, preserving paths, then commit and let AppVeyor build that exact commit. After the entire build succeeds, download `Nexus-Shell-1.0.0-Update-win-x64.zip` to update a compatible existing full app folder, or the full `Nexus-Shell-1.0.0-win-x64.zip` for a fresh installation.
+This is source for the Solstice UI upgrade. Build it through AppVeyor to get the runnable Windows application.
 
-Fully exit Nexus before applying a binary update. Existing notes, tasks, pins and Explore spaces retain their current storage. Open Ctrl+5 for native PC controls or Control center for quick volume/mute. Follow docs/PC-CONTROLS.md and the 1.0.0 acceptance list in docs/TEST-WINDOWS.md. Source archives are not runnable binaries.
+1. If your repository contains the saved **1.0.0 source**, extract `Nexus-Shell-1.1.0-Source-Patch.zip` and merge the **contents of `files/`** into the repository root, preserving paths and replacing matching files. The patch adds files and replaces files; it deletes none.
+2. For **0.9.0 or earlier**, use the complete `Nexus-Shell-1.1.0-Source.zip` so the native PC controls from 1.0.0 are included. Commit the extracted source, rather than only uploading the ZIP to the repository.
+3. Run AppVeyor for that exact commit. Wait for the Windows build, behavior checks, resource verification and packaging to succeed.
+4. Download `Nexus-Shell-1.1.0-Update-win-x64.zip`. Fully exit Nexus, extract the update and run `Apply-Update.bat`, selecting the existing full application folder. If its runtime verification fails, use the complete `Nexus-Shell-1.1.0-win-x64.zip` instead.
+5. Open **More → Personalize → Solstice** for the warm light direction, or **Ember** for warm dark surfaces. Existing saved mood choices stay selected after updating.
 
-The older notes below describe the project history.
+Notes, tasks, pins and Explore spaces retain their existing storage. Source ZIPs are not binary app updates and cannot be used with the binary updater.
 
-# Nexus Shell 0.7.0 — start here
+Read [BUILD-HANDOFF.md](docs/BUILD-HANDOFF.md) for the confirmed repository and AppVeyor handoff. Read [UI-POLISH.md](docs/UI-POLISH.md) for the reference analysis and Windows visual review. Core checks, C# API checks and source validation pass locally; the full Windows XAML build and native appearance still need validation. The included previews are source-derived layout illustrations with sample content.
 
-This archive is source. Build it through AppVeyor to get the runnable Windows application.
-
-1. If your repository contains **0.6.0 source**, extract `Nexus-Shell-0.7.0-Source-Patch.zip` and merge the extracted folder's contents into the repository root. Replace matching files and add new files; include `src`, `tests`, `scripts` and CI configuration. Do not nest the patch folder inside your repository.
-2. If your source is earlier than 0.6.0, use the complete `Nexus-Shell-0.7.0-Source.zip` as the new source tree.
-3. Commit and run AppVeyor. Wait for behavior checks, publish/resource checks and packaging to succeed.
-4. Download `Nexus-Shell-0.7.0-Update-win-x64.zip`. Fully exit any running/hidden Nexus instance through Control center or its notification-area menu.
-5. Extract the binary Update ZIP, run `Apply-Update.bat`, and choose your current full binary app folder containing `Nexus.Shell.exe` and its runtime files. The updater creates a new version folder and keeps the old one.
-6. Launch the new folder. If runtime hashes do not match, use the full `Nexus-Shell-0.7.0-win-x64.zip` instead.
-7. If startup still points to the old folder, choose **Use this version at sign-in** in Control center.
-
-No local developer installation is needed for this route. Source ZIPs cannot be passed to the binary updater.
-
-## First things to try
-
-- **More → Personalize**: choose a mood, compact dock, clock format and visible Home cards.
-- Navigate Home → Apps → Study; use Alt+Left/Right or the header arrows.
-- Ctrl+K: try Apps, Saved, Workspaces and Windows categories. The current window list refreshes when search opens.
-- Select an app, saved item or workspace in search, then reopen All to see recent choices. Clear/disable these in Personalize.
-- Hide Home notes, return to Home and then show them again. The text should remain saved.
-
-Prepared source checks pass. Windows compilation and native acceptance still need to run. Keep the complete published folder together; the existing resource publishing and accessibility safeguards remain in place.
+Use [PC-CONTROLS.md](docs/PC-CONTROLS.md) and [TEST-WINDOWS.md](docs/TEST-WINDOWS.md) to check existing audio, window controls, input and update behavior on Windows.

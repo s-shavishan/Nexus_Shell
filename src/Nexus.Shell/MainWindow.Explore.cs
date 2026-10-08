@@ -73,8 +73,9 @@ public sealed partial class MainWindow
                 face.Children.Add(Text(space.Name, 12));
                 face.Children.Add(Text(_state.SavedItems.Count(a => a.SpaceId == space.Id).ToString(), 10, true));
                 var button = new Button { Content = face, Tag = space.Id,
-                    Style = (Style)Application.Current.Resources["QuietButton"], CornerRadius = new CornerRadius(8), Padding = new Thickness(12, 6, 12, 6),
-                    Background = space.Id == ActiveExploreSpace.Id ? _highContrast ? _selection : Resource("NexusCard") : _transparent };
+                    Style = (Style)Application.Current.Resources["SegmentButton"], CornerRadius = new CornerRadius(7), Padding = new Thickness(12, 6, 12, 6),
+                    Background = space.Id == ActiveExploreSpace.Id ? _highContrast ? _selection : Resource("NexusSegment") : _transparent };
+                SetSegment(button, space.Id == ActiveExploreSpace.Id);
                 if (_highContrast && space.Id == ActiveExploreSpace.Id)
                     foreach (var text in face.Children.OfType<TextBlock>()) text.Foreground = Resource("NexusAccentText");
                 Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, "Explore space: " + space.Name);
@@ -135,7 +136,7 @@ public sealed partial class MainWindow
         foreach (var button in new[] { ExploreBoardMode, ExploreListMode })
         {
             bool selected = (string)button.Tag == _state.ExploreView;
-            button.Background = selected ? _selection : _transparent;
+            SetSegment(button, selected);
             button.Foreground = Resource(_highContrast && selected ? "NexusAccentText" : "NexusText");
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(button, selected ? "Selected view" : "");
         }

@@ -153,7 +153,7 @@ public sealed partial class MainWindow : Window
     };
     private Border Card(UIElement content) => new()
     {
-        Child = content, Padding = new Thickness(20), CornerRadius = new CornerRadius(22),
+        Child = content, Padding = new Thickness(20), CornerRadius = new CornerRadius(16),
         Background = Resource("NexusCard"), BorderBrush = Resource("NexusBorder"), BorderThickness = new Thickness(1)
     };
 
@@ -544,11 +544,11 @@ public sealed partial class MainWindow : Window
         SpaceCard.Visibility = _state.ShowSpaceWidget ? Visibility.Visible : Visibility.Collapsed;
         bool hidden = _page != "Home" || _expanded || _state.FocusMode || !_state.DesktopLayout || width < 1120 || DesktopRoot.ActualHeight < 650;
         DesktopWidgets.Visibility = hidden ? Visibility.Collapsed : Visibility.Visible;
-        DesktopColumn.Width = new GridLength(hidden ? 0 : 236);
+        DesktopColumn.Width = new GridLength(hidden ? 0 : 252);
         Workspace.ColumnSpacing = hidden ? 0 : 28;
         bool sidebar = width >= 760 && DesktopRoot.ActualHeight >= 580;
         Sidebar.Visibility = sidebar ? Visibility.Visible : Visibility.Collapsed;
-        SidebarColumn.Width = new GridLength(sidebar ? 170 : 0);
+        SidebarColumn.Width = new GridLength(sidebar ? 176 : 0);
         ResourceText.Visibility = width < 1120 ? Visibility.Collapsed : Visibility.Visible;
         FooterSettingsButton.Visibility = width < 1120 ? Visibility.Collapsed : Visibility.Visible;
         MenuLinks.Visibility = width < 1060 ? Visibility.Collapsed : Visibility.Visible;
@@ -559,13 +559,14 @@ public sealed partial class MainWindow : Window
         SearchLabel.Visibility = width < 650 ? Visibility.Collapsed : Visibility.Visible;
         SearchShortcut.Visibility = width < 650 ? Visibility.Collapsed : Visibility.Visible;
         MenuBar.Margin = new Thickness(width < 600 ? 8 : 12, 5, width < 600 ? 8 : 12, 1);
-        Brush desktopCaption = _highContrast ? Resource("NexusPanel") : MakeBrush(32, 37, 65, 200);
+        Brush desktopCaption = _highContrast ? Resource("NexusPanel") : Resource("NexusDesktopLabel");
         DesktopPathPill.Background = DesktopTrailPill.Background = DesktopSearchButton.Background = desktopCaption;
         DesktopTrailPill.Visibility = width < 760 ? Visibility.Collapsed : Visibility.Visible;
         Workspace.Margin = new Thickness(width < 600 ? 12 : _state.DesktopLayout ? 36 : 20, 6, width < 600 ? 12 : _state.DesktopLayout ? 36 : 20, 4);
         int capacity = width < 550 ? 1 : width < 720 ? 2 : width < 1120 ? 4 : 5;
         DockRunningApps.Visibility = width >= 1200 ? Visibility.Visible : Visibility.Collapsed;
         if (_dockCapacity != capacity) { _dockCapacity = capacity; RefreshDock(); }
+        UpdateDockSelection();
         ControlPanel.Width = Math.Clamp(width - 64, 256, 400);
         ControlScroller.MaxHeight = Math.Max(120, DesktopRoot.ActualHeight - 160);
         CommandPanel.MaxHeight = Math.Max(180, DesktopRoot.ActualHeight - 128);

@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Media;
 using Nexus.Shell.Interop;
 using Nexus.Shell.Models;
 using Nexus.Shell.Services;
+using Nexus.Shell.UI;
 using System.Diagnostics;
 
 namespace Nexus.Shell;
@@ -150,7 +151,7 @@ public sealed partial class MainWindow
     {
         bool desktop = IsDesktopCanvas;
         WindowChrome.Visibility = WindowFooter.Visibility = desktop ? Visibility.Collapsed : Visibility.Visible;
-        ChromeRow.Height = new GridLength(desktop ? 0 : 44);
+        ChromeRow.Height = new GridLength(desktop ? 0 : 52);
         FooterRow.Height = new GridLength(desktop ? 0 : 30);
         HomeBorder.MaxWidth = desktop || _expanded ? double.PositiveInfinity : 1180;
         HomeBorder.BorderThickness = new Thickness(desktop ? 0 : 1);
@@ -420,18 +421,14 @@ public sealed partial class MainWindow
         DockRunningApps.Children.Clear();
         foreach (var window in _desktopWindows.Take(3))
         {
-            var face = new StackPanel { Spacing = 4 };
-            var tile = new Border { Width = 40, Height = 38, CornerRadius = new CornerRadius(11), Background = Resource("NexusCard") };
-            tile.Child = new TextBlock { Text = window.ProcessName.Length > 0 ? window.ProcessName[..1].ToUpperInvariant() : "•",
-                FontSize = 17, Foreground = Resource("NexusText"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-            face.Children.Add(tile);
-            face.Children.Add(new Border { Width = 5, Height = 3, CornerRadius = new CornerRadius(2), Background = Resource("NexusAccent"), HorizontalAlignment = HorizontalAlignment.Center });
+            var face = RunningDockFace(NexusIcons.ForProcess(window.ProcessName));
             var button = new Button { Content = face, Style = (Style)Application.Current.Resources["DockButton"],
                 Background = _transparent, BorderBrush = _transparent };
             button.Click += (_, _) => { if (!NativeMethods.Activate(window.Handle)) ShowStatus("This window is unavailable. Refresh window overview."); };
             ToolTipService.SetToolTip(button, window.ProcessName + " · " + window.Title);
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, "Return to " + window.Title);
             DockRunningApps.Children.Add(button);
+            _motion?.AttachHover(button);
         }
         ApplyDockDensity();
         HomeWindowsSummary.Text = _desktopWindows.Count + " open windows · Return through the dock or window overview";

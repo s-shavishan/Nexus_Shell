@@ -28,7 +28,7 @@ public sealed partial class MainWindow
     private void InitializeWorkspaces()
     {
         QuickNotesBox.Text = _state.QuickNote;
-        WallpaperBox.SelectedIndex = _state.Wallpaper switch { "Orbit" => 1, "Aurora" => 2, "Slate" => 3, _ => 0 };
+        WallpaperBox.SelectedIndex = Math.Max(0, Array.IndexOf(AuraPalette.Moods, _state.Wallpaper));
         if (_state.FocusRemainingSeconds >= 0)
             _focusSession.Restore(_state.FocusMinutes, TimeSpan.FromSeconds(_state.FocusRemainingSeconds));
         else _focusSession.Reset(_state.FocusMinutes);
@@ -355,12 +355,12 @@ public sealed partial class MainWindow
     private void Wallpaper_SelectionChanged(object sender, SelectionChangedEventArgs args)
     {
         if (!_ready) return;
-        _state.Wallpaper = WallpaperBox.SelectedIndex switch { 1 => "Orbit", 2 => "Aurora", 3 => "Slate", _ => "Opal" };
+        _state.Wallpaper = AuraPalette.Moods[Math.Clamp(WallpaperBox.SelectedIndex, 0, AuraPalette.Moods.Length - 1)];
         SelectWallpaper(); ApplyEffects(); SaveState();
     }
     private void SelectWallpaper()
     {
         ApplyAuraPalette();
-        WallpaperAccents.Opacity = _state.Wallpaper == "Opal" ? .94 : _state.Wallpaper == "Slate" ? .35 : .7;
+        WallpaperAccents.Opacity = 1;
     }
 }
