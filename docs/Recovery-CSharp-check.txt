@@ -1,0 +1,1 @@
+PASS: independent recovery C# compiles using C# 5 syntax. Windows PowerShell execution pending.

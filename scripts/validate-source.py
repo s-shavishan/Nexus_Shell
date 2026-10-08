@@ -25,7 +25,7 @@ required = [
     "Services/UsageTracker.cs",
     "Services/ResourceSampler.cs", "UI/MotionController.cs", "UI/AppAccentConverter.cs",
     "Desktop/FilesWindow.cs", "Desktop/SwitcherWindow.cs", "UI/Files/FilesView.cs", "MainWindow.DesktopMode.cs",
-    "Services/FileCatalog.cs", "Services/DesktopShellPolicy.cs", "Services/DesktopShellRegistration.cs",
+    "Services/FileCatalog.cs", "Services/DesktopShellPolicy.cs", "Services/DesktopShellRegistration.cs", "Services/DesktopSessionRecovery.cs", "Services/DesktopSessionRecord.cs",
     "Interop/ExclusiveTaskbarRegistration.cs", "Interop/ShellKeyboardHook.cs", "Interop/NexusDesktopToggle.cs", "Interop/ShortcutResolver.cs", "Interop/RecycleBinService.cs",
 ]
 for relative in required:
@@ -186,7 +186,7 @@ closed = code[code.index("private void Window_Closed("):]
 assert "SaveFinal(" not in closed and "DetachSnapshot(" in closed, "Closing Sections must not finalize the desktop session"
 for file in [root / "appveyor.yml", root / ".github/workflows/build-windows.yml", root / "scripts/package.ps1", root / "scripts/build.ps1"]:
     body = file.read_text()
-    assert "Nexus-Shell-1.3.0" in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
+    assert "Nexus-Shell-1.3.1" in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
 print("Independent desktop ownership, Sections lifetime and CI versions OK")
 # Desktop replacement cannot silently instantiate Explorer or common picker UI.
 environment = (project / "Desktop/DesktopEnvironment.cs").read_text()
@@ -199,7 +199,7 @@ assert 'new("files", "Files", "nexus:files"' in (project / "Services/AppCatalog.
 assert "new ExclusiveTaskbarRegistration" in (project / "Desktop/TaskbarWindow.cs").read_text()
 for layer in ["FilesWindow", "SwitcherWindow"]:
     assert re.search(r"class\s+" + layer + r"\s*:\s*Window", (project / "Desktop" / (layer + ".cs")).read_text())
-for relative in ["src/Nexus.DesktopHost/Nexus.DesktopHost.csproj", "src/Nexus.DesktopHost/Program.cs", "docs/NEXUS-DESKTOP-MODE.md", "docs/TEST-DESKTOP-MODE.md", "scripts/restore-windows-desktop.ps1"]:
+for relative in ["src/Nexus.DesktopHost/Nexus.DesktopHost.csproj", "src/Nexus.DesktopHost/Program.cs", "src/Nexus.DesktopHost/WindowsDesktopSurfaces.cs", "docs/NEXUS-DESKTOP-MODE.md", "docs/TEST-DESKTOP-MODE.md", "scripts/restore-windows-desktop.ps1"]:
     assert (root / relative).is_file(), f"Missing desktop-mode deliverable: {relative}"
 ET.parse(root / "src/Nexus.DesktopHost/Nexus.DesktopHost.csproj")
 host = (root / "src/Nexus.DesktopHost/Program.cs").read_text()

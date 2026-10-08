@@ -9,7 +9,7 @@ $root = [IO.Path]::GetFullPath($PublishDirectory).TrimEnd([char[]]'\/')
 $prefix = $root + [IO.Path]::DirectorySeparatorChar
 if (-not (Test-Path (Join-Path $root 'Nexus.Shell.exe') -PathType Leaf)) { throw 'The published executable is missing.' }
 if (-not (Test-Path (Join-Path $root 'Nexus.Shell.dll') -PathType Leaf)) { throw 'The published app assembly is missing.' }
-foreach ($name in @('Nexus.DesktopHost.exe', 'Nexus.DesktopHost.dll', 'Nexus.DesktopHost.deps.json', 'Nexus.DesktopHost.runtimeconfig.json')) {
+foreach ($name in @('Nexus.DesktopHost.exe', 'Nexus.DesktopHost.dll', 'Nexus.DesktopHost.deps.json', 'Nexus.DesktopHost.runtimeconfig.json', 'Launch-Nexus-Desktop.bat', 'Restore-Windows-Desktop.bat', 'restore-windows-desktop.ps1')) {
     if (-not (Test-Path (Join-Path $root $name) -PathType Leaf)) { throw "The published desktop host is missing $name." }
 }
 $report = Get-Content (Join-Path $root 'Nexus.resources.json') -Raw | ConvertFrom-Json
@@ -51,7 +51,8 @@ NEXUS SMALL UPDATE
 2. Close Nexus, then double-click Apply-Update.bat.
 3. Paste the path of your existing full Nexus folder containing Nexus.Shell.exe.
 4. The updater checks the runtime files and creates a NEW version folder.
-5. Run Nexus.Shell.exe from that new folder. Your old folder is retained.
+5. Run Launch-Nexus-Desktop.bat for a Nexus-only desktop session, or Nexus.Shell.exe
+   for preview. Exit Nexus to return to Windows. Your old folder is retained.
 
 No SDK or separate runtime installation is needed.
 If runtime files are missing or different, use this release's full ZIP instead.

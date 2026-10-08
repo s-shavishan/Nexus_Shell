@@ -22,6 +22,7 @@ internal sealed class DesktopEnvironment
     internal bool SectionsOpen => _sections is not null;
     internal bool FilesOpen => _files is not null;
     internal DesktopSessionMode Mode { get; }
+    internal bool IsManagedDesktop => Mode != DesktopSessionMode.Preview;
     internal event Action? Stopped;
     private MainWindow? _sections;
     private FilesWindow? _files;
@@ -30,6 +31,7 @@ internal sealed class DesktopEnvironment
     private readonly NexusDesktopToggle _desktopToggle = new();
     private ShellKeyboardHook? _keyboard;
     private EventWaitHandle? _pulse;
+    private Process? _host;
     private bool _sessionDialog;
     private readonly UsageTracker _usage;
     private int _usageTicks;
@@ -46,12 +48,19 @@ internal sealed class DesktopEnvironment
     private bool _refreshing, _saving, _dirty;
     internal bool HotkeyAvailable => _integration?.HotkeyAvailable == true;
 
-    internal DesktopEnvironment(DesktopSessionMode mode = DesktopSessionMode.Preview, string? hostToken = null)
+    internal DesktopEnvironment(DesktopSessionMode mode = DesktopSessionMode.Preview, string? hostToken = null, int? hostPid = null)
     {
         Mode = mode; Menus = new(this); _usage = new(Session.State); _usageTracking = Session.State.UsageTracking;
-        if (mode == DesktopSessionMode.DesktopShell)
+        if (IsManagedDesktop)
         {
             if (!Guid.TryParseExact(hostToken, "N", out _)) throw new ArgumentException("Start desktop mode through Nexus.DesktopHost.exe.");
+            if (hostPid is null || hostPid <= 0) throw new ArgumentException("Start desktop mode with the matching Nexus desktop host.");
+            _host = Process.GetProcessById(hostPid.Value);
+            if (_host.SessionId != Process.GetCurrentProcess().SessionId
+                || !string.Equals(_host.MainModule?.FileName, Path.Combine(AppContext.BaseDirectory, "Nexus.DesktopHost.exe"), StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("The desktop host does not belong to this Nexus folder and session.");
+            // Retain the native process handle, so PID reuse cannot mask a dead host.
+            _ = _host.Handle;
             _pulse = EventWaitHandle.OpenExisting(@"Local\WhiteDreams.Nexus.Pulse." + hostToken);
         }
     }
@@ -77,7 +86,7 @@ internal sealed class DesktopEnvironment
                 else if (command == "tray-lost") Report("The Windows notification icon is unavailable. The Nexus taskbar is still running.");
             }));
             RefreshIntegration(); Desktop.ShowSurface(); Taskbar.ShowBar();
-            if (Mode == DesktopSessionMode.DesktopShell)
+            if (IsManagedDesktop)
                 _keyboard = new(action => Desktop.DispatcherQueue.TryEnqueue(() => HandleShellKey(action)));
             RefreshDesktop(); UpdateTaskbar(); _timer.Start();
             _pulse?.Set();
@@ -130,6 +139,19 @@ internal sealed class DesktopEnvironment
     private void Tick(object? sender, object args)
     {
         if (IsStopping) return;
+        if (_host?.HasExited == true)
+        {
+            Log.Write("Desktop host exited; requesting independent Windows recovery.");
+            try
+            {
+                var start = new ProcessStartInfo(Path.Combine(AppContext.BaseDirectory, "Nexus.DesktopHost.exe")) { UseShellExecute = false, WorkingDirectory = AppContext.BaseDirectory };
+                start.ArgumentList.Add(Mode == DesktopSessionMode.NexusSession ? "--restore-session" : "--restore-windows");
+                start.ArgumentList.Add("--wait-for-preview"); start.ArgumentList.Add(Environment.ProcessId.ToString());
+                Process.Start(start);
+            }
+            catch (Exception ex) { Log.Write("Could not start independent recovery; use Restore-Windows-Desktop.bat.", ex); }
+            Shutdown(DesktopExitCode.RestoreWindows); return;
+        }
         _pulse?.Set();
         RefreshAppearance(); Taskbar.View.RefreshClock(); UpdateTaskbar();
         if (!Session.State.UsageTracking) return;
@@ -207,7 +229,7 @@ internal sealed class DesktopEnvironment
                 if (Directory.Exists(folder)) ShowFiles(folder); else ShowFiles(); return;
             }
             if (link.Target.Length > 0) { target = link.Target; arguments = link.Arguments; working = link.WorkingDirectory; }
-            else if (Mode == DesktopSessionMode.DesktopShell) throw new NotSupportedException("This Windows namespace shortcut has no app target. Pin the application executable or use Nexus Files.");
+            else if (IsManagedDesktop) throw new NotSupportedException("This Windows namespace shortcut has no app target. Pin the application executable or use Nexus Files.");
         }
         if (target.StartsWith("shell:", StringComparison.OrdinalIgnoreCase) || target.StartsWith("::{", StringComparison.Ordinal))
             throw new NotSupportedException("This Windows desktop location is not available in Nexus. Use My files or PC controls.");
@@ -285,6 +307,7 @@ internal sealed class DesktopEnvironment
     {
         if (IsStopping || _sessionDialog) return; HideMenu();
         if (Mode == DesktopSessionMode.Preview) { Shutdown(DesktopExitCode.Stop); return; }
+        if (Mode == DesktopSessionMode.NexusSession) { Shutdown(DesktopExitCode.RestoreWindows); return; }
         _sessionDialog = true;
         try
         {
@@ -313,7 +336,7 @@ internal sealed class DesktopEnvironment
         if (IsStopping) return; IsStopping = true;
         _timer.Stop(); _saveTimer.Stop(); Session.Changed -= SessionChanged;
         _cancel.Cancel();
-        Environment.ExitCode = (int)(exitCode ?? (Mode == DesktopSessionMode.DesktopShell ? DesktopExitCode.RestoreWindows : DesktopExitCode.Stop));
+        Environment.ExitCode = (int)(exitCode ?? (IsManagedDesktop ? DesktopExitCode.RestoreWindows : DesktopExitCode.Stop));
         void Cleanup(Action action) { try { action(); } catch (Exception ex) { Log.Write("Desktop shutdown cleanup failed", ex); } }
         Cleanup(() => _sections?.Close()); _sections = null;
         Cleanup(() => _menu?.Close()); _menu = null;
@@ -322,6 +345,7 @@ internal sealed class DesktopEnvironment
         foreach (var picker in _pickers.ToArray()) Cleanup(picker.Close); _pickers.Clear();
         Cleanup(() => _keyboard?.Dispose()); _keyboard = null;
         Cleanup(() => _pulse?.Dispose()); _pulse = null;
+        Cleanup(() => _host?.Dispose()); _host = null;
         Cleanup(() => _integration?.Dispose()); _integration = null;
         // Release the working-area reservation before destroying any native window.
         Cleanup(() => Taskbar?.Dispose()); Cleanup(() => Taskbar?.Close());

@@ -787,7 +787,7 @@
       </Grid.ColumnDefinitions>
       <TextBlock x:Name="ActiveProfileText" Width="170" Margin="0,0,12,0" VerticalAlignment="Center" FontSize="11" TextTrimming="CharacterEllipsis" Foreground="{ThemeResource NexusMuted}" />
       <TextBlock x:Name="PageStatus" Text="Your personal workspace" VerticalAlignment="Center" FontSize="11" TextTrimming="CharacterEllipsis" Foreground="{ThemeResource NexusMuted}" Grid.Column="1" />
-      <TextBlock Grid.Column="2" Text="NEXUS  1.3.0" VerticalAlignment="Center" Foreground="{ThemeResource NexusMuted}" FontSize="9" CharacterSpacing="90" Margin="12,0,0,0" />
+      <TextBlock Grid.Column="2" Text="NEXUS  1.3.1" VerticalAlignment="Center" Foreground="{ThemeResource NexusMuted}" FontSize="9" CharacterSpacing="90" Margin="12,0,0,0" />
      </Grid>
     </Border>
    </Grid>

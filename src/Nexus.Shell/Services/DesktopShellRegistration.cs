@@ -28,7 +28,10 @@ public sealed class WindowsDesktopSettings : IUserDesktopSettings
     }
     private static void Write(string path, string name, ShellRegistryValue? value)
     {
-        using var key = Registry.CurrentUser.CreateSubKey(path);
+        if (Read(path, name) == value) return;
+        using var key = Registry.CurrentUser.OpenSubKey(path, RegistryKeyPermissionCheck.ReadWriteSubTree,
+            System.Security.AccessControl.RegistryRights.QueryValues | System.Security.AccessControl.RegistryRights.SetValue)
+            ?? Registry.CurrentUser.CreateSubKey(path);
         if (value is null) key.DeleteValue(name, false);
         else key.SetValue(name, value.Text, value.Kind switch
         {

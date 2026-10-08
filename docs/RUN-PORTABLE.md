@@ -1,13 +1,15 @@
-# Run Nexus Shell 1.3.0
+# Run Nexus Shell 1.3.1
 
-Extract the full runnable Windows ZIP into a new folder. Keep all DLL, PRI, XBF, runtime/deps files and Assets together with both Nexus executables. Run **Nexus.Shell.exe** to preview the desktop alongside Explorer. Sections opens only through its shortcut or Start.
+Extract the full runnable Windows ZIP into a new folder. Keep both executables, their dependencies, PRI/XBF resources, Assets and helper files together.
 
-After Windows acceptance, choose **Sections → Personalize → Use Nexus at sign-in** to make Nexus the desktop for this user. The full selected folder must stay in place. Save work and sign out when ready; setup does not sign out automatically.
+- **Launch-Nexus-Desktop.bat:** temporary Nexus desktop/taskbar. Windows surfaces are hidden when Nexus is ready. **Exit Nexus** restores Windows; no sign-in policy is changed.
+- **Nexus.Shell.exe / Launch-Nexus.bat:** preview alongside Windows. Sections → Personalize → Use Nexus for this session switches to the temporary session.
+- **Restore-Windows-Desktop.bat:** independent current-desktop recovery, with sign-in restoration attempted separately if a prior persistent backup exists.
 
-In a Nexus desktop session, use **Start → Session…** to restart Nexus, return to Windows, or sign out. Closing Sections/Files does not close the shell. Settings, Control Panel and Task Manager are in PC controls. See NEXUS-DESKTOP-MODE.md for keyboard behavior, scope and recovery.
+Sections opens only from its shortcut or Start. Closing Sections or Files does not exit the desktop. Settings, Control Panel and Task Manager remain available from PC controls.
 
-If the UI fails, run **Restore-Windows-Desktop.bat**. Use Ctrl+Alt+Delete → Task Manager → Run new task to reach it from an empty desktop. This restores the saved sign-in policy. Running explorer.exe alone does not repair future sign-in.
+Persistent Use Nexus at sign-in is optional, requires a supported edition/build and policy permission, and needs the complete selected folder to stay in place. A denied policy restore does not stop GUI recovery but can leave future sign-in set to Nexus. See NEXUS-DESKTOP-MODE.md.
 
-Data and recovery records live under `%LOCALAPPDATA%\WhiteDreams\NexusShell`. Updates create a separate version folder; preview it and select its host in Personalize before removing the old folder.
+From a blank desktop, Ctrl+Alt+Delete → Task Manager → Run new task → explorer.exe. Then run the recovery BAT. Data and recovery records remain under %LOCALAPPDATA%\WhiteDreams\NexusShell.
 
-Source ZIPs cannot run directly or serve as a binary updater base. Native Windows compilation and acceptance are still required for the prepared source.
+Updates create a new version folder. Exit the old Nexus instance before launching the new one. Source ZIPs require a Windows build; they are not executable updates. Complete TEST-DESKTOP-MODE.md on the VM.

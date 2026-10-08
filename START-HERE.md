@@ -1,13 +1,13 @@
-# Start here — Nexus 1.3.0
+# Start here — Nexus 1.3.1
 
-This is the source for a Nexus desktop replacement on Windows Pro. It includes the independent desktop foundation, Nexus Files/pickers, window switching, per-user sign-in setup and a desktop recovery host.
+1. Apply the 1.3.0→1.3.1 Git patch to the verified 1.3.0 baseline, or extract the full source into a new folder. See SOURCE-PATCH.md.
+2. Commit/push the source for AppVeyor, or build on Windows using `scripts\build.ps1 -UseMSBuild`. Source ZIPs cannot run directly.
+3. Extract the complete Windows artifact. Close any Nexus preview, then run **Launch-Nexus-Desktop.bat** for a temporary Nexus desktop.
+4. The Windows desktop and taskbars are hidden after Nexus becomes ready. **Exit Nexus** to restore them. No sign-in policy changes are made by this mode.
+5. Complete docs/TEST-DESKTOP-MODE.md on your VM, including normal exit, UI failure, host failure and a denied registry write.
 
-1. Extract the full source into a fresh folder, or apply the source patch matching your unchanged 1.0.0, 1.1.0 or 1.2.0 baseline.
-2. Build on Windows using `scripts\build.ps1 -UseMSBuild`, or upload the source to your repository and run the included Windows CI.
-3. Run the complete published folder's `Nexus.Shell.exe` to preview it. Source ZIPs are not runnable releases.
-4. Complete `docs/TEST-DESKTOP-MODE.md` on a Windows Pro VM/test account before configuring your everyday sign-in.
-5. Select **Sections → Personalize → Use Nexus at sign-in**. Keep the full published folder in its selected location.
+Opening `Nexus.Shell.exe` is preview mode. From preview, **Sections → Personalize → Use Nexus for this session…** performs the same temporary takeover with an orderly handoff.
 
-Read [NEXUS-DESKTOP-MODE.md](docs/NEXUS-DESKTOP-MODE.md) for setup/recovery and [BUILD-HANDOFF.md](docs/BUILD-HANDOFF.md) for CI and artifact details.
+Persistent **Use Nexus at sign-in** is a separate option with Windows edition/build and registry permissions requirements. See docs/NEXUS-DESKTOP-MODE.md. Current-session Windows recovery is allowed to continue even if that policy setting cannot be restored.
 
-The C# API, core and source checks pass locally. Native Windows compilation, launch and sign-in acceptance are pending. No account setting was changed here.
+Local core, source, host C# and application API checks pass. Native Windows compilation and 1.3.1 VM acceptance remain pending.

@@ -22,8 +22,40 @@ internal static class DesktopModeChecks
             set { if (FailStartup) { FailStartup = false; throw new IOException("Injected registry write failure"); } StartupValue = value; }
         }
     }
+    private sealed class Surfaces : IWindowsDesktopSurfaces
+    {
+        internal readonly Dictionary<long, WindowsDesktopSurface> Values = [];
+        internal long FailHandle;
+        public IReadOnlyList<WindowsDesktopSurface> Read() => Values.Values.ToList();
+        public bool Matches(WindowsDesktopSurface saved) => Values.TryGetValue(saved.Handle, out var now) && now.ProcessId == saved.ProcessId && now.ClassName == saved.ClassName;
+        public void SetVisible(WindowsDesktopSurface saved, bool visible)
+        { if (!Matches(saved)) return; if (saved.Handle == FailHandle) throw new IOException("Injected surface failure"); Values[saved.Handle] = Values[saved.Handle] with { Visible = visible }; }
+    }
     internal static void Run()
     {
+        var surfaces = new Surfaces();
+        surfaces.Values[1] = new(1, 100, "Shell_TrayWnd", true);
+        surfaces.Values[2] = new(2, 100, "WorkerW", false);
+        var lease = new DesktopSurfaceLease(surfaces);
+        lease.TakeOver(); Check(!surfaces.Values[1].Visible && !surfaces.Values[2].Visible, "Takeover must hide visible desktop surfaces and preserve originally hidden surfaces.");
+        surfaces.Values[3] = new(3, 101, "Shell_SecondaryTrayWnd", true); lease.Maintain();
+        surfaces.Values[1] = new(1, 999, "unrelated-app", false);
+        lease.Restore();
+        Check(!surfaces.Values[1].Visible && !surfaces.Values[2].Visible && surfaces.Values[3].Visible,
+            "Restoration must preserve original visibility, restore newly discovered taskbars and reject reused handles.");
+        var partialSurfaces = new Surfaces { FailHandle = 8 };
+        partialSurfaces.Values[8] = new(8, 100, "Shell_TrayWnd", false); partialSurfaces.Values[9] = new(9, 100, "Shell_SecondaryTrayWnd", false);
+        Reject(() => DesktopSurfaceLease.RestoreSaved(partialSurfaces, partialSurfaces.Read().Select(s => s with { Visible = true })), "A failed native surface operation must be reported.");
+        Check(partialSurfaces.Values[9].Visible, "One failed taskbar restore must not stop the other surface restorations.");
+        bool shown = false, area = false, explorer = false;
+        var recovery = DesktopSessionRecovery.Restore(() => throw new UnauthorizedAccessException("policy denied"), () => shown = true, () => area = true, () => explorer = true);
+        Check(shown && area && explorer && recovery.WindowsDesktopRequested && !recovery.SignInRestored && recovery.Errors.Count == 1,
+            "Denied policy permission must never stop surface, work-area or Explorer recovery.");
+        recovery = DesktopSessionRecovery.Restore(null, () => shown = true, () => area = true, () => explorer = true);
+        Check(recovery.SignInRestored && recovery.WindowsDesktopRequested && recovery.Errors.Count == 0, "Session-only recovery must complete with no sign-in policy operation.");
+        explorer = false;
+        recovery = DesktopSessionRecovery.Restore(null, () => throw new IOException("surface failure"), () => throw new IOException("area failure"), () => explorer = true);
+        Check(explorer && recovery.Errors.Count == 2, "Explorer recovery must still run if either preceding desktop operation fails.");
         Check(new DesktopCapabilities(true, "Professional", 22631).SupportsCustomInterface, "Windows Pro must use the custom interface route.");
         Check(!new DesktopCapabilities(true, "Core", 22631).SupportsCustomInterface, "Windows Home cannot be selected as supported.");
         Check(!new DesktopCapabilities(false, "Professional", 22631).SupportsCustomInterface, "A Linux host cannot configure sign-in.");
@@ -35,6 +67,29 @@ internal static class DesktopModeChecks
         {
             string host = Path.Combine(root, "Nexus.DesktopHost.exe"), next = Path.Combine(root, "Next", "Nexus.DesktopHost.exe");
             File.WriteAllText(host, "fixture"); Directory.CreateDirectory(Path.GetDirectoryName(next)!); File.WriteAllText(next, "fixture");
+            var record = new DesktopSessionRecord(Path.Combine(root, "session.json"));
+            var snapshot = new DesktopSessionSnapshot(1, 7, host, new(0, 0, 1920, 1080), new(0, 0, 1920, 1032), []);
+            Check(record.Read(7) is null, "No saved session must leave desktop state untouched.");
+            var savedSurfaces = new Surfaces(); savedSurfaces.Values[4] = new(4, 100, "Shell_TrayWnd", true); savedSurfaces.Values[5] = new(5, 100, "WorkerW", false);
+            var savedLease = new DesktopSurfaceLease(savedSurfaces, before =>
+            {
+                Check(savedSurfaces.Values[4].Visible, "The journal must be written before hiding the Windows taskbar.");
+                record.Save(snapshot with { Surfaces = before });
+            });
+            savedLease.TakeOver();
+            var savedSession = record.Read(7)!;
+            Check(savedSession.Work == snapshot.Work && savedSession.Surfaces.Single(s => s.Handle == 4).Visible, "Recovery must retain original work area and visibility through actual disk I/O.");
+            DesktopSurfaceLease.RestoreSaved(savedSurfaces, savedSession.Surfaces);
+            Check(savedSurfaces.Values[4].Visible && !savedSurfaces.Values[5].Visible, "Independent recovery must restore the saved visibility after the host lease is lost.");
+            Reject(() => record.Read(8), "Session recovery must reject another interactive session's record.");
+            Reject(() => record.Save(snapshot with { Work = new(0, 0, 2500, 1032) }), "The saved work area must fit its monitor.");
+            var cannotSave = new DesktopSurfaceLease(savedSurfaces, _ => throw new UnauthorizedAccessException("journal denied"));
+            Reject(cannotSave.TakeOver, "An unwritable recovery journal must reject takeover.");
+            Reject(cannotSave.Maintain, "A journal failure must remain pending on a retry.");
+            Check(savedSurfaces.Values[4].Visible, "A recovery-record permission failure must leave Windows visible.");
+            File.WriteAllText(Path.Combine(root, "session.json"), "{\"Format\":99}");
+            Reject(() => record.Read(7), "Invalid session state must not supply native window handles.");
+            record.Delete(); Check(record.Read(7) is null, "Successful restoration must permit removing its session record.");
             var settings = new Settings { BackupPath = Path.Combine(root, "recovery.json"), StartupValue = new("old preview command", ShellRegistryKind.ExpandString) };
             var originalRun = settings.StartupValue;
             var registration = new DesktopShellRegistration(settings, settings.BackupPath);
@@ -98,6 +153,14 @@ internal static class DesktopModeChecks
         }
         finally { Directory.Delete(root, true); }
         var keys = new ShellKeyboardState();
+        Check(keys.Process(0x1B, true, true, false, true).Action == ShellKeyAction.Start && keys.Process(0x1B, true, true, false, true).Action == ShellKeyAction.None
+            && keys.Process(0x1B, false, true, false, true).Consume, "Ctrl+Esc must open Nexus Start once and consume its release.");
+        Check(!keys.Process(0x1B, true, true, true, true).Consume && !keys.Process(0x1B, false, true, true, true).Consume,
+            "Ctrl+Shift+Esc must remain available to Windows Task Manager.");
+        keys.Process(0xA4, true);
+        Check(!keys.Process(0x2E, true, true, false, true).Consume && !keys.Process(0x2E, false, true, false, true).Consume,
+            "Ctrl+Alt+Delete must remain a Windows security shortcut.");
+        keys.Process(0xA4, false);
         Check(!keys.Process(0x5B, true).Consume && keys.Process(0x5B, false).Action == ShellKeyAction.Start, "Windows key alone must open Nexus Start on release.");
         keys.Process(0x5B, true); Check(keys.Process(0x45, true).Action == ShellKeyAction.Files && keys.Process(0x45, true).Action == ShellKeyAction.None, "Win+E must open Files once per press.");
         Check(keys.Process(0x45, false).Consume && keys.Process(0x5B, false).Action == ShellKeyAction.None, "Owned chord releases must not also open Start.");
@@ -117,5 +180,6 @@ internal static class DesktopModeChecks
         Check(!budget.IsUnresponsive(TimeSpan.FromSeconds(44), TimeSpan.FromSeconds(44), false) && budget.IsUnresponsive(TimeSpan.FromSeconds(45), TimeSpan.FromSeconds(45), false), "Startup heartbeat timeout must be bounded.");
         Check(!budget.IsUnresponsive(TimeSpan.FromHours(1), TimeSpan.FromSeconds(89), true) && budget.IsUnresponsive(TimeSpan.FromHours(1), TimeSpan.FromSeconds(90), true), "A missing UI heartbeat must trigger recovery after 90 seconds.");
         Console.WriteLine("PASS: Windows Pro capability, backup-before-policy, upgrade rollback, foreign-policy preservation, partial recovery retry, file I/O/filtering/bounds, shell shortcuts and restart/heartbeat policy.");
+        Console.WriteLine("PASS: session takeover/restoration, durable visibility and work-area recovery, refused journal writes, reused handles, denied-policy recovery and Task Manager/security shortcuts.");
     }
 }

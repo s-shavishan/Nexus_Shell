@@ -1,10 +1,12 @@
-# Desktop-mode updates — 1.3.0
+# Desktop session updates — 1.3.1
 
-The new release includes Nexus.DesktopHost.exe and its DLL/deps/runtimeconfig. They are app-owned update payload, not reusable runtime files. The full release also includes Restore-Windows-Desktop.bat and its independent PowerShell script.
+Full and compatible-runtime update packages carry the host, Launch-Nexus-Desktop.bat, Restore-Windows-Desktop.bat and recovery script as new app payload. Published host and shell runtime bytes must agree; only matching runtime files may be reused. The updater always creates a separate new version folder and preserves the base folder/settings.
 
-Extract a new full build or apply the compatible-runtime update to create a separate version folder. The updater requests the base path in its console and never opens Explorer. It checks all runtime/payload hashes. Keep the old selected folder. If its Nexus desktop is active, use Session → Return to Windows to close it; only one Nexus version runs in a user session. Preview the new version. In the new build, choose Personalize → Use this version at sign-in, then save work and sign out. The original pre-Nexus desktop backup is retained across version changes. See NEXUS-DESKTOP-MODE.md.
+Exit the old Nexus desktop before launching a new version. Apply the compatible update or extract the full new Windows ZIP. Run Launch-Nexus-Desktop.bat for a temporary session, or Nexus.Shell.exe to preview. Temporary launch/exit leaves sign-in policy unchanged.
 
-The historical updater implementation notes below remain useful for hash and resource checks; current desktop sign-in controls are in Personalize.
+If your earlier version was selected for persistent sign-in, keep that folder. Return to Windows from the old session, then select Use this version at sign-in in the new Personalize page if desired. A denied policy restore still allows current-session Windows recovery but leaves the old future sign-in setting requiring permission. See NEXUS-DESKTOP-MODE.md.
+
+Source patch instructions are in SOURCE-PATCH.md. Source ZIPs are not runtime updates. The historical hash/resource implementation notes below retain their original version context.
 
 # Updating Nexus 0.7.0
 

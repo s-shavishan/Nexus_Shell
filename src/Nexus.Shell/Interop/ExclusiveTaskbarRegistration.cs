@@ -30,20 +30,23 @@ internal sealed class ExclusiveTaskbarRegistration : ITaskbarLayer
     public void Position(bool compact)
     {
         if (_disposed) return;
-        var monitor = ShellLayerInterop.Monitor(_handle).Monitor;
+        var info = ShellLayerInterop.Monitor(_handle); var monitor = info.Monitor;
         int height = (int)Math.Round(DesktopLayout.TaskbarHeight(compact) * ShellLayerInterop.Scale(_handle));
         var bar = new ShellRect(monitor.Left, monitor.Bottom - height, monitor.Right - monitor.Left, height);
-        if (Bounds == bar) return;
         var work = monitor; work.Bottom = bar.Y;
+        bool moved = Bounds != bar;
+        if (!moved && info.Work.Bounds == work.Bounds) return;
         if (!SetWorkArea(0x002F, 0, ref work, 2)) throw new Win32Exception(Marshal.GetLastWin32Error(), "Windows could not set the Nexus desktop work area.");
         Bounds = bar;
-        ShellLayerInterop.SetWindowPos(_handle, _fullscreen ? ShellLayerInterop.Bottom : ShellLayerInterop.Topmost, bar.X, bar.Y, bar.Width, bar.Height, 0x0010);
+        if (moved) ShellLayerInterop.SetWindowPos(_handle, _fullscreen ? ShellLayerInterop.Bottom : ShellLayerInterop.Topmost, bar.X, bar.Y, bar.Width, bar.Height, 0x0010);
     }
     public void RefreshStacking()
     {
         if (_disposed) return;
         var foreground = NativeMethods.GetForegroundWindow();
-        var monitor = ShellLayerInterop.Monitor(_handle).Monitor.Bounds;
+        var info = ShellLayerInterop.Monitor(_handle); var monitor = info.Monitor.Bounds;
+        // Explorer can refresh the work area even with its taskbar hidden.
+        if (Bounds.Width > 0 && info.Work.Bounds != new ShellRect(monitor.X, monitor.Y, monitor.Width, Bounds.Y - monitor.Y)) _reposition();
         bool full = foreground != IntPtr.Zero && foreground != _handle && foreground != _desktop
             && GetWindowRect(foreground, out var rect) && rect.Left <= monitor.X && rect.Top <= monitor.Y && rect.Right >= monitor.Right && rect.Bottom >= monitor.Bottom;
         if (_fullscreen == full) return; _fullscreen = full;

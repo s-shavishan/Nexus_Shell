@@ -1,3 +1,12 @@
+# 1.3.1 — reversible Nexus desktop sessions
+
+- Add a supervised temporary Nexus desktop/session launcher and preview handoff without writing sign-in policy.
+- Hide Explorer desktop/taskbar windows after the first UI heartbeat; preserve original visibility and primary work area in an atomic recovery record.
+- Restore Windows on exit, bounded UI failures and responsive-UI host loss; recovery actions continue despite denied registry policy access.
+- Add Ctrl+Esc Start, retain Task Manager/security shortcuts, request only needed registry rights and skip unchanged values.
+- Refresh independent PowerShell recovery, including old-host fallback; ship/verify new launcher and recovery files in full/small updates.
+- Core/analyzer/C# API/source checks pass. Native Windows build and VM acceptance for 1.3.1 remain pending.
+
 # 1.3.0 — Nexus desktop mode
 
 - Supported per-user desktop sign-in on Windows Pro, with independent host, heartbeat/restart supervision, durable original-policy backup and recovery script.

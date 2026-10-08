@@ -1,38 +1,31 @@
-# Windows acceptance — Nexus 1.3.0
+# Windows desktop acceptance — 1.3.1
 
-Run on a Windows Pro VM/test account first. Record OS build/revision, edition, display size/scaling, build commit and result. This checklist is pending, not a record of completed Windows testing.
+These checks need a complete successful Windows build and a VM/test account. The previous 1.3.0 VM result is not acceptance of the new native takeover paths. Run core checks and scripts/test-update.ps1 as CI already does; retain the actual build logs.
 
-## Build and preview
+## Temporary takeover and return
 
-- Run the source/core/updater checks, `scripts\build.ps1 -UseMSBuild`, and `scripts\package.ps1`. Require a clean Windows XAML/resource build and ZIP verification. The host's shared .NET runtime must match the shell publish byte-for-byte.
-- Confirm the complete folder contains the shell, host, host deps/runtimeconfig, WinUI DLLs, app PRI/XBF resources, Assets and independent recovery BAT/script.
-- Start Nexus.Shell.exe with Explorer running. Desktop/taskbar appear, Sections stays closed, and Personalize reports preview mode. The Windows taskbar and Windows global shell shortcuts remain available.
-- Open Sections, Files, Start and window overview. Close each tool separately; desktop/taskbar continue. Verify notes/timer state survives Sections reopening, and new Files pins survive workspace save/reload.
-- Browse local/user folders and drives; type paths, Up/Refresh/filter, create a folder, open files and folder shortcuts. Test unavailable/network paths, renamed files, cancellations, a >1,000-entry folder and a picker file name outside the displayed subset. Navigation must remain responsive and never select a misleading old folder path.
-- Add an app, capture multiple files/folders, export/import an Explore space. Require only Nexus picker UI; test file-extension filtering, 100-file bound, Cancel and existing-file replacement confirmation.
-- Open Recycle Bin through desktop/Files. Check count/size and empty confirmation with disposable test items. No Explorer window or Windows progress/confirmation appears. Individual restore is not part of this version.
+- With Windows visible and all Nexus instances closed, launch Launch-Nexus-Desktop.bat. Verify the Windows desktop/taskbar disappear only after the independent Nexus desktop/taskbar become ready. No Sections window should open automatically.
+- Open Settings, Control Panel and ordinary apps. Verify they stay available and continue running. Windows services and explorer.exe should remain running; no sign-in policy should have changed.
+- Use the Sections desktop shortcut, close and reopen Sections, open/close Files and Start. Verify independent window lifetime, saved content and consistent Solstice/Ember styling.
+- Test Win, Ctrl+Esc, Win+E/D/I/R/S/A, Alt+Tab/Shift+Tab and Win+Tab. Ctrl+Shift+Esc, Ctrl+Alt+Delete and Win+L must still work. Lock/unlock must keep the desktop usable.
+- Exit Nexus from Start, desktop context menu and Personalize in separate runs. Each must close all Nexus surfaces and restore Windows' desktop, taskbars, original visible/hidden surfaces, original primary working area and ordinary shell shortcuts. Existing apps keep running; a maximized window must fit above the Windows taskbar.
+- Repeat with Windows taskbar auto-hide enabled, then disabled. Verify its prior behavior returns. Test display scaling at 100%, 150% and 200%, resolution changes and secondary displays. Nexus currently supplies only a primary-display taskbar; hidden secondary Windows bars must return on exit.
+- In preview Nexus.Shell.exe, use Personalize → Use Nexus for this session. Verify the preview saves/closes, one host/UI pair takes over, and exit restores Windows. Re-launch the desktop BAT while already managed: there must be no second host/UI instance.
+- Deny writing Policies\System on a test account. Temporary takeover/exit must still work without changing that policy. Deny writing the session recovery file separately: takeover must abort without hiding Windows.
 
-## Sign-in and normal use
+## Failure recovery
 
-- Capture the current user's Shell and Nexus Run values/types. Enable Nexus from Personalize and inspect the recovery record. The record must precede the registry change; another user's/HKLM settings must remain unchanged.
-- Sign out after saving work, then sign in. Require only the Nexus desktop/taskbar/Start. Confirm Explorer's taskbar/desktop is absent, rather than hidden beneath Nexus.
-- Win opens Start; Win+E Files; Win+D minimizes/restores the same app identities/placements; Win+I Settings; Win+R/S search; Win+A PC controls. Ordinary typing, Ctrl/Shift shortcuts, Alt+F4, Win+L and Ctrl+Alt+Delete remain usable.
-- Alt+Tab and Alt+Shift+Tab cycle Nexus's independent switcher once per key press; release Alt to activate. Win+Tab opens it persistently; Enter/click selects and Escape cancels. Include minimized, closed and reused-handle app windows, plus Nexus Files and Sections. Ctrl+Alt+Tab opens the persistent Nexus overview; releasing Alt must keep it open.
-- Start deactivates on app click, supports search/Down/Enter/Escape and stays above the bar. The switcher and Start do not steal focus after being dismissed.
-- Verify Settings, Control Panel and Task Manager explicitly open from PC controls. Test audio, lock, power/network data and arranging/undoing windows.
-- Maximize several apps: their content stops above Nexus's bar. Fullscreen an app/video/game: it covers the bar. Leave fullscreen: the bar returns. Start/menu interaction from fullscreen must remain usable. Test DPI/display changes, focus and keyboard navigation.
-- Test Solstice, Ember, all legacy moods, high contrast and reduced effects across open Files/pickers/Start/switcher/Sections. Inspect text/selection contrast and fonts at 100%, 150%, 200% scaling and a small display. Measure idle CPU/private working set; source previews are not performance evidence.
+- End only Nexus.Shell.exe in Task Manager. Host must restore surfaces/work area between attempts and restart its own UI. Repeated short failures must exhaust two retries and return to Windows.
+- End only Nexus.DesktopHost.exe while UI is responsive. Within the next five-second tick, the UI should request recovery and close. Verify the independent helper restores visibility/work area after UI cleanup, with no registry write for a temporary session.
+- End host and UI together. Run Restore-Windows-Desktop.bat. Verify saved visibility/work area and Windows UI return; originally hidden wallpaper WorkerW windows must remain hidden.
+- Run the recovery script against an older 1.3.0 folder. It must use the independent fallback, not pass an unknown --restore-session option to that old host. Test absent host/dependencies as well.
+- Simulate an invalid session record, stale handles, an Explorer restart, a missing first heartbeat (45 seconds), and a stalled UI heartbeat (90 seconds). Recovery must not alter unrelated app windows. Check desktop-host.log and app logs.
+- Suspend/resume the VM, fullscreen an app/video/game, and change display/DPI settings. Confirm the Nexus bar and later Windows bar/work area remain usable. Record any native behavior that differs from these expectations.
 
-## Recovery and upgrade
+## Persistent sign-in regression
 
-- Session → Restart Nexus saves shared state, restarts the shell and leaves other app processes running.
-- Session → Sign out requires the Nexus confirmation and returns through Windows sign-in. Cancel keeps the session.
-- End only Nexus.Shell.exe in Task Manager: host restarts it. Repeat short failures: after two retries the previous policy is restored and Windows desktop returns. Check logs and work area.
-- In a test build, block the UI dispatcher: no heartbeat for 90 seconds triggers child-only termination and recovery. Simulate startup never reaching its first heartbeat: 45-second timeout. Do not use daily work for these tests.
-- Session → Return to Windows restores the original value/type and Nexus Run setting, closes all Nexus surfaces, releases the work area and starts Explorer. Verify the next sign-in uses the previous desktop.
-- Run the independent recovery script after UI failure. Verify it restores only owned policy and completes a partial restore retry. Set an unrelated Shell policy after Nexus setup: recovery must refuse to overwrite it.
-- Return to Windows before previewing a version in a different folder; verify only one Nexus version can run in a session. Enable the new version. Verify upgrade preserves the original backup. Simulate a failed Run/value write: prior host/policy and recovery remain valid. Keep old folders until success.
-- Test a removed/renamed host folder and use the Task Manager recovery-script route. The host cannot recover if it cannot start.
-- Restore Windows and confirm Explorer's normal desktop, taskbar, work area and usual shortcuts return.
+On a supported Windows Pro VM with permission to write the policy, configure Use Nexus at sign-in, sign out/in, and verify Nexus runs as the selected desktop. Restart, sign out and return-to-Windows must keep their existing behavior. Preserve the original policy value/type across upgrades.
 
-Also run the existing tool regressions in TEST-WINDOWS.md. The historical desktop-foundation checklist describes 1.2 preview behavior; this checklist owns 1.3 desktop-mode acceptance.
+Deny policy writes before Return to Windows or recovery BAT. The current Windows desktop/taskbars must still return; the warning and original sign-in backup must remain, and no successful future sign-in restoration should be claimed. Remove the denial through the VM's normal administration and retry restoration. A foreign policy set after setup must not be overwritten.
+
+Also run TEST-WINDOWS.md for Files/pickers, Explore, settings, PC controls, keyboard accessibility and shared-state regressions. Native visual/performance results require actual Windows evidence.

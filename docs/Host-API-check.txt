@@ -1,1 +1,1 @@
-PASS: standalone desktop host C# compiles against .NET 8 APIs with compiler warnings treated as errors. Native Windows runtime acceptance pending.
+PASS: host C# and SDK platform analyzers with warnings as errors. Native execution pending.

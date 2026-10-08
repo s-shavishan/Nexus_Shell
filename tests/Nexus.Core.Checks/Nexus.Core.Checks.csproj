@@ -9,6 +9,8 @@
   <ItemGroup>
     <Compile Include="../../src/Nexus.Shell/Services/DesktopShellPolicy.cs" Link="DesktopShellPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DesktopShellRegistration.cs" Link="DesktopShellRegistration.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/DesktopSessionRecovery.cs" Link="DesktopSessionRecovery.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/DesktopSessionRecord.cs" Link="DesktopSessionRecord.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/FileCatalog.cs" Link="FileCatalog.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/ExclusiveTaskbarRegistration.cs" Link="ExclusiveTaskbarRegistration.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/ShellSession.cs" Link="ShellSession.cs" />

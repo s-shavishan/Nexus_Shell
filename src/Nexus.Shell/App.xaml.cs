@@ -53,10 +53,13 @@ public partial class App : Application
         try
         {
             var command = Environment.GetCommandLineArgs();
-            var mode = command.Contains("--desktop-shell") ? DesktopSessionMode.DesktopShell : DesktopSessionMode.Preview;
+            var mode = command.Contains("--nexus-session") ? DesktopSessionMode.NexusSession
+                : command.Contains("--desktop-shell") ? DesktopSessionMode.DesktopShell : DesktopSessionMode.Preview;
             int tokenIndex = Array.IndexOf(command, "--host-token");
             string? token = tokenIndex >= 0 && tokenIndex + 1 < command.Length ? command[tokenIndex + 1] : null;
-            _environment = new Desktop.DesktopEnvironment(mode, token);
+            int pidIndex = Array.IndexOf(command, "--host-pid");
+            int? hostPid = pidIndex >= 0 && pidIndex + 1 < command.Length && int.TryParse(command[pidIndex + 1], out int parsedPid) ? parsedPid : null;
+            _environment = new Desktop.DesktopEnvironment(mode, token, hostPid);
             stage = "starting the desktop and taskbar";
             _environment.Stopped += () =>
             {

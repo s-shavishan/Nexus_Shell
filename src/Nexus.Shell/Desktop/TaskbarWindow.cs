@@ -26,11 +26,11 @@ internal sealed class TaskbarWindow : Window, IDisposable
         if (NativeWindow.Presenter is OverlappedPresenter presenter)
         { presenter.SetBorderAndTitleBar(false, false); presenter.IsResizable = presenter.IsMinimizable = presenter.IsMaximizable = false; }
         ShellLayerInterop.ToolWindow(Handle, noActivate: true);
-        _registration = environment.Mode == DesktopSessionMode.DesktopShell
+        _registration = environment.IsManagedDesktop
             ? new ExclusiveTaskbarRegistration(Handle, environment.Desktop.Handle, QueuePosition)
             : new TaskbarRegistration(Handle, QueuePosition, hide => { if (hide) NativeWindow.Hide(); else NativeWindow.Show(false); });
         _stacking.Tick += (_, _) => { if (!_disposed) _registration.RefreshStacking(); };
-        if (environment.Mode == DesktopSessionMode.DesktopShell) _stacking.Start();
+        if (environment.IsManagedDesktop) _stacking.Start();
         Closed += (_, _) => { Dispose(); if (!environment.IsStopping) environment.Shutdown(); };
         Position();
     }

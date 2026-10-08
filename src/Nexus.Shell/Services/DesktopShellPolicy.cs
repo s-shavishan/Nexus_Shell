@@ -1,6 +1,6 @@
 namespace Nexus.Shell.Services;
 
-public enum DesktopSessionMode { Preview, DesktopShell }
+public enum DesktopSessionMode { Preview, DesktopShell, NexusSession }
 public enum DesktopExitCode { Stop = 0, Restart = 10, RestoreWindows = 20, SignOut = 30 }
 public sealed record DesktopCapabilities(bool IsWindows, string Edition, int Build, int Revision = 0)
 {
@@ -43,6 +43,8 @@ public sealed class ShellKeyboardState
             return new(start || _owned, start ? ShellKeyAction.Start : ShellKeyAction.None);
         }
         if (!down) return new(_blocked.Remove(key));
+        if (key == 0x1B && control && !shift && _alt.Count == 0 && _windows.Count == 0)
+            return new(true, _blocked.Add(key) ? ShellKeyAction.Start : ShellKeyAction.None);
         if (key == 0x09 && _alt.Count > 0 && _windows.Count == 0)
         {
             _switching = !control; bool firstTab = _blocked.Add(key);

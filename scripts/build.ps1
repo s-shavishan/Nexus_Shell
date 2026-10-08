@@ -7,7 +7,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $projectFile = Join-Path $projectRoot 'src\Nexus.Shell\Nexus.Shell.csproj'
-$publishDirectory = Join-Path $projectRoot 'artifacts\Nexus-Shell-1.3.0-win-x64'
+$publishDirectory = Join-Path $projectRoot 'artifacts\Nexus-Shell-1.3.1-win-x64'
 $logDirectory = Join-Path $projectRoot 'artifacts\logs'
 
 if ($env:OS -ne 'Windows_NT') { throw 'WinUI must be built on Windows. Use an included Windows cloud-build route in START-HERE.md.' }
@@ -80,6 +80,7 @@ try {
     Copy-Item (Join-Path $projectRoot 'docs\TEST-DESKTOP-MODE.md') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'scripts\restore-windows-desktop.ps1') $publishDirectory
     Set-Content (Join-Path $publishDirectory 'Launch-Nexus.bat') "@echo off`r`nstart `"`" `"%~dp0Nexus.Shell.exe`"" -Encoding ASCII
+    Set-Content (Join-Path $publishDirectory 'Launch-Nexus-Desktop.bat') "@echo off`r`nstart `"`" `"%~dp0Nexus.DesktopHost.exe`" --nexus-session" -Encoding ASCII
     Set-Content (Join-Path $publishDirectory 'Restore-Windows-Desktop.bat') "@echo off`r`npowershell.exe -NoProfile -ExecutionPolicy Bypass -File `"%~dp0restore-windows-desktop.ps1`"`r`nif errorlevel 1 pause" -Encoding ASCII
     Write-Host 'Build and MainWindow resource verification complete. Keep the entire output folder together.' -ForegroundColor Green
     if ($Run) { Start-Process $exe -WorkingDirectory $publishDirectory }

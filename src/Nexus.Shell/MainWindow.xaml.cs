@@ -661,7 +661,12 @@ public sealed partial class MainWindow : Window
     
     private void RefreshStartupRepair()
     {
-        bool desktop = _environment.Mode == DesktopSessionMode.DesktopShell || new DesktopShellRegistration(new WindowsDesktopSettings(), DesktopShellRegistration.DefaultBackupPath).OwnsCurrentSetting;
+        bool desktop = _environment.IsManagedDesktop;
+        if (!desktop)
+        {
+            try { desktop = new DesktopShellRegistration(new WindowsDesktopSettings(), DesktopShellRegistration.DefaultBackupPath).OwnsCurrentSetting; }
+            catch (Exception ex) { Log.Write("Could not read desktop sign-in policy; session mode is still available.", ex); }
+        }
         StartupSwitch.IsEnabled = !desktop;
         bool repair = !desktop && StartupRegistration.IsEnabled() && !StartupRegistration.UsesCurrentVersion();
         StartupRepairHint.Visibility = repair ? Visibility.Visible : Visibility.Collapsed;
