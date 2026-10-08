@@ -1,5 +1,15 @@
 # NEXUS Shell changes
 
+## 1.0.0 — PC control surface
+
+- Added an in-shell PC controls workspace with Ctrl+5, desktop/dock/menu/search entry points and optional workspace destinations.
+- Added native default-output volume/mute and up to 32 app audio sessions through documented Core Audio interfaces, a dedicated MTA worker, session notifications, coalesced slider writes, device-change checks and unavailable states.
+- Added live CPU, physical memory, power, local network link/address, fixed-drive free space and uptime. Polling follows the active view; audio connections release when controls are closed or inactive.
+- Added one-to-four-window columns, stack and grid layouts on the first window's monitor work area, process ownership checks, rollback on failed placement, Undo and direct Lock PC.
+- Added Nexus button templates with native focus behavior, original toolbar branding, fuller clock typography, larger comfortable dock icons and compact width fallbacks.
+- Added CPU/layout/recovery behavior checks and Windows-only native placement, ownership, Undo and read-only audio checks. Updated all binary artifact versions without changing runtime dependencies.
+- Local C# API compilation, core behavior and source checks pass. Windows XAML compilation, device operation, rendering and performance remain pending.
+
 ## 0.9.0 — A softer desktop
 
 - Fixed the two CS7036 build failures in Explore by using four-sided WinUI Thickness constructors; added a regression guard.

@@ -220,17 +220,19 @@ public sealed partial class MainWindow
     }
     private void ApplyDockDensity()
     {
-        bool compact = _state.CompactDock;
+        bool compact = _state.CompactDock || DesktopRoot.ActualWidth < 900;
+        DockStudyButton.Visibility = DesktopRoot.ActualWidth < 650 ? Visibility.Collapsed : Visibility.Visible;
+        DockPcButton.Visibility = DesktopRoot.ActualWidth < 460 ? Visibility.Collapsed : Visibility.Visible;
         DockBorder.CornerRadius = new CornerRadius(compact ? 18 : 22);
         DockBorder.Padding = new Thickness(compact ? 8 : 10, compact ? 6 : 7, compact ? 8 : 10, compact ? 6 : 7);
         if (DockBorder.Child is StackPanel dock) dock.Spacing = compact ? 4 : 6;
         DockApps.Spacing = compact ? 5 : 9; DockRunningApps.Spacing = compact ? 2 : 4;
-        foreach (var button in new[] { DockHomeButton, DockExploreButton, DockStudyButton, DockSearchButton, DockRunningButton }
+        foreach (var button in new[] { DockHomeButton, DockExploreButton, DockStudyButton, DockPcButton, DockSearchButton, DockRunningButton }
             .Concat(DockApps.Children.OfType<Button>()).Concat(DockRunningApps.Children.OfType<Button>()))
         {
-            button.Width = compact ? 46 : 54; button.Height = compact ? 48 : 56;
+            button.Width = compact ? 46 : 62; button.Height = compact ? 48 : 64;
             if (button.Content is Image image)
-            { image.Width = compact ? 40 : 48; image.Height = compact ? 40 : 48; }
+            { image.Width = compact ? 40 : 56; image.Height = compact ? 40 : 56; }
             else if (button.Content is Border tile)
             {
                 tile.Width = compact ? 40 : 48; tile.Height = compact ? 40 : 48;

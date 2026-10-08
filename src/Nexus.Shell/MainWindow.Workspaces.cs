@@ -225,10 +225,11 @@ public sealed partial class MainWindow
             ("Apps", "Start-menu apps and pins", "\uE71D"),
             ("Gaming", "Installed games and shortcuts", "\uE7FC"),
             ("Window overview", "Switch to an open window · Ctrl+4", "\uE7F4"),
+            ("PC controls", "Master volume, app mixer, PC status and window layouts · Ctrl+5", "\uE713"),
             ("Activity", "Your local session", "\uE9D9"),
             ("Personalize", "Moods, desktop widgets and dock", "\uE790") })
             yield return new(item.Item1, item.Item2, item.Item3, "Workspace", item.Item1 == "Window overview" ? "Running apps" : item.Item1);
-        yield return new("Control center", "Appearance and Windows settings", "\uE713", "Action", "controls");
+        yield return new("Control center", "Quick audio controls and shell preferences", "\uE713", "Action", "controls");
         yield return new(_focusSession.IsRunning ? "Pause focus" : "Start focus", "Study session", "\uE916", "Action", "focus");
         yield return new("Toggle full screen", "Nexus desktop view", "\uE740", "Action", "screen");
         foreach (var profile in _state.Profiles)

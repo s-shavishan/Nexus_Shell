@@ -32,7 +32,7 @@ public static class DesktopWorkspace
             {
                 Id = p.Id[..Math.Min(64, p.Id.Length)], Name = p.Name.Trim()[..Math.Min(32, p.Name.Trim().Length)],
                 Description = (p.Description ?? "")[..Math.Min(160, (p.Description ?? "").Length)],
-                Page = p.Page is "Home" or "Study" or "Explore" or "Apps" or "Gaming" ? p.Page : "Home",
+                Page = p.Page is "Home" or "Study" or "Explore" or "Apps" or "Gaming" or "PC controls" ? p.Page : "Home",
                 Glyph = string.IsNullOrEmpty(p.Glyph) ? "\uE80F" : p.Glyph[..Math.Min(2, p.Glyph.Length)],
                 Apps = (p.Apps ?? []).Where(a => a is not null && !string.IsNullOrWhiteSpace(a.Name) && IsAppTarget(a.Target))
                     .DistinctBy(a => a.Target, StringComparer.OrdinalIgnoreCase).Take(MaximumApps)
@@ -42,7 +42,7 @@ public static class DesktopWorkspace
             }).DistinctBy(p => p.Id, StringComparer.Ordinal).ToList();
         if (state.Profiles.Count == 0) state.Profiles = Defaults();
         if (!state.Profiles.Any(p => p.Id == state.ActiveProfileId)) state.ActiveProfileId = state.Profiles[0].Id;
-        state.LastPage = state.LastPage is "Home" or "Study" or "Explore" or "Apps" or "Gaming" or "Activity" or "Running apps" or "Workspaces" or "Personalize"
+        state.LastPage = state.LastPage is "Home" or "Study" or "Explore" or "Apps" or "Gaming" or "Activity" or "Running apps" or "Workspaces" or "Personalize" or "PC controls"
             ? state.LastPage : "Home";
     }
 

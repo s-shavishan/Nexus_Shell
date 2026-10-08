@@ -60,7 +60,7 @@ public sealed partial class MainWindow : Window
             _state.CatalogInitialized = true;
             _dirty = true;
         }
-        _navigation = [TopNavHome, TopNavProfiles, TopNavExplore, TopNavStudy, TopNavApps, NavPersonalize, NavProfiles, NavHome, NavExplore, NavStudy, NavApps, NavGames, NavActivity, NavRunning];
+        _navigation = [TopNavHome, TopNavProfiles, TopNavExplore, TopNavStudy, TopNavApps, NavPcControls, NavPersonalize, NavProfiles, NavHome, NavExplore, NavStudy, NavApps, NavGames, NavActivity, NavRunning];
         _shortcutCards = [FilesCard, GamesCard, FocusCard];
         _wallpaper = DesktopRoot.Background;
         _surfaceDefaults = new()
@@ -105,12 +105,14 @@ public sealed partial class MainWindow : Window
         AddAccelerator(VirtualKey.Number3, VirtualKeyModifiers.Control, () => Navigate("Study"));
         AddAccelerator(VirtualKey.Number1, VirtualKeyModifiers.Control, () => Navigate("Home"));
         AddAccelerator(VirtualKey.Number4, VirtualKeyModifiers.Control, () => Navigate("Running apps"));
+        AddAccelerator(VirtualKey.Number5, VirtualKeyModifiers.Control, () => Navigate("PC controls"));
         AddAccelerator(VirtualKey.Left, VirtualKeyModifiers.Menu, GoBack);
         AddAccelerator(VirtualKey.Right, VirtualKeyModifiers.Menu, GoForward);
         _uiTimer.Tick += Ui_Tick;
         _usageTimer.Tick += Usage_Tick;
         _searchTimer.Tick += Search_Tick;
         _saveTimer.Tick += Save_Tick;
+        _audioWriteTimer.Tick += AudioWrite_Tick;
         Activated += Window_Activated;
         Closed += Window_Closed;
         _ready = true;
@@ -158,7 +160,7 @@ public sealed partial class MainWindow : Window
     private void Navigate(string page, bool animate = true, bool remember = true)
     {
         if (!_ready) return;
-        page = page is "Home" or "Explore" or "Study" or "Apps" or "Gaming" or "Activity" or "Running apps" or "Workspaces" or "Personalize" ? page : "Home";
+        page = page is "Home" or "Explore" or "Study" or "Apps" or "Gaming" or "Activity" or "Running apps" or "Workspaces" or "Personalize" or "PC controls" ? page : "Home";
         bool changed = _page != page || HomeBorder.Visibility != Visibility.Visible;
         _page = page;
         if (remember) _pageTrail.Visit(page);
@@ -173,6 +175,7 @@ public sealed partial class MainWindow : Window
         AppLibraryView.Visibility = page is "Apps" or "Gaming" ? Visibility.Visible : Visibility.Collapsed;
         WindowOverviewView.Visibility = page == "Running apps" ? Visibility.Visible : Visibility.Collapsed;
         ExploreView.Visibility = page == "Explore" ? Visibility.Visible : Visibility.Collapsed;
+        PcView.Visibility = page == "PC controls" ? Visibility.Visible : Visibility.Collapsed;
         PageScroller.Visibility = page is "Activity" or "Study" or "Workspaces" or "Personalize" ? Visibility.Visible : Visibility.Collapsed;
         if (page != "Running apps") ReleaseWindowOverview();
         if (page != "Explore") ReleaseExploreControls();
@@ -199,13 +202,15 @@ public sealed partial class MainWindow : Window
             case "Running apps": ShowWindowOverview(changed); break;
             case "Workspaces": BuildProfiles(); break;
             case "Personalize": BuildPersonalize(); break;
+            case "PC controls": BuildPcControls(); break;
             case "Explore": BuildExplore(); break;
             case "Study": BuildStudy(); break;
             default: RefreshHome(); PageStatus.Text = "Your personal workspace"; break;
         }
         ApplyWidgetLayout();
+        if (page != "PC controls") _ = SuspendAudioAsync();
         if (changed && animate)
-            _motion?.Enter(page is "Apps" or "Gaming" ? AppLibraryView : page == "Home" ? IsDesktopCanvas ? DesktopCanvas : HomeView : page == "Running apps" ? WindowOverviewView : page == "Explore" ? ExploreView : PageScroller);
+            _motion?.Enter(page is "Apps" or "Gaming" ? AppLibraryView : page == "Home" ? IsDesktopCanvas ? DesktopCanvas : HomeView : page == "Running apps" ? WindowOverviewView : page == "Explore" ? ExploreView : page == "PC controls" ? PcView : PageScroller);
     }
 
     private void RefreshHome()
@@ -354,7 +359,7 @@ public sealed partial class MainWindow : Window
     }
     private Button ActionButton(string title, Action action)
     {
-        var button = new Button { Content = Text(title, 14), Style = (Style)Application.Current.Resources["AuraSurfaceButton"] };
+        var button = new Button { Content = new TextBlock { Text = title, TextWrapping = TextWrapping.Wrap }, Style = (Style)Application.Current.Resources["AuraSurfaceButton"] };
         button.Click += (_, _) => { try { action(); } catch (Exception ex) { Error(title, ex); } };
         return button;
     }
@@ -493,6 +498,7 @@ public sealed partial class MainWindow : Window
         UpdateClock();
         RefreshWorkspaceSummary();
         if (!_commandOpen && !_dialogOpen) _ = RefreshDesktopWindowsAsync();
+        if (PcVisible) _ = RefreshPcAsync();
         if (ResourceText.Visibility != Visibility.Visible) return;
         try
         {
@@ -606,7 +612,7 @@ public sealed partial class MainWindow : Window
         if (colorsChanged)
         {
             if (_page == "Activity") { PageContent.Children.Clear(); BuildActivity(); }
-            if (_page is "Study" or "Explore" or "Workspaces" or "Personalize") Navigate(_page, false);
+            if (_page is "Study" or "Explore" or "Workspaces" or "Personalize" or "PC controls") Navigate(_page, false);
             RenderHomeWorkspace(); RenderDesktopIdentity(); RefreshDock(); RenderRunningDock();
         }
     }
@@ -616,7 +622,7 @@ public sealed partial class MainWindow : Window
         try
         {
             _motion = new MotionController(DesktopRoot);
-            foreach (var control in new FrameworkElement[] { DockHomeButton, DockExploreButton, DockStudyButton, DockRunningButton, DockSearchButton, FilesCard, GamesCard, FocusCard })
+            foreach (var control in new FrameworkElement[] { DockHomeButton, DockExploreButton, DockStudyButton, DockPcButton, DockRunningButton, DockSearchButton, FilesCard, GamesCard, FocusCard })
                 _motion.AttachHover(control);
             foreach (var control in DockApps.Children.OfType<FrameworkElement>()) _motion.AttachHover(control);
             ApplyEffects();
@@ -631,11 +637,12 @@ public sealed partial class MainWindow : Window
         _isActive = args.WindowActivationState != WindowActivationState.Deactivated;
         if (_isActive)
         {
-            UpdateClock(true); RenderFocus(); RefreshWorkspaceSummary(); _resources.Reset(); _uiTimer.Start();
+            UpdateClock(true); RenderFocus(); RefreshWorkspaceSummary(); _resources.Reset(); _pcCpuTimes = null; _uiTimer.Start();
             RefreshSystemAppearance(); ApplyEffects();
             _ = RefreshDesktopWindowsAsync();
+            if (PcVisible) _ = RefreshPcAsync();
         }
-        else { _uiTimer.Stop(); _motion?.SetEnabled(false); ApplyEffects(); }
+        else { _uiTimer.Stop(); _motion?.SetEnabled(false); ApplyEffects(); _ = SuspendAudioAsync(); }
     }
     private bool RefreshSystemAppearance()
     {
@@ -710,8 +717,8 @@ public sealed partial class MainWindow : Window
         else ControlsFlyout.ShowAt(ControlsButton);
     }
     private void Controls_Opening(object sender, object args) => ApplyWidgetLayout();
-    private void Controls_Opened(object sender, object args) { _controlsOpen = true; _motion?.Enter(ControlPanel); }
-    private void Controls_Closed(object sender, object args) => _controlsOpen = false;
+    private void Controls_Opened(object sender, object args) { _controlsOpen = true; _motion?.Enter(ControlPanel); _ = RefreshPcAsync(); }
+    private void Controls_Closed(object sender, object args) { _controlsOpen = false; _ = SuspendAudioAsync(); }
     private void CloseControls_Click(object sender, RoutedEventArgs args) => ControlsFlyout.Hide();
     private void Exit_Click(object sender, RoutedEventArgs args) => ExitNexus();
     private void FullScreen_Click(object sender, RoutedEventArgs args) => SetFullScreen(!_state.FullScreen);
@@ -725,7 +732,7 @@ public sealed partial class MainWindow : Window
     private void PageHost_SizeChanged(object sender, SizeChangedEventArgs args)
     {
         ((Grid)sender).Clip = new RectangleGeometry { Rect = new Windows.Foundation.Rect(0, 0, args.NewSize.Width, args.NewSize.Height) };
-        if (_ready) { UpdateHero(); UpdateWorkspaceLayout(); UpdateHomeColumns(); UpdateExperienceLayout(); }
+        if (_ready) { UpdateHero(); UpdateWorkspaceLayout(); UpdateHomeColumns(); UpdateExperienceLayout(); UpdatePcLayout(); }
     }
     private void DragArea_PointerPressed(object sender, PointerRoutedEventArgs args)
     {
@@ -810,6 +817,7 @@ public sealed partial class MainWindow : Window
         _ready = false;
         try { _desktopIntegration?.Dispose(); } catch (Exception ex) { Log.Write("Desktop cleanup skipped", ex); }
         _uiTimer.Stop(); _usageTimer.Stop(); _searchTimer.Stop(); _saveTimer.Stop();
+        _audioWriteTimer.Stop(); _audio?.Dispose();
         _focusTimer.Stop();
         _discoveryCancellation.Cancel();
         try { _motion?.Dispose(); } catch (Exception ex) { Log.Write("Motion cleanup skipped", ex); }

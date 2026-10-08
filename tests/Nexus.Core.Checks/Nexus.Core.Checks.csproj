@@ -7,6 +7,9 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../src/Nexus.Shell/Services/AudioController.cs" Link="AudioController.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/PcMetrics.cs" Link="PcMetrics.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/WindowLayouts.cs" Link="WindowLayouts.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/NativeMethods.cs" Link="NativeMethods.cs" />
     <Compile Include="../../src/Nexus.Shell/Models/ShellState.cs" Link="ShellState.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/AuraPalette.cs" Link="AuraPalette.cs" />

@@ -13,6 +13,7 @@ options = parser.parse_args()
 root = Path(__file__).resolve().parents[1]
 project = root / "src/Nexus.Shell"
 required = [
+    "MainWindow.PcControls.cs", "Services/AudioController.cs", "Services/PcMetrics.cs", "Services/WindowLayouts.cs",
     "App.xaml", "App.xaml.cs", "MainWindow.xaml", "MainWindow.xaml.cs", "MainWindow.Workspaces.cs", "MainWindow.Orbit.cs", "MainWindow.Desktop.cs", "MainWindow.Canvas.cs", "MainWindow.Appearance.cs", "MainWindow.Experience.cs", "MainWindow.Explore.cs", "Services/ExploreWorkspace.cs", "UI/SavedKindConverter.cs", "UI/NexusIcons.cs", "Services/NavigationTrail.cs", "Services/ShellExperience.cs", "Services/AuraPalette.cs", "Services/DesktopWorkspace.cs", "Interop/DesktopIntegration.cs",
     "Services/FocusSession.cs", "Services/CommandSearch.cs", "Services/WorkspaceState.cs",
     "Nexus.Shell.csproj", "app.manifest", "Assets/Nexus.ico",
@@ -63,7 +64,7 @@ assert len(names) == len(set(names)), "Duplicate XAML names"
 handlers = set()
 for node in window.iter():
     for key, value in node.attrib.items():
-        if key in {"Click", "DragOver", "Drop", "Toggled", "Checked", "Unchecked", "KeyDown", "SizeChanged", "PointerPressed", "Loaded", "Opening", "Opened", "Closed", "ItemClick", "TextChanged", "ContainerContentChanging", "SelectionChanged", "PreviewKeyDown"}:
+        if key in {"Click", "DragOver", "Drop", "Toggled", "Checked", "Unchecked", "KeyDown", "SizeChanged", "PointerPressed", "Loaded", "Opening", "Opened", "Closed", "ItemClick", "TextChanged", "ContainerContentChanging", "SelectionChanged", "PreviewKeyDown", "ValueChanged"}:
             assert re.search(r"\b" + re.escape(value) + r"\s*\(", code), f"Missing handler: {value}"
             handlers.add(value)
 assert "AutomationProperties =" not in code, "Attached properties must use their setters"

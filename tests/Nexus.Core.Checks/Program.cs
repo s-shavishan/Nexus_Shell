@@ -32,6 +32,7 @@ foreach (string mood in new[] { "Opal", "Orbit", "Aurora", "Slate" })
 }
 ExploreChecks.Run(Check);
 ReliabilityChecks.Run(Check);
+PcControlChecks.Run(Check);
 Check(AuraPalette.For("old-unknown").Name == "Pearl", "Unknown mood values should use the safe default palette.");
 var glassState = new ShellState { NativeGlass = true };
 Check(glassState.Snapshot().NativeGlass && JsonSerializer.Deserialize<ShellState>(JsonSerializer.Serialize(glassState))!.NativeGlass,

@@ -286,7 +286,7 @@ public sealed partial class MainWindow
             var name = new TextBox { Header = "Workspace name", Text = profile.Name, MaxLength = 32 };
             var description = new TextBox { Header = "Description", Text = profile.Description, MaxLength = 160 };
             var destination = new ComboBox { Header = "Workspace destination", HorizontalAlignment = HorizontalAlignment.Stretch,
-                ItemsSource = new[] { "Home", "Study", "Explore", "Apps", "Gaming" }, SelectedItem = profile.Page };
+                ItemsSource = new[] { "Home", "Study", "Explore", "Apps", "Gaming", "PC controls" }, SelectedItem = profile.Page };
             var apps = new ListView { ItemsSource = profile.Apps.Concat(_orderedCatalog).DistinctBy(a => a.Target, StringComparer.OrdinalIgnoreCase)
                 .OrderBy(a => a.Name).ToArray(), DisplayMemberPath = "Name", SelectionMode = ListViewSelectionMode.Multiple,
                 MaxHeight = 170, MinHeight = 80 };

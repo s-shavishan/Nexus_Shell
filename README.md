@@ -1,10 +1,17 @@
-# NEXUS Shell 0.9.0 — A softer desktop
+# NEXUS Shell 1.0.0 — PC control surface
 
-A native Windows desktop surface for your apps, study sessions, notes and resources.
+A native Windows desktop surface for your apps, study sessions, resources and live PC controls.
 
 ## What's new
 
-- **A desktop canvas.** My files, Explore, Study, App Library and up to four favorite saved cards appear as working shortcuts beside compact clock, spaces and focus widgets. A small workspace card replaces the large Home dashboard in desktop mode. Panel mode and high contrast retain the Home cards.
+- **PC controls workspace.** Open it from the desktop, dock, menus, search or Ctrl+5. Live CPU, physical memory, power, local network link, storage and uptime appear inside Nexus. Readings refresh every five seconds while the view is active.
+- **Native audio.** Change the default output's master level and mute from the quick control panel. The full workspace includes up to 32 app audio sessions on that output, with individual level and mute controls. Windows Core Audio runs on a dedicated MTA worker; slider writes are coalesced and missing/unresponsive devices show an unavailable state.
+- **Window layouts.** Choose one to four existing windows, arrange them in columns, a vertical stack or a grid on the first window's display, and Undo the last arrangement. Native actions verify window/process ownership. Optional minimization reveals the arranged apps. Lock PC also works directly.
+- **Actual WinUI polish.** Nexus button templates define hover, pressed and disabled states with system keyboard focus visuals. Comfortable dock icons are larger; a responsive compact layout keeps navigation reachable. The toolbar uses the original Nexus mark and the clock uses a fuller text weight.
+
+## Existing tools
+
+- **A desktop canvas.** My files, Explore, Study, App Library, PC controls and up to four favorite saved cards appear as working shortcuts beside compact clock, spaces and focus widgets. A small workspace card replaces the large Home dashboard in desktop mode. Panel mode and high contrast retain the Home cards.
 - **Original colorful icons.** Thirteen static vector illustrations give the dock, desktop, app categories and saved cards consistent folder, notebook, compass and app artwork. Installed apps use category illustrations rather than extracted application logos.
 - **Softer Opal.** Peach, coral, lilac and blue vector waves, floating acrylic cards, compact traffic lights, smaller controls and a 66-pixel Explore list. Orbit, Aurora and Slate remain available. Glass and custom motion retain reduced-effects, system-preference and high-contrast fallbacks.
 - **Build correction.** Fixed both unsupported two-argument WinUI `Thickness` calls from the supplied 0.8.0 build log. Source validation now checks those constructors, and publishing checks require the new vector assets.
@@ -26,6 +33,7 @@ References to local files do not move the originals. Board capacity is 100 cards
 | Ctrl+Alt+Space | Summon search from another app while Nexus runs and the shortcut is enabled |
 | Ctrl+N | Create a note in Explore |
 | Ctrl+1 / 2 / 3 / 4 | Desktop / Explore / Study / Window overview |
+| Ctrl+5 | PC controls |
 | Space or Enter on an Explore card | Quick Look |
 | Alt+Left / Alt+Right | Previous / next Nexus page |
 | F11 | Full screen / windowed |
@@ -35,7 +43,7 @@ References to local files do not move the originals. Board capacity is 100 cards
 
 Commit this source to the repository and let AppVeyor build it. The pipeline runs the core/native and updater checks, publishes the app, verifies its compiled XAML resources, and packages the outputs.
 
-After a successful build, download `Nexus-Shell-0.9.0-Update-win-x64.zip`. Fully exit Nexus, extract it and run `Apply-Update.bat`, selecting your existing full app folder. It verifies the runtime files and creates a fresh version folder. If runtime checks fail, download the full `Nexus-Shell-0.9.0-win-x64.zip` once. Runtime dependencies are unchanged.
+After a successful build, download `Nexus-Shell-1.0.0-Update-win-x64.zip`. Fully exit Nexus, extract it and run `Apply-Update.bat`, selecting your existing full app folder. It verifies the runtime files and creates a fresh version folder. If runtime checks fail, download the full `Nexus-Shell-1.0.0-win-x64.zip` once. Runtime dependencies are unchanged.
 
 Source files require a Windows build. To build locally with the C# WinUI tools installed, run `.\scripts\build.ps1 -UseMSBuild -Run`.
 
@@ -43,9 +51,11 @@ Source files require a Windows build. To build locally with the C# WinUI tools i
 
 All application C# compiles locally against the project's pinned WinUI/Windows API references, using generated field declarations in place of compiled XAML. The core behavior checks also compile and run, including Explore migration, imports, independent spaces, timer recovery, settings backups and final-save ordering. XAML structure, resources, assets and event wiring pass source checks. Native Windows XAML compilation, packaging, startup, layout, input, glass rendering and performance still need the Windows build and acceptance checks in [TEST-WINDOWS.md](docs/TEST-WINDOWS.md). See [VALIDATION.md](docs/VALIDATION.md) for the exact limits.
 
-Design references in `docs` illustrate layout; they are not Windows screenshots.
+The 0.9.0 design references in `docs` are historical layout illustrations, not screenshots of 1.0.0. The supplied real screenshot informed this release's native controls, typography and dock changes. Compare the built Windows app at the same resolution and scaling; illustration rendering is not native UI acceptance.
 
 - [Desktop layout](docs/Nexus-0.9.0-Desktop-reference.png)
 - [Explore layout](docs/Nexus-0.9.0-Explore-reference.png)
 
 Regenerate the SVG references with `python scripts/desktop-preview.py`, then export them with Inkscape or another SVG renderer. They use the source wallpaper and original icon assets with sample content. The supplied macOS component boards and Windows concept informed spacing, materials and hierarchy; their artwork is not bundled.
+
+See [PC-CONTROLS.md](docs/PC-CONTROLS.md) for supported capabilities and Windows acceptance. Files and websites still use their configured Windows applications when you choose Open; the new in-shell control layer covers audio, window arrangement, system status and locking.

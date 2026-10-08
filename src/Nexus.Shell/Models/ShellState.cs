@@ -1,7 +1,7 @@
 namespace Nexus.Shell.Models;
 
 public sealed record AppEntry(string Id, string Name, string Target, string Glyph, string Category = "App");
-public sealed record RunningWindow(IntPtr Handle, string Title, string ProcessName);
+public sealed record RunningWindow(IntPtr Handle, string Title, string ProcessName, int ProcessId = 0);
 public sealed record ActivityEntry(DateTimeOffset Time, string Message);
 public sealed record SavedItem(string Id, string Title, string Target, string Kind, string Collection = "Personal", bool Favorite = false,
     string SpaceId = "personal", string Note = "", string Tags = "");

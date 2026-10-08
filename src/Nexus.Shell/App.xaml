@@ -211,19 +211,38 @@
    <SolidColorBrush x:Key="ToggleSwitchFillOffPressed" Color="#E52B3445"/>
    <SolidColorBrush x:Key="ToggleSwitchStrokeOffPressed" Color="#406D809A"/>
    <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPressed" Color="#FFB8C3D6"/>
+   <ControlTemplate x:Key="NexusButtonTemplate" TargetType="Button">
+    <Grid x:Name="NexusButtonRoot" Background="Transparent">
+     <VisualStateManager.VisualStateGroups><VisualStateGroup x:Name="CommonStates">
+      <VisualState x:Name="Normal"/>
+      <VisualState x:Name="PointerOver"><VisualState.Setters><Setter Target="NexusHoverWash.Opacity" Value="0.06"/></VisualState.Setters></VisualState>
+      <VisualState x:Name="Pressed"><VisualState.Setters><Setter Target="NexusHoverWash.Opacity" Value="0.12"/></VisualState.Setters></VisualState>
+      <VisualState x:Name="Disabled"><VisualState.Setters><Setter Target="NexusButtonChrome.Background" Value="{ThemeResource NexusCard}"/><Setter Target="NexusButtonContent.Foreground" Value="{ThemeResource NexusMuted}"/></VisualState.Setters></VisualState>
+     </VisualStateGroup></VisualStateManager.VisualStateGroups>
+     <Border x:Name="NexusButtonChrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}">
+      <Grid><Border x:Name="NexusHoverWash" Background="Black" Opacity="0" CornerRadius="{TemplateBinding CornerRadius}" IsHitTestVisible="False"/>
+       <ContentPresenter x:Name="NexusButtonContent" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" Foreground="{TemplateBinding Foreground}" FontSize="{TemplateBinding FontSize}" FontWeight="{TemplateBinding FontWeight}"/>
+      </Grid>
+     </Border>
+    </Grid>
+   </ControlTemplate>
    <Style x:Key="QuietButton" TargetType="Button">
+    <Setter Property="Template" Value="{StaticResource NexusButtonTemplate}"/><Setter Property="UseSystemFocusVisuals" Value="True"/>
     <Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/>
     <Setter Property="CornerRadius" Value="8"/><Setter Property="Padding" Value="11,8"/>
     <Setter Property="FontSize" Value="13"/><Setter Property="Foreground" Value="{ThemeResource NexusText}"/>
    </Style>
    <Style x:Key="AuraSurfaceButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
+    <Setter Property="Template" Value="{StaticResource NexusButtonTemplate}"/><Setter Property="UseSystemFocusVisuals" Value="True"/>
     <Setter Property="Background" Value="{ThemeResource NexusCard}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusBorder}"/>
     <Setter Property="BorderThickness" Value="1"/><Setter Property="Padding" Value="15,11"/>
    </Style>
    <Style x:Key="AuraPrimaryButton" TargetType="Button" BasedOn="{StaticResource AccentButtonStyle}">
+    <Setter Property="Template" Value="{StaticResource NexusButtonTemplate}"/><Setter Property="UseSystemFocusVisuals" Value="True"/>
     <Setter Property="CornerRadius" Value="8"/><Setter Property="Padding" Value="14,9"/><Setter Property="FontSize" Value="13"/>
     <Setter Property="FontWeight" Value="SemiBold"/>
-   </Style>
+       <Setter Property="Background" Value="{ThemeResource NexusAccent}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusAccent}"/><Setter Property="Foreground" Value="{ThemeResource NexusAccentText}"/>
+</Style>
    <Style x:Key="IconButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
     <Setter Property="Width" Value="38"/><Setter Property="Height" Value="36"/><Setter Property="Padding" Value="0"/>
    </Style>
@@ -231,17 +250,20 @@
     <Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Height" Value="38"/>
    </Style>
    <Style x:Key="DockButton" TargetType="Button">
-    <Setter Property="Width" Value="54"/><Setter Property="Height" Value="56"/><Setter Property="CornerRadius" Value="16"/><Setter Property="Padding" Value="0"/>
+    <Setter Property="Template" Value="{StaticResource NexusButtonTemplate}"/><Setter Property="UseSystemFocusVisuals" Value="True"/>
+    <Setter Property="Width" Value="62"/><Setter Property="Height" Value="64"/><Setter Property="CornerRadius" Value="16"/><Setter Property="Padding" Value="0"/>
     <Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/>
     <Setter Property="Foreground" Value="{ThemeResource NexusText}"/>
    </Style>
    <Style x:Key="DesktopIconButton" TargetType="Button">
+    <Setter Property="Template" Value="{StaticResource NexusButtonTemplate}"/><Setter Property="UseSystemFocusVisuals" Value="True"/>
     <Setter Property="Width" Value="108"/><Setter Property="MinHeight" Value="108"/><Setter Property="Padding" Value="6"/><Setter Property="CornerRadius" Value="14"/>
     <Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="Transparent"/><Setter Property="BorderThickness" Value="1"/>
     <Setter Property="HorizontalContentAlignment" Value="Center"/><Setter Property="VerticalContentAlignment" Value="Top"/>
     <Setter Property="Foreground" Value="{ThemeResource NexusDesktopText}"/>
    </Style>
    <Style x:Key="ShortcutCard" TargetType="Button">
+    <Setter Property="Template" Value="{StaticResource NexusButtonTemplate}"/><Setter Property="UseSystemFocusVisuals" Value="True"/>
     <Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="HorizontalContentAlignment" Value="Left"/>
     <Setter Property="Padding" Value="20,18"/><Setter Property="CornerRadius" Value="20"/>
     <Setter Property="Background" Value="{ThemeResource NexusCard}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusBorder}"/>

@@ -1,4 +1,6 @@
 using Nexus.Shell.Interop;
+using Nexus.Shell.Models;
+using Nexus.Shell.Services;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 
@@ -18,6 +20,7 @@ internal static class DesktopNativeChecks
         public IntPtr SmallIcon;
     }
     [StructLayout(LayoutKind.Sequential)] private struct Point { public int X, Y; }
+    [StructLayout(LayoutKind.Sequential)] private struct Rect { public int Left, Top, Right, Bottom; }
     [StructLayout(LayoutKind.Sequential)] private struct Message
     {
         public IntPtr Window;
@@ -36,6 +39,7 @@ internal static class DesktopNativeChecks
         string title, uint style, int x, int y, int width, int height, IntPtr parent, IntPtr menu, IntPtr instance, IntPtr data);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern IntPtr DefWindowProc(IntPtr window, uint message, UIntPtr wParam, IntPtr lParam);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool DestroyWindow(IntPtr window);
+    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool GetWindowRect(IntPtr window, out Rect rect);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool PeekMessage(out Message message, IntPtr window, uint minimum, uint maximum, uint flags);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern IntPtr DispatchMessage(ref Message message);
     internal static void Run()
@@ -49,8 +53,20 @@ internal static class DesktopNativeChecks
         IntPtr window = IntPtr.Zero;
         try
         {
-            window = CreateWindowEx(0, className, "Nexus desktop control check", 0, 0, 0, 1, 1, IntPtr.Zero, IntPtr.Zero, definition.Instance, IntPtr.Zero);
+            window = CreateWindowEx(0, className, "Nexus desktop control check", 0, 100, 100, 240, 160, IntPtr.Zero, IntPtr.Zero, definition.Instance, IntPtr.Zero);
             if (window == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
+            var layouts = new WindowLayouts();
+            if (!GetWindowRect(window, out var original)) throw new Exception("The native window bounds could not be read.");
+            bool rejected = false;
+            try { layouts.Arrange([new RunningWindow(window, "Wrong process", "test", Environment.ProcessId + 1)], "Columns"); }
+            catch (InvalidOperationException) { rejected = true; }
+            if (!rejected) throw new Exception("The native layout must reject a handle whose process no longer matches.");
+            layouts.Arrange([new RunningWindow(window, "Own test window", "test", Environment.ProcessId)], "Columns");
+            if (!layouts.CanUndo || !GetWindowRect(window, out var arranged) || arranged.Equals(original))
+                throw new Exception("The native layout must place its own test window in a usable monitor area.");
+            if (layouts.Undo() != 1 || !GetWindowRect(window, out var restored) || !restored.Equals(original))
+                throw new Exception("Undo must restore the test window's original geometry.");
+            Console.WriteLine("PASS: actual Win32 window placement, process ownership rejection and undo (own test window only).");
             var actions = new List<string>();
             using (var integration = new DesktopIntegration(window, actions.Add))
             {
@@ -64,7 +80,7 @@ internal static class DesktopNativeChecks
             actions.Clear();
             DesktopIntegration.PostMessage(window, DesktopIntegration.SummonMessage, UIntPtr.Zero, IntPtr.Zero); Pump(window);
             if (actions.Count != 0) throw new Exception("Disposed desktop controls must no longer receive invocation.");
-            Console.WriteLine("PASS: real Win32 desktop subclass, invocation, disabled controls, and cleanup (hidden test window).");
+            Console.WriteLine("PASS: real Win32 desktop subclass, invocation, disabled controls, and cleanup (own test window).");
         }
         finally
         {

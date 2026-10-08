@@ -200,3 +200,11 @@ Automated CI compilation and packaging cannot establish how the UI renders or pe
 7. Switch every mood, native glass, reduced effects and Windows transparency/animation preferences. Deactivate/reactivate the window and toggle high contrast. Check clock, shortcuts, toolbar pills, text fields, menus, disabled controls and dialogs; high contrast must use the panel fallback and system colors.
 8. Upgrade a compatible existing full folder with the small binary update. Confirm new SVGs and compiled resources are present, runtime checks pass and the old folder remains intact. Reopen with existing notes, tasks, pins and spaces intact. Repair the sign-in path if it pointed at an older folder.
 9. After acceptance, measure idle, minimized, Explore scrolling, rapid navigation and glass-on/off resource use with the existing measurement script. Record native screenshots and failures rather than treating the included layout illustrations as rendered-app evidence.
+
+## 1.0.0 acceptance
+
+1. Run the exact commit through Windows CI, including the new own-window placement/Undo/process-ownership tests and read-only audio capability check. A SKIP for an unavailable build-host audio device still requires device testing on the user's PC.
+2. Follow the complete [PC controls checklist](PC-CONTROLS.md): quick output volume/mute, app sessions, device removal/change, window layouts/Undo, locking, real system readings and active-only refresh.
+3. Open Ctrl+5 through every entry point, use Back/Forward, set it as a workspace destination and restart with last-workspace recovery. Existing Study, Explore, app pins and notes must remain intact.
+4. Test native Nexus button hover/pressed/disabled and keyboard focus states, comfortable/compact dock density, toolbar branding and clock typography at the existing size/DPI matrix. Do not compare a different-resolution SVG illustration as if it were a native screenshot.
+5. Repeat high contrast, reduced effects, mood changes, flyout dismissal, fullscreen, tray/hotkey recovery, small update and resource measurement checks. Confirm all binary artifacts use 1.0.0 and runtime compatibility remains unchanged.

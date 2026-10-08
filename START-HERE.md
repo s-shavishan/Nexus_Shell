@@ -1,8 +1,8 @@
-# 0.9.0 quick start
+# 1.0.0 quick start
 
-Apply the contents of the 0.9.0 source patch's `files/` directory to the repository root, preserving paths, then commit and let AppVeyor build that exact commit. This includes the two 0.8.0 build fixes. After the entire build succeeds, download `Nexus-Shell-0.9.0-Update-win-x64.zip` to update a compatible existing full app folder, or the full `Nexus-Shell-0.9.0-win-x64.zip` for a fresh installation.
+Apply the contents of the 1.0.0 source patch's `files/` directory to the repository root, preserving paths, then commit and let AppVeyor build that exact commit. After the entire build succeeds, download `Nexus-Shell-1.0.0-Update-win-x64.zip` to update a compatible existing full app folder, or the full `Nexus-Shell-1.0.0-win-x64.zip` for a fresh installation.
 
-Fully exit Nexus before applying a binary update. Existing notes, tasks, pins and Explore spaces retain their current storage. The earlier migration runs only when needed. Check the 0.9.0 acceptance list in docs/TEST-WINDOWS.md, including desktop actions, SVG loading, compact lists, glass fallbacks and scaling. Source archives are not runnable binaries.
+Fully exit Nexus before applying a binary update. Existing notes, tasks, pins and Explore spaces retain their current storage. Open Ctrl+5 for native PC controls or Control center for quick volume/mute. Follow docs/PC-CONTROLS.md and the 1.0.0 acceptance list in docs/TEST-WINDOWS.md. Source archives are not runnable binaries.
 
 The older notes below describe the project history.
 

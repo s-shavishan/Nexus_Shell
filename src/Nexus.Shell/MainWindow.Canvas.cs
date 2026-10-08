@@ -21,6 +21,7 @@ public sealed partial class MainWindow
         AddDesktopShortcut("Explore", "Explore", () => Navigate("Explore"));
         AddDesktopShortcut("Study", "Study", () => Navigate("Study"));
         AddDesktopShortcut("App Library", "Apps", () => Navigate("Apps"));
+        AddDesktopShortcut("PC controls", "Settings", () => Navigate("PC controls"));
         foreach (var saved in _state.SavedItems.Where(s => s.Favorite).Take(4))
             AddDesktopShortcut(saved.Title, NexusIcons.ForKind(saved.Kind), () => SelectExploreItem(saved));
         UpdateDesktopCanvasLayout();

@@ -102,7 +102,7 @@ internal static class NativeMethods
             try
             {
                 using var process = Process.GetProcessById((int)id);
-                if (process.SessionId == session) result.Add(new(window, title.ToString(), process.ProcessName));
+                if (process.SessionId == session) result.Add(new(window, title.ToString(), process.ProcessName, (int)id));
             }
             catch { /* A window can disappear while it is being enumerated. */ }
             return result.Count < 80;
