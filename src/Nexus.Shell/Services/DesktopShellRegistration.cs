@@ -4,7 +4,9 @@ using System.Runtime.Versioning;
 
 namespace Nexus.Shell.Services;
 
-public sealed record ShellRegistryValue(string Text, RegistryValueKind Kind = RegistryValueKind.String);
+// Numeric values are part of the recovery JSON format and must remain stable.
+public enum ShellRegistryKind { String = 1, ExpandString = 2 }
+public sealed record ShellRegistryValue(string Text, ShellRegistryKind Kind = ShellRegistryKind.String);
 public interface IUserDesktopSettings
 {
     ShellRegistryValue? Shell { get; set; }
@@ -21,12 +23,19 @@ public sealed class WindowsDesktopSettings : IUserDesktopSettings
         if (key is null || !key.GetValueNames().Contains(name, StringComparer.OrdinalIgnoreCase)) return null;
         var kind = key.GetValueKind(name);
         if (kind is not (RegistryValueKind.String or RegistryValueKind.ExpandString)) throw new InvalidOperationException("The existing desktop setting has an unsupported type.");
-        return new((string)key.GetValue(name, "", RegistryValueOptions.DoNotExpandEnvironmentNames)!, kind);
+        return new((string)key.GetValue(name, "", RegistryValueOptions.DoNotExpandEnvironmentNames)!,
+            kind == RegistryValueKind.String ? ShellRegistryKind.String : ShellRegistryKind.ExpandString);
     }
     private static void Write(string path, string name, ShellRegistryValue? value)
     {
         using var key = Registry.CurrentUser.CreateSubKey(path);
-        if (value is null) key.DeleteValue(name, false); else key.SetValue(name, value.Text, value.Kind);
+        if (value is null) key.DeleteValue(name, false);
+        else key.SetValue(name, value.Text, value.Kind switch
+        {
+            ShellRegistryKind.String => RegistryValueKind.String,
+            ShellRegistryKind.ExpandString => RegistryValueKind.ExpandString,
+            _ => throw new InvalidOperationException("The desktop setting has an unsupported type.")
+        });
     }
     public ShellRegistryValue? Shell { get => Read(ShellKey, "Shell"); set => Write(ShellKey, "Shell", value); }
     public ShellRegistryValue? NexusStartup { get => Read(RunKey, "WhiteDreamsNexusShell"); set => Write(RunKey, "WhiteDreamsNexusShell", value); }
@@ -57,7 +66,7 @@ public sealed class DesktopShellRegistration(IUserDesktopSettings settings, stri
         var backup = JsonSerializer.Deserialize<DesktopShellBackup>(File.ReadAllText(backupPath));
         if (backup is null || backup.Format != 1 || string.IsNullOrWhiteSpace(backup.Command)) throw new InvalidDataException("The desktop recovery record is invalid.");
         foreach (var value in new[] { backup.PreviousShell, backup.PreviousStartup })
-            if (value is not null && (value.Text is null || value.Kind is not (RegistryValueKind.String or RegistryValueKind.ExpandString)))
+            if (value is not null && (value.Text is null || value.Kind is not (ShellRegistryKind.String or ShellRegistryKind.ExpandString)))
                 throw new InvalidDataException("The saved desktop registry value is invalid.");
         return backup;
     }

@@ -1,5 +1,5 @@
 using Nexus.Shell.Services;
-using Microsoft.Win32;
+using System.Text.Json;
 
 internal static class DesktopModeChecks
 {
@@ -35,13 +35,16 @@ internal static class DesktopModeChecks
         {
             string host = Path.Combine(root, "Nexus.DesktopHost.exe"), next = Path.Combine(root, "Next", "Nexus.DesktopHost.exe");
             File.WriteAllText(host, "fixture"); Directory.CreateDirectory(Path.GetDirectoryName(next)!); File.WriteAllText(next, "fixture");
-            var settings = new Settings { BackupPath = Path.Combine(root, "recovery.json"), StartupValue = new("old preview command", RegistryValueKind.ExpandString) };
+            var settings = new Settings { BackupPath = Path.Combine(root, "recovery.json"), StartupValue = new("old preview command", ShellRegistryKind.ExpandString) };
             var originalRun = settings.StartupValue;
             var registration = new DesktopShellRegistration(settings, settings.BackupPath);
             Check(!registration.Restore(), "No backup must leave sign-in unchanged.");
             Reject(() => registration.Enable(host, new(true, "Core", 22631)), "Unsupported editions must not change sign-in.");
             Check(settings.Shell is null && !File.Exists(settings.BackupPath), "Unsupported setup must leave no recovery or policy changes.");
             registration.Enable(host, new(true, "Professional", 22631));
+            using (var saved = JsonDocument.Parse(File.ReadAllText(settings.BackupPath)))
+                Check(saved.RootElement.GetProperty("PreviousStartup").GetProperty("Kind").GetInt32() == 2,
+                    "Expanded strings must retain the existing numeric recovery format.");
             Check(registration.Uses(host) && registration.OwnsCurrentSetting && settings.NexusStartup is null, "The host replaces the desktop and only Nexus's own Run entry is removed.");
             registration.Enable(next, new(true, "Professional", 22631));
             Check(registration.Uses(next), "A configured desktop must be able to move to a newer version folder.");
@@ -56,14 +59,27 @@ internal static class DesktopModeChecks
             settings.Shell = new("another-desktop.exe");
             Reject(() => registration.Enable(host, new(true, "Professional", 22631)), "Another custom desktop must not be replaced.");
             Check(settings.Shell.Text == "another-desktop.exe", "Foreign desktop policy must be preserved.");
-            settings.Shell = new("explorer.exe", RegistryValueKind.ExpandString); registration.Enable(host, new(true, "Professional", 22631));
+            settings.Shell = new("explorer.exe", ShellRegistryKind.ExpandString); registration.Enable(host, new(true, "Professional", 22631));
             settings.Shell = new("policy-updated-externally.exe");
             Reject(() => registration.Restore(), "Recovery must refuse an externally replaced desktop policy.");
             settings.Shell = new(DesktopShellRegistration.CommandFor(host)); registration.Restore();
-            Check(settings.Shell == new ShellRegistryValue("explorer.exe", RegistryValueKind.ExpandString), "Recovery must restore an explicit desktop command without expanding it.");
+            Check(settings.Shell == new ShellRegistryValue("explorer.exe", ShellRegistryKind.ExpandString), "Recovery must restore an explicit desktop command without expanding it.");
             registration.Enable(host, new(true, "Professional", 22631));
             settings.FailStartup = true; Reject(() => registration.Restore(), "A partial recovery write failure must be reported.");
             Check(registration.Restore() && settings.NexusStartup == originalRun, "Retrying partial recovery must finish restoring the Run value.");
+            string legacyStartup = "%LOCALAPPDATA%\\previous.exe";
+            File.WriteAllText(settings.BackupPath, JsonSerializer.Serialize(new
+            {
+                Format = 1, Command = DesktopShellRegistration.CommandFor(host),
+                PreviousShell = new { Text = "explorer.exe", Kind = 1 },
+                PreviousStartup = new { Text = legacyStartup, Kind = 2 }
+            }));
+            settings.Shell = new(DesktopShellRegistration.CommandFor(host)); settings.NexusStartup = null;
+            Check(registration.Restore() && settings.Shell == new ShellRegistryValue("explorer.exe")
+                && settings.NexusStartup == new ShellRegistryValue(legacyStartup, ShellRegistryKind.ExpandString),
+                "Existing numeric recovery records must restore string kinds and unexpanded text.");
+            File.WriteAllText(settings.BackupPath, "{\"Format\":1,\"Command\":\"host\",\"PreviousShell\":{\"Text\":\"invalid\",\"Kind\":3}}");
+            Reject(() => registration.Restore(), "Recovery must reject unsupported numeric registry kinds.");
             File.WriteAllText(settings.BackupPath, "{\"Format\":99,\"Command\":\"bad\"}");
             Reject(() => registration.Enable(host, new(true, "Professional", 22631)), "An invalid recovery record must block changes.");
             Reject(() => DesktopShellRegistration.CommandFor("relative.exe"), "The desktop command must use a full path.");
