@@ -18,7 +18,7 @@ public static class PcMetrics
     }
     public static string Size(ulong bytes) => bytes >= 1073741824 ? $"{bytes / 1073741824d:0.0} GB" : $"{bytes / 1048576d:0} MB";
 
-    public static PcSnapshot Read(ref CpuTimes? previous)
+    public static PcSnapshot Read(ref CpuTimes? previous, bool includeStorage = true)
     {
         double? cpu = null; ulong total = 0, available = 0;
         if (GetSystemTimes(out ulong idle, out ulong kernel, out ulong user))
@@ -49,7 +49,7 @@ public static class PcMetrics
         var storage = new List<string>();
         try
         {
-            foreach (var drive in DriveInfo.GetDrives().Where(d => d.DriveType == DriveType.Fixed).Take(8))
+            foreach (var drive in (includeStorage ? DriveInfo.GetDrives() : []).Where(d => d.DriveType == DriveType.Fixed).Take(8))
                 try { if (drive.IsReady) storage.Add(drive.Name + "  " + Size((ulong)drive.AvailableFreeSpace) + " free of " + Size((ulong)drive.TotalSize)); } catch { }
         }
         catch { }

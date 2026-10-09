@@ -80,7 +80,7 @@ public sealed partial class MainWindow
             ShowStatus("Nexus is selected for your next sign-in. Save your work, then sign out when you’re ready.");
             Navigate("Personalize", false);
         }
-        catch (UnauthorizedAccessException ex)
+        catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException)
         {
             Log.Write("Windows denied desktop sign-in setup.", ex);
             ShowStatus("Windows denied access to desktop sign-in policy. Use Nexus for this session to run the Nexus desktop without changing sign-in settings.");
@@ -102,7 +102,7 @@ public sealed partial class MainWindow
             ShowStatus(restored ? "Your previous desktop sign-in setting is restored." : "No saved Nexus desktop setup was found. No sign-in setting changed.");
             Navigate("Personalize", false);
         }
-        catch (UnauthorizedAccessException ex)
+        catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException)
         {
             Log.Write("Windows denied desktop sign-in restoration.", ex);
             ShowStatus("Windows denied the sign-in policy change. You can still exit Nexus and restore Windows for the current session; the saved recovery record is retained.");

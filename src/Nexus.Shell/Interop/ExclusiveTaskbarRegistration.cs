@@ -17,6 +17,7 @@ internal sealed class ExclusiveTaskbarRegistration : ITaskbarLayer
     private readonly IntPtr _handle, _desktop;
     private readonly Action _reposition;
     private readonly ShellLayerInterop.SubclassProc _callback;
+    private readonly DesktopWorkAreaReservation _workArea = new();
     private bool _disposed, _fullscreen;
     public ShellRect Bounds { get; private set; }
     [DllImport("user32.dll", EntryPoint = "SystemParametersInfoW", SetLastError = true)]
@@ -35,8 +36,7 @@ internal sealed class ExclusiveTaskbarRegistration : ITaskbarLayer
         var bar = new ShellRect(monitor.Left, monitor.Bottom - height, monitor.Right - monitor.Left, height);
         var work = monitor; work.Bottom = bar.Y;
         bool moved = Bounds != bar;
-        if (!moved && info.Work.Bounds == work.Bounds) return;
-        if (!SetWorkArea(0x002F, 0, ref work, 2)) throw new Win32Exception(Marshal.GetLastWin32Error(), "Windows could not set the Nexus desktop work area.");
+        _workArea.Apply(work.Bounds, DesktopWorkArea.Apply);
         Bounds = bar;
         if (moved) ShellLayerInterop.SetWindowPos(_handle, _fullscreen ? ShellLayerInterop.Bottom : ShellLayerInterop.Topmost, bar.X, bar.Y, bar.Width, bar.Height, 0x0010);
     }
@@ -45,8 +45,6 @@ internal sealed class ExclusiveTaskbarRegistration : ITaskbarLayer
         if (_disposed) return;
         var foreground = NativeMethods.GetForegroundWindow();
         var info = ShellLayerInterop.Monitor(_handle); var monitor = info.Monitor.Bounds;
-        // Explorer can refresh the work area even with its taskbar hidden.
-        if (Bounds.Width > 0 && info.Work.Bounds != new ShellRect(monitor.X, monitor.Y, monitor.Width, Bounds.Y - monitor.Y)) _reposition();
         bool full = foreground != IntPtr.Zero && foreground != _handle && foreground != _desktop
             && GetWindowRect(foreground, out var rect) && rect.Left <= monitor.X && rect.Top <= monitor.Y && rect.Right >= monitor.Right && rect.Bottom >= monitor.Bottom;
         if (_fullscreen == full) return; _fullscreen = full;
@@ -54,7 +52,7 @@ internal sealed class ExclusiveTaskbarRegistration : ITaskbarLayer
     }
     private IntPtr Message(IntPtr window, uint message, UIntPtr wp, IntPtr lp, UIntPtr id, UIntPtr data)
     {
-        try { if (!_disposed && message is 0x007E or 0x02E0) _reposition(); }
+        try { if (!_disposed && message is 0x007E or 0x02E0) { _workArea.Invalidate(); _reposition(); } }
         catch (Exception ex) { Log.Write("Desktop taskbar message failed", ex); }
         return ShellLayerInterop.DefSubclassProc(window, message, wp, lp);
     }

@@ -1,12 +1,10 @@
-# Desktop session updates — 1.3.1
+# Desktop session updates — 1.4.0
 
-Full and compatible-runtime update packages carry the host, Launch-Nexus-Desktop.bat, Restore-Windows-Desktop.bat and recovery script as new app payload. Published host and shell runtime bytes must agree; only matching runtime files may be reused. The updater always creates a separate new version folder and preserves the base folder/settings.
+Full and compatible-runtime update packages include the host, launch/recovery helpers, Quick Settings code and all six cached wallpaper assets. The resource report fingerprints the wallpapers; both portable and update packaging verify their bytes. Runtime reuse remains governed by matching hashes. The updater creates a separate version folder and preserves the old folder/settings.
 
-Exit the old Nexus desktop before launching a new version. Apply the compatible update or extract the full new Windows ZIP. Run Launch-Nexus-Desktop.bat for a temporary session, or Nexus.Shell.exe to preview. Temporary launch/exit leaves sign-in policy unchanged.
+Exit the old Nexus session before running the new full folder. Temporary session launch/exit leaves sign-in policy unchanged. Permanent sign-in configuration remains optional and still requires Windows policy permission. Keep an old folder selected for sign-in until that setting is updated successfully.
 
-If your earlier version was selected for persistent sign-in, keep that folder. Return to Windows from the old session, then select Use this version at sign-in in the new Personalize page if desired. A denied policy restore still allows current-session Windows recovery but leaves the old future sign-in setting requiring permission. See NEXUS-DESKTOP-MODE.md.
-
-Source patch instructions are in SOURCE-PATCH.md. Source ZIPs are not runtime updates. The historical hash/resource implementation notes below retain their original version context.
+Source patch instructions are in SOURCE-PATCH.md. After a successful Windows build, compare Fast/Balanced/Full in QUICK-SETTINGS-AND-PERFORMANCE.md; no native timing improvement is claimed from source checks alone. Historical update notes follow.
 
 # Updating Nexus 0.7.0
 

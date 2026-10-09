@@ -8,9 +8,10 @@ Desktop WinRT event compatibility OK
 WinUI Thickness constructors OK
 C# UI brush resources OK
 Native vector assets and publish wiring OK
+Cached wallpaper assets and publish wiring OK
 Independent desktop ownership, Sections lifetime and CI versions OK
 Nexus desktop mode, Files/pickers, switcher, host recovery and build/update ownership OK
 Interop imports OK
 C# syntax OK (tree-sitter; API/type resolution NOT checked)
-PASS: 67 project files, 132 named elements, 69 handlers, resources, icon, JSON, and build references.
+PASS: 74 project files, 132 named elements, 69 handlers, resources, icon, JSON, and build references.
 C# / XAML compilation and Windows launch still required.

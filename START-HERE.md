@@ -1,13 +1,9 @@
-# Start here — Nexus 1.3.1
+# Start here — Nexus 1.4.0
 
-1. Apply the 1.3.0→1.3.1 Git patch to the verified 1.3.0 baseline, or extract the full source into a new folder. See SOURCE-PATCH.md.
-2. Commit/push the source for AppVeyor, or build on Windows using `scripts\build.ps1 -UseMSBuild`. Source ZIPs cannot run directly.
-3. Extract the complete Windows artifact. Close any Nexus preview, then run **Launch-Nexus-Desktop.bat** for a temporary Nexus desktop.
-4. The Windows desktop and taskbars are hidden after Nexus becomes ready. **Exit Nexus** to restore them. No sign-in policy changes are made by this mode.
-5. Complete docs/TEST-DESKTOP-MODE.md on your VM, including normal exit, UI failure, host failure and a denied registry write.
+1. Apply `Nexus-1.3.1-to-1.4.0.patch` to the verified 1.3.1 baseline, then commit/push for AppVeyor. See SOURCE-PATCH.md. The Source ZIP is an alternative complete source tree.
+2. Wait for the Windows build to complete. Extract the entire `Nexus-Shell-1.4.0-win-x64.zip` artifact to a new folder. Keep the old folder.
+3. Exit the old Nexus instance. Launch the new `Launch-Nexus-Desktop.bat`, or use Personalize → Use Nexus for this session from preview.
+4. Open the taskbar's Quick Settings button or press Win+A. Choose **Fast** in the VM. Drag the same ordinary application windows you used with 1.3.1; compare Balanced and Full afterward.
+5. Exit Nexus to verify Windows returns. Complete docs/QUICK-SETTINGS-AND-PERFORMANCE.md and docs/TEST-DESKTOP-MODE.md.
 
-Opening `Nexus.Shell.exe` is preview mode. From preview, **Sections → Personalize → Use Nexus for this session…** performs the same temporary takeover with an orderly handoff.
-
-Persistent **Use Nexus at sign-in** is a separate option with Windows edition/build and registry permissions requirements. See docs/NEXUS-DESKTOP-MODE.md. Current-session Windows recovery is allowed to continue even if that policy setting cannot be restored.
-
-Local core, source, host C# and application API checks pass. Native Windows compilation and 1.3.1 VM acceptance remain pending.
+Source ZIPs and patches require compilation; they are not runnable Windows updates. Local C#/core/source checks pass, but 1.4.0 native build and measured VM smoothness remain pending. Temporary session mode does not change protected sign-in policy.

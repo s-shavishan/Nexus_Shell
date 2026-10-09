@@ -1,6 +1,6 @@
-# Windows desktop acceptance — 1.3.1
+# Windows desktop acceptance — 1.4.0
 
-These checks need a complete successful Windows build and a VM/test account. The previous 1.3.0 VM result is not acceptance of the new native takeover paths. Run core checks and scripts/test-update.ps1 as CI already does; retain the actual build logs.
+These checks need a complete successful Windows build and a VM/test account. The working 1.3.1 VM result does not establish 1.4.0 performance or Quick Settings behavior. Complete QUICK-SETTINGS-AND-PERFORMANCE.md alongside these recovery regressions. Run core checks and scripts/test-update.ps1 as CI already does; retain the actual build logs.
 
 ## Temporary takeover and return
 

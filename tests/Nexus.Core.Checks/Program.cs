@@ -58,6 +58,7 @@ try
 }
 finally { if (Directory.Exists(moodDirectory)) Directory.Delete(moodDirectory, true); }
 DesktopFoundationChecks.Run(Check);
+DesktopPerformanceChecks.Run(Check);
 ExploreChecks.Run(Check);
 ReliabilityChecks.Run(Check);
 PcControlChecks.Run(Check);

@@ -8,6 +8,18 @@ param(
 $ErrorActionPreference = 'Stop'
 $publishRoot = [IO.Path]::GetFullPath($PublishDirectory).TrimEnd([char[]]'\/')
 $rootPrefix = $publishRoot + [IO.Path]::DirectorySeparatorChar
+$wallpaperFiles = @()
+if ([version]$AppVersion -ge [version]'1.4.0') {
+    foreach ($name in @('Solstice','Ember','Opal','Lagoon','Graphite','Pearl')) {
+        $asset = Join-Path $publishRoot ("Assets\Wallpapers\" + $name + '.png')
+        if (-not (Test-Path $asset -PathType Leaf)) { throw "The cached desktop wallpaper is missing: $name.png" }
+        $bytes = [IO.File]::ReadAllBytes($asset)
+        if ($bytes.Length -lt 33 -or [BitConverter]::ToString($bytes, 0, 8) -ne '89-50-4E-47-0D-0A-1A-0A') {
+            throw "The cached desktop wallpaper is invalid: $name.png"
+        }
+        $wallpaperFiles += Get-Item $asset
+    }
+}
 if ([version]$AppVersion -ge [version]'0.9.0') {
     foreach ($name in @('Nexus','Explore','Study','Files','Apps','Browser','Search','Settings','Windows','Note','Document','Terminal','Game')) {
         $asset = Join-Path $publishRoot ("Assets\Icons\" + $name + '.svg')
@@ -53,7 +65,7 @@ foreach ($window in $windows) {
 }
 # Keep fingerprints for the actual app index and every loose compiled XAML file.
 # The package script verifies these bytes again inside the finished ZIP.
-$files = @(Get-Item $pri) + @(Get-ChildItem $publishRoot -Recurse -File -Filter '*.xbf')
+$files = @(Get-Item $pri) + @(Get-ChildItem $publishRoot -Recurse -File -Filter '*.xbf') + $wallpaperFiles
 $records = @($files | ForEach-Object {
     [ordered]@{
         File = $_.FullName.Substring($rootPrefix.Length).Replace('\', '/')

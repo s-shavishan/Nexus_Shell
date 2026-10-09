@@ -1,3 +1,7 @@
+# Current desktop performance — 1.4.0
+
+The desktop consists of independent native layers. Quick Settings and the cached wallpaper/performance changes are described in [QUICK-SETTINGS-AND-PERFORMANCE.md](QUICK-SETTINGS-AND-PERFORMANCE.md). The earlier packed-surface design notes below remain historical; they do not describe current startup ownership, wallpaper assets, defaults or managed-session hotkeys.
+
 # Shell experience and Aura design — 0.7.0
 
 The default desktop layout removes the central panel's chrome/sidebar while keeping a top navigation bar, desktop widgets, Home cards and a dock. A Control center switch restores the panel layout. F11 provides fullscreen.

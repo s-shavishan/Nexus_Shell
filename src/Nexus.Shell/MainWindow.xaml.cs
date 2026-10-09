@@ -487,6 +487,7 @@ public sealed partial class MainWindow : Window
             Grid.SetColumnSpan(_shortcutCards[index], compact ? 3 : 1);
         }
     }
+    internal void RefreshSharedAppearance() { if (_ready) ApplyEffects(); }
     private void ApplyEffects()
     {
         ApplyAuraPalette();

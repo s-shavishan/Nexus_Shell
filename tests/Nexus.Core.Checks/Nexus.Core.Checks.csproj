@@ -13,6 +13,10 @@
     <Compile Include="../../src/Nexus.Shell/Services/DesktopSessionRecord.cs" Link="DesktopSessionRecord.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/FileCatalog.cs" Link="FileCatalog.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/ExclusiveTaskbarRegistration.cs" Link="ExclusiveTaskbarRegistration.cs" />
+    <Compile Include="../../src/Nexus.Shell/Interop/DesktopWorkArea.cs" Link="DesktopWorkArea.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/DesktopWorkAreaReservation.cs" Link="DesktopWorkAreaReservation.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/DesktopVisuals.cs" Link="DesktopVisuals.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/BrightnessScale.cs" Link="BrightnessScale.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/ShellSession.cs" Link="ShellSession.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DesktopLayout.cs" Link="DesktopLayout.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DesktopCatalog.cs" Link="DesktopCatalog.cs" />

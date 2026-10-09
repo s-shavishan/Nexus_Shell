@@ -9,6 +9,13 @@ public readonly record struct ShellRect(int X, int Y, int Width, int Height)
 public static class DesktopLayout
 {
     public static int TaskbarHeight(bool compact) => compact ? 56 : 68;
+    public static ShellRect QuickSettingsBounds(ShellRect monitor, ShellRect bar, double scale)
+    {
+        var rect = MenuBounds(monitor, bar, scale, 392, 650);
+        scale = double.IsFinite(scale) ? Math.Clamp(scale, .5, 4) : 1;
+        int gap = Math.Max(4, (int)Math.Round(12 * scale));
+        return rect with { X = Math.Max(monitor.X, monitor.Right - gap - rect.Width) };
+    }
     public static ShellRect MenuBounds(ShellRect monitor, ShellRect bar, double scale, int widthDip = 440, int heightDip = 540)
     {
         scale = double.IsFinite(scale) ? Math.Clamp(scale, .5, 4) : 1;

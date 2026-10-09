@@ -13,6 +13,7 @@ internal sealed class DesktopMenus(DesktopEnvironment environment)
         var menu = new MenuFlyout();
         menu.Items.Add(Item("Refresh", environment.RefreshDesktop));
         menu.Items.Add(Item("Open Sections", () => environment.ShowSections()));
+        menu.Items.Add(Item("Quick settings", environment.ShowQuickSettings));
         menu.Items.Add(new MenuFlyoutSeparator());
         menu.Items.Add(Item("Open desktop folder", () => environment.OpenTarget(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory))));
         menu.Items.Add(Item("Personalize", () => environment.ShowSections("Personalize")));

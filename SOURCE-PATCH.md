@@ -1,17 +1,18 @@
-# Updating the source to 1.3.1
+# Updating the source to 1.4.0
 
-`Nexus-1.3.0-to-1.3.1.patch` targets the complete source at repository commit **8659dbbdb1953cd18bfce4025d57e7bb08be059f**, the 1.3.0 CA1416 fix. All 172 baseline files were verified against GitHub's Git blob hashes. The patch adds temporary desktop takeover, policy-independent recovery, a saved desktop session record, launch/package integration and checks.
+`Nexus-1.3.1-to-1.4.0.patch` targets complete source at repository commit **b493314f5b9118c19077a5ea3be6c1996ba191d0**. All 176 baseline files matched GitHub's Git blob hashes. It adds desktop performance changes, independent Quick Settings, six cached wallpapers, focused checks and versioned package integration.
 
-Extract the Source-Patch ZIP and copy **only the .patch** into your repository root. Preserve local work, then run from that root:
+Extract the Source-Patch ZIP and copy only the `.patch` into your repository root. Preserve local work. Confirm the baseline with `git rev-parse HEAD`, then run:
 
 ```powershell
-git apply --check Nexus-1.3.0-to-1.3.1.patch
-git apply Nexus-1.3.0-to-1.3.1.patch
+git apply --check --whitespace=error-all Nexus-1.3.1-to-1.4.0.patch
+git apply --whitespace=error-all Nexus-1.3.1-to-1.4.0.patch
+git diff --check
 git diff --stat
 ```
 
-Stop if `--check` fails; do not force the patch over a different or modified baseline. The existing `.gitignore` excludes `*.patch`. Review the new and changed source files, commit them, and push to main for AppVeyor. This patch is checked by applying it to the verified baseline and comparing every resulting file with the full 1.3.1 source.
+If the check fails, stop and reconcile your baseline/local changes. The patch contains Git binary additions for PNG assets and must be applied with Git. It is verified by applying to a clean baseline and comparing every result byte-for-byte with the full 1.4.0 source. No added trailing-whitespace errors are present.
 
-The patch and full Source ZIP are source code, not binary updates. The next successful Windows build should produce `Nexus-Shell-1.3.1-win-x64.zip` and `Nexus-Shell-1.3.1-Update-win-x64.zip`. Keep the entire runnable folder together.
+Review the source, then commit and push for AppVeyor. The `.gitignore` excludes patch/archive files. Existing package pins remain unchanged. A successful Windows build produces `Nexus-Shell-1.4.0-win-x64.zip` and compatible-runtime `Nexus-Shell-1.4.0-Update-win-x64.zip`.
 
-Once built, exit the old Nexus version, then run **Launch-Nexus-Desktop.bat** in the new full folder. This temporary mode hides the Windows desktop/taskbars and restores them on exit without changing sign-in settings. `Nexus.Shell.exe` remains preview. Complete docs/TEST-DESKTOP-MODE.md in the VM.
+Use the complete compiled folder. Open Quick Settings → Desktop performance → Fast for the initial VM comparison. Local checks do not establish native frame timing; follow docs/QUICK-SETTINGS-AND-PERFORMANCE.md.

@@ -37,8 +37,9 @@ internal sealed class DesktopEnvironment
     private int _usageTicks;
     private bool _usageTracking;
     private bool? _compact;
-    private (string, bool, bool, bool, string)? _appearance;
+    private (string, bool, bool, bool, bool, string)? _appearance;
     private MenuWindow? _menu;
+    private QuickSettingsWindow? _quickSettings;
     private DesktopIntegration? _integration;
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(5) };
     private readonly DispatcherTimer _saveTimer = new() { Interval = TimeSpan.FromSeconds(2) };
@@ -103,18 +104,20 @@ internal sealed class DesktopEnvironment
         RefreshAppearance(); RefreshIntegration();
         Taskbar.View.Refresh(_windows);
         if (_compact != Session.State.CompactDock) { _compact = Session.State.CompactDock; Taskbar.Position(); }
+        _quickSettings?.RefreshPreferences();
         if (_usageTracking != Session.State.UsageTracking) { _usageTracking = Session.State.UsageTracking; ResetUsageSample(); }
     }
     internal void RefreshAppearance()
     {
         if (IsStopping || Desktop is null) return;
         Theme.Apply(Session.State.Wallpaper);
-        var appearance = (Theme.Palette.Name, Theme.HighContrast, Theme.Animations, Session.State.ReducedEffects, Session.State.DisplayName);
+        var appearance = (Theme.Palette.Name, Theme.HighContrast, Theme.Animations, Session.State.ReducedEffects, Session.State.NativeGlass, Session.State.DisplayName);
         if (_appearance == appearance) return;
         _appearance = appearance; Desktop.Surface.ApplyAppearance();
         Taskbar?.View.ApplyAppearance(); _menu?.ApplyAppearance(this);
         _files?.ApplyAppearance(); foreach (var picker in _pickers) picker.ApplyAppearance();
         _switcher?.ApplyAppearance();
+        _quickSettings?.ApplyAppearance(); _sections?.RefreshSharedAppearance();
     }
     internal void RefreshIntegration()
     {
@@ -187,10 +190,19 @@ internal sealed class DesktopEnvironment
     internal void ShowMenu(bool search = false)
     {
         if (IsStopping) return;
+        _quickSettings?.Hide();
         try { _menu ??= new(this); if (_menu.IsOpen && !search) _menu.HideMenu(); else _menu.ShowMenu(this, Taskbar.BarBounds, search); }
         catch (Exception ex) { Report("Could not open Start", ex); }
     }
-    internal void HideMenu() => _menu?.HideMenu();
+    internal void ShowQuickSettings()
+    {
+        if (IsStopping) return; _menu?.HideMenu();
+        try { _quickSettings ??= new(this); if (_quickSettings.IsOpen) _quickSettings.Hide(); else _quickSettings.Show(); }
+        catch (Exception ex) { Report("Could not open Quick Settings", ex); }
+    }
+    internal void QuickSettingsClosed(QuickSettingsWindow window) { if (ReferenceEquals(_quickSettings, window)) _quickSettings = null; }
+    internal void PositionQuickSettings() { if (_quickSettings?.IsOpen == true) _quickSettings.Position(); }
+    internal void HideMenu() { _menu?.HideMenu(); _quickSettings?.Hide(); }
     internal void MenuClosed(MenuWindow window) { if (ReferenceEquals(_menu, window)) _menu = null; }
     internal Task<List<AppEntry>> GetCatalogAsync(bool refresh = false)
     {
@@ -268,7 +280,7 @@ internal sealed class DesktopEnvironment
             case ShellKeyAction.ShowDesktop: ShowDesktop(); break;
             case ShellKeyAction.Settings: OpenTarget("ms-settings:"); break;
             case ShellKeyAction.Search: ShowMenu(true); break;
-            case ShellKeyAction.Controls: ShowSections("PC controls"); break;
+            case ShellKeyAction.Controls: ShowQuickSettings(); break;
             case ShellKeyAction.Overview: ShowSwitcher(false, true); break;
             case ShellKeyAction.SwitchNext: ShowSwitcher(false, false); break;
             case ShellKeyAction.SwitchPrevious: ShowSwitcher(true, false); break;
@@ -340,6 +352,7 @@ internal sealed class DesktopEnvironment
         void Cleanup(Action action) { try { action(); } catch (Exception ex) { Log.Write("Desktop shutdown cleanup failed", ex); } }
         Cleanup(() => _sections?.Close()); _sections = null;
         Cleanup(() => _menu?.Close()); _menu = null;
+        Cleanup(() => _quickSettings?.Close()); _quickSettings = null;
         Cleanup(() => _files?.Close()); _files = null;
         Cleanup(() => _switcher?.Close()); _switcher = null;
         foreach (var picker in _pickers.ToArray()) Cleanup(picker.Close); _pickers.Clear();

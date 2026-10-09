@@ -1,4 +1,4 @@
-# Nexus desktop sessions — 1.3.1
+# Nexus desktop sessions — 1.4.0
 
 ## Use Nexus now and restore Windows on exit
 
@@ -32,7 +32,7 @@ Keep the entire selected published folder in place. Return to Windows before lau
 
 ## Integration and current scope
 
-Desktop, taskbar, Start/context menus, Files, switcher and Sections remain separate native windows with shared state/theme. Temporary and persistent modes use the Nexus taskbar's primary working area and keyboard/window switcher. Preview retains Explorer coexistence.
+Desktop, taskbar, Start/context menus, Quick Settings, Files, switcher and Sections remain separate native windows with shared state/theme. Temporary and persistent modes use the Nexus taskbar's primary working area and keyboard/window switcher. Preview retains Explorer coexistence.
 
 | Shortcut | Managed Nexus desktop |
 |---|---|
@@ -41,7 +41,7 @@ Desktop, taskbar, Start/context menus, Files, switcher and Sections remain separ
 | Win+D | Nexus Show desktop |
 | Win+I | Windows Settings |
 | Win+R / Win+S | Nexus search |
-| Win+A | Nexus PC controls |
+| Win+A | Nexus Quick Settings |
 | Alt+Tab / Alt+Shift+Tab | Nexus window cycling |
 | Win+Tab / Ctrl+Alt+Tab | Nexus window overview |
 | Ctrl+Shift+Esc | Windows Task Manager |

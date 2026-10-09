@@ -40,6 +40,7 @@ internal sealed class TaskbarWindow : Window, IDisposable
         _registration.Position(_environment.Session.State.CompactDock);
         var monitor = ShellLayerInterop.Monitor(Handle).Monitor.Bounds;
         _environment.Desktop.Surface.SetWorkArea((monitor.Bottom - BarBounds.Y) / ShellLayerInterop.Scale(Handle));
+        _environment.PositionQuickSettings();
     }
     private void QueuePosition()
     { if (_queued || _disposed) return; _queued = true; DispatcherQueue.TryEnqueue(() => { _queued = false; Position(); }); }

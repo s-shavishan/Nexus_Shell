@@ -33,7 +33,7 @@ internal sealed class TaskbarView : Grid
         Grid.SetColumn(scroll, 1); Children.Add(scroll);
         var status = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
         status.Children.Add(IconButton("Windows", "Switch windows", environment.ShowWindowOverview, true));
-        status.Children.Add(IconButton("Settings", "PC controls", () => environment.ShowSections("PC controls"), true));
+        status.Children.Add(IconButton("Settings", "Quick settings", environment.ShowQuickSettings, true));
         var clock = new StackPanel { Spacing = 2 }; clock.Children.Add(_time); clock.Children.Add(_date);
         var clockButton = new Button { Content = clock, Style = (Style)Application.Current.Resources["QuietButton"], Padding = new Thickness(6) };
         clockButton.Click += (_, _) => environment.ShowMenu(); status.Children.Add(clockButton);

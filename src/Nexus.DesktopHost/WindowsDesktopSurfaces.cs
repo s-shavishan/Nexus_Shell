@@ -6,7 +6,7 @@ using System.Runtime.Versioning;
 using System.Text;
 
 [SupportedOSPlatform("windows")]
-internal sealed class WindowsDesktopSurfaces : IWindowsDesktopSurfaces
+internal sealed class WindowsDesktopSurfaces : IWindowsDesktopSurfaces, IDisposable
 {
     private delegate bool WindowVisitor(IntPtr window, IntPtr state);
     [DllImport("user32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool EnumWindows(WindowVisitor visitor, IntPtr state);
@@ -18,17 +18,29 @@ internal sealed class WindowsDesktopSurfaces : IWindowsDesktopSurfaces
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern IntPtr FindWindow(string? name, string? title);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern IntPtr FindWindowEx(IntPtr parent, IntPtr after, string? name, string? title);
     private readonly int _session = Process.GetCurrentProcess().SessionId;
+    private readonly Dictionary<int, Process> _explorers = [];
     private static string ClassOf(IntPtr window) { var text = new StringBuilder(128); GetClassName(window, text, text.Capacity); return text.ToString(); }
     private bool Explorer(int id)
     {
+        Process? candidate = null;
         try
         {
-            using var process = Process.GetProcessById(id);
-            return process.SessionId == _session && process.ProcessName.Equals("explorer", StringComparison.OrdinalIgnoreCase)
-                && string.Equals(process.MainModule?.FileName, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe"), StringComparison.OrdinalIgnoreCase);
+            if (_explorers.TryGetValue(id, out var known))
+            {
+                if (!known.HasExited) return true;
+                known.Dispose(); _explorers.Remove(id);
+            }
+            candidate = Process.GetProcessById(id);
+            if (candidate.SessionId != _session || !candidate.ProcessName.Equals("explorer", StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(candidate.MainModule?.FileName, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe"), StringComparison.OrdinalIgnoreCase)) return false;
+            // Validate the image once. Retaining the handle also detects PID reuse.
+            _ = candidate.Handle;
+            if (candidate.HasExited) return false;
+            _explorers[id] = candidate; candidate = null; return true;
         }
         catch (ArgumentException) { return false; }
         catch (InvalidOperationException) { return false; }
+        finally { candidate?.Dispose(); }
     }
     public IReadOnlyList<WindowsDesktopSurface> Read()
     {
@@ -79,4 +91,5 @@ internal sealed class WindowsDesktopSurfaces : IWindowsDesktopSurfaces
     }
     internal static bool DesktopExists => GetShellWindow() != IntPtr.Zero;
     internal static bool NexusExists => FindWindow(null, "White Dreams Nexus Desktop") != IntPtr.Zero;
+    public void Dispose() { foreach (var process in _explorers.Values) process.Dispose(); _explorers.Clear(); }
 }

@@ -1,3 +1,7 @@
+# Quick Settings — 1.4.0
+
+The taskbar and Win+A in a managed desktop now open independent Quick Settings. More controls opens the existing Sections PC controls/mixer described below. See [QUICK-SETTINGS-AND-PERFORMANCE.md](QUICK-SETTINGS-AND-PERFORMANCE.md) for hardware capability limits and validation.
+
 # Nexus 1.0.0 PC controls
 
 Use Ctrl+5, the desktop shortcut, dock gear, More menu or Ctrl+K → PC controls. The quick Control center includes the default output's volume and mute; the full workspace also shows app sessions, PC status and window layouts.

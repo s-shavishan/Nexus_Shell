@@ -61,9 +61,10 @@ internal static class Program
         var result = DesktopSessionRecovery.Restore(policy,
             () =>
             {
+                using var surfaces = new WindowsDesktopSurfaces();
                 if (lease is not null) lease.Restore();
-                else if (snapshot is not null) DesktopSurfaceLease.RestoreSaved(new WindowsDesktopSurfaces(), snapshot.Surfaces);
-                else new WindowsDesktopSurfaces().RestoreDefaultSurfaces();
+                else if (snapshot is not null) DesktopSurfaceLease.RestoreSaved(surfaces, snapshot.Surfaces);
+                else surfaces.RestoreDefaultSurfaces();
                 surfacesRestored = true;
             },
             () => { RestoreWorkArea(original, snapshot); areaRestored = true; },
@@ -101,7 +102,7 @@ internal static class Program
     {
         if (!OperatingSystem.IsWindows()) return 1;
         bool sessionOnly = args.Contains("--nexus-session") || args.Contains("--restore-session");
-        DesktopSurfaceLease? lease = null; MonitorInfo? original = null; Process? active = null;
+        DesktopSurfaceLease? lease = null; MonitorInfo? original = null; Process? active = null; WindowsDesktopSurfaces? surfaces = null;
         try
         {
             if (args.Contains("--restore-windows") || args.Contains("--restore-session"))
@@ -119,7 +120,8 @@ internal static class Program
             original = Monitor();
             var snapshot = new DesktopSessionSnapshot(1, SessionId, Environment.ProcessPath!, Rectangle(original.Value.Monitor), Rectangle(original.Value.Work), []);
             SessionRecord.Save(snapshot);
-            lease = new(new WindowsDesktopSurfaces(), surfaces => SessionRecord.Save(snapshot with { Surfaces = surfaces }));
+            surfaces = new();
+            lease = new(surfaces, saved => SessionRecord.Save(snapshot with { Surfaces = saved }));
             var budget = new ShellRestartBudget();
             while (true)
             {
@@ -164,6 +166,6 @@ internal static class Program
             RestoreWindows(!sessionOnly, lease, original, true);
             return 1;
         }
-        finally { active?.Dispose(); }
+        finally { active?.Dispose(); surfaces?.Dispose(); }
     }
 }

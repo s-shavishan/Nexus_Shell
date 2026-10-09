@@ -27,6 +27,8 @@ required = [
     "Desktop/FilesWindow.cs", "Desktop/SwitcherWindow.cs", "UI/Files/FilesView.cs", "MainWindow.DesktopMode.cs",
     "Services/FileCatalog.cs", "Services/DesktopShellPolicy.cs", "Services/DesktopShellRegistration.cs", "Services/DesktopSessionRecovery.cs", "Services/DesktopSessionRecord.cs",
     "Interop/ExclusiveTaskbarRegistration.cs", "Interop/ShellKeyboardHook.cs", "Interop/NexusDesktopToggle.cs", "Interop/ShortcutResolver.cs", "Interop/RecycleBinService.cs",
+    "Interop/DesktopWorkArea.cs", "Services/DesktopWorkAreaReservation.cs", "Services/DesktopVisuals.cs",
+    "Services/BrightnessController.cs", "Services/BrightnessScale.cs", "Desktop/QuickSettingsWindow.cs", "UI/Controls/QuickSettingsView.cs",
 ]
 for relative in required:
     assert (project / relative).is_file(), f"Missing file: {relative}"
@@ -174,19 +176,27 @@ for source in project.glob("*.xaml"):
         if uri.startswith("ms-appx:///Assets/Icons/"):
             assert uri.rsplit("/", 1)[-1].removesuffix(".svg") in icon_names, f"Missing icon: {uri}"
 print("Native vector assets and publish wiring OK")
+wallpaper_content = project_xml.find("ItemGroup/Content[@Include='Assets\\Wallpapers\\*.png']")
+assert wallpaper_content is not None and wallpaper_content.attrib.get("CopyToPublishDirectory") == "PreserveNewest"
+for mood in ["Solstice", "Ember", "Opal", "Lagoon", "Graphite", "Pearl"]:
+    png = (project / "Assets/Wallpapers" / (mood + ".png")).read_bytes()
+    assert png[:8] == b"\x89PNG\r\n\x1a\n" and struct.unpack(">II", png[16:24]) == (2560, 1600), f"Invalid wallpaper cache: {mood}"
+desktop = (project / "UI/Desktop/DesktopSurface.cs").read_text()
+assert "BitmapImage" in desktop and "Shapes.Path" not in desktop, "Desktop ribbons must use the cached asset"
+print("Cached wallpaper assets and publish wiring OK")
 # Desktop composition must not regress into the Sections XAML root.
 assert not (project / "MainWindow.Canvas.cs").exists(), "Obsolete packed desktop partial remains"
 assert not {"MenuBar", "DockBorder", "DesktopCanvas", "DesktopClockCard", "DesktopWorkspaceCard", "WallpaperAccents"} & set(names), "Desktop UI must not be embedded in Sections"
 startup = (project / "App.xaml.cs").read_text()
 assert "new MainWindow(" not in startup and "DesktopEnvironment" in startup, "Startup must create the environment without Sections"
-for layer in ["DesktopWindow", "TaskbarWindow", "MenuWindow"]:
+for layer in ["DesktopWindow", "TaskbarWindow", "MenuWindow", "QuickSettingsWindow"]:
     body = (project / "Desktop" / (layer + ".cs")).read_text()
     assert re.search(r"class\s+" + layer + r"\s*:\s*Window", body), f"{layer} must own a native Window"
 closed = code[code.index("private void Window_Closed("):]
 assert "SaveFinal(" not in closed and "DetachSnapshot(" in closed, "Closing Sections must not finalize the desktop session"
 for file in [root / "appveyor.yml", root / ".github/workflows/build-windows.yml", root / "scripts/package.ps1", root / "scripts/build.ps1"]:
     body = file.read_text()
-    assert "Nexus-Shell-1.3.1" in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
+    assert "Nexus-Shell-1.4.0" in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
 print("Independent desktop ownership, Sections lifetime and CI versions OK")
 # Desktop replacement cannot silently instantiate Explorer or common picker UI.
 environment = (project / "Desktop/DesktopEnvironment.cs").read_text()

@@ -1,3 +1,14 @@
+# 1.4.0 — desktop performance and independent Quick Settings
+
+- Remove half-second work-area repair/broadcast loops; update intended geometry once and notify app windows asynchronously.
+- Cache validated Explorer process handles during session maintenance without weakening image/session checks.
+- Replace live desktop ribbon shapes with six cached wallpapers; retain a simple Fast background.
+- Add on-demand native Quick Settings via taskbar, desktop context menu and Win+A: real output audio, supported DDC/CI brightness, visual quality, compact taskbar, power/network status and system shortcuts.
+- Run driver calls off the UI thread; coalesce slider changes, bound pending work and stop hidden-panel polling.
+- Keep shared appearance synchronized with open Sections; handle both Windows registry permission exception forms in persistent setup UI.
+- Ship/hash cached assets in full and small updates; add performance/profile/layout/range checks and explicit VM comparison guidance.
+- Local core/analyzer/API/source checks pass; native Windows build and measured lag improvement remain pending.
+
 # 1.3.1 — reversible Nexus desktop sessions
 
 - Add a supervised temporary Nexus desktop/session launcher and preview handoff without writing sign-in policy.
