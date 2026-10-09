@@ -7,9 +7,10 @@ using Nexus.Shell.Models;
 
 namespace Nexus.Shell.UI.Taskbar;
 
-internal sealed class TaskbarView : Border
+internal sealed class TaskbarView : Grid
 {
     private readonly DesktopEnvironment _environment;
+    private readonly Border _frame = new();
     private readonly Grid _body = new() { ColumnSpacing = 12, Padding = new Thickness(14, 6, 14, 6) };
     private readonly StackPanel _pins = new() { Orientation = Orientation.Horizontal, Spacing = 4 };
     private readonly StackPanel _windows = new() { Orientation = Orientation.Horizontal, Spacing = 4 };
@@ -27,7 +28,7 @@ internal sealed class TaskbarView : Border
     private MotionController? _motion;
     internal TaskbarView(DesktopEnvironment environment)
     {
-        _environment = environment; Child = _body;
+        _environment = environment; _frame.Child = _body; Children.Add(_frame);
         _body.ColumnDefinitions.Add(new() { Width = GridLength.Auto }); _body.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) }); _body.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
         var start = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
         start.Children.Add(IconButton("Nexus", "Start", () => environment.ShowMenu(), true));
@@ -94,7 +95,7 @@ internal sealed class TaskbarView : Border
     }
     internal void SetAvailableWidth(double widthDip)
     {
-        CornerRadius = new CornerRadius(_environment.Session.State.FloatingTaskbar && !_environment.Theme.HighContrast ? 22 : 0);
+        _frame.CornerRadius = new CornerRadius(_environment.Session.State.FloatingTaskbar && !_environment.Theme.HighContrast ? 22 : 0);
         // Keep Start and Quick Settings reachable on small/scaled displays.
         _search.Visibility = widthDip < 400 ? Visibility.Collapsed : Visibility.Visible;
         _overview.Visibility = widthDip < 440 ? Visibility.Collapsed : Visibility.Visible;
@@ -106,9 +107,9 @@ internal sealed class TaskbarView : Border
     { var now = DateTime.Now; _time.Text = now.ToString(_environment.Session.State.Clock24Hour ? "HH:mm" : "h:mm tt"); _date.Text = now.ToString("ddd, d MMM"); }
     internal void ApplyAppearance()
     {
-        var theme = _environment.Theme; RequestedTheme = theme.ElementTheme; Background = theme.Brush("NexusPanel");
-        CornerRadius = new CornerRadius(_environment.Session.State.FloatingTaskbar && !theme.HighContrast ? 22 : 0);
-        BorderBrush = theme.Brush("NexusBorder"); BorderThickness = new Thickness(theme.HighContrast ? 1 : 0);
+        var theme = _environment.Theme; RequestedTheme = theme.ElementTheme; _frame.Background = theme.Brush("NexusPanel");
+        _frame.CornerRadius = new CornerRadius(_environment.Session.State.FloatingTaskbar && !theme.HighContrast ? 22 : 0);
+        _frame.BorderBrush = theme.Brush("NexusBorder"); _frame.BorderThickness = new Thickness(theme.HighContrast ? 1 : 0);
         _separator.Background = theme.Brush("NexusBorder"); _time.Foreground = theme.Brush("NexusText"); _date.Foreground = theme.Brush("NexusMuted");
         _clockButton.Background = theme.Brush("NexusCard");
         _motion?.SetEnabled(!theme.HighContrast && theme.Animations && !_environment.Session.State.ReducedEffects); ApplyDensity(); RefreshClock();

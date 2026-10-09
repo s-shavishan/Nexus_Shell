@@ -5,6 +5,7 @@ XML OK: src/Nexus.Shell/app.manifest
 XML OK: NuGet.Config
 XAML content ordering OK
 Desktop WinRT event compatibility OK
+WinUI sealed Border inheritance OK
 WinUI Thickness constructors OK
 C# UI brush resources OK
 Native vector assets and publish wiring OK
@@ -15,4 +16,4 @@ Interop imports OK
 PASS: 76 project files, 132 named elements, 69 handlers, resources, icon, JSON, and build references.
 C# / XAML compilation and Windows launch still required.
 
-1.4.2: These source/resource checks passed. Native C#/WinUI/.NET, PowerShell and Windows/VM acceptance remain pending; see VALIDATION.md.
+1.4.2 build fix: Source/resource checks pass locally. The supplied AppVeyor log for af26198808fbc31f92275847cabfdf461093e35f records passed .NET core checks (including 1008 placement cases) and PowerShell updater checks. Corrected WinUI compilation and Windows/VM acceptance remain pending; see VALIDATION.md.

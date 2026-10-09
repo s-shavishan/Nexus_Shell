@@ -13,7 +13,7 @@ The user's short VirtualBox test reported much smoother dragging in **1.4.1 whil
 
 ## Build and try
 
-Apply `Nexus-1.4.1-to-1.4.2.patch` to main commit `d98e09ff916c16ee1321bbf285a228bc785f9653`, then commit/push for AppVeyor. A separate cumulative patch is included for an unchanged 1.4.0 checkout; apply exactly one.
+For the failed 1.4.2 source at commit `af26198808fbc31f92275847cabfdf461093e35f`, apply `Nexus-1.4.2-Build-Fix.patch`, then commit/push for AppVeyor. The taskbar now contains its rounded Border inside a Grid; it no longer inherits WinUI's sealed Border class. SOURCE-PATCH.md gives the exact commands. The complete Source ZIP is an alternative source tree.
 
 ```powershell
 dotnet run --project .\tests\Nexus.Core.Checks\Nexus.Core.Checks.csproj --configuration Release
@@ -24,7 +24,7 @@ dotnet run --project .\tests\Nexus.Core.Checks\Nexus.Core.Checks.csproj --config
 
 After CI succeeds, extract the complete `Nexus-Shell-1.4.2-win-x64.zip` into a new folder, or use its compatible-runtime Update package. Exit the old Nexus first. Launch **Launch-Nexus-Desktop.bat** or select **Sections → Personalize → Use Nexus for this session** in the preview. Use Balanced to inspect motion; compare Fast if testing window-drag performance.
 
-The authoring environment cannot compile/run Windows or .NET. Source/resource checks and patch reconstruction are verified here; native Windows build, new core checks and VM UI acceptance remain pending.
+The supplied AppVeyor log for the original 1.4.2 commit records passed .NET core checks, including all 1,008 placement cases, and PowerShell updater checks. The UI build then failed with CS0509. Source/resource checks and patch reconstruction are verified here; the corrected native Windows build and VM UI acceptance remain pending.
 
 ## Guides
 

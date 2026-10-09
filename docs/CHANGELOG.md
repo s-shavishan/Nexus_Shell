@@ -1,3 +1,9 @@
+# 1.4.2 — build fix
+
+- Fix CS0509 by composing the rounded taskbar Border inside a Grid.
+- Add a source guard for sealed WinUI Border inheritance; keep dock geometry and motion unchanged.
+- Record passed CI core/geometry/updater checks separately from the pending corrected native build and Windows acceptance.
+
 # 1.4.2 — floating taskbar and rounded windows
 
 - Default to a centered floating taskbar; retain compact/edge-to-edge preferences and safe work-area reservation.

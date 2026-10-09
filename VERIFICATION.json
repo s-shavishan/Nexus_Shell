@@ -1,7 +1,7 @@
 {
   "version": "1.4.2",
-  "baselineCommit": "d98e09ff916c16ee1321bbf285a228bc785f9653",
-  "baselineFiles": 194,
+  "baselineCommit": "af26198808fbc31f92275847cabfdf461093e35f",
+  "baselineFiles": 199,
   "sourceFiles": 199,
   "implemented": [
     "floating taskbar with stable appbar reservation",
@@ -10,14 +10,26 @@
     "Sections/Files tuck-and-return"
   ],
   "checksCompleted": [
-    "all 194 baseline Git blobs verified",
+    "all 199 failed-build baseline Git blobs verified",
     "source/XML/XAML/resources/publish/ownership/version checks",
-    "unchanged host takeover/recovery code and pinned dependencies"
+    "sealed Border guard rejects failed source and accepts corrected source",
+    "unchanged host takeover/recovery/startup and pinned dependencies"
   ],
   "pending": [
-    "new C# behavioral tests (1008 placement cases and persistence)",
-    "C# type/analyzer and native WinUI build",
-    "PowerShell updater/parser checks",
-    "Windows 10/11 frame/minimize/focus and VirtualBox performance acceptance"
-  ]
+    "corrected native WinUI build and type/analyzer checks",
+    "publish/resource and full/update package validation",
+    "Windows 10/11 frame/minimize/focus and VirtualBox performance acceptance",
+    "actual audio-device acceptance"
+  ],
+  "buildFix": "TaskbarView composes its rounded Border inside a Grid (CS0509)",
+  "observedCI": {
+    "commit": "af26198808fbc31f92275847cabfdf461093e35f",
+    "source": "user-supplied AppVeyor log",
+    "coreAndNativeTestWindows": "passed",
+    "placementCases": 1008,
+    "settingsMigrationAndPersistence": "passed",
+    "powerShellUpdaterChecks": "passed",
+    "audioDeviceAcceptance": "skipped: CI host has no audio output",
+    "uiCompilation": "failed with CS0509 before this fix"
+  }
 }

@@ -87,6 +87,16 @@ for source in project.rglob("*.cs"):
     )
 print("Desktop WinRT event compatibility OK")
 
+# WinUI Border is sealed in its C# projection (CS0509). A custom surface must
+# compose a Border inside a supported layout/control base. This catches that
+# specific API mistake; native C# compilation is still required.
+for source in project.rglob("*.cs"):
+    assert not re.search(
+        r"\bclass\s+\w+\s*:\s*(?:global::)?(?:Microsoft\.UI\.Xaml\.Controls\.)?Border\b",
+        source.read_text(encoding="utf-8"),
+    ), f"Sealed WinUI Border inheritance (CS0509): {source.relative_to(root)}. Compose the Border instead."
+print("WinUI sealed Border inheritance OK")
+
 # WinUI Thickness has uniform and four-side constructors. The two-value WPF
 # overload is not available and caused CS7036 in the 0.8.0 Windows build.
 for source in project.rglob("*.cs"):
