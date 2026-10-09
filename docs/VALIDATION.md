@@ -1,18 +1,11 @@
-# 1.4.0 validation
+# 1.4.1 validation
 
-The 176-file baseline at b493314 passed AppVeyor build 54860759. The user's VM runs its session takeover/restoration but reports severe dragging lag. New 1.4.0 native behavior and improvement require a Windows build and comparison.
+Baseline: all 192 source files from 1.4.0 match main commit a9f813df250f8c5b8f4a3fdadb05804fae867025. AppVeyor build 54863707 succeeded for that baseline. The user's VirtualBox VM still lags in 1.4.0 Fast after takeover; it is responsive with the Windows taskbar present.
 
-Completed locally on prepared source:
+1.4.1 changes taskbar-only takeover and native desktop placement. The added behavioral checks exercise preserved visible/hidden desktop windows, 1,000 unchanged maintenance passes without additional hide writes, reappearing/secondary taskbars, original-state recovery, durable taskbar-only journals and recovery of old journals containing WorkerW.
 
-- Actual .NET 8 core checks execute with SDK platform analyzers and compiler/analyzer warnings as errors. New checks cover one work-area write across 1,000 unchanged refreshes, geometry changes, explicit display invalidation, failed-write retry, existing-preference visual profile persistence and content preservation, right-anchored small/DPI/negative-origin panel bounds, and brightness range/numeric rejection.
-- Existing state, Files, keyboard, policy/backup rollback, numeric registry kind, durable session recovery, denied-policy recovery and restart/heartbeat checks remain passing.
-- All host C# compiles with .NET 8 default analyzers and warnings as errors. The independent recovery fallback's embedded C# compiles with C# 5 syntax and warnings as errors.
-- All application C# resolves against the pinned real WinUI/Windows/.NET references with platform analyzers and warnings as errors. Only known reference-unification warnings (CS1701/CS1702) and unused generated stand-in fields (CS0414) are excluded in this local check. Temporary XAML field/InitializeComponent stand-ins are used.
-- Source XML/XAML resource/name/handler/order, native surface ownership, startup/Sections lifetime, cached wallpaper dimensions/publish wiring, host/source/build/update ownership and C# syntax checks pass. Wallpaper bytes are verified and the selected Solstice asset was visually inspected.
-- The Git binary patch applies cleanly to the verified baseline, introduces no trailing-whitespace errors, and reconstructs the full 1.4.0 source byte-for-byte. Source/patch archive entries and SHA-256 hashes are verified.
+The authoring environment has no .NET or Windows runtime available for this update. New core tests, C# type/analyzer checks, PowerShell checks, native WinUI build and Windows execution are pending. Existing Core-checks.txt/CSharp-API-check.txt/Host-API-check.txt/Recovery-CSharp-check.txt are explicitly labeled historical 1.4.0 evidence.
 
-Pending: real Windows PowerShell parser/updater execution, native XBF/PRI generation, app launch/rendering, dragging/frame timing, CPU/GPU/memory measurements, work-area interaction with Explorer/appbars, actual audio/brightness drivers, focus/dismissal, failure recovery, lock/unlock and display/DPI behavior. No Windows services, sign-in setting or VM was modified here.
+The existing Python source validation checks XML/XAML resources, handlers/content order, startup/Sections ownership, assets/publish wiring, host recovery wiring and 1.4.1 artifact naming. The release patch is verified with git apply --check --whitespace=error-all, then applied to a clean baseline; every reconstructed file is compared to the full source. ZIP entries/CRC and SHA-256 hashes are checked during packaging.
 
-CI must complete native build/resource/package checks. QUICK-SETTINGS-AND-PERFORMANCE.md and TEST-DESKTOP-MODE.md define acceptance. Local API compilation is not a runnable Windows release and does not prove that the user's lag is resolved.
-
-Evidence: Core-checks.txt, CSharp-API-check.txt, Host-API-check.txt, Recovery-CSharp-check.txt and Source-checks.txt. Historical design screenshots and earlier release notes retain their original context.
+CI must execute the core checks and PowerShell updater/parser tests, build both host/UI, generate native XBF/PRI resources and validate the full/small packages. Then complete SESSION-TAKEOVER-1.4.1.md and the existing Windows acceptance guides. Source checks do not establish native layer ordering or resolve the user's window-drag lag.

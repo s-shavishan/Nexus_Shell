@@ -139,7 +139,11 @@ internal static class Program
                 {
                     if (pulse.WaitOne(1000))
                     {
-                        if (!received) lease.TakeOver();
+                        if (!received)
+                        {
+                            lease.TakeOver();
+                            Log("Requested taskbar-only takeover; Explorer desktop windows remain behind Nexus.");
+                        }
                         received = true; sincePulse.Restart();
                     }
                     if (received) lease.Maintain();

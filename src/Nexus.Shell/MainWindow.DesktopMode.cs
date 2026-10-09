@@ -28,7 +28,7 @@ public sealed partial class MainWindow
         {
             var session = AsyncButton("Use Nexus for this session…", StartNexusSessionAsync);
             session.IsEnabled = File.Exists(host); panel.Children.Add(session);
-            panel.Children.Add(Text("Hides the Windows desktop and taskbars while Nexus runs. Exit Nexus to bring them back. Your sign-in settings stay as they are.", 12, true));
+            panel.Children.Add(Text("Use the Nexus desktop and taskbar for this session. Exit Nexus to return to Windows. Your sign-in settings stay as they are.", 12, true));
         }
         var enable = AsyncButton(configured ? "Use this version at sign-in" : "Use Nexus at sign-in…", EnableDesktopModeAsync);
         enable.IsEnabled = capabilities.SupportsCustomInterface && File.Exists(host);
@@ -53,7 +53,7 @@ public sealed partial class MainWindow
         {
             string host = CheckDesktopHost();
             var dialog = new ContentDialog { XamlRoot = DesktopRoot.XamlRoot, RequestedTheme = DesktopRoot.RequestedTheme,
-                Title = "Use Nexus for this session?", Content = "Nexus will reopen as your desktop. The Windows desktop and taskbars will be hidden while it runs. Your other apps and Windows services stay available.\n\nExit Nexus to restore the Windows desktop. Your sign-in settings will stay as they are.",
+                Title = "Use Nexus for this session?", Content = "Nexus will reopen as your desktop with its own taskbar. Your other apps and Windows services stay available.\n\nExit Nexus to return to the Windows desktop. Your sign-in settings will stay as they are.",
                 PrimaryButtonText = "Start Nexus desktop", CloseButtonText = "Cancel", DefaultButton = ContentDialogButton.Close };
             PolishDialog(dialog);
             if (await dialog.ShowAsync() != ContentDialogResult.Primary || !_ready) return;

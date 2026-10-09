@@ -1,18 +1,17 @@
-# Updating the source to 1.4.0
+# Updating the source to 1.4.1
 
-`Nexus-1.3.1-to-1.4.0.patch` targets complete source at repository commit **b493314f5b9118c19077a5ea3be6c1996ba191d0**. All 176 baseline files matched GitHub's Git blob hashes. It adds desktop performance changes, independent Quick Settings, six cached wallpapers, focused checks and versioned package integration.
+`Nexus-1.4.0-to-1.4.1.patch` targets main commit **a9f813df250f8c5b8f4a3fdadb05804fae867025**, the 192-file 1.4.0 source. It narrows takeover to Windows taskbars and uses the existing desktop-relative placement path in session mode. It retains recovery for old session journals.
 
-Extract the Source-Patch ZIP and copy only the `.patch` into your repository root. Preserve local work. Confirm the baseline with `git rev-parse HEAD`, then run:
+From your existing Nexus_Shell source folder:
 
 ```powershell
-git apply --check --whitespace=error-all Nexus-1.3.1-to-1.4.0.patch
-git apply --whitespace=error-all Nexus-1.3.1-to-1.4.0.patch
+git apply --check --whitespace=error-all Nexus-1.4.0-to-1.4.1.patch
+git apply --whitespace=error-all Nexus-1.4.0-to-1.4.1.patch
 git diff --check
-git diff --stat
 ```
 
-If the check fails, stop and reconcile your baseline/local changes. The patch contains Git binary additions for PNG assets and must be applied with Git. It is verified by applying to a clean baseline and comparing every result byte-for-byte with the full 1.4.0 source. No added trailing-whitespace errors are present.
+Then commit/push through your usual workflow. AppVeyor runs core checks, the PowerShell updater/parser checks, the Windows build and resource/package verification. A successful build produces `Nexus-Shell-1.4.1-win-x64.zip` and `Nexus-Shell-1.4.1-Update-win-x64.zip`.
 
-Review the source, then commit and push for AppVeyor. The `.gitignore` excludes patch/archive files. Existing package pins remain unchanged. A successful Windows build produces `Nexus-Shell-1.4.0-win-x64.zip` and compatible-runtime `Nexus-Shell-1.4.0-Update-win-x64.zip`.
+Use this patch once on 1.4.0. A failing check can mean it was already applied or your source differs; reconcile the diff before applying it. The patch archive and full-source archive are alternative source delivery routes, not executable Windows packages.
 
-Use the complete compiled folder. Open Quick Settings → Desktop performance → Fast for the initial VM comparison. Local checks do not establish native frame timing; follow docs/QUICK-SETTINGS-AND-PERFORMANCE.md.
+The patch is checked by reconstructing the update from the baseline and comparing all source bytes. No added trailing-whitespace errors are permitted. Runtime dependencies remain pinned.

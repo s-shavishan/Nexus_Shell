@@ -1,3 +1,11 @@
+# 1.4.1 — taskbar-only session takeover
+
+- Hide only Explorer's Windows taskbars during supervised Nexus takeover; keep Progman/WorkerW desktop windows active underneath Nexus.
+- Use the existing desktop-relative placement path during managed sessions, covering Explorer's desktop below application windows.
+- Retain original taskbar visibility/work-area restoration and recovery of interrupted 1.4.0 desktop-window journals.
+- Add focused takeover/recovery checks and update full/small artifact versions to 1.4.1.
+- Native Windows build, layer/focus acceptance and VirtualBox drag performance remain pending.
+
 # 1.4.0 — desktop performance and independent Quick Settings
 
 - Remove half-second work-area repair/broadcast loops; update intended geometry once and notify app windows asynchronously.

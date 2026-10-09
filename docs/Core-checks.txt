@@ -1,3 +1,5 @@
+Historical 1.4.0 evidence. These results predate the 1.4.1 source changes; they do not validate this update.
+
 PASS: Windows Pro capability, backup-before-policy, upgrade rollback, foreign-policy preservation, partial recovery retry, file I/O/filtering/bounds, shell shortcuts and restart/heartbeat policy.
 PASS: session takeover/restoration, durable visibility and work-area recovery, refused journal writes, reused handles, denied-policy recovery and Task Manager/security shortcuts.
 PASS: desktop session saves after Sections closes/reopens, ordered/final writes, scaled Start bounds, native appbar layout and desktop shortcuts.

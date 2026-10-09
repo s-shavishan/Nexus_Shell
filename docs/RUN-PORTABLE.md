@@ -1,8 +1,8 @@
-# Run Nexus Shell 1.4.0
+# Run Nexus Shell 1.4.1
 
 Extract the full runnable Windows ZIP into a new folder. Keep both executables, their dependencies, PRI/XBF resources, Assets and helper files together.
 
-- **Launch-Nexus-Desktop.bat:** temporary Nexus desktop/taskbar. Windows surfaces are hidden when Nexus is ready. **Exit Nexus** restores Windows; no sign-in policy is changed.
+- **Launch-Nexus-Desktop.bat:** temporary Nexus desktop/taskbar. Windows taskbars are hidden when Nexus is ready; the Nexus desktop covers the active Windows desktop on the primary display. **Exit Nexus** restores Windows; no sign-in policy is changed.
 - **Nexus.Shell.exe / Launch-Nexus.bat:** preview alongside Windows. Sections → Personalize → Use Nexus for this session switches to the temporary session.
 - **Restore-Windows-Desktop.bat:** independent current-desktop recovery, with sign-in restoration attempted separately if a prior persistent backup exists.
 

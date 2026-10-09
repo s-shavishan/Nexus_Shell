@@ -9,6 +9,8 @@ public interface IWindowsDesktopSurfaces
 }
 
 // The host owns this lease, so closing/crashing the UI cannot strand the taskbar.
+// Keep Explorer's desktop windows alive behind Nexus. Hiding Progman/WorkerW
+// also changes the desktop infrastructure; only the taskbars need hiding.
 public sealed class DesktopSurfaceLease(IWindowsDesktopSurfaces surfaces, Action<IReadOnlyList<WindowsDesktopSurface>>? beforeHide = null)
 {
     private readonly Dictionary<long, WindowsDesktopSurface> _original = [];
@@ -18,7 +20,8 @@ public sealed class DesktopSurfaceLease(IWindowsDesktopSurfaces surfaces, Action
     public void Maintain()
     {
         if (!Active) return;
-        var currentSurfaces = surfaces.Read();
+        var currentSurfaces = surfaces.Read()
+            .Where(s => s.ClassName is "Shell_TrayWnd" or "Shell_SecondaryTrayWnd").ToList();
         foreach (var current in currentSurfaces)
         {
             if (!_original.TryGetValue(current.Handle, out var saved)

@@ -5,8 +5,8 @@ using Nexus.Shell.Services;
 
 namespace Nexus.Shell.Interop;
 
-// Standard Win32 window positioning and shell appbar registration. No Explorer
-// injection, WorkerW creation message, keyboard hook, or shell replacement.
+// Standard Win32 window positioning and shell appbar registration. Uses
+// existing desktop windows without injecting into or reparenting Explorer.
 internal static class ShellLayerInterop
 {
     internal static readonly IntPtr Topmost = new(-1), NotTopmost = new(-2), Bottom = new(1);
@@ -64,7 +64,7 @@ internal static class ShellLayerInterop
         return Bottom;
     }
     internal static bool ExplorerDesktopPresent() => GetShellWindow() != IntPtr.Zero || FindWindowEx(IntPtr.Zero, IntPtr.Zero, "Shell_TrayWnd", null) != IntPtr.Zero;
-    internal static void AnchorDesktop(IntPtr desktop, bool independent = false) => SetWindowPos(desktop, independent ? Bottom : DesktopAnchor(desktop), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010);
+    internal static void AnchorDesktop(IntPtr desktop) => SetWindowPos(desktop, DesktopAnchor(desktop), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010);
 }
 
 internal sealed class DesktopLayerHook : IDisposable
@@ -72,11 +72,10 @@ internal sealed class DesktopLayerHook : IDisposable
     private readonly IntPtr _handle;
     private readonly ShellLayerInterop.SubclassProc _callback;
     private readonly Action _reposition;
-    private readonly bool _independent;
     private bool _disposed;
-    internal DesktopLayerHook(IntPtr handle, Action reposition, bool independent = false)
+    internal DesktopLayerHook(IntPtr handle, Action reposition)
     {
-        _handle = handle; _reposition = reposition; _independent = independent; _callback = Message;
+        _handle = handle; _reposition = reposition; _callback = Message;
         if (!ShellLayerInterop.SetWindowSubclass(handle, _callback, new UIntPtr(0x4E01), UIntPtr.Zero)) throw new Win32Exception("Could not anchor the desktop layer.");
     }
     private IntPtr Message(IntPtr window, uint message, UIntPtr wp, IntPtr lp, UIntPtr id, UIntPtr data)
@@ -87,7 +86,7 @@ internal sealed class DesktopLayerHook : IDisposable
             {
                 var position = Marshal.PtrToStructure<ShellLayerInterop.WindowPos>(lp);
                 if ((position.Flags & 0x0004) == 0)
-                { position.InsertAfter = _independent ? ShellLayerInterop.Bottom : ShellLayerInterop.DesktopAnchor(window); Marshal.StructureToPtr(position, lp, false); }
+                { position.InsertAfter = ShellLayerInterop.DesktopAnchor(window); Marshal.StructureToPtr(position, lp, false); }
             }
             if (!_disposed && message is 0x007E or 0x02E0) _reposition(); // display / DPI
         }

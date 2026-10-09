@@ -12,6 +12,7 @@ Cached wallpaper assets and publish wiring OK
 Independent desktop ownership, Sections lifetime and CI versions OK
 Nexus desktop mode, Files/pickers, switcher, host recovery and build/update ownership OK
 Interop imports OK
-C# syntax OK (tree-sitter; API/type resolution NOT checked)
 PASS: 74 project files, 132 named elements, 69 handlers, resources, icon, JSON, and build references.
 C# / XAML compilation and Windows launch still required.
+
+1.4.1: source/XML/resource/publish/ownership/metadata checks above passed. C# behavioral/type/analyzer, PowerShell and native Windows build/VM checks are pending; see VALIDATION.md.

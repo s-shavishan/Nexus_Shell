@@ -1,1 +1,3 @@
+Historical 1.4.0 evidence. These results predate the 1.4.1 source changes; they do not validate this update.
+
 PASS: host C# and SDK platform analyzers with warnings as errors. Native execution pending.

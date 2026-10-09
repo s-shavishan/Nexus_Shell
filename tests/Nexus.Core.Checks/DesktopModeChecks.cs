@@ -26,22 +26,34 @@ internal static class DesktopModeChecks
     {
         internal readonly Dictionary<long, WindowsDesktopSurface> Values = [];
         internal long FailHandle;
+        internal int VisibilityWrites;
         public IReadOnlyList<WindowsDesktopSurface> Read() => Values.Values.ToList();
         public bool Matches(WindowsDesktopSurface saved) => Values.TryGetValue(saved.Handle, out var now) && now.ProcessId == saved.ProcessId && now.ClassName == saved.ClassName;
         public void SetVisible(WindowsDesktopSurface saved, bool visible)
-        { if (!Matches(saved)) return; if (saved.Handle == FailHandle) throw new IOException("Injected surface failure"); Values[saved.Handle] = Values[saved.Handle] with { Visible = visible }; }
+        { if (!Matches(saved)) return; if (saved.Handle == FailHandle) throw new IOException("Injected surface failure"); VisibilityWrites++; Values[saved.Handle] = Values[saved.Handle] with { Visible = visible }; }
     }
     internal static void Run()
     {
         var surfaces = new Surfaces();
         surfaces.Values[1] = new(1, 100, "Shell_TrayWnd", true);
-        surfaces.Values[2] = new(2, 100, "WorkerW", false);
+        surfaces.Values[2] = new(2, 100, "WorkerW", true);
+        surfaces.Values[4] = new(4, 100, "Progman", true);
+        surfaces.Values[5] = new(5, 100, "WorkerW", false);
+        surfaces.Values[6] = new(6, 100, "unrelated-app", true);
         var lease = new DesktopSurfaceLease(surfaces);
-        lease.TakeOver(); Check(!surfaces.Values[1].Visible && !surfaces.Values[2].Visible, "Takeover must hide visible desktop surfaces and preserve originally hidden surfaces.");
+        lease.TakeOver(); Check(!surfaces.Values[1].Visible && surfaces.Values[2].Visible && surfaces.Values[4].Visible
+            && !surfaces.Values[5].Visible && surfaces.Values[6].Visible,
+            "Takeover must hide the taskbar while preserving visible/hidden Explorer desktop windows and unrelated apps.");
+        for (int i = 0; i < 1000; i++) lease.Maintain();
+        Check(surfaces.VisibilityWrites == 1, "Steady session maintenance must not repeatedly hide an unchanged taskbar or any desktop window.");
         surfaces.Values[3] = new(3, 101, "Shell_SecondaryTrayWnd", true); lease.Maintain();
+        surfaces.Values[1] = surfaces.Values[1] with { Visible = true }; lease.Maintain();
+        Check(!surfaces.Values[1].Visible && !surfaces.Values[3].Visible && surfaces.VisibilityWrites == 3,
+            "A reappearing primary taskbar and newly created secondary taskbar must each be hidden once.");
         surfaces.Values[1] = new(1, 999, "unrelated-app", false);
         lease.Restore();
-        Check(!surfaces.Values[1].Visible && !surfaces.Values[2].Visible && surfaces.Values[3].Visible,
+        Check(!surfaces.Values[1].Visible && surfaces.Values[2].Visible && surfaces.Values[3].Visible
+            && surfaces.Values[4].Visible && !surfaces.Values[5].Visible && surfaces.Values[6].Visible,
             "Restoration must preserve original visibility, restore newly discovered taskbars and reject reused handles.");
         var partialSurfaces = new Surfaces { FailHandle = 8 };
         partialSurfaces.Values[8] = new(8, 100, "Shell_TrayWnd", false); partialSurfaces.Values[9] = new(9, 100, "Shell_SecondaryTrayWnd", false);
@@ -78,9 +90,14 @@ internal static class DesktopModeChecks
             });
             savedLease.TakeOver();
             var savedSession = record.Read(7)!;
-            Check(savedSession.Work == snapshot.Work && savedSession.Surfaces.Single(s => s.Handle == 4).Visible, "Recovery must retain original work area and visibility through actual disk I/O.");
+            Check(savedSession.Work == snapshot.Work && savedSession.Surfaces.Single().Handle == 4 && savedSession.Surfaces.Single().Visible,
+                "New recovery journals must retain the original work area and taskbar visibility without owning Explorer desktop windows.");
             DesktopSurfaceLease.RestoreSaved(savedSurfaces, savedSession.Surfaces);
             Check(savedSurfaces.Values[4].Visible && !savedSurfaces.Values[5].Visible, "Independent recovery must restore the saved visibility after the host lease is lost.");
+            var legacySnapshot = snapshot with { Surfaces = [new WindowsDesktopSurface(5, 100, "WorkerW", true)] };
+            record.Save(legacySnapshot);
+            DesktopSurfaceLease.RestoreSaved(savedSurfaces, record.Read(7)!.Surfaces);
+            Check(savedSurfaces.Values[5].Visible, "Recovery must still restore Explorer desktop windows from interrupted 1.4.0 journals.");
             Reject(() => record.Read(8), "Session recovery must reject another interactive session's record.");
             Reject(() => record.Save(snapshot with { Work = new(0, 0, 2500, 1032) }), "The saved work area must fit its monitor.");
             var cannotSave = new DesktopSurfaceLease(savedSurfaces, _ => throw new UnauthorizedAccessException("journal denied"));

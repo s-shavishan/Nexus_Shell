@@ -1,33 +1,32 @@
-# Nexus Shell 1.4.0 — desktop performance and Quick Settings
+# Nexus Shell 1.4.1 — session takeover repair
 
-This upgrade addresses likely causes of severe window-drag lag after **Use Nexus for this session**. It also adds a separate Quick Settings window, keeping desktop, taskbar, Start, Files and Sections independent.
+Nexus 1.4.0 is responsive with the Windows taskbar present, but the user's VirtualBox session still lags severely after takeover, including in Fast mode. This update narrows takeover: the host hides only Explorer's primary/secondary taskbars. It leaves Explorer's Progman/WorkerW desktop windows active and positions the opaque Nexus desktop above them, below application windows. The Windows desktop layer remains covered on Nexus's primary display.
 
-The taskbar no longer repeatedly repairs Windows' working area on its half-second stacking timer. It reserves space when its geometry changes and notifies other applications asynchronously. The session host validates Explorer's executable once per retained process handle, rather than opening its modules on each maintenance pass. The six existing ribbon wallpapers use checked-in image caches instead of large live vector shapes.
+Exit Nexus restores the original taskbar visibility and work area. New session journals own taskbars only; recovery still supports interrupted 1.4.0 journals containing desktop windows. Windows services, other apps and saved sign-in preferences retain their existing lifecycle.
 
-Open **Quick settings** from the taskbar, desktop context menu or **Win+A** in a managed Nexus session. Adjust real output volume/mute, hardware brightness on supported DDC/CI displays, visual quality and compact taskbar size. Settings, Control Panel, Task Manager and more PC controls are directly available. Network/power status is read only; unsupported brightness remains disabled. Hardware reads/writes run away from the UI thread, slider changes are coalesced, and hidden panels stop polling.
-
-**Fast** uses a simple background with glass and custom motion disabled; try this first in your VM. **Balanced** retains the cached wallpaper and motion with glass off. **Full** allows the existing glass effects where available. These profiles use existing saved preferences and preserve your content and chosen mood.
+This is a focused candidate repair. Smooth dragging in VirtualBox must be confirmed with a Windows build and the same windows/resolution used for 1.4.0. It does not establish that hiding Explorer desktop windows was the sole lag cause.
 
 ## Build and try
 
-Apply the verified 1.3.1→1.4.0 patch, commit/push for AppVeyor, or build on Windows:
+Apply `Nexus-1.4.0-to-1.4.1.patch` to main commit `a9f813df250f8c5b8f4a3fdadb05804fae867025`, commit/push for AppVeyor, or build on Windows:
 
 ```powershell
+dotnet run --project .\tests\Nexus.Core.Checks\Nexus.Core.Checks.csproj --configuration Release
+.\scripts\test-update.ps1
 .\scripts\build.ps1 -UseMSBuild
 .\scripts\package.ps1
 ```
 
-Run **Launch-Nexus-Desktop.bat** from the complete published `Nexus-Shell-1.4.0-win-x64` folder, or open preview and choose **Sections → Personalize → Use Nexus for this session…**. Exit or Quick Settings → Return to Windows restores the saved Windows desktop/taskbars and working area. Windows services and other apps keep running.
+Extract the complete `Nexus-Shell-1.4.1-win-x64.zip` build to a new folder. Return fully to Windows and exit the old Nexus before launching the new **Launch-Nexus-Desktop.bat**, or choose **Sections → Personalize → Use Nexus for this session** in its preview. In Quick Settings choose Fast, close panels, and drag the same Notepad window for 20–30 seconds.
 
-The source targets verified commit **b493314f5b9118c19077a5ea3be6c1996ba191d0**. Its 1.3.1 AppVeyor build succeeded and session mode works in the user's VM. **1.4.0 requires a real Windows build and VM performance comparison.** Local core, platform-analyzer, C# API and source checks pass; no Windows drag timings have been measured here.
+Quick Settings, Files, Sections, Start, the switcher, cached wallpapers and the 1.4.0 work-area/polling improvements remain available. Nexus still supplies the desktop/taskbar on the primary display. Additional-display Nexus surfaces and a notification-area replacement remain future work.
 
 ## Guides
 
 - [Apply the source patch](SOURCE-PATCH.md)
-- [Quick Settings and performance checks](docs/QUICK-SETTINGS-AND-PERFORMANCE.md)
+- [Session comparison and acceptance](docs/SESSION-TAKEOVER-1.4.1.md)
 - [Session/sign-in/recovery](docs/NEXUS-DESKTOP-MODE.md)
-- [Windows acceptance](docs/TEST-DESKTOP-MODE.md)
 - [Build handoff](docs/BUILD-HANDOFF.md)
-- [Validation evidence](docs/VALIDATION.md)
+- [Validation status](docs/VALIDATION.md)
 
-Persistent **Use Nexus at sign-in** remains a separate Windows policy option requiring registry permission. A denied persistent-policy restore does not prevent current-session Windows recovery; its backup is retained. Nexus currently supplies desktop/taskbar on the primary display. Additional-display bars, notification-area replacement and broader file operations remain future work. The orange/Solstice/Ember styling and historical design references are retained.
+The 1.4.0 baseline succeeded in AppVeyor build 54863707. The 1.4.1 Windows build, native layer ordering and VM smoothness remain pending. Persistent sign-in is separate from temporary session mode and still follows Windows policy permissions.

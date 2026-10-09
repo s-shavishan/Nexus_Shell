@@ -1,14 +1,14 @@
-# Nexus desktop sessions — 1.4.0
+# Nexus desktop sessions — 1.4.1
 
 ## Use Nexus now and restore Windows on exit
 
 Extract the full runnable folder. Close any existing Nexus preview, then run **Launch-Nexus-Desktop.bat**. The launcher starts `Nexus.DesktopHost.exe --nexus-session`. From preview, **Sections → Personalize → Use Nexus for this session…** closes the preview and starts the same supervised desktop session.
 
-After Nexus's desktop/taskbar and keyboard hook are ready, the host hides matching Windows desktop and taskbar windows owned by the real Explorer process in the current interactive session. Primary and secondary Windows taskbars are covered. Other applications and Windows services keep running. Explorer remains in the background for reversible restoration; this is not a service shutdown or Explorer process termination.
+After Nexus's desktop/taskbar and keyboard hook are ready, the host hides only matching primary and secondary Windows taskbar windows owned by the real Explorer process in the current interactive session. Explorer's Progman/WorkerW desktop windows remain active behind the opaque Nexus desktop on the primary display; Nexus is positioned above them and below application windows. Other applications and Windows services keep running. Explorer remains in the background for reversible restoration; this is not a service shutdown or Explorer process termination.
 
 **Start → Exit Nexus**, desktop right-click → Exit Nexus, or **Personalize → Return to Windows** closes all Nexus surfaces and restores the saved Windows visibility and primary work area. Closing Sections or Files alone keeps the desktop active. No sign-in policy is written by temporary launch or exit.
 
-The original working area and surface visibility are stored under `%LOCALAPPDATA%\WhiteDreams\NexusShell\desktop-session-<session-id>.json` before hiding any surface. Unwritable recovery data rejects takeover while Windows stays visible. Recovery validates Explorer ownership, window handle, process ID and class before changing visibility; dead/reused windows are skipped. Originally hidden surfaces remain hidden. The completed session record is removed after restoration.
+The original working area and taskbar visibility are stored under `%LOCALAPPDATA%\WhiteDreams\NexusShell\desktop-session-<session-id>.json` before hiding any surface. Unwritable recovery data rejects takeover while Windows stays visible. Recovery validates Explorer ownership, window handle, process ID and class before changing visibility; dead/reused windows are skipped. Originally hidden taskbars remain hidden. Recovery also accepts old Format 1 journals containing Progman/WorkerW windows from interrupted 1.4.0 sessions. The completed session record is removed after restoration.
 
 ## Host and recovery
 
