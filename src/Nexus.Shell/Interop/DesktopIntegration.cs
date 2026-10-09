@@ -9,7 +9,7 @@ internal sealed class DesktopIntegration : IDisposable
 {
     internal const uint SummonMessage = 0x8000 + 41;
     private const uint TrayMessage = 0x8000 + 42;
-    private const int HotkeyId = 0x4E58;
+    private const uint SubclassId = 0x4E58;
     private readonly IntPtr _window;
     private readonly SubclassProc _callback;
     private readonly Action<string> _dispatch;
@@ -18,7 +18,6 @@ internal sealed class DesktopIntegration : IDisposable
     private bool _hooked, _disposed, _trayRequested;
     internal static int NotificationDataSize => Marshal.SizeOf<NotifyData>();
     internal static int NotificationIconOffset => (int)Marshal.OffsetOf<NotifyData>(nameof(NotifyData.Icon));
-    internal bool HotkeyAvailable { get; private set; }
     internal bool TrayAvailable { get; private set; }
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi)]
@@ -29,10 +28,6 @@ internal sealed class DesktopIntegration : IDisposable
     private static extern bool RemoveWindowSubclass(IntPtr window, SubclassProc callback, UIntPtr id);
     [DllImport("comctl32.dll", ExactSpelling = true)]
     private static extern IntPtr DefSubclassProc(IntPtr window, uint message, UIntPtr wParam, IntPtr lParam);
-    [DllImport("user32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool RegisterHotKey(IntPtr window, int id, uint modifiers, uint key);
-    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool UnregisterHotKey(IntPtr window, int id);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern uint RegisterWindowMessage(string message);
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
@@ -72,21 +67,14 @@ internal sealed class DesktopIntegration : IDisposable
     {
         _window = window; _dispatch = dispatch; _callback = HandleMessage;
         _taskbarCreated = RegisterWindowMessage("TaskbarCreated");
-        _hooked = SetWindowSubclass(window, _callback, new UIntPtr(HotkeyId), UIntPtr.Zero);
+        _hooked = SetWindowSubclass(window, _callback, new UIntPtr(SubclassId), UIntPtr.Zero);
         if (!_hooked) throw new Win32Exception("Nexus could not attach its desktop controls.");
-    }
-    internal bool SetHotkey(bool enabled)
-    {
-        if (_disposed || !_hooked) return false;
-        if (HotkeyAvailable) UnregisterHotKey(_window, HotkeyId);
-        HotkeyAvailable = enabled && RegisterHotKey(_window, HotkeyId, 0x4000 | 0x0001 | 0x0002, 0x20); // NOREPEAT, ALT, CTRL, SPACE
-        return !enabled || HotkeyAvailable;
     }
     private NotifyData Data() => new()
     {
         Size = (uint)Marshal.SizeOf<NotifyData>(), Window = _window, Id = 1,
         Flags = 1 | 2 | 4, Callback = TrayMessage, Icon = _icon,
-        Tip = "Nexus · Ctrl+Alt+Space", Info = "", InfoTitle = ""
+        Tip = "Nexus", Info = "", InfoTitle = ""
     };
     internal bool SetResident(bool enabled)
     {
@@ -108,7 +96,6 @@ internal sealed class DesktopIntegration : IDisposable
             if (!_disposed)
             {
                 if (message == SummonMessage) { _dispatch("show"); return IntPtr.Zero; }
-                if (message == 0x0312 && wParam.ToUInt64() == HotkeyId) { _dispatch("search"); return IntPtr.Zero; }
                 if (message == TrayMessage)
                 {
                     uint action = unchecked((uint)lParam.ToInt64()); // legacy icon callback, deliberately no NIM_SETVERSION
@@ -148,8 +135,8 @@ internal sealed class DesktopIntegration : IDisposable
     public void Dispose()
     {
         if (_disposed) return;
-        SetResident(false); SetHotkey(false); _disposed = true;
-        if (_hooked) { RemoveWindowSubclass(_window, _callback, new UIntPtr(HotkeyId)); _hooked = false; }
+        SetResident(false); _disposed = true;
+        if (_hooked) { RemoveWindowSubclass(_window, _callback, new UIntPtr(SubclassId)); _hooked = false; }
         if (_icon != IntPtr.Zero) { DestroyIcon(_icon); _icon = IntPtr.Zero; }
     }
 }

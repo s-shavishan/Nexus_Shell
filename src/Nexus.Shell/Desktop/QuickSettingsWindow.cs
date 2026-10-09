@@ -51,8 +51,8 @@ internal sealed class QuickSettingsWindow : Window
     internal void ApplyAppearance()
     {
         var theme = _environment.Theme;
-        _frame.RequestedTheme = theme.ElementTheme; _frame.Background = theme.Brush("NexusPanel"); _frame.BorderBrush = theme.Brush("NexusBorder");
-        _frame.BorderThickness = new Thickness(theme.HighContrast ? 1 : 0); _frame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 18);
+        _frame.RequestedTheme = theme.ElementTheme; _frame.Background = theme.Surface("Sidebar"); _frame.BorderBrush = theme.Brush("NexusBorder");
+        _frame.BorderThickness = new Thickness(theme.HighContrast ? 1 : 0); _frame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 22);
         _chrome.SetCorners(theme.HighContrast); _motion.Refresh(); _view.ApplyAppearance();
     }
     internal void RefreshPreferences() => _view.RefreshPreferences();

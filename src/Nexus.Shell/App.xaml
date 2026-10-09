@@ -4,6 +4,7 @@
    <ResourceDictionary.MergedDictionaries><XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls"/></ResourceDictionary.MergedDictionaries>
    <ResourceDictionary.ThemeDictionaries>
     <ResourceDictionary x:Key="Light">
+     <LinearGradientBrush x:Key="NexusAction" StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#FFAA461F" Offset="0"/><GradientStop Color="#FFAA461F" Offset="1"/></LinearGradientBrush>
      <SolidColorBrush x:Key="NexusDesktopText" Color="#FFF5F8FF"/>
      <SolidColorBrush x:Key="NexusDesktopMuted" Color="#FFD2DDED"/>
      <SolidColorBrush x:Key="NexusText" Color="#FF302923"/>
@@ -153,6 +154,7 @@
      <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#383F332D"/>
     </ResourceDictionary>
     <ResourceDictionary x:Key="Dark">
+     <LinearGradientBrush x:Key="NexusAction" StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#FFAA461F" Offset="0"/><GradientStop Color="#FFAA461F" Offset="1"/></LinearGradientBrush>
      <SolidColorBrush x:Key="NexusDesktopText" Color="#FFF5F8FF"/>
      <SolidColorBrush x:Key="NexusDesktopMuted" Color="#FFD2DDED"/>
      <SolidColorBrush x:Key="NexusText" Color="#FF302923"/>
@@ -302,6 +304,7 @@
      <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#383F332D"/>
     </ResourceDictionary>
     <ResourceDictionary x:Key="HighContrast">
+     <SolidColorBrush x:Key="NexusAction" Color="{ThemeResource SystemColorHighlightColor}"/>
      <SolidColorBrush x:Key="NexusDesktopText" Color="{ThemeResource SystemColorWindowTextColor}"/>
      <SolidColorBrush x:Key="NexusDesktopMuted" Color="{ThemeResource SystemColorWindowTextColor}"/>
      <SolidColorBrush x:Key="NexusText" Color="{ThemeResource SystemColorWindowTextColor}"/>
@@ -599,6 +602,7 @@
      <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#29AA461F"/>
      <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#FF302923"/>
      <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#383F332D"/>
+<LinearGradientBrush x:Key="NexusAction" StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#FFAA461F" Offset="0"/><GradientStop Color="#FFAA461F" Offset="1"/></LinearGradientBrush>
    <ControlTemplate x:Key="NexusButtonTemplate" TargetType="Button">
     <Grid x:Name="NexusButtonRoot" Background="Transparent">
      <VisualStateManager.VisualStateGroups><VisualStateGroup x:Name="CommonStates">
@@ -619,7 +623,7 @@
     <Setter Property="MinHeight" Value="32"/><Setter Property="FocusVisualPrimaryBrush" Value="{ThemeResource NexusAccent}"/>
     <Setter Property="Template" Value="{StaticResource NexusButtonTemplate}"/><Setter Property="UseSystemFocusVisuals" Value="True"/>
     <Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/>
-    <Setter Property="CornerRadius" Value="8"/><Setter Property="Padding" Value="11,8"/>
+    <Setter Property="CornerRadius" Value="12"/><Setter Property="Padding" Value="11,8"/>
     <Setter Property="FontSize" Value="13"/><Setter Property="Foreground" Value="{ThemeResource NexusText}"/>
    </Style>
    <Style x:Key="AuraSurfaceButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
@@ -630,15 +634,15 @@
    <Style x:Key="AuraPrimaryButton" TargetType="Button" BasedOn="{StaticResource AccentButtonStyle}">
     <Setter Property="FocusVisualPrimaryBrush" Value="{ThemeResource NexusAccent}"/>
     <Setter Property="Template" Value="{StaticResource NexusButtonTemplate}"/><Setter Property="UseSystemFocusVisuals" Value="True"/>
-    <Setter Property="CornerRadius" Value="10"/><Setter Property="Padding" Value="15,9"/><Setter Property="FontSize" Value="13"/>
+    <Setter Property="CornerRadius" Value="16"/><Setter Property="Padding" Value="18,11"/><Setter Property="FontSize" Value="13"/>
     <Setter Property="FontWeight" Value="SemiBold"/>
-       <Setter Property="Background" Value="{ThemeResource NexusAccent}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusAccent}"/><Setter Property="Foreground" Value="{ThemeResource NexusAccentText}"/>
+       <Setter Property="Background" Value="{ThemeResource NexusAction}"/><Setter Property="BorderBrush" Value="Transparent"/><Setter Property="Foreground" Value="{ThemeResource NexusAccentText}"/>
 </Style>
    <Style x:Key="IconButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
     <Setter Property="Width" Value="38"/><Setter Property="Height" Value="36"/><Setter Property="Padding" Value="0"/>
    </Style>
    <Style x:Key="SidebarButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
-    <Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Height" Value="34"/>
+    <Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Height" Value="44"/><Setter Property="CornerRadius" Value="14"/><Setter Property="Padding" Value="12,9"/>
    </Style>
    <Style x:Key="DockButton" TargetType="Button">
     <Setter Property="FocusVisualPrimaryBrush" Value="{ThemeResource NexusAccent}"/>
@@ -665,7 +669,7 @@
    </Style>
    <Style TargetType="Button" BasedOn="{StaticResource AuraSurfaceButton}"/>
    <Style x:Key="SegmentButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
-    <Setter Property="CornerRadius" Value="7"/><Setter Property="Padding" Value="12,6"/><Setter Property="MinHeight" Value="30"/><Setter Property="FontSize" Value="12"/>
+    <Setter Property="CornerRadius" Value="16"/><Setter Property="Padding" Value="14,7"/><Setter Property="MinHeight" Value="30"/><Setter Property="FontSize" Value="12"/>
    </Style>
    <Style TargetType="FlyoutPresenter">
     <Setter Property="Background" Value="{ThemeResource NexusPanel}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusBorder}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="18"/><Setter Property="Padding" Value="8"/>

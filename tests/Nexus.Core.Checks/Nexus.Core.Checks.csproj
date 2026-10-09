@@ -7,6 +7,12 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../src/Nexus.Shell/Services/DockVisibility.cs" Link="DockVisibility.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/DockMotionPolicy.cs" Link="DockMotionPolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/DockPreviewPolicy.cs" Link="DockPreviewPolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Interop/WindowThumbnail.cs" Link="WindowThumbnail.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/DockWindowSet.cs" Link="DockWindowSet.cs" />
+    <Compile Include="../../src/Nexus.Shell/Interop/WindowEventObserver.cs" Link="WindowEventObserver.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DesktopShellPolicy.cs" Link="DesktopShellPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DesktopShellRegistration.cs" Link="DesktopShellRegistration.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DesktopSessionRecovery.cs" Link="DesktopSessionRecovery.cs" />

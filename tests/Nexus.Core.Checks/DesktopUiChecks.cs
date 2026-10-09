@@ -22,7 +22,10 @@ internal static class DesktopUiChecks
             int height = Math.Min(monitor.Height, DesktopLayout.TaskbarReservationHeight(compact, floating, scale));
             var reservation = new ShellRect(monitor.X, monitor.Bottom - height, monitor.Width, height);
             var bar = DesktopLayout.TaskbarBounds(reservation, floating, preferred, scale);
-            Check(Contains(monitor, reservation) && Contains(reservation, bar), "The dock and its reserved work area must fit the active monitor at every DPI/origin.");
+            var work = DesktopLayout.TaskbarWorkArea(monitor, compact, floating, scale);
+            Check(Contains(monitor, reservation) && Contains(reservation, bar), "The dock and its native window strip must fit the active monitor at every DPI/origin.");
+            Check(Contains(monitor, work) && (floating ? work == monitor : work.Bottom == reservation.Y),
+                "Floating mode must reserve zero space; only edge mode may reduce the work area.");
             if (floating)
             {
                 Check(bar.X > reservation.X && bar.Right < reservation.Right && bar.Y > reservation.Y && bar.Bottom < reservation.Bottom,
@@ -32,6 +35,9 @@ internal static class DesktopUiChecks
             else Check(bar == reservation, "Edge-to-edge mode must retain the complete appbar bounds.");
             Check(Contains(monitor, DesktopLayout.MenuBounds(monitor, bar, scale)), "Start must remain on-screen above the visible dock.");
             Check(Contains(monitor, DesktopLayout.QuickSettingsBounds(monitor, bar, scale)), "Quick Settings must remain on-screen at the dock's right edge.");
+            foreach (int x in new[] { monitor.X, bar.X + bar.Width / 2, monitor.Right - 1 })
+                Check(Contains(monitor, DesktopLayout.PreviewBounds(monitor, bar, new(x, bar.Y, 48, bar.Height), scale)),
+                    "A preview above the left, middle or right icon must stay within the active monitor at every origin/DPI.");
             cases++;
         }
         var state = JsonSerializer.Deserialize<ShellState>("{\"CompactDock\":true}")!;
@@ -44,6 +50,8 @@ internal static class DesktopUiChecks
             DesktopVisuals.Apply(state, profile);
             Check(DesktopVisuals.Read(state) == profile && !state.FloatingTaskbar, "Visual quality must remain independent of the taskbar layout preference.");
         }
-        Console.WriteLine($"PASS: {cases} floating/appbar/menu placement cases across monitor origins, DPI and overflow; settings migration and persistence.");
+        DockChecks.Run();
+        DockExperienceChecks.Run();
+        Console.WriteLine($"PASS: {cases} floating/appbar/menu placement and work-area cases across monitor origins, DPI and overflow; settings migration and persistence.");
     }
 }

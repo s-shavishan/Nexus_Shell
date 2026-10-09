@@ -1,10 +1,10 @@
-# Nexus desktop sessions — 1.4.2
+# Nexus desktop sessions — 1.4.3
 
 ## Use Nexus now and restore Windows on exit
 
 Extract the full runnable folder. Close any existing Nexus preview, then run **Launch-Nexus-Desktop.bat**. The launcher starts `Nexus.DesktopHost.exe --nexus-session`. From preview, **Sections → Personalize → Use Nexus for this session…** closes the preview and starts the same supervised desktop session.
 
-After Nexus's desktop/taskbar and keyboard hook are ready, the host hides only matching primary and secondary Windows taskbar windows owned by the real Explorer process in the current interactive session. Explorer's Progman/WorkerW desktop windows remain active behind the opaque Nexus desktop on the primary display; Nexus is positioned above them and below application windows. Other applications and Windows services keep running. Explorer remains in the background for reversible restoration; this is not a service shutdown or Explorer process termination.
+After Nexus's desktop/dock are ready, the host hides only matching primary and secondary Windows taskbar windows owned by the real Explorer process in the current interactive session. Explorer's Progman/WorkerW desktop windows remain active behind the opaque Nexus desktop on the primary display; Nexus is positioned above them and below application windows. Other applications and Windows services keep running. Explorer remains in the background for native shortcuts and reversible restoration. There is no Nexus global keyboard hook.
 
 **Start → Exit Nexus**, desktop right-click → Exit Nexus, or **Personalize → Return to Windows** closes all Nexus surfaces and restores the saved Windows visibility and primary work area. Closing Sections or Files alone keeps the desktop active. No sign-in policy is written by temporary launch or exit.
 
@@ -32,20 +32,22 @@ Keep the entire selected published folder in place. Return to Windows before lau
 
 ## Integration and current scope
 
-Desktop, taskbar, Start/context menus, Quick Settings, Files, switcher and Sections remain separate native windows with shared state/theme. Temporary and persistent modes use the Nexus taskbar's primary working area and keyboard/window switcher. Preview retains Explorer coexistence.
+Desktop, dock, Start/context menus, Quick Settings, Files, overview and Sections remain separate native windows with shared state/theme. Floating mode reserves no work area; edge mode reserves only its height. Maximized foreground windows hide the floating dock, with bottom-edge reveal. Window events update dock membership/state; five-second polling is reconciliation. Preview retains Explorer coexistence.
 
-| Shortcut | Managed Nexus desktop |
+| Shortcut | Windows-native behavior when the shell backend is present |
 |---|---|
-| Win / Ctrl+Esc | Nexus Start |
-| Win+E | Nexus Files |
-| Win+D | Nexus Show desktop |
+| Win / Ctrl+Esc | Windows Start |
+| Win+E | Windows File Explorer |
+| Win+D | Windows Show desktop; Nexus keeps its desktop surface |
 | Win+I | Windows Settings |
-| Win+R / Win+S | Nexus search |
-| Win+A | Nexus Quick Settings |
-| Alt+Tab / Alt+Shift+Tab | Nexus window cycling |
-| Win+Tab / Ctrl+Alt+Tab | Nexus window overview |
+| Win+R / Win+S | Windows Run / Search |
+| Win+A | Windows controls |
+| Alt+Tab / Alt+Shift+Tab | Windows window cycling |
+| Win+Tab / Ctrl+Alt+Tab | Windows native task view / switcher |
 | Ctrl+Shift+Esc | Windows Task Manager |
 | Win+L / Ctrl+Alt+Delete | Windows secure session controls |
+
+Open Nexus Start, search, Files, Quick Settings and overview through dock/desktop buttons. The dock's Show desktop button retains its own reversible Nexus action. Nexus-local app shortcuts stay local. In permanent sign-in mode, Explorer can be absent, so its native Run/Start/Show desktop handlers may be unavailable; 1.4.3 does not bootstrap Explorer or synthesize those shortcuts. Native shortcuts can open native Windows GUI even though Windows taskbars stay hidden. Tucked Nexus windows remain reachable through the dock.
 
 The Nexus desktop/taskbar currently occupy the primary display only. Windows taskbars on other displays are hidden during takeover; additional Nexus taskbars are future work. Other applications, secure prompts and Windows facilities can still show UI. Replacement notification-area icons, every Windows overlay, full file operations and individual Recycle Bin restoration are not implemented. This is not an access-restriction policy.
 

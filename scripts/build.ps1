@@ -7,7 +7,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $projectFile = Join-Path $projectRoot 'src\Nexus.Shell\Nexus.Shell.csproj'
-$publishDirectory = Join-Path $projectRoot 'artifacts\Nexus-Shell-1.4.2-win-x64'
+$publishDirectory = Join-Path $projectRoot 'artifacts\Nexus-Shell-1.5.0-win-x64'
 $logDirectory = Join-Path $projectRoot 'artifacts\logs'
 
 if ($env:OS -ne 'Windows_NT') { throw 'WinUI must be built on Windows. Use an included Windows cloud-build route in START-HERE.md.' }

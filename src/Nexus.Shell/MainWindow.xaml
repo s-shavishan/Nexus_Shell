@@ -113,11 +113,11 @@
   <Border x:Name="HomeBorder" CornerRadius="0" Background="{ThemeResource NexusPanel}" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="0" HorizontalAlignment="Stretch">
    <Grid>
     <Grid.RowDefinitions>
-     <RowDefinition x:Name="ChromeRow" Height="52" />
+     <RowDefinition x:Name="ChromeRow" Height="64" />
      <RowDefinition Height="*" />
      <RowDefinition x:Name="FooterRow" Height="34" />
     </Grid.RowDefinitions>
-    <Border x:Name="WindowChrome" Background="{ThemeResource NexusSidebar}" CornerRadius="18,18,0,0" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="0,0,0,1">
+    <Border x:Name="WindowChrome" Background="{ThemeResource NexusPanel}" CornerRadius="0" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="0">
      <Grid Margin="12,0">
       <Grid.ColumnDefinitions>
        <ColumnDefinition Width="Auto" />
@@ -143,7 +143,14 @@
        </Button>
       </StackPanel>
       <Border Grid.Column="1" Background="Transparent" PointerPressed="DragArea_PointerPressed" />
-      <TextBlock IsHitTestVisible="False" x:Name="PageTitle" Text="Sections" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource NexusText}" TextTrimming="CharacterEllipsis" />
+      <TextBlock Visibility="Collapsed" IsHitTestVisible="False" x:Name="PageTitle" Text="Sections" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource NexusText}" TextTrimming="CharacterEllipsis" />
+      <Button x:Name="ChromeSearchButton" Grid.Column="1" Click="SearchApps_Click" Style="{StaticResource QuietButton}" MaxWidth="480" HorizontalAlignment="Stretch" Margin="24,0" Padding="14,8" CornerRadius="22" Background="{ThemeResource NexusInput}" AutomationProperties.Name="Search Nexus; Control K">
+       <Grid ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE721;" FontSize="16" Foreground="{ThemeResource NexusMuted}"/>
+        <TextBlock Grid.Column="1" Text="Search anything…" Foreground="{ThemeResource NexusMuted}" FontSize="13" VerticalAlignment="Center"/>
+        <Border Grid.Column="2" CornerRadius="7" Padding="7,2" Background="{ThemeResource NexusSelection}"><TextBlock Text="Ctrl K" Foreground="{ThemeResource NexusMuted}" FontSize="10"/></Border>
+       </Grid>
+      </Button>
       <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
        <Button Click="SearchApps_Click" Style="{StaticResource IconButton}" AutomationProperties.Name="Search Nexus" ToolTipService.ToolTip="Search · Ctrl+K">
         <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="" FontSize="16" />
@@ -258,7 +265,7 @@
               </Grid>
               <ComboBox x:Name="WallpaperBox" Header="Desktop mood" SelectionChanged="Wallpaper_SelectionChanged" HorizontalAlignment="Stretch">
                <ComboBoxItem Content="Solstice · warm pearl" />
-               <ComboBoxItem Content="Ember · warm midnight" />
+               <ComboBoxItem Content="Ember · sunset &amp; rose" />
                <ComboBoxItem Content="Opal · luminous glass" />
                <ComboBoxItem Content="Pearl · iris and charcoal" />
                <ComboBoxItem Content="Lagoon · deep teal" />
@@ -273,7 +280,6 @@
                 <TextBlock x:Name="GlassStatus" Foreground="{ThemeResource NexusMuted}" FontSize="12" TextWrapping="Wrap" />
                 <ToggleSwitch x:Name="EffectsSwitch" Header="Reduced effects" Toggled="Effects_Toggled" OffContent="Nexus signature" OnContent="Simpler surfaces and no custom motion" />
                 <TextBlock Text="Motion follows your Windows animation preference. Reduced effects uses simpler surfaces." Foreground="{ThemeResource NexusMuted}" FontSize="12" TextWrapping="Wrap" />
-                <ToggleSwitch x:Name="GlobalShortcutSwitch" Header="Summon Nexus from other apps" Toggled="GlobalShortcut_Toggled" OffContent="Off" OnContent="Ctrl+Alt+Space" />
                 <TextBlock x:Name="DesktopShortcutStatus" Foreground="{ThemeResource NexusMuted}" FontSize="12" TextWrapping="Wrap" />
                 <ToggleSwitch x:Name="ResidentSwitch" Header="Windows notification icon" Toggled="Resident_Toggled" OffContent="Taskbar remains available" OnContent="Notification icon enabled" />
                 <TextBlock Text="Focus continues while Sections is minimized; closing Sections pauses it. Your desktop and enabled usage tracking stay available." Foreground="{ThemeResource NexusMuted}" FontSize="12" TextWrapping="Wrap" />
@@ -299,119 +305,82 @@
     </Border>
     <Grid Grid.Row="1">
      <Grid.ColumnDefinitions>
-      <ColumnDefinition x:Name="SidebarColumn" Width="196" />
+      <ColumnDefinition x:Name="SidebarColumn" Width="228" />
       <ColumnDefinition Width="*" />
      </Grid.ColumnDefinitions>
-     <Border x:Name="Sidebar" Background="{ThemeResource NexusSidebar}" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="0,0,1,0">
-      <Grid Margin="14,20,14,16">
+     <Border x:Name="Sidebar" Margin="12,12,0,12" CornerRadius="22" Background="{ThemeResource NexusSidebar}" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="1">
+      <Grid Margin="10,18,10,16">
        <Grid.RowDefinitions>
         <RowDefinition Height="*" />
         <RowDefinition Height="Auto" />
        </Grid.RowDefinitions>
        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Spacing="4">
-         <TextBlock Text="WORKSPACE" FontSize="10" CharacterSpacing="120" Margin="12,0,0,13" Foreground="{ThemeResource NexusMuted}" />
-         <Button x:Name="NavProfiles" Tag="Workspaces" Click="Navigate_Click" Style="{StaticResource SidebarButton}">
-          <StackPanel Orientation="Horizontal" Spacing="12">
-           <Image Width="21" Height="21">
-            <Image.Source>
-             <SvgImageSource UriSource="ms-appx:///Assets/Icons/Explore.svg" />
-            </Image.Source>
-           </Image>
-           <TextBlock Text="Workspaces" FontSize="13" />
-          </StackPanel>
-         </Button>
+        <StackPanel Spacing="6">
+         <TextBlock Text="NEXUS" FontSize="10" CharacterSpacing="120" Margin="12,0,0,13" Foreground="{ThemeResource NexusMuted}" />
          <Button x:Name="NavHome" Tag="Home" Click="Navigate_Click" Style="{StaticResource SidebarButton}" AutomationProperties.Name="Overview">
           <StackPanel Orientation="Horizontal" Spacing="12">
-           <Image Width="21" Height="21">
-            <Image.Source>
-             <SvgImageSource UriSource="ms-appx:///Assets/Icons/Nexus.svg" />
-            </Image.Source>
-           </Image>
+           <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE80F;" FontSize="19"/>
            <TextBlock Text="Overview" FontSize="13" />
+          </StackPanel>
+         </Button>
+         <Button x:Name="NavProfiles" Tag="Workspaces" Click="Navigate_Click" Style="{StaticResource SidebarButton}">
+          <StackPanel Orientation="Horizontal" Spacing="12">
+           <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE8B7;" FontSize="19"/>
+           <TextBlock Text="Workspaces" FontSize="13" />
           </StackPanel>
          </Button>
          <Button x:Name="NavExplore" Tag="Explore" Click="Navigate_Click" Style="{StaticResource SidebarButton}">
           <StackPanel Orientation="Horizontal" Spacing="12">
-           <Image Width="21" Height="21">
-            <Image.Source>
-             <SvgImageSource UriSource="ms-appx:///Assets/Icons/Browser.svg" />
-            </Image.Source>
-           </Image>
+           <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE774;" FontSize="19"/>
            <TextBlock Text="Explore" FontSize="13" />
           </StackPanel>
          </Button>
          <Button x:Name="NavStudy" Tag="Study" Click="Navigate_Click" Style="{StaticResource SidebarButton}">
           <StackPanel Orientation="Horizontal" Spacing="12">
-           <Image Width="21" Height="21">
-            <Image.Source>
-             <SvgImageSource UriSource="ms-appx:///Assets/Icons/Study.svg" />
-            </Image.Source>
-           </Image>
+           <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE8F1;" FontSize="19"/>
            <TextBlock Text="Study" FontSize="13" />
           </StackPanel>
          </Button>
          <Button x:Name="NavApps" Tag="Apps" Click="Navigate_Click" Style="{StaticResource SidebarButton}">
           <StackPanel Orientation="Horizontal" Spacing="12">
-           <Image Width="21" Height="21">
-            <Image.Source>
-             <SvgImageSource UriSource="ms-appx:///Assets/Icons/Apps.svg" />
-            </Image.Source>
-           </Image>
+           <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE71D;" FontSize="19"/>
            <TextBlock Text="Apps" FontSize="13" />
           </StackPanel>
          </Button>
          <Button x:Name="NavGames" Tag="Gaming" Click="Navigate_Click" Style="{StaticResource SidebarButton}">
           <StackPanel Orientation="Horizontal" Spacing="12">
-           <Image Width="21" Height="21">
-            <Image.Source>
-             <SvgImageSource UriSource="ms-appx:///Assets/Icons/Game.svg" />
-            </Image.Source>
-           </Image>
+           <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE7FC;" FontSize="19"/>
            <TextBlock Text="Games" FontSize="13" />
           </StackPanel>
          </Button>
          <Button x:Name="NavActivity" Tag="Activity" Click="Navigate_Click" Style="{StaticResource SidebarButton}">
           <StackPanel Orientation="Horizontal" Spacing="12">
-           <Image Width="21" Height="21">
-            <Image.Source>
-             <SvgImageSource UriSource="ms-appx:///Assets/Icons/Document.svg" />
-            </Image.Source>
-           </Image>
+           <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE9D9;" FontSize="19"/>
            <TextBlock Text="Activity" FontSize="13" />
           </StackPanel>
          </Button>
          <TextBlock Text="YOUR SESSION" FontSize="10" CharacterSpacing="120" Margin="12,24,0,10" Foreground="{ThemeResource NexusMuted}" />
          <Button x:Name="NavRunning" Tag="Running apps" Click="Navigate_Click" Style="{StaticResource SidebarButton}">
           <StackPanel Orientation="Horizontal" Spacing="12">
-           <Image Width="21" Height="21">
-            <Image.Source>
-             <SvgImageSource UriSource="ms-appx:///Assets/Icons/Windows.svg" />
-            </Image.Source>
-           </Image>
+           <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE7F4;" FontSize="19"/>
            <TextBlock Text="Window overview" FontSize="12" />
           </StackPanel>
          </Button>
          <Button x:Name="NavPcControls" Tag="PC controls" Click="Navigate_Click" Style="{StaticResource SidebarButton}">
           <StackPanel Orientation="Horizontal" Spacing="12">
-           <Image Width="21" Height="21">
-            <Image.Source>
-             <SvgImageSource UriSource="ms-appx:///Assets/Icons/Settings.svg" />
-            </Image.Source>
-           </Image>
+           <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE713;" FontSize="19"/>
            <TextBlock Text="PC controls" FontSize="13" />
           </StackPanel>
          </Button>
          <Button x:Name="NavPersonalize" Tag="Personalize" Click="Navigate_Click" Style="{StaticResource SidebarButton}">
           <StackPanel Orientation="Horizontal" Spacing="12">
-           <Image Width="21" Height="21">
-            <Image.Source>
-             <SvgImageSource UriSource="ms-appx:///Assets/Icons/Note.svg" />
-            </Image.Source>
-           </Image>
+           <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE790;" FontSize="19"/>
            <TextBlock Text="Personalize" FontSize="13" />
           </StackPanel>
          </Button>
+         <Border Height="1" Background="{ThemeResource NexusBorder}" Margin="12,14,12,8"/>
+         <TextBlock Text="WORKSPACES" FontSize="10" CharacterSpacing="120" Margin="12,0,0,8" Foreground="{ThemeResource NexusMuted}"/>
+         <Grid x:Name="ProfileStrip" RowSpacing="4"/>
         </StackPanel>
        </ScrollViewer>
        <Border Grid.Row="1" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="0,1,0,0" Padding="9,16,0,0">
@@ -425,71 +394,60 @@
      </Border>
      <Grid x:Name="PageHost" Grid.Column="1" SizeChanged="PageHost_SizeChanged">
       <ScrollViewer x:Name="HomeView" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-       <StackPanel Spacing="20" Padding="16,12,16,24">
-        <Grid ColumnSpacing="12">
-         <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="*" />
-          <ColumnDefinition Width="Auto" />
-         </Grid.ColumnDefinitions>
-         <TextBlock x:Name="HomeGreeting" FontSize="15" Foreground="{ThemeResource NexusMuted}" VerticalAlignment="Center" TextWrapping="Wrap" />
-         <Button x:Name="HomeWorkspacesButton" Grid.Column="1" Content="Workspaces" Tag="Workspaces" Click="Navigate_Click" Style="{StaticResource QuietButton}" />
-        </Grid>
-        <Grid x:Name="ProfileStrip" ColumnSpacing="10" RowSpacing="10" />
-        <Border x:Name="HeroCard" CornerRadius="26" Padding="30" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="1">
-         <Border.Background>
-          <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-           <GradientStop Color="#DD4B426A" Offset="0" />
-           <GradientStop Color="#DB2B3854" Offset="0.65" />
-           <GradientStop Color="#DC28474C" Offset="1" />
-          </LinearGradientBrush>
-         </Border.Background>
-         <Grid ColumnSpacing="16">
-          <Grid.ColumnDefinitions>
-           <ColumnDefinition Width="*" />
-           <ColumnDefinition Width="Auto" />
-          </Grid.ColumnDefinitions>
-          <StackPanel Spacing="12" VerticalAlignment="Center">
-           <TextBlock Text="YOUR PERSONAL DESKTOP" FontSize="10" CharacterSpacing="150" Foreground="{ThemeResource NexusAccent}" />
-           <TextBlock x:Name="HeroTitle" Text="Your day, your space." FontSize="36" FontWeight="SemiBold" Foreground="{ThemeResource NexusText}" TextWrapping="Wrap" />
-           <TextBlock x:Name="HeroDescription" FontSize="14" Foreground="{ThemeResource NexusMuted}" TextWrapping="Wrap" />
-           <TextBlock x:Name="ProfileSummary" FontSize="12" Foreground="{ThemeResource NexusMuted}" />
-           <StackPanel x:Name="ProfileHeroActions" Orientation="Horizontal" Spacing="8">
-            <Button x:Name="ProfileOpenButton" Content="Open Personal" Click="ProfileOpen_Click" Style="{StaticResource AuraPrimaryButton}" />
-            <Button x:Name="ProfileDestinationButton" Content="Your apps" Click="ProfileDestination_Click" Style="{StaticResource QuietButton}" />
-            <Button x:Name="ProfileConfigureButton" Content="Configure" Click="ProfileEdit_Click" Style="{StaticResource QuietButton}" />
-           </StackPanel>
-          </StackPanel>
-          <Viewbox x:Name="HomeHeroArt" Grid.Column="1" Width="135" Height="148" IsHitTestVisible="False">
-           <Grid Width="160" Height="170">
-            <Ellipse Width="118" Height="118" Fill="{ThemeResource NexusIcon}" Stroke="{ThemeResource NexusSecondary}" StrokeThickness="1" />
-            <Ellipse Width="156" Height="57" Stroke="{ThemeResource NexusAccent}" StrokeThickness="1.5" RenderTransformOrigin="0.5,0.5">
-             <Ellipse.RenderTransform>
-              <RotateTransform Angle="-32" />
-             </Ellipse.RenderTransform>
-            </Ellipse>
-            <Ellipse Width="147" Height="46" Stroke="{ThemeResource NexusSecondary}" StrokeThickness="1" RenderTransformOrigin="0.5,0.5">
-             <Ellipse.RenderTransform>
-              <RotateTransform Angle="34" />
-             </Ellipse.RenderTransform>
-            </Ellipse>
-            <TextBlock Text="N" FontSize="68" FontWeight="Light" Foreground="{ThemeResource NexusText}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-            <Ellipse Width="9" Height="9" Fill="{ThemeResource NexusAccent}" Margin="120,13,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" />
-           </Grid>
-          </Viewbox>
-         </Grid>
-        </Border>
-        <Grid x:Name="HomeCards" ColumnSpacing="16" RowSpacing="16">
-         <Grid.ColumnDefinitions>
-          <ColumnDefinition x:Name="HomePrimaryColumn" Width="*" />
-          <ColumnDefinition x:Name="HomeSecondaryColumn" Width="*" />
-         </Grid.ColumnDefinitions>
-         <Grid.RowDefinitions>
-          <RowDefinition Height="Auto" />
-          <RowDefinition Height="Auto" />
-          <RowDefinition Height="Auto" />
-          <RowDefinition Height="Auto" />
-         </Grid.RowDefinitions>
-         <Border x:Name="HomeTaskCard" Padding="20" CornerRadius="24" Background="{ThemeResource NexusCard}" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="1">
+ <StackPanel x:Name="HomeBody" Spacing="20" Padding="24,22,24,24">
+  <Grid ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+   <StackPanel Spacing="8"><TextBlock x:Name="HomeGreeting" FontSize="34" FontWeight="SemiBold" Foreground="{ThemeResource NexusText}" TextWrapping="Wrap"/>
+    <TextBlock Text="Your workspaces, resources and focus, together." FontSize="14" Foreground="{ThemeResource NexusMuted}" TextWrapping="Wrap"/>
+   </StackPanel>
+   <Button x:Name="HomeWorkspacesButton" Grid.Column="1" Content="+ Workspace" Click="NewWorkspace_Click" Style="{StaticResource AuraPrimaryButton}" VerticalAlignment="Center"/>
+  </Grid>
+  <Grid x:Name="HomeSummaryCards" ColumnSpacing="12" RowSpacing="12"/>
+  <Grid x:Name="HomeCards" ColumnSpacing="16" RowSpacing="16">
+   <Grid.ColumnDefinitions><ColumnDefinition x:Name="HomePrimaryColumn" Width="2*"/><ColumnDefinition x:Name="HomeSecondaryColumn" Width="*"/></Grid.ColumnDefinitions>
+   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+   <Border x:Name="HomeSavedCard" Padding="20" CornerRadius="22" Background="{ThemeResource NexusCard}" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="1">
+ <StackPanel Spacing="14">
+  <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+   <TextBlock Text="Saved resources" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource NexusText}"/>
+   <Button Grid.Column="1" Content="Explore ↗" Tag="Explore" Click="Navigate_Click" Style="{StaticResource QuietButton}"/>
+  </Grid>
+  <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+   <StackPanel x:Name="HomeSavedFilters" Orientation="Horizontal" Spacing="4">
+    <Button Content="All" Tag="All" Click="HomeSavedFilter_Click" Style="{StaticResource SegmentButton}"/>
+    <Button Content="Files" Tag="Files" Click="HomeSavedFilter_Click" Style="{StaticResource SegmentButton}"/>
+    <Button Content="Links" Tag="Links" Click="HomeSavedFilter_Click" Style="{StaticResource SegmentButton}"/>
+    <Button Content="Notes" Tag="Notes" Click="HomeSavedFilter_Click" Style="{StaticResource SegmentButton}"/>
+   </StackPanel>
+  </ScrollViewer>
+  <StackPanel x:Name="HomeSavedRows" Spacing="2"/>
+  <TextBlock x:Name="HomeSavedEmpty" Text="Save a file, link or note in Explore to keep it here." TextWrapping="Wrap" Foreground="{ThemeResource NexusMuted}" FontSize="13"/>
+ </StackPanel>
+</Border>
+   <Border x:Name="HeroCard" Padding="20" CornerRadius="22" Background="{ThemeResource NexusCard}" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="1">
+ <StackPanel Spacing="14">
+  <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+   <TextBlock Text="Workspace spotlight" FontSize="18" FontWeight="SemiBold" Foreground="{ThemeResource NexusText}"/>
+   <Button Grid.Column="1" Content="•••" Click="ProfileEdit_Click" Style="{StaticResource IconButton}" AutomationProperties.Name="Configure current workspace"/>
+  </Grid>
+  <Border x:Name="HomeSpotlightArt" Height="112" CornerRadius="16" Background="{ThemeResource NexusIcon}">
+   <Grid><Image x:Name="HomeSpotlightImage" Stretch="UniformToFill" IsHitTestVisible="False"/>
+    <Border Background="#20000000" CornerRadius="16"/>
+    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE8B7;" FontSize="32" Foreground="{ThemeResource NexusAccentText}"/>
+   </Grid>
+  </Border>
+  <TextBlock x:Name="HeroTitle" FontSize="22" FontWeight="SemiBold" Foreground="{ThemeResource NexusText}" TextWrapping="Wrap"/>
+  <TextBlock x:Name="HeroDescription" FontSize="12" Foreground="{ThemeResource NexusMuted}" TextWrapping="Wrap"/>
+  <TextBlock x:Name="ProfileSummary" FontSize="12" Foreground="{ThemeResource NexusMuted}" TextWrapping="Wrap"/>
+  <StackPanel x:Name="ProfileHeroActions" Spacing="8">
+   <Button x:Name="ProfileOpenButton" Content="Open workspace" Click="ProfileOpen_Click" Style="{StaticResource AuraPrimaryButton}" HorizontalAlignment="Stretch"/>
+   <Grid ColumnSpacing="6"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+    <Button x:Name="ProfileDestinationButton" Content="Your apps" Click="ProfileDestination_Click" Style="{StaticResource QuietButton}"/>
+    <Button x:Name="ProfileConfigureButton" Grid.Column="1" Content="Configure" Click="ProfileEdit_Click" Style="{StaticResource QuietButton}"/>
+   </Grid>
+  </StackPanel>
+ </StackPanel>
+</Border>
+   <Border x:Name="HomeTaskCard" Padding="20" CornerRadius="24" Background="{ThemeResource NexusCard}" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="1">
           <StackPanel Spacing="12">
            <Grid ColumnSpacing="8">
             <Grid.ColumnDefinitions>
@@ -504,7 +462,7 @@
            <TextBlock x:Name="HomeFocusCount" Foreground="{ThemeResource NexusMuted}" FontSize="12" />
           </StackPanel>
          </Border>
-         <Border x:Name="HomeFavoritesCard" Grid.Column="1" Padding="20" CornerRadius="24" Background="{ThemeResource NexusCard}" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="1">
+   <Border x:Name="HomeFavoritesCard" Grid.Column="1" Padding="20" CornerRadius="24" Background="{ThemeResource NexusCard}" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="1">
           <StackPanel Spacing="12">
            <Grid ColumnSpacing="8">
             <Grid.ColumnDefinitions>
@@ -518,7 +476,7 @@
            <TextBlock x:Name="HomeSavedCount" Foreground="{ThemeResource NexusMuted}" FontSize="12" />
           </StackPanel>
          </Border>
-         <Border x:Name="HomeEssentialsCard" Grid.Row="1" Padding="20" CornerRadius="24" Background="{ThemeResource NexusCard}" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="1">
+   <Border x:Name="HomeEssentialsCard" Grid.Row="1" Padding="20" CornerRadius="24" Background="{ThemeResource NexusCard}" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="1">
           <StackPanel Spacing="12">
            <Grid ColumnSpacing="8">
             <Grid.ColumnDefinitions>
@@ -532,7 +490,7 @@
            <GridView x:Name="HomePins" MaxHeight="252" Margin="-6,-8,-6,0" SelectionMode="None" IsItemClickEnabled="True" ItemClick="AppGrid_ItemClick" ContainerContentChanging="AppContainer_ContentChanging" ItemTemplate="{StaticResource AppTile}" ItemsPanel="{StaticResource AppItemsPanel}" ItemContainerStyle="{StaticResource AppContainer}" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" />
           </StackPanel>
          </Border>
-         <Border x:Name="HomeNotesCard" Grid.Row="1" Grid.Column="1" Padding="8" CornerRadius="24" Background="{ThemeResource NexusCard}" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="1">
+   <Border x:Name="HomeNotesCard" Grid.Row="1" Grid.Column="1" Padding="8" CornerRadius="24" Background="{ThemeResource NexusCard}" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="1">
           <Expander Header="Quick note" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
            <StackPanel Spacing="10">
             <TextBox x:Name="QuickNotesBox" PlaceholderText="A thought, a plan, a reminder…" AcceptsReturn="True" TextWrapping="Wrap" MaxLength="10000" MaxHeight="170" MinHeight="110" TextChanged="QuickNotes_TextChanged" AutomationProperties.Name="Local quick notes" />
@@ -540,8 +498,8 @@
            </StackPanel>
           </Expander>
          </Border>
-        </Grid>
-        <Grid x:Name="ShortcutRow" ColumnSpacing="10">
+  </Grid>
+  <Grid x:Name="ShortcutRow" ColumnSpacing="10">
          <Grid.RowDefinitions>
           <RowDefinition Height="Auto" />
           <RowDefinition Height="Auto" />
@@ -571,17 +529,30 @@
           </StackPanel>
          </Button>
         </Grid>
-        <Grid ColumnSpacing="10">
-         <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="*" />
-          <ColumnDefinition Width="Auto" />
-         </Grid.ColumnDefinitions>
-         <TextBlock x:Name="HomeWindowsSummary" Text="Return to your open apps through window overview" FontSize="12" Foreground="{ThemeResource NexusMuted}" VerticalAlignment="Center" TextWrapping="Wrap" />
-         <Button x:Name="HomeOverviewButton" Grid.Column="1" Content="Overview" Click="Running_Click" Style="{StaticResource QuietButton}" />
-        </Grid>
-        <TextBlock x:Name="HomeRecentText" Text="Ready for your next idea." Foreground="{ThemeResource NexusMuted}" FontSize="12" TextWrapping="Wrap" />
-       </StackPanel>
-      </ScrollViewer>
+  <Grid ColumnSpacing="10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+   <TextBlock x:Name="HomeWindowsSummary" Text="Return to open apps through your dock" FontSize="12" Foreground="{ThemeResource NexusMuted}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+   <Button x:Name="HomeOverviewButton" Grid.Column="1" Content="Windows ↗" Click="Running_Click" Style="{StaticResource QuietButton}"/>
+  </Grid>
+  <TextBlock x:Name="HomeRecentText" Foreground="{ThemeResource NexusMuted}" FontSize="12" TextWrapping="Wrap"/>
+  <Grid Visibility="Collapsed"><Viewbox x:Name="HomeHeroArt" Grid.Column="1" Width="135" Height="148" IsHitTestVisible="False">
+           <Grid Width="160" Height="170">
+            <Ellipse Width="118" Height="118" Fill="{ThemeResource NexusIcon}" Stroke="{ThemeResource NexusSecondary}" StrokeThickness="1" />
+            <Ellipse Width="156" Height="57" Stroke="{ThemeResource NexusAccent}" StrokeThickness="1.5" RenderTransformOrigin="0.5,0.5">
+             <Ellipse.RenderTransform>
+              <RotateTransform Angle="-32" />
+             </Ellipse.RenderTransform>
+            </Ellipse>
+            <Ellipse Width="147" Height="46" Stroke="{ThemeResource NexusSecondary}" StrokeThickness="1" RenderTransformOrigin="0.5,0.5">
+             <Ellipse.RenderTransform>
+              <RotateTransform Angle="34" />
+             </Ellipse.RenderTransform>
+            </Ellipse>
+            <TextBlock Text="N" FontSize="68" FontWeight="Light" Foreground="{ThemeResource NexusText}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <Ellipse Width="9" Height="9" Fill="{ThemeResource NexusAccent}" Margin="120,13,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" />
+           </Grid>
+          </Viewbox></Grid>
+ </StackPanel>
+</ScrollViewer>
       <Grid x:Name="PcView" Visibility="Collapsed" Padding="20" RowSpacing="14">
        <Grid.RowDefinitions>
         <RowDefinition Height="Auto" />

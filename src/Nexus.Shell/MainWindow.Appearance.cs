@@ -15,7 +15,7 @@ public sealed partial class MainWindow
     private void ApplyAuraPalette()
     {
         var theme = _environment.Theme;
-        theme.Apply(_state.Wallpaper);
+        theme.Apply(_state.Wallpaper, _state.ReducedEffects);
         _highContrast = theme.HighContrast; _animationsEnabled = theme.Animations;
         DesktopRoot.RequestedTheme = theme.ElementTheme;
         var palette = theme.Palette;
@@ -51,9 +51,10 @@ public sealed partial class MainWindow
             Log.Write("Sections material connection failed; using solid surfaces", ex);
             HomeBorder.Background = ControlPanel.Background = CommandPanel.Background = _solidPanel;
         }
-        Sidebar.Background = WindowChrome.Background = WindowFooter.Background = Resource(_highContrast ? "NexusPanel" : "NexusSidebar");
-        var palette = _environment.Theme.Palette;
-        HeroCard.Background = _highContrast ? Resource("NexusCard") : simple ? _solidCard : AuraGradient(palette.HeroStart, palette.HeroEnd);
+        Sidebar.Background = _environment.Theme.Surface("Sidebar", simple);
+        WindowChrome.Background = WindowFooter.Background = Resource("NexusPanel");
+        HeroCard.Background = _highContrast ? Resource("NexusCard") : simple ? _solidCard : _environment.Theme.Surface("Hero");
+        ApplyOverviewAppearance();
         UpdateNavigation();
         GlassStatus.Text = _glassUnavailable ? "Solid fallback · native glass is unavailable on this system."
             : _state.NativeGlass ? "Glass follows Windows availability, high contrast, reduced effects and window focus."
@@ -64,8 +65,9 @@ public sealed partial class MainWindow
         foreach (var button in _navigation)
         {
             bool selected = (string)button.Tag == _page;
-            button.Background = selected ? _selection : _transparent;
-            button.Foreground = Resource(_highContrast && selected ? "NexusAccentText" : selected ? "NexusSelectedText" : "NexusText");
+            button.Background = selected ? _environment.Theme.Surface("Accent") : _transparent;
+            button.Foreground = Resource(selected ? "NexusAccentText" : "NexusText");
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(button, selected ? "Current page" : "");
         }
     }
     private void Glass_Toggled(object sender, RoutedEventArgs args)

@@ -45,8 +45,8 @@ internal sealed class MenuWindow : Window
     internal void HideMenu() { if (_closed || !IsOpen) return; IsOpen = false; _motion.Hide(); NativeWindow.Hide(); }
     internal void ApplyAppearance(DesktopEnvironment environment)
     {
-        _frame.RequestedTheme = environment.Theme.ElementTheme; _frame.Background = environment.Theme.Brush("NexusPanel"); _frame.BorderBrush = environment.Theme.Brush("NexusBorder");
-        _frame.BorderThickness = new Thickness(environment.Theme.HighContrast ? 1 : 0); _frame.CornerRadius = new CornerRadius(environment.Theme.HighContrast ? 0 : 18);
+        _frame.RequestedTheme = environment.Theme.ElementTheme; _frame.Background = environment.Theme.Surface("Sidebar"); _frame.BorderBrush = environment.Theme.Brush("NexusBorder");
+        _frame.BorderThickness = new Thickness(environment.Theme.HighContrast ? 1 : 0); _frame.CornerRadius = new CornerRadius(environment.Theme.HighContrast ? 0 : 22);
         _chrome.SetCorners(environment.Theme.HighContrast); _motion.Refresh(); _view.ApplyAppearance();
     }
 }

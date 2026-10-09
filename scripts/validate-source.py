@@ -17,7 +17,7 @@ required = [
     "UI/Desktop/DesktopSurface.cs", "UI/Taskbar/TaskbarView.cs", "UI/Menus/DesktopMenus.cs", "UI/Menus/StartMenuView.cs", "UI/ShellTheme.cs",
     "Services/ShellSession.cs", "Services/DesktopLayout.cs", "Services/DesktopCatalog.cs", "Interop/ShellLayerInterop.cs", "Interop/TaskbarRegistration.cs",
     "MainWindow.Polish.cs", "MainWindow.PcControls.cs", "Services/AudioController.cs", "Services/PcMetrics.cs", "Services/WindowLayouts.cs",
-    "App.xaml", "App.xaml.cs", "MainWindow.xaml", "MainWindow.xaml.cs", "MainWindow.Workspaces.cs", "MainWindow.Orbit.cs", "MainWindow.Desktop.cs", "MainWindow.Appearance.cs", "MainWindow.Experience.cs", "MainWindow.Explore.cs", "Services/ExploreWorkspace.cs", "UI/SavedKindConverter.cs", "UI/NexusIcons.cs", "Services/NavigationTrail.cs", "Services/ShellExperience.cs", "Services/AuraPalette.cs", "Services/DesktopWorkspace.cs", "Interop/DesktopIntegration.cs",
+    "App.xaml", "App.xaml.cs", "MainWindow.xaml", "MainWindow.xaml.cs", "MainWindow.Workspaces.cs", "MainWindow.Orbit.cs", "MainWindow.Desktop.cs", "MainWindow.Appearance.cs", "MainWindow.Experience.cs", "MainWindow.Explore.cs", "MainWindow.Overview.cs", "Services/ExploreWorkspace.cs", "UI/SavedKindConverter.cs", "UI/NexusIcons.cs", "Services/NavigationTrail.cs", "Services/ShellExperience.cs", "Services/AuraPalette.cs", "Services/DesktopWorkspace.cs", "Interop/DesktopIntegration.cs",
     "Services/FocusSession.cs", "Services/CommandSearch.cs", "Services/WorkspaceState.cs",
     "Nexus.Shell.csproj", "app.manifest", "Assets/Nexus.ico",
     "Interop/NativeMethods.cs", "Models/ShellState.cs", "Services/AppCatalog.cs",
@@ -26,10 +26,12 @@ required = [
     "Services/ResourceSampler.cs", "UI/MotionController.cs", "UI/AppAccentConverter.cs",
     "Desktop/FilesWindow.cs", "Desktop/SwitcherWindow.cs", "UI/Files/FilesView.cs", "MainWindow.DesktopMode.cs",
     "Services/FileCatalog.cs", "Services/DesktopShellPolicy.cs", "Services/DesktopShellRegistration.cs", "Services/DesktopSessionRecovery.cs", "Services/DesktopSessionRecord.cs",
-    "Interop/ExclusiveTaskbarRegistration.cs", "Interop/ShellKeyboardHook.cs", "Interop/NexusDesktopToggle.cs", "Interop/ShortcutResolver.cs", "Interop/RecycleBinService.cs",
+    "Interop/ExclusiveTaskbarRegistration.cs", "Interop/WindowEventObserver.cs", "Services/DockWindowSet.cs", "Services/DockVisibility.cs", "Interop/NexusDesktopToggle.cs", "Interop/ShortcutResolver.cs", "Interop/RecycleBinService.cs",
     "Interop/DesktopWorkArea.cs", "Services/DesktopWorkAreaReservation.cs", "Services/DesktopVisuals.cs",
     "Services/BrightnessController.cs", "Services/BrightnessScale.cs", "Desktop/QuickSettingsWindow.cs", "UI/Controls/QuickSettingsView.cs",
     "Interop/WindowChrome.cs", "UI/SurfaceMotion.cs",
+    "Services/DockMotionPolicy.cs", "Services/DockPreviewPolicy.cs", "UI/Taskbar/DockMotionController.cs",
+    "Interop/WindowThumbnail.cs", "Desktop/DockPreviewWindow.cs", "Desktop/DesktopEnvironment.Dock.cs",
 ]
 for relative in required:
     assert (project / relative).is_file(), f"Missing file: {relative}"
@@ -151,6 +153,9 @@ assert parents[overview] is page_host, "Window overview must be inside the page 
 assert "AppsGrid.ItemsSource =" in code and "grid.Items.Add(AppButton" not in code
 motion = (project / "UI/MotionController.cs").read_text(encoding="utf-8")
 assert "IterationBehavior.Forever" not in motion and "CompositionTarget.Rendering" not in motion
+for relative in ["UI/Taskbar/DockMotionController.cs", "Desktop/DockPreviewWindow.cs"]:
+    animation_source = (project / relative).read_text(encoding="utf-8")
+    assert "IterationBehavior.Forever" not in animation_source and "CompositionTarget.Rendering" not in animation_source, f"Unbounded motion: {relative}"
 
 json.loads((root / "global.json").read_text())
 reserved, icon_type, count = struct.unpack("<HHH", (project / "Assets/Nexus.ico").read_bytes()[:6])
@@ -207,7 +212,7 @@ closed = code[code.index("private void Window_Closed("):]
 assert "SaveFinal(" not in closed and "DetachSnapshot(" in closed, "Closing Sections must not finalize the desktop session"
 for file in [root / "appveyor.yml", root / ".github/workflows/build-windows.yml", root / "scripts/package.ps1", root / "scripts/build.ps1"]:
     body = file.read_text()
-    assert "Nexus-Shell-1.4.2" in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
+    assert "Nexus-Shell-1.5.0" in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
 print("Independent desktop ownership, Sections lifetime and CI versions OK")
 # Desktop replacement cannot silently instantiate Explorer or common picker UI.
 environment = (project / "Desktop/DesktopEnvironment.cs").read_text()
@@ -243,6 +248,15 @@ for source in project.rglob("*.cs"):
     if "NativeMethods." in body and "namespace Nexus.Shell.Interop;" not in body:
         assert "using Nexus.Shell.Interop;" in body or "Interop.NativeMethods." in body, f"Missing interop import: {source}"
 print("Interop imports OK")
+
+# Global shortcuts belong to Windows. A leftover hook file would also compile
+# against removed key-state types, so check the whole tree rather than one caller.
+for source in project.rglob("*.cs"):
+    assert not re.search(r"\b(?:SetWindowsHookEx|RegisterHotKey|ShellKeyboardState|ShellKeyAction)\b", source.read_text()), (
+        f"Global shortcut interception remains: {source.relative_to(root)}"
+    )
+assert not (project / "Interop/ShellKeyboardHook.cs").exists()
+print("Native Windows shortcut ownership OK")
 if options.syntax:
     from tree_sitter import Language, Parser
     import tree_sitter_c_sharp

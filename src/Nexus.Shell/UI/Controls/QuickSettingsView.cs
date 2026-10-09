@@ -19,6 +19,7 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     private readonly ComboBox _profile = new() { HorizontalAlignment = HorizontalAlignment.Stretch };
     private readonly ToggleSwitch _compact = new() { Header = "Compact taskbar", OnContent = "On", OffContent = "Off" };
     private readonly ToggleSwitch _floating = new() { Header = "Floating taskbar", OnContent = "Floating", OffContent = "Edge to edge" };
+    private readonly ToggleSwitch _previews = new() { Header = "Dock hover previews", OnContent = "On", OffContent = "Off" };
     private readonly List<(TextBlock Label, bool Muted)> _labels = [];
     private readonly List<Border> _cards = [];
     private readonly DispatcherTimer _poll = new() { Interval = TimeSpan.FromSeconds(5) };
@@ -63,7 +64,7 @@ internal sealed class QuickSettingsView : Grid, IDisposable
         var visuals = new StackPanel { Spacing = 8 }; visuals.Children.Add(Label("Desktop performance", 15));
         foreach (string name in new[] { "Fast", "Balanced", "Full" }) _profile.Items.Add(name);
         AutomationProperties.SetName(_profile, "Desktop visual quality"); visuals.Children.Add(_profile);
-        _profileMessage = Label("", 12, true); visuals.Children.Add(_profileMessage); visuals.Children.Add(_floating); visuals.Children.Add(_compact); body.Children.Add(Card(visuals));
+        _profileMessage = Label("", 12, true); visuals.Children.Add(_profileMessage); visuals.Children.Add(_floating); visuals.Children.Add(_compact); visuals.Children.Add(_previews); body.Children.Add(Card(visuals));
 
         var status = new StackPanel { Spacing = 4 };
         _power = Label("Reading power status…", 12, true); _network = Label("Reading network link…", 12, true);
@@ -104,6 +105,7 @@ internal sealed class QuickSettingsView : Grid, IDisposable
         };
         _compact.Toggled += (_, _) => { if (!_syncing) { environment.Session.State.CompactDock = _compact.IsOn; environment.SaveState(); } };
         _floating.Toggled += (_, _) => { if (!_syncing) { environment.Session.State.FloatingTaskbar = _floating.IsOn; environment.SaveState(); } };
+        _previews.Toggled += (_, _) => { if (!_syncing) { environment.Session.State.DockPreviews = _previews.IsOn; environment.SaveState(); } };
         KeyDown += (_, args) => { if (args.Key == VirtualKey.Escape) { close(); args.Handled = true; } };
         _writes.Tick += (_, _) => { _writes.Stop(); _ = UpdateAudioAsync(false); _ = UpdateDisplayAsync(false); };
         _poll.Tick += (_, _) => { _ = UpdateAudioAsync(true); if (_displayTask is not null) _ = UpdateDisplayAsync(false); _ = UpdateStatusAsync(); };
@@ -112,7 +114,7 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     private TextBlock Label(string text, double size, bool muted = false)
     { var label = new TextBlock { Text = text, FontSize = size, TextWrapping = TextWrapping.Wrap }; _labels.Add((label, muted)); return label; }
     private Border Card(UIElement child)
-    { var card = new Border { Child = child, Padding = new Thickness(14, 12, 14, 12), CornerRadius = new CornerRadius(12), BorderThickness = new Thickness(1) }; _cards.Add(card); return card; }
+    { var card = new Border { Child = child, Padding = new Thickness(16), CornerRadius = new CornerRadius(18), BorderThickness = new Thickness(1) }; _cards.Add(card); return card; }
     private static Button Button(string name, Action action, bool quiet = false)
     {
         var button = new Button { Content = name, Style = (Style)Application.Current.Resources[quiet ? "QuietButton" : "AuraSurfaceButton"], Padding = new Thickness(10, 7, 10, 7) };
@@ -131,11 +133,11 @@ internal sealed class QuickSettingsView : Grid, IDisposable
         try
         {
             var profile = DesktopVisuals.Read(_environment.Session.State);
-            _profile.SelectedIndex = (int)profile; _compact.IsOn = _environment.Session.State.CompactDock; _floating.IsOn = _environment.Session.State.FloatingTaskbar;
+            _profile.SelectedIndex = (int)profile; _compact.IsOn = _environment.Session.State.CompactDock; _floating.IsOn = _environment.Session.State.FloatingTaskbar; _previews.IsOn = _environment.Session.State.DockPreviews;
             _profileMessage.Text = profile switch
             {
-                DesktopVisualProfile.Fast => "Best for VMs · simple background, no glass or motion.",
-                DesktopVisualProfile.Balanced => "Cached wallpaper and motion, with glass turned off.",
+                DesktopVisualProfile.Fast => "Best for VMs · simple background and window cards, no glass or motion.",
+                DesktopVisualProfile.Balanced => "Cached wallpaper, dock motion and live previews, with glass turned off.",
                 _ => "Cached wallpaper, motion and glass where available."
             };
             if (profile != DesktopVisualProfile.Fast && !_environment.Theme.Animations)

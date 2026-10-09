@@ -12,8 +12,10 @@ public static class DesktopLayout
     private static double Scale(double value) => double.IsFinite(value) ? Math.Clamp(value, .5, 4) : 1;
     public static int TaskbarReservationHeight(bool compact, bool floating, double scale)
         => Math.Max(1, (int)Math.Round((TaskbarHeight(compact) + (floating ? 32 : 0)) * Scale(scale)));
-    // Reserve a normal appbar strip; clip only its visible dock. The empty
-    // margin stays outside the HWND's input/drawing region, not painted white.
+    public static ShellRect TaskbarWorkArea(ShellRect monitor, bool compact, bool floating, double scale)
+        => floating ? monitor : monitor with { Height = Math.Max(1, monitor.Height - TaskbarReservationHeight(compact, false, scale)) };
+    // The native window strip and the reserved work area are independent.
+    // Floating mode clips this strip to the dock and reserves zero pixels.
     public static ShellRect TaskbarBounds(ShellRect reservation, bool floating, double preferredWidthDip, double scale)
     {
         if (!floating) return reservation;
@@ -28,6 +30,16 @@ public static class DesktopLayout
     {
         var rect = MenuBounds(monitor, bar, scale, 392, 650);
         return rect with { X = Math.Clamp(bar.Right - rect.Width, monitor.X, Math.Max(monitor.X, monitor.Right - rect.Width)) };
+    }
+    public static ShellRect PreviewBounds(ShellRect monitor, ShellRect bar, ShellRect anchor, double scale)
+    {
+        scale = Scale(scale);
+        int gap = Math.Max(4, (int)Math.Round(12 * scale));
+        int width = Math.Min(Math.Max(1, monitor.Width - gap * 2), (int)Math.Round(336 * scale));
+        int height = Math.Min(Math.Max(1, bar.Y - monitor.Y - gap * 2), (int)Math.Round(268 * scale));
+        int x = Math.Clamp(anchor.X + (anchor.Width - width) / 2, monitor.X, Math.Max(monitor.X, monitor.Right - width));
+        int y = Math.Clamp(bar.Y - gap - height, monitor.Y, Math.Max(monitor.Y, monitor.Bottom - height));
+        return new(x, y, width, height);
     }
     public static ShellRect MenuBounds(ShellRect monitor, ShellRect bar, double scale, int widthDip = 440, int heightDip = 540)
     {

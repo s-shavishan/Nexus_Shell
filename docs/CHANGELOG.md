@@ -1,3 +1,28 @@
+# 1.5.0 — dock motion and window previews
+
+- Add finite launch/arrival/activation/minimize/restore icon cues and compositor underline state changes; separate them from hover/press.
+- Add a brief staggered Overview entrance and detach unloaded entrance targets.
+- Add an independent delayed hover/keyboard preview with one DWM thumbnail while open; use static cards in Fast/high contrast and for unavailable windows.
+- Add preview and context-menu restore/minimize/maximize/restore-size/normal-close controls with HWND/process validation.
+- Save the hover-preview preference independently of visual quality; dismiss/cancel previews during menu, dock and lifecycle changes.
+- Preserve the warm reference-adapted UI, floating work-area/auto-hide behavior, host/recovery/startup/updater and dependencies.
+- Add policy/geometry/preferences and owned-window maximize/WM_CLOSE/DWM checks. Source/syntax and delivery reconstruction are checked locally; native compile/execution, rendering and measured VM performance remain pending.
+
+# 1.4.4 — warm UI and stability
+
+- Adapt the supplied design into Ember gradients, a rounded sidebar/search capsule, actual summary cards, saved-resource filters, workspace spotlight and coordinated floating dock/menus.
+- Preserve saved moods, independent layers, finite motion and Fast/high-contrast behavior.
+- Recognize animation preference changes; cache paint; reuse overview rows/layouts.
+- Dismiss/remove dock menus and detach motion handlers when windows close; use idempotent menu membership.
+- Enforce the workspace limit in the new overview creation action.
+- Preserve the 1.4.3 dock foundation and host/recovery/dependency pins. Windows compile and VM acceptance remain pending.
+
+# 1.4.3 — responsive dock source update
+
+- Add coalesced lifecycle updates, stable dock order, all-window overflow, active/minimized indicators and native minimize/restore commands.
+- Remove floating work-area reservation and global keyboard overrides; add maximize auto-hide and frame cleanup.
+- Preserve host takeover/recovery. Source delivery was verified; native build and VM acceptance were pending.
+
 # 1.4.2 — build fix
 
 - Fix CS0509 by composing the rounded taskbar Border inside a Grid.

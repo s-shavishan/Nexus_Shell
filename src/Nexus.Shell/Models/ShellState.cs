@@ -38,10 +38,10 @@ public sealed class ShellState
     public bool ShowHomeEssentials { get; set; } = true;
     public bool CompactDock { get; set; }
     public bool FloatingTaskbar { get; set; } = true;
+    public bool DockPreviews { get; set; } = true;
     public bool RememberRecentItems { get; set; } = true;
     public List<RecentCommand> RecentCommands { get; set; } = [];
     public bool DesktopLayout { get; set; } = true;
-    public bool GlobalShortcut { get; set; } = true;
     public bool KeepAvailable { get; set; }
     public bool ResumeWorkspace { get; set; } = true;
     public string LastPage { get; set; } = "Home";
@@ -65,12 +65,12 @@ public sealed class ShellState
         DisplayName = DisplayName, UsageTracking = UsageTracking, FullScreen = FullScreen,
         FocusMode = FocusMode, ReducedEffects = ReducedEffects, CatalogInitialized = CatalogInitialized,
         Clock24Hour = Clock24Hour, ShowClockWidget = ShowClockWidget, ShowSpaceWidget = ShowSpaceWidget,
-        ShowHomeNotes = ShowHomeNotes, ShowHomeEssentials = ShowHomeEssentials, CompactDock = CompactDock, FloatingTaskbar = FloatingTaskbar,
+        ShowHomeNotes = ShowHomeNotes, ShowHomeEssentials = ShowHomeEssentials, CompactDock = CompactDock, FloatingTaskbar = FloatingTaskbar, DockPreviews = DockPreviews,
         RememberRecentItems = RememberRecentItems, RecentCommands = [.. RecentCommands],
         ExploreSpaces = [.. ExploreSpaces], ActiveExploreSpaceId = ActiveExploreSpaceId,
         ExploreSelectedItemId = ExploreSelectedItemId, ExploreView = ExploreView,
         ExploreQuery = ExploreQuery, ExploreCollection = ExploreCollection, ExploreFavoritesOnly = ExploreFavoritesOnly,
-        NativeGlass = NativeGlass, DesktopLayout = DesktopLayout, GlobalShortcut = GlobalShortcut, KeepAvailable = KeepAvailable,
+        NativeGlass = NativeGlass, DesktopLayout = DesktopLayout, KeepAvailable = KeepAvailable,
         ResumeWorkspace = ResumeWorkspace, LastPage = LastPage, ActiveProfileId = ActiveProfileId,
         Profiles = Profiles.Select(p => p with { Apps = [.. p.Apps], SavedItemIds = [.. p.SavedItemIds] }).ToList(),
         Wallpaper = Wallpaper, QuickNote = QuickNote, FocusMinutes = FocusMinutes,

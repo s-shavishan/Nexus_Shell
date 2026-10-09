@@ -12,9 +12,9 @@ test: off
 deploy: off
 
 artifacts:
-  - path: artifacts\Nexus-Shell-1.4.2-win-x64.zip
-  - path: artifacts\Nexus-Shell-1.4.2-win-x64.zip.sha256
-  - path: artifacts\Nexus-Shell-1.4.2-Update-win-x64.zip
-  - path: artifacts\Nexus-Shell-1.4.2-Update-win-x64.zip.sha256
+  - path: artifacts\Nexus-Shell-1.5.0-win-x64.zip
+  - path: artifacts\Nexus-Shell-1.5.0-win-x64.zip.sha256
+  - path: artifacts\Nexus-Shell-1.5.0-Update-win-x64.zip
+  - path: artifacts\Nexus-Shell-1.5.0-Update-win-x64.zip.sha256
   - path: artifacts\logs\resources-check.json
   - path: artifacts\logs\app-resources.xml

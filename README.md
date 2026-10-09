@@ -1,38 +1,21 @@
-# Nexus Shell 1.4.2 — a softer desktop
+# Nexus Shell 1.5.0 — motion and window previews
 
-Nexus now has a centered floating taskbar, rounded native windows on Windows 10 and Windows 11, clean window edges, and brief compositor animations when motion is enabled. Desktop, taskbar, Start, Quick Settings, Files, switcher and Sections remain independent windows with shared state.
+The dock now responds to real window state: a finite launch lift, arrival cue for newly opened windows, activation feedback, downward minimize cue and upward restore cue. Its active underline smoothly changes length and opacity inside a fixed layout slot. Hover and press run on a separate container, so state motion cannot overwrite them. Overview cards enter in a short stagger.
 
-The user's short VirtualBox test reported much smoother dragging in **1.4.1 while Explorer was still running**. This update keeps that host takeover and recovery code unchanged: only Windows taskbars are hidden, and Explorer's desktop stays active underneath Nexus. Explorer is not stopped by temporary session mode.
+Hover an open app for a window preview and restore, minimize, maximize/restore-size or close controls. The preview is an independent, non-activating window above the icon. Move into it across the gap, or press Down on a focused dock button / choose Window preview in its context menu for keyboard access. Escape dismisses it. The context menu exposes the same window commands. Close asks the app to close normally, including its own save prompts.
 
-## What changes
+Balanced/Full use one native DWM thumbnail while a card is open. Fast and high contrast use the app icon, title and controls. Minimized/hidden windows also use a card. Protected apps can show blank contents. Toggle **Quick Settings → Dock hover previews** or **Sections → Personalize → Dock hover previews** to turn previews off. No screenshots are saved and closed previews keep no thumbnail. Motion respects Fast/Reduced effects, high contrast and Windows animation settings.
 
-- Floating taskbar is the default for existing and new settings. Its visible width follows its contents; blank margins show the desktop and pass input through. Maximized windows reserve room above it. Compact and edge-to-edge layouts remain available.
-- Nexus Sections, Files, Start, Quick Settings and the switcher share rounded native edges. Bright Windows outer frames are removed; resizing, dragging, maximizing and fullscreen remain available on app windows.
-- Sections and Files tuck away through Nexus's taskbar instead of invoking legacy minimized-window rendering. Click their taskbar entries to return. Ordinary Windows applications retain their normal behavior.
-- Start, Quick Settings, Files and the switcher have short entrance motion inside a fixed frame. Dock hover/press feedback and Sections navigation remain finite compositor animations. Fast mode and Windows accessibility preferences disable motion.
+Ember's burgundy surfaces, orange-to-rose accents, rounded sidebar/search and real workspace/resource cards remain. Desktop, dock, Start, Quick Settings, Files, window overview, previews and Sections are independent windows sharing state. Sections opens from its desktop shortcut. Floating mode reserves no work-area strip and retains maximize auto-hide / bottom-edge reveal.
 
-## Build and try
+The host still hides Windows taskbars in managed session mode and restores Windows on exit. Explorer infrastructure, Windows services, recovery/startup/update implementation and dependency pins are preserved. Windows owns desktop shortcuts.
 
-For the failed 1.4.2 source at commit `af26198808fbc31f92275847cabfdf461093e35f`, apply `Nexus-1.4.2-Build-Fix.patch`, then commit/push for AppVeyor. The taskbar now contains its rounded Border inside a Grid; it no longer inherits WinUI's sealed Border class. SOURCE-PATCH.md gives the exact commands. The complete Source ZIP is an alternative source tree.
+## Build and test
 
-```powershell
-dotnet run --project .\tests\Nexus.Core.Checks\Nexus.Core.Checks.csproj --configuration Release
-.\scripts\test-update.ps1
-.\scripts\build.ps1 -UseMSBuild
-.\scripts\package.ps1
-```
+Apply one matching patch from [SOURCE-PATCH.md](SOURCE-PATCH.md), then commit/push for the Windows CI build. Routes cover GitHub main's 1.4.2 tree at `1cd328f83d28d606fe5e9da7250ee3d792725cd0` and prepared 1.4.3/1.4.4 source. Complete source is an alternative route. Source ZIPs contain no executable.
 
-After CI succeeds, extract the complete `Nexus-Shell-1.4.2-win-x64.zip` into a new folder, or use its compatible-runtime Update package. Exit the old Nexus first. Launch **Launch-Nexus-Desktop.bat** or select **Sections → Personalize → Use Nexus for this session** in the preview. Use Balanced to inspect motion; compare Fast if testing window-drag performance.
+Local source/XML/resource/ownership and C# syntax checks, unchanged palette contrast and exact patch/ZIP reconstruction checks are recorded separately from native execution. This Linux authoring environment has no .NET, WinUI or PowerShell runtime. Native build, .NET/Win32 checks, package checks and Windows/VirtualBox acceptance remain pending; performance is not claimed as measured.
 
-The supplied AppVeyor log for the original 1.4.2 commit records passed .NET core checks, including all 1,008 placement cases, and PowerShell updater checks. The UI build then failed with CS0509. Source/resource checks and patch reconstruction are verified here; the corrected native Windows build and VM UI acceptance remain pending.
+After CI succeeds, extract `Nexus-Shell-1.5.0-win-x64.zip` into a fresh folder and exit the old Nexus before launching it. Compare Fast and Balanced and complete [motion and preview acceptance](docs/MOTION-DOCK-1.5.0.md), [dock acceptance](docs/DOCK-RELIABILITY-1.4.3.md), [session recovery](docs/NEXUS-DESKTOP-MODE.md) and [validation status](docs/VALIDATION.md). Choose Personalize → Ember for the supplied reference's warm appearance.
 
-## Guides
-
-- [Source patch](SOURCE-PATCH.md)
-- [UI changes and Windows acceptance](docs/UI-POLISH-1.4.2.md)
-- [Session/sign-in/recovery](docs/NEXUS-DESKTOP-MODE.md)
-- [Startup privileges](docs/STARTUP-PRIVILEGES.md)
-- [Build handoff](docs/BUILD-HANDOFF.md)
-- [Validation status](docs/VALIDATION.md)
-
-Nexus desktop surfaces currently cover the primary display. Additional-display Nexus surfaces and a replacement Windows notification area remain future work. Saved sign-in settings are separate from temporary session mode.
+Dock icon cues do not redirect Windows' own minimize animation into the Nexus icon. Full tray/Jump List contracts, app-native icons and additional-display shell surfaces remain future work.

@@ -64,6 +64,14 @@ internal static class ShellLayerInterop
         return Bottom;
     }
     internal static bool ExplorerDesktopPresent() => GetShellWindow() != IntPtr.Zero || FindWindowEx(IntPtr.Zero, IntPtr.Zero, "Shell_TrayWnd", null) != IntPtr.Zero;
+    internal static bool IsExplorerDesktopWindow(IntPtr window)
+    {
+        if (window == IntPtr.Zero) return false;
+        if (window == GetShellWindow()) return true;
+        var name = new StringBuilder(80); GetClassName(window, name, name.Capacity);
+        return name.ToString() is "Progman" or "WorkerW"
+            && FindWindowEx(window, IntPtr.Zero, "SHELLDLL_DefView", null) != IntPtr.Zero;
+    }
     internal static void AnchorDesktop(IntPtr desktop) => SetWindowPos(desktop, DesktopAnchor(desktop), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010);
 }
 
@@ -85,9 +93,14 @@ internal sealed class DesktopLayerHook : IDisposable
             if (!_disposed && message == 0x0046 && lp != IntPtr.Zero)
             {
                 var position = Marshal.PtrToStructure<ShellLayerInterop.WindowPos>(lp);
+                // This HWND is the desktop surface, not an application. Native
+                // Show Desktop may minimize/hide apps but must keep this root.
+                position.Flags &= ~0x0080u; // SWP_HIDEWINDOW
                 if ((position.Flags & 0x0004) == 0)
-                { position.InsertAfter = ShellLayerInterop.DesktopAnchor(window); Marshal.StructureToPtr(position, lp, false); }
+                    position.InsertAfter = ShellLayerInterop.DesktopAnchor(window);
+                Marshal.StructureToPtr(position, lp, false);
             }
+            if (!_disposed && message == 0x0112 && (wp.ToUInt64() & 0xFFF0) == 0xF020) return IntPtr.Zero;
             if (!_disposed && message is 0x007E or 0x02E0) _reposition(); // display / DPI
         }
         catch (Exception ex) { Log.Write("Desktop layer message failed", ex); }

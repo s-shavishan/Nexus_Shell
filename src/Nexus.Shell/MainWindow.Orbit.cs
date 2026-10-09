@@ -18,6 +18,7 @@ public sealed partial class MainWindow
     private long _windowEpoch;
     private IReadOnlyList<RunningWindow> _openWindows = [];
     private bool? _renderedHighContrast;
+    private string? _renderedPalette;
 
     private void ReleaseOrbitControls()
     {
@@ -31,6 +32,7 @@ public sealed partial class MainWindow
     }
     private void RenderHomeWorkspace()
     {
+        RefreshOverviewSummary(); RenderOverviewSaved();
         HomeTaskList.Children.Clear(); HomeFavorites.Children.Clear();
         int remaining = _state.Tasks.Count(t => !t.Completed);
         var selected = _state.Tasks.FirstOrDefault(t => !t.Completed && t.Id == _state.FocusTaskId);

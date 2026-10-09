@@ -34,6 +34,20 @@ foreach (string mood in AuraPalette.Moods)
     }
     Check(AuraColor.Contrast(AuraColor.Parse(palette.Tokens["NexusAccentText"]), AuraColor.Parse(palette.Accent)) >= 4.5,
         palette.Name + " primary button text must meet 4.5:1 contrast.");
+    var first = AuraColor.Parse(palette.Accent); var last = AuraColor.Parse(palette.AccentEnd);
+    for (int step = 0; step <= 10; step++)
+    {
+        double amount = step / 10.0;
+        byte Mix(byte a, byte b) => (byte)Math.Round(a + (b - a) * amount);
+        var paint = new AuraColor(255, Mix(first.R, last.R), Mix(first.G, last.G), Mix(first.B, last.B));
+        foreach (double opacity in new[] { 0d, .07, .13 })
+        {
+            var wash = AuraColor.Parse(palette.Tokens["NexusHover"]);
+            var surface = (wash with { A = (byte)Math.Round(wash.A * opacity) }).Over(paint);
+            Check(AuraColor.Contrast(AuraColor.Parse(palette.Tokens["NexusAccentText"]), surface) >= 4.5,
+                palette.Name + " action text must meet 4.5:1 across the gradient, including hover and pressed washes.");
+        }
+    }
     foreach (var surface in new[] { panel, card, AuraColor.Parse(palette.Tokens["NexusSidebar"]).Over(canvas),
         AuraColor.Parse(palette.Tokens["NexusSidebar"]).Over(panel) })
     {

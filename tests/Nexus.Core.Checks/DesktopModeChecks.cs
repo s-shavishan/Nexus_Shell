@@ -169,34 +169,12 @@ internal static class DesktopModeChecks
             Check(FileCatalog.Read(folder).Limited && FileCatalog.Read(folder).Entries.Count <= FileCatalog.MaximumEntries, "Folder listing and realization must stay bounded.");
         }
         finally { Directory.Delete(root, true); }
-        var keys = new ShellKeyboardState();
-        Check(keys.Process(0x1B, true, true, false, true).Action == ShellKeyAction.Start && keys.Process(0x1B, true, true, false, true).Action == ShellKeyAction.None
-            && keys.Process(0x1B, false, true, false, true).Consume, "Ctrl+Esc must open Nexus Start once and consume its release.");
-        Check(!keys.Process(0x1B, true, true, true, true).Consume && !keys.Process(0x1B, false, true, true, true).Consume,
-            "Ctrl+Shift+Esc must remain available to Windows Task Manager.");
-        keys.Process(0xA4, true);
-        Check(!keys.Process(0x2E, true, true, false, true).Consume && !keys.Process(0x2E, false, true, false, true).Consume,
-            "Ctrl+Alt+Delete must remain a Windows security shortcut.");
-        keys.Process(0xA4, false);
-        Check(!keys.Process(0x5B, true).Consume && keys.Process(0x5B, false).Action == ShellKeyAction.Start, "Windows key alone must open Nexus Start on release.");
-        keys.Process(0x5B, true); Check(keys.Process(0x45, true).Action == ShellKeyAction.Files && keys.Process(0x45, true).Action == ShellKeyAction.None, "Win+E must open Files once per press.");
-        Check(keys.Process(0x45, false).Consume && keys.Process(0x5B, false).Action == ShellKeyAction.None, "Owned chord releases must not also open Start.");
-        keys.Process(0x5B, true); Check(!keys.Process(0x4C, true).Consume && !keys.Process(0x4C, false).Consume && !keys.Process(0x5B, false).Consume, "Win+L and security shortcuts must pass to Windows.");
-        keys.Process(0x5B, true, true); Check(!keys.Process(0x45, true, true).Consume && keys.Process(0x5B, false, true).Action == ShellKeyAction.None, "Ctrl/Alt/Shift chords must not be reinterpreted.");
-        keys.Process(0x45, false); Check(!keys.Process(0x41, true).Consume, "Ordinary typing must pass through.");
-        keys.Process(0xA4, true); Check(keys.Process(0x09, true).Action == ShellKeyAction.SwitchNext && keys.Process(0x09, true).Action == ShellKeyAction.None, "Alt+Tab must open the Nexus switcher once per press.");
-        Check(keys.Process(0x09, false).Consume, "Tab release must remain owned while switching.");
-        Check(keys.Process(0x09, true, true, true).Action == ShellKeyAction.SwitchPrevious, "Alt+Shift+Tab must cycle backwards.");
-        keys.Process(0x09, false); Check(keys.Process(0xA4, false).Action == ShellKeyAction.SwitchCommit, "Releasing Alt must select the Nexus switcher window.");
-        keys.Process(0xA4, true); Check(keys.Process(0x09, true, true, false, true).Action == ShellKeyAction.Overview, "Ctrl+Alt+Tab must open a persistent Nexus overview.");
-        keys.Process(0x09, false); keys.Process(0xA4, false); keys.Process(0x5B, true);
-        Check(keys.Process(0x09, true).Action == ShellKeyAction.Overview, "Win+Tab must open the Nexus overview."); keys.Process(0x09, false); keys.Process(0x5B, false);
         var budget = new ShellRestartBudget();
         Check(budget.MayRestart(TimeSpan.FromSeconds(2)) && budget.MayRestart(TimeSpan.FromSeconds(2)) && !budget.MayRestart(TimeSpan.FromSeconds(2)), "Recovery must allow two retries, then return to Windows.");
         Check(budget.MayRestart(TimeSpan.FromMinutes(5)), "A stable session must reset the crash budget.");
         Check(!budget.IsUnresponsive(TimeSpan.FromSeconds(44), TimeSpan.FromSeconds(44), false) && budget.IsUnresponsive(TimeSpan.FromSeconds(45), TimeSpan.FromSeconds(45), false), "Startup heartbeat timeout must be bounded.");
         Check(!budget.IsUnresponsive(TimeSpan.FromHours(1), TimeSpan.FromSeconds(89), true) && budget.IsUnresponsive(TimeSpan.FromHours(1), TimeSpan.FromSeconds(90), true), "A missing UI heartbeat must trigger recovery after 90 seconds.");
-        Console.WriteLine("PASS: Windows Pro capability, backup-before-policy, upgrade rollback, foreign-policy preservation, partial recovery retry, file I/O/filtering/bounds, shell shortcuts and restart/heartbeat policy.");
-        Console.WriteLine("PASS: session takeover/restoration, durable visibility and work-area recovery, refused journal writes, reused handles, denied-policy recovery and Task Manager/security shortcuts.");
+        Console.WriteLine("PASS: Windows Pro capability, backup-before-policy, upgrade rollback, foreign-policy preservation, partial recovery retry, file I/O/filtering/bounds, restart/heartbeat policy.");
+        Console.WriteLine("PASS: session takeover/restoration, durable visibility and work-area recovery, refused journal writes, reused handles, denied-policy recovery and denied-policy handling.");
     }
 }

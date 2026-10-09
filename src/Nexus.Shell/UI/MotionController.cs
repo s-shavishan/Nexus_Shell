@@ -18,8 +18,9 @@ public sealed class MotionController : IDisposable
     private readonly ScalarKeyFrameAnimation _fade;
     private readonly Vector3KeyFrameAnimation _enter, _enterScale, _press, _lift, _settle, _grow, _shrink, _dockGrow, _dockLift;
     private readonly CubicBezierEasingFunction _easing;
+    private readonly List<(ScalarKeyFrameAnimation Fade, Vector3KeyFrameAnimation Move, Vector3KeyFrameAnimation Scale)> _stages = [];
     private readonly PointerEventHandler _pressedHandler, _releasedHandler, _canceledHandler;
-    private bool _enabled, _usable = true;
+    private bool _enabled, _usable = true, _disposed;
 
     public MotionController(FrameworkElement root)
     {
@@ -38,6 +39,20 @@ public sealed class MotionController : IDisposable
         _enterScale.Duration = TimeSpan.FromMilliseconds(240);
         _enterScale.InsertKeyFrame(0, new Vector3(.985f));
         _enterScale.InsertKeyFrame(1, Vector3.One, easing);
+        _stages.Add((_fade, _enter, _enterScale));
+        foreach (int delay in new[] { 33, 66 })
+        {
+            var fade = compositor.CreateScalarKeyFrameAnimation(); fade.Duration = _fade.Duration;
+            fade.DelayTime = TimeSpan.FromMilliseconds(delay); fade.DelayBehavior = AnimationDelayBehavior.SetInitialValueBeforeDelay;
+            fade.InsertKeyFrame(0, .68f); fade.InsertKeyFrame(1, 1, easing);
+            var move = compositor.CreateVector3KeyFrameAnimation(); move.Duration = _enter.Duration;
+            move.DelayTime = fade.DelayTime; move.DelayBehavior = fade.DelayBehavior;
+            move.InsertKeyFrame(0, new Vector3(0, 8, 0)); move.InsertKeyFrame(.72f, new Vector3(0, -1, 0), easing); move.InsertKeyFrame(1, Vector3.Zero, easing);
+            var scale = compositor.CreateVector3KeyFrameAnimation(); scale.Duration = _enterScale.Duration;
+            scale.DelayTime = fade.DelayTime; scale.DelayBehavior = fade.DelayBehavior;
+            scale.InsertKeyFrame(0, new Vector3(.985f)); scale.InsertKeyFrame(1, Vector3.One, easing);
+            _stages.Add((fade, move, scale));
+        }
         Vector3KeyFrameAnimation Transition(Vector3 end)
         {
             var animation = compositor.CreateVector3KeyFrameAnimation();
@@ -54,28 +69,38 @@ public sealed class MotionController : IDisposable
 
     public void SetEnabled(bool value)
     {
+        if (_disposed) return;
         _enabled = value && _usable;
         if (!_enabled) { _overTargets.Clear(); _pressedTargets.Clear(); ResetAll(); }
     }
 
-    public void Enter(FrameworkElement element)
+    public void Enter(FrameworkElement element) => Enter(element, 0);
+    public void EnterStaggered(IEnumerable<FrameworkElement> elements)
     {
+        int index = 0;
+        foreach (var element in elements.Where(e => e.Visibility == Visibility.Visible).Take(12)) Enter(element, Math.Min(index++, _stages.Count - 1));
+    }
+    private void Enter(FrameworkElement element, int stage)
+    {
+        if (_disposed) return;
         try
         {
-            _entranceTargets.Add(element);
+            if (_entranceTargets.Add(element)) element.Unloaded += EntranceUnloaded;
             Reset(element);
             if (!_enabled) return;
             var visual = ElementCompositionPreview.GetElementVisual(element);
             visual.CenterPoint = new Vector3((float)element.ActualWidth / 2, (float)element.ActualHeight / 2, 0);
-            visual.StartAnimation("Opacity", _fade);
-            visual.StartAnimation("Translation", _enter);
-            visual.StartAnimation("Scale", _enterScale);
+            var animation = _stages[stage];
+            visual.StartAnimation("Opacity", animation.Fade);
+            visual.StartAnimation("Translation", animation.Move);
+            visual.StartAnimation("Scale", animation.Scale);
         }
         catch (Exception ex) { Disable(ex); }
     }
 
     public void AttachHover(FrameworkElement element)
     {
+        if (_disposed) return;
         if (!_hoverTargets.Add(element)) return;
         element.PointerEntered += PointerEntered;
         element.PointerExited += PointerExited;
@@ -121,7 +146,8 @@ public sealed class MotionController : IDisposable
         catch (Exception ex) { Disable(ex); }
     }
     private static FrameworkElement HoverTarget(FrameworkElement element) =>
-        element is ContentControl { Content: FrameworkElement content } ? content : element;
+        element is Button { Tag: FrameworkElement iconHost } button && ReferenceEquals(button.Style, Application.Current.Resources["DockButton"])
+            ? iconHost : element is ContentControl { Content: FrameworkElement content } ? content : element;
 
     private static void Reset(FrameworkElement element)
     {
@@ -140,6 +166,13 @@ public sealed class MotionController : IDisposable
     {
         Detach((FrameworkElement)sender);
     }
+    private void EntranceUnloaded(object sender, RoutedEventArgs args)
+    {
+        var element = (FrameworkElement)sender;
+        element.Unloaded -= EntranceUnloaded; _entranceTargets.Remove(element);
+        try { Reset(element); } catch { }
+    }
+    public void DetachHover(FrameworkElement element) => Detach(element);
     private void Detach(FrameworkElement element)
     {
         try { Reset(HoverTarget(element)); } catch { }
@@ -159,12 +192,16 @@ public sealed class MotionController : IDisposable
     }
     public void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
         _enabled = false; ResetAll();
         foreach (var element in _hoverTargets.ToArray()) Detach(element);
+        foreach (var element in _entranceTargets) element.Unloaded -= EntranceUnloaded;
         _hoverTargets.Clear(); _entranceTargets.Clear();
         _overTargets.Clear(); _pressedTargets.Clear();
         _fade.Dispose(); _enter.Dispose(); _enterScale.Dispose(); _press.Dispose(); _lift.Dispose(); _settle.Dispose(); _grow.Dispose(); _shrink.Dispose();
         _dockGrow.Dispose(); _dockLift.Dispose();
+        foreach (var stage in _stages.Skip(1)) { stage.Fade.Dispose(); stage.Move.Dispose(); stage.Scale.Dispose(); } _stages.Clear();
         _easing.Dispose();
     }
 }

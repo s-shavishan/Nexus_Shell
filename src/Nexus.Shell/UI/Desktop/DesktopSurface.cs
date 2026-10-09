@@ -83,7 +83,7 @@ internal sealed class DesktopSurface : Grid
     {
         var theme = _environment.Theme; RequestedTheme = theme.ElementTheme;
         _wallpaper.Visibility = theme.HighContrast || _environment.Session.State.ReducedEffects ? Visibility.Collapsed : Visibility.Visible;
-        Background = theme.HighContrast ? theme.Brush("NexusPanel") : ShellTheme.Gradient(theme.Palette.Canvas, theme.Palette.WallpaperEnd);
+        Background = theme.Surface("Canvas");
         if (_wallpaperName != theme.Palette.Name)
         {
             _wallpaper.Source = new BitmapImage(new Uri("ms-appx:///Assets/Wallpapers/" + theme.Palette.Name + ".png"));

@@ -111,7 +111,7 @@ public sealed partial class MainWindow
                     BorderBrush = Resource("NexusBorder"), BorderThickness = new Thickness(1) });
             var moodTitle = Text(palette.Name, 17);
             content.Children.Add(swatches); content.Children.Add(moodTitle);
-            content.Children.Add(Text(mood == "Solstice" ? "Warm pearl & amber" : mood == "Ember" ? "Warm midnight" : mood == "Opal" ? "Luminous lavender" : mood == "Orbit" ? "Iris & charcoal" : mood == "Aurora" ? "Deep teal" : "Cool blue", 12, true));
+            content.Children.Add(Text(mood == "Solstice" ? "Warm pearl & amber" : mood == "Ember" ? "Sunset & rose · new design" : mood == "Opal" ? "Luminous lavender" : mood == "Orbit" ? "Iris & charcoal" : mood == "Aurora" ? "Deep teal" : "Cool blue", 12, true));
             var button = new Button { Tag = mood, Content = content, Style = (Style)Application.Current.Resources["AuraSurfaceButton"],
                 HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left,
                 Padding = new Thickness(20), CornerRadius = new CornerRadius(20) };
@@ -144,6 +144,8 @@ public sealed partial class MainWindow
             "Windows acrylic", "Layered surfaces"));
         interfacePanel.Children.Add(PersonalizeToggle("Reduced effects", () => _state.ReducedEffects, v => _state.ReducedEffects = v));
         interfacePanel.Children.Add(PersonalizeToggle("Floating taskbar", () => _state.FloatingTaskbar, v => _state.FloatingTaskbar = v));
+        interfacePanel.Children.Add(PersonalizeToggle("Dock hover previews", () => _state.DockPreviews, v => _state.DockPreviews = v));
+        interfacePanel.Children.Add(Text("Hover an open app for a preview and window controls. Fast mode shows a light window card. Dock motion follows Windows animation settings.", 12, true));
         interfacePanel.Children.Add(PersonalizeToggle("Compact taskbar", () => _state.CompactDock, v => _state.CompactDock = v,
             "Compact taskbar height", "Comfortable taskbar height"));
         var format = new ComboBox { Header = "Clock format", HorizontalAlignment = HorizontalAlignment.Stretch };
@@ -172,7 +174,7 @@ public sealed partial class MainWindow
         var clear = ActionButton("Clear recent items", () => { _state.RecentCommands.Clear(); SaveState(); RefreshPersonalizationControls(); });
         _personalizationSync.Add(() => clear.IsEnabled = _state.RecentCommands.Count > 0);
         search.Children.Add(clear);
-        search.Children.Add(Text("Alt+← / → changes pages. Ctrl+K opens search. Ctrl+Alt+Space summons it when enabled.", 12, true));
+        search.Children.Add(Text("In this window, Alt+← / → changes pages and Ctrl+K opens search. Windows owns desktop shortcuts.", 12, true));
         _personalizeSections = new Grid { ColumnSpacing = 16, RowSpacing = 16 };
         _personalizeSections.Children.Add(Card(desktop)); _personalizeSections.Children.Add(Card(interfacePanel));
         _personalizeSections.Children.Add(Card(search));
@@ -186,7 +188,7 @@ public sealed partial class MainWindow
         _state.Wallpaper = "Solstice"; _state.NativeGlass = true; _state.ReducedEffects = false;
         _state.DesktopLayout = true; _state.FocusMode = false; _state.Clock24Hour = true;
         _state.ShowClockWidget = true; _state.ShowSpaceWidget = true;
-        _state.ShowHomeNotes = true; _state.ShowHomeEssentials = true; _state.CompactDock = false;
+        _state.ShowHomeNotes = true; _state.ShowHomeEssentials = true; _state.CompactDock = false; _state.DockPreviews = true;
         WallpaperBox.SelectedIndex = 0; SelectWallpaper(); ApplyExperiencePreferences();
         ShowStatus("Appearance defaults restored.");
     }

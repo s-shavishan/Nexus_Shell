@@ -27,7 +27,7 @@ internal sealed class NexusDesktopToggle
             }
             _hidden.Clear(); return;
         }
-        foreach (var window in windows.DistinctBy(w => w.Handle).Take(100))
+        foreach (var window in windows.DistinctBy(w => w.Handle))
         {
             if (!Matches(window) || !IsWindowVisible(window.Handle) || IsIconic(window.Handle)) continue;
             var before = new Placement { Length = (uint)Marshal.SizeOf<Placement>() };

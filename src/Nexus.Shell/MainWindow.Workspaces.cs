@@ -57,6 +57,7 @@ public sealed partial class MainWindow
             if (_ready) SaveState();
         }
         HomeSavedCount.Text = _state.SavedItems.Count + " saved";
+        RefreshOverviewSummary();
         HomeFocusCount.Text = _state.FocusCompleted + " focus sessions today";
         FocusCardLabel.Text = _focusSession.IsRunning ? _state.FocusMinutes == 5 ? "Return to break" : "Return to focus" : "Study time";
         FocusBadge.Text = _focusSession.IsRunning ? FormatRemaining() + (_state.FocusMinutes == 5 ? " · Break" : " · Focus") : "Your orbit";

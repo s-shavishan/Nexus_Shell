@@ -1,6 +1,6 @@
-# Nexus Shell 1.4.2 — Windows build handoff
+# Nexus Shell 1.5.0 — Windows build handoff
 
-Build-fix baseline: **af26198808fbc31f92275847cabfdf461093e35f**, the 199-file original 1.4.2 GitHub tree. Use SOURCE-PATCH.md to apply Nexus-1.4.2-Build-Fix.patch, then commit/push through the existing workflow. The earlier GitHub write was denied by the integration, so this delivery is source archives/patches.
+SOURCE-PATCH.md lists routes from the 199-file GitHub main 1.4.2 tree at `1cd328f83d28d606fe5e9da7250ee3d792725cd0`, prepared 1.4.3 and prepared 1.4.4. Apply one patch, then commit/push through the normal workflow. Complete source is an alternative; source ZIPs contain no compiled executable.
 
 ```powershell
 dotnet run --project .\tests\Nexus.Core.Checks\Nexus.Core.Checks.csproj --configuration Release
@@ -9,8 +9,8 @@ dotnet run --project .\tests\Nexus.Core.Checks\Nexus.Core.Checks.csproj --config
 .\scripts\package.ps1
 ```
 
-Both CI configurations retain .NET platform/core checks, PowerShell parser/updater checks, native WinUI publishing, XBF/PRI resource generation and package verification. Host/UI/manifest and artifact names match 1.4.2. Direct runtime dependencies remain pinned.
+Both CI configurations retain .NET core/platform checks, PowerShell parser/updater checks, native WinUI publishing, XBF/PRI resource generation and package verification. Host/UI/artifact versions match 1.5.0. Dependency pins and host/recovery/startup/updater implementation are preserved.
 
-Expected artifacts: `Nexus-Shell-1.4.2-win-x64.zip`, `Nexus-Shell-1.4.2-Update-win-x64.zip` and their hashes. The update package reuses runtime files only when their hashes match the selected complete folder. Exit the old version before launching the new folder.
+New core checks cover lifecycle cues without replay, rapid state sequences, preview geometry/corridor/aspect fit and preference persistence. Native checks use only owned test windows for maximize/restore/maximize-from-minimized, graceful WM_CLOSE and DWM registration/update/rejection/disposal. The thumbnail native case reports SKIP when composition is unavailable. A passing native relationship check does not verify rendering over WinUI.
 
-The supplied AppVeyor log records passed core/platform/geometry/migration checks and PowerShell updater checks. UI compilation failed at TaskbarView's sealed Border inheritance (CS0509), before publish/package completion. The fix uses a Grid containing a Border and adds a source guard for that mistake. The corrected native build and Windows acceptance in UI-POLISH-1.4.2.md remain required. Keep the working 1.4.1 build while testing this update.
+Expected artifacts: `Nexus-Shell-1.5.0-win-x64.zip`, `Nexus-Shell-1.5.0-Update-win-x64.zip` and hashes. Exit the old Nexus before launching the new folder. Complete docs/MOTION-DOCK-1.5.0.md on Windows 10/11 and VirtualBox, plus existing dock/recovery checks. Native build, frame timing, hover/focus, DWM-over-WinUI rendering and memory acceptance remain pending.

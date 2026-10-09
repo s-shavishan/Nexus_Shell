@@ -15,6 +15,7 @@ internal sealed class DesktopWindow : Window, IDisposable
     internal AppWindow NativeWindow { get; }
     internal DesktopSurface Surface { get; }
     private readonly DesktopLayerHook _hook;
+    private readonly WindowChrome _chrome;
     private bool _positionQueued, _disposed;
     internal DesktopWindow(DesktopEnvironment environment)
     {
@@ -25,12 +26,13 @@ internal sealed class DesktopWindow : Window, IDisposable
         if (NativeWindow.Presenter is OverlappedPresenter presenter)
         { presenter.SetBorderAndTitleBar(false, false); presenter.IsResizable = presenter.IsMinimizable = presenter.IsMaximizable = false; }
         ShellLayerInterop.ToolWindow(Handle);
+        _chrome = new(Handle); _chrome.SetFullscreen(true);
         _hook = new(Handle, QueuePosition);
         Closed += (_, _) => { Dispose(); if (!environment.IsStopping) environment.Shutdown(); };
         Activated += (_, args) => { if (args.WindowActivationState != WindowActivationState.Deactivated) ShellLayerInterop.AnchorDesktop(Handle); };
         Position();
     }
-    internal void ShowSurface() { NativeWindow.Show(false); ShellLayerInterop.AnchorDesktop(Handle); }
+    internal void ShowSurface() { if (_disposed) return; NativeWindow.Show(false); ShellLayerInterop.AnchorDesktop(Handle); }
     private void QueuePosition()
     {
         if (_positionQueued || _disposed) return; _positionQueued = true;
@@ -38,5 +40,5 @@ internal sealed class DesktopWindow : Window, IDisposable
     }
     private void Position()
     { var b = ShellLayerInterop.Monitor(Handle).Monitor.Bounds; NativeWindow.MoveAndResize(new RectInt32(b.X, b.Y, b.Width, b.Height)); ShellLayerInterop.AnchorDesktop(Handle); }
-    public void Dispose() { if (_disposed) return; _disposed = true; _hook.Dispose(); }
+    public void Dispose() { if (_disposed) return; _disposed = true; _hook.Dispose(); _chrome.Dispose(); }
 }

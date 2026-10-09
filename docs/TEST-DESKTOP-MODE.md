@@ -1,6 +1,6 @@
-# Windows desktop acceptance — 1.4.2
+# Windows desktop acceptance — 1.4.3
 
-These checks need a complete successful Windows build and a VM/test account. Complete UI-POLISH-1.4.2.md first and QUICK-SETTINGS-AND-PERFORMANCE.md alongside these recovery regressions. The 1.4.0 baseline was built successfully, but the new native placement and VM smoothness remain pending. Run core checks and scripts/test-update.ps1 as CI already does; retain the actual build logs.
+These checks need a complete successful Windows build and a VM/test account. Complete DOCK-RELIABILITY-1.4.3.md first and QUICK-SETTINGS-AND-PERFORMANCE.md alongside these recovery regressions. The 1.4.0 baseline was built successfully, but the new native placement and VM smoothness remain pending. Run core checks and scripts/test-update.ps1 as CI already does; retain the actual build logs.
 
 ## Temporary takeover and return
 

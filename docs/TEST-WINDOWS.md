@@ -1,3 +1,7 @@
+# Windows acceptance — current release
+
+For 1.5.0, complete [motion and preview acceptance](MOTION-DOCK-1.5.0.md), [dock reliability acceptance](DOCK-RELIABILITY-1.4.3.md) and [desktop recovery checks](TEST-DESKTOP-MODE.md) after CI succeeds. Earlier checklists below are historical; the removed global shortcut/old embedded dock cases do not describe current behavior.
+
 # 0.5.0 desktop acceptance
 
 Run these checks on your Windows 10 PC after a successful CI build. Use a copy of your app folder if experimenting with updates.

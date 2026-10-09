@@ -22,7 +22,7 @@ internal sealed class SwitcherWindow : Window
     private readonly UI.SurfaceMotion _motion;
     private readonly ListView _list = new() { SelectionMode = ListViewSelectionMode.Single, IsItemClickEnabled = true };
     private readonly TextBlock _title = new() { Text = "Your windows", FontSize = 20, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
-    private readonly TextBlock _hint = new() { Text = "Alt+Tab to cycle · release Alt to return · Esc to cancel", FontSize = 12, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _hint = new() { Text = "Choose a window · Enter to return · Esc to cancel", FontSize = 12, TextWrapping = TextWrapping.Wrap };
     internal bool IsOpen { get; private set; }
     internal SwitcherWindow(DesktopEnvironment environment)
     {
@@ -51,11 +51,11 @@ internal sealed class SwitcherWindow : Window
         Closed += (_, _) => { IsOpen = false; _motion.Dispose(); _chrome.Dispose(); environment.SwitcherClosed(this); };
         ApplyAppearance();
     }
-    internal void Show(IReadOnlyList<RunningWindow> windows, IntPtr current, bool reverse, bool overview)
+    internal void Show(IReadOnlyList<RunningWindow> windows, IntPtr current)
     {
         if (!IsOpen)
         {
-            var items = windows.Take(40).Select(w => new SwitcherItem(w.Title, w.ProcessName, "ms-appx:///Assets/Icons/" + UI.NexusIcons.ForProcess(w.ProcessName) + ".svg", w)).ToArray();
+            var items = windows.Select(w => new SwitcherItem(w.Title, w.ProcessName, "ms-appx:///Assets/Icons/" + UI.NexusIcons.ForProcess(w.ProcessName) + ".svg", w)).ToArray();
             _list.ItemsSource = items;
             _list.SelectedIndex = Array.FindIndex(items, i => i.Window.Handle == current);
             var work = ShellLayerInterop.Monitor(current).Work.Bounds;
@@ -67,12 +67,12 @@ internal sealed class SwitcherWindow : Window
         int count = _list.Items.Count;
         if (count > 0)
         {
-            _list.SelectedIndex = overview || _list.SelectedIndex < 0 && !reverse ? 0 : _list.SelectedIndex < 0 ? count - 1 : (_list.SelectedIndex + (reverse ? -1 : 1) + count) % count;
+            if (_list.SelectedIndex < 0) _list.SelectedIndex = 0;
             _list.ScrollIntoView(_list.SelectedItem); _list.Focus(FocusState.Programmatic);
         }
-        _hint.Text = count == 0 ? "No app windows are open." : overview ? "Choose a window · Enter to return · Esc to cancel" : "Alt+Tab to cycle · release Alt to return · Esc to cancel";
+        _hint.Text = count == 0 ? "No app windows are open." : "Choose a window · Enter to return · Esc to cancel";
     }
-    private void Commit(SwitcherItem item) { Hide(); if (!NativeMethods.Activate(item.Window)) _environment.Report("That window is no longer available."); }
+    private void Commit(SwitcherItem item) { Hide(); _environment.RestoreDockWindow(item.Window); }
     internal void CommitSelection() { if (!IsOpen) return; if (_list.SelectedItem is SwitcherItem item) Commit(item); else Hide(); }
     internal void Hide() { IsOpen = false; _motion.Hide(); _native.Hide(); }
     internal void ApplyAppearance()

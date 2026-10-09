@@ -11,7 +11,7 @@ namespace Nexus.Shell.Desktop;
 
 // The coordinator owns lifetime and shared data. Each surface owns its UI and
 // its own HWND; Sections is created only after an explicit open action.
-internal sealed class DesktopEnvironment
+internal sealed partial class DesktopEnvironment
 {
     internal ShellSession Session { get; } = new();
     internal ShellTheme Theme { get; } = new();
@@ -21,6 +21,7 @@ internal sealed class DesktopEnvironment
     internal bool IsStopping { get; private set; }
     internal bool SectionsOpen => _sections is not null;
     internal bool FilesOpen => _files is not null;
+    internal bool DockInteraction => _menu?.IsOpen == true || _quickSettings?.IsOpen == true || _switcher?.IsOpen == true || _dockPreview?.IsOpen == true || _sessionDialog;
     internal DesktopSessionMode Mode { get; }
     internal bool IsManagedDesktop => Mode != DesktopSessionMode.Preview;
     internal event Action? Stopped;
@@ -29,7 +30,9 @@ internal sealed class DesktopEnvironment
     private SwitcherWindow? _switcher;
     private readonly HashSet<FilesWindow> _pickers = [];
     private readonly NexusDesktopToggle _desktopToggle = new();
-    private ShellKeyboardHook? _keyboard;
+    private WindowEventObserver? _windowEvents;
+    private readonly DispatcherTimer _windowRefreshTimer = new() { Interval = TimeSpan.FromMilliseconds(50) };
+    private bool _windowEventQueued, _foregroundChanged, _windowRefreshPending;
     private EventWaitHandle? _pulse;
     private Process? _host;
     private bool _sessionDialog;
@@ -48,7 +51,6 @@ internal sealed class DesktopEnvironment
     private Task<List<AppEntry>>? _catalog;
     private IReadOnlyList<RunningWindow> _windows = [];
     private bool _refreshing, _saving, _dirty;
-    internal bool HotkeyAvailable => _integration?.HotkeyAvailable == true;
 
     internal DesktopEnvironment(DesktopSessionMode mode = DesktopSessionMode.Preview, string? hostToken = null, int? hostPid = null)
     {
@@ -76,10 +78,11 @@ internal sealed class DesktopEnvironment
             { Session.State.PinnedApps = AppCatalog.Defaults(); Session.State.CatalogInitialized = true; _dirty = true; }
             for (int i = 0; i < Session.State.PinnedApps.Count; i++)
                 if (IsExplorer(Session.State.PinnedApps[i].Target)) { Session.State.PinnedApps[i] = Session.State.PinnedApps[i] with { Target = "nexus:files" }; _dirty = true; }
-            Theme.Apply(Session.State.Wallpaper);
+            Theme.Apply(Session.State.Wallpaper, Session.State.ReducedEffects);
             Desktop = new(this); Taskbar = new(this);
             Session.Changed += SessionChanged;
             _saveTimer.Tick += SaveTick; _timer.Tick += Tick;
+            _windowRefreshTimer.Tick += (_, _) => { _windowRefreshTimer.Stop(); UpdateTaskbar(); };
             _integration = new(Desktop.Handle, command => Desktop.DispatcherQueue.TryEnqueue(() =>
             {
                 if (IsStopping) return;
@@ -88,8 +91,10 @@ internal sealed class DesktopEnvironment
                 else if (command == "tray-lost") Report("The Windows notification icon is unavailable. The Nexus taskbar is still running.");
             }));
             RefreshIntegration(); Desktop.ShowSurface(); Taskbar.ShowBar();
-            if (IsManagedDesktop)
-                _keyboard = new(action => Desktop.DispatcherQueue.TryEnqueue(() => HandleShellKey(action)));
+            // Native Windows shortcuts are never intercepted. Events observe
+            // app lifecycle only; the five-second tick is a recovery fallback.
+            try { _windowEvents = new(QueueWindowEvent); }
+            catch (Exception ex) { Report("Window notifications unavailable; the dock will use periodic refresh", ex); }
             RefreshDesktop(); UpdateTaskbar(); _timer.Start();
             _pulse?.Set();
             if (_dirty) _saveTimer.Start();
@@ -103,7 +108,8 @@ internal sealed class DesktopEnvironment
         if (IsStopping) return;
         _dirty = true; _saveTimer.Stop(); _saveTimer.Start();
         RefreshAppearance(); RefreshIntegration();
-        Taskbar.View.Refresh(_windows);
+        if (!Session.State.DockPreviews) HideDockPreview();
+        Taskbar.View.Refresh(DockWindows());
         if (_compact != Session.State.CompactDock || _floating != Session.State.FloatingTaskbar)
         { _compact = Session.State.CompactDock; _floating = Session.State.FloatingTaskbar; Taskbar.Position(); }
         _quickSettings?.RefreshPreferences();
@@ -112,10 +118,10 @@ internal sealed class DesktopEnvironment
     internal void RefreshAppearance()
     {
         if (IsStopping || Desktop is null) return;
-        Theme.Apply(Session.State.Wallpaper);
+        Theme.Apply(Session.State.Wallpaper, Session.State.ReducedEffects);
         var appearance = (Theme.Palette.Name, Theme.HighContrast, Theme.Animations, Session.State.ReducedEffects, Session.State.NativeGlass, Session.State.DisplayName);
         if (_appearance == appearance) return;
-        _appearance = appearance; Desktop.Surface.ApplyAppearance();
+        _appearance = appearance; HideDockPreview(); Desktop.Surface.ApplyAppearance();
         Taskbar?.ApplyAppearance(); _menu?.ApplyAppearance(this);
         _files?.ApplyAppearance(); foreach (var picker in _pickers) picker.ApplyAppearance();
         _switcher?.ApplyAppearance();
@@ -124,14 +130,11 @@ internal sealed class DesktopEnvironment
     internal void RefreshIntegration()
     {
         if (_integration is null || IsStopping) return;
-        // Avoid re-registering hotkeys/tray icons for every notes keystroke.
-        if (_lastShortcut != Session.State.GlobalShortcut)
-        { _lastShortcut = Session.State.GlobalShortcut; if (!_integration.SetHotkey(_lastShortcut.Value)) Report("Ctrl+Alt+Space is already assigned. Use the taskbar search button."); }
         bool resident = Mode == DesktopSessionMode.Preview && Session.State.KeepAvailable;
         if (_lastResident != resident)
         { _lastResident = resident; if (!_integration.SetResident(resident)) Report("The notification icon is unavailable. Exit remains available in the desktop menu."); }
     }
-    private bool? _lastShortcut, _lastResident;
+    private bool? _lastResident;
     private async void SaveTick(object? sender, object args)
     {
         _saveTimer.Stop(); if (IsStopping || !_dirty || _saving) return;
@@ -169,10 +172,75 @@ internal sealed class DesktopEnvironment
     }
     internal async void UpdateTaskbar()
     {
-        if (IsStopping || Taskbar is null || _refreshing) return; _refreshing = true;
-        try { var windows = await Task.Run(() => NativeMethods.RunningWindows(Desktop.Handle)); if (!IsStopping) { _windows = windows; Taskbar.View.Refresh(windows); } }
+        if (IsStopping || Taskbar is null) return;
+        _windowRefreshPending = true;
+        if (_refreshing) return; _refreshing = true; _windowRefreshPending = false;
+        try
+        {
+            var windows = await Task.Run(() => NativeMethods.RunningWindows(Desktop.Handle));
+            // A new event during enumeration schedules another pass instead of
+            // being lost behind the old _refreshing early return.
+            if (!IsStopping) { _windows = windows; Taskbar.View.Refresh(DockWindows()); Taskbar.RefreshVisibility(); }
+        }
         catch (Exception ex) { Report("Could not refresh running windows", ex, false); }
-        finally { _refreshing = false; }
+        finally
+        {
+            _refreshing = false;
+            if (!IsStopping && _windowRefreshPending && !_windowRefreshTimer.IsEnabled) _windowRefreshTimer.Start();
+        }
+    }
+    private void QueueWindowEvent(WindowEvent change)
+    {
+        if (IsStopping) return;
+        _foregroundChanged |= change.IsForeground;
+        if (_windowEventQueued) return; _windowEventQueued = true;
+        if (!Desktop.DispatcherQueue.TryEnqueue(() =>
+        {
+            _windowEventQueued = false; if (IsStopping) return;
+            bool foregroundChanged = _foregroundChanged; _foregroundChanged = false;
+            if (foregroundChanged && ShellLayerInterop.IsExplorerDesktopWindow(NativeMethods.GetForegroundWindow())) Desktop.ShowSurface();
+            Taskbar.View.RefreshWindowStates(); Taskbar.RefreshVisibility();
+            // Fixed coalescing window, not a sliding debounce that can starve.
+            if (!_windowRefreshTimer.IsEnabled) _windowRefreshTimer.Start();
+        })) _windowEventQueued = false;
+    }
+    private IReadOnlyList<RunningWindow> DockWindows()
+    {
+        var windows = _windows.ToList();
+        if (_sections is not null) windows.Add(new(WinRT.Interop.WindowNative.GetWindowHandle(_sections), "Sections", "nexus", Environment.ProcessId));
+        if (_files is not null) windows.Add(new(_files.Handle, "Files", "nexus", Environment.ProcessId));
+        foreach (var picker in _pickers) windows.Add(new(picker.Handle, picker.NativeWindow.Title, "nexus", Environment.ProcessId));
+        return windows;
+    }
+    internal void ToggleDockWindow(RunningWindow window)
+    {
+        HideDockPreview();
+        if (IsStopping || !NativeMethods.OwnsWindow(window)) { UpdateTaskbar(); return; }
+        if (_sections is not null && window.Handle == WinRT.Interop.WindowNative.GetWindowHandle(_sections)) _sections.ToggleFromDock();
+        else if (_files is not null && window.Handle == _files.Handle) _files.ToggleFromDock();
+        else if (_pickers.FirstOrDefault(p => p.Handle == window.Handle) is { } picker) picker.ToggleFromDock();
+        else if (!NativeMethods.ToggleDockWindow(window)) Report("Windows could not switch this app. Try the window overview.");
+        Taskbar.View.RefreshWindowStates(); UpdateTaskbar();
+    }
+    internal void RestoreDockWindow(RunningWindow window)
+    {
+        HideDockPreview();
+        if (IsStopping || !NativeMethods.OwnsWindow(window)) { UpdateTaskbar(); return; }
+        if (_sections is not null && window.Handle == WinRT.Interop.WindowNative.GetWindowHandle(_sections)) _sections.OpenSection(null);
+        else if (_files is not null && window.Handle == _files.Handle) _files.ReturnToWindow();
+        else if (_pickers.FirstOrDefault(p => p.Handle == window.Handle) is { } picker) picker.ReturnToWindow();
+        else if (!NativeMethods.Activate(window)) Report("Windows could not switch this app. Try the window overview.");
+        UpdateTaskbar();
+    }
+    internal void MinimizeDockWindow(RunningWindow window)
+    {
+        HideDockPreview();
+        if (IsStopping || !NativeMethods.OwnsWindow(window)) { UpdateTaskbar(); return; }
+        if (_sections is not null && window.Handle == WinRT.Interop.WindowNative.GetWindowHandle(_sections)) _sections.MinimizeFromDock();
+        else if (_files is not null && window.Handle == _files.Handle) _files.MinimizeFromDock();
+        else if (_pickers.FirstOrDefault(p => p.Handle == window.Handle) is { } picker) picker.MinimizeFromDock();
+        else if (!NativeMethods.Minimize(window)) Report("Windows could not minimize this app.");
+        UpdateTaskbar();
     }
     internal void RefreshDesktop() { if (!IsStopping && Desktop is not null) _ = Desktop.Surface.RefreshAsync(); }
     internal void ShowSections(string? page = null)
@@ -192,19 +260,20 @@ internal sealed class DesktopEnvironment
     internal void ShowMenu(bool search = false)
     {
         if (IsStopping) return;
+        HideDockPreview();
         _quickSettings?.Hide();
         try { _menu ??= new(this); if (_menu.IsOpen && !search) _menu.HideMenu(); else _menu.ShowMenu(this, Taskbar.BarBounds, search); }
         catch (Exception ex) { Report("Could not open Start", ex); }
     }
     internal void ShowQuickSettings()
     {
-        if (IsStopping) return; _menu?.HideMenu();
+        if (IsStopping) return; HideDockPreview(); _menu?.HideMenu();
         try { _quickSettings ??= new(this); if (_quickSettings.IsOpen) _quickSettings.Hide(); else _quickSettings.Show(); }
         catch (Exception ex) { Report("Could not open Quick Settings", ex); }
     }
     internal void QuickSettingsClosed(QuickSettingsWindow window) { if (ReferenceEquals(_quickSettings, window)) _quickSettings = null; }
     internal void PositionQuickSettings() { if (_quickSettings?.IsOpen == true) _quickSettings.Position(); }
-    internal void HideMenu() { _menu?.HideMenu(); _quickSettings?.Hide(); }
+    internal void HideMenu() { HideDockPreview(); _menu?.HideMenu(); _quickSettings?.Hide(); }
     internal void MenuClosed(MenuWindow window) { if (ReferenceEquals(_menu, window)) _menu = null; }
     internal Task<List<AppEntry>> GetCatalogAsync(bool refresh = false)
     {
@@ -214,10 +283,13 @@ internal sealed class DesktopEnvironment
     }
     internal void OpenDesktopItem(DesktopShortcut item)
     { if (item.Id == "sections") ShowSections(); else OpenTarget(item.Target); }
-    internal void Launch(AppEntry app)
+    internal void Launch(AppEntry app) => TryLaunch(app);
+    internal bool TryLaunch(AppEntry app)
     {
-        try { OpenTargetChecked(app.Target); Session.State.Activity.Insert(0, new(DateTimeOffset.Now, "Opened " + app.Name)); if (Session.State.Activity.Count > 200) Session.State.Activity.RemoveRange(200, Session.State.Activity.Count - 200); SaveState(); }
-        catch (Exception ex) { Report("Could not open " + app.Name, ex); }
+        if (IsStopping) return false;
+        HideDockPreview();
+        try { OpenTargetChecked(app.Target); Session.State.Activity.Insert(0, new(DateTimeOffset.Now, "Opened " + app.Name)); if (Session.State.Activity.Count > 200) Session.State.Activity.RemoveRange(200, Session.State.Activity.Count - 200); SaveState(); return true; }
+        catch (Exception ex) { Report("Could not open " + app.Name, ex); return false; }
     }
     internal void OpenTarget(string target)
     {
@@ -268,26 +340,9 @@ internal sealed class DesktopEnvironment
     {
         if (IsStopping) return [];
         var window = new FilesWindow(this, request, Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments));
-        _pickers.Add(window);
+        _pickers.Add(window); UpdateTaskbar();
         try { return await window.Selection; }
-        finally { _pickers.Remove(window); }
-    }
-    private void HandleShellKey(ShellKeyAction action)
-    {
-        if (IsStopping) return;
-        switch (action)
-        {
-            case ShellKeyAction.Start: ShowMenu(); break;
-            case ShellKeyAction.Files: ShowFiles(); break;
-            case ShellKeyAction.ShowDesktop: ShowDesktop(); break;
-            case ShellKeyAction.Settings: OpenTarget("ms-settings:"); break;
-            case ShellKeyAction.Search: ShowMenu(true); break;
-            case ShellKeyAction.Controls: ShowQuickSettings(); break;
-            case ShellKeyAction.Overview: ShowSwitcher(false, true); break;
-            case ShellKeyAction.SwitchNext: ShowSwitcher(false, false); break;
-            case ShellKeyAction.SwitchPrevious: ShowSwitcher(true, false); break;
-            case ShellKeyAction.SwitchCommit: _switcher?.CommitSelection(); break;
-        }
+        finally { _pickers.Remove(window); UpdateTaskbar(); }
     }
     private List<RunningWindow> AppWindows()
     {
@@ -297,13 +352,12 @@ internal sealed class DesktopEnvironment
         foreach (var picker in _pickers) windows.Add(new(picker.Handle, picker.NativeWindow.Title, "nexus", Environment.ProcessId));
         return windows;
     }
-    private void ShowSwitcher(bool reverse, bool overview)
+    internal void ShowWindowOverview()
     {
         if (IsStopping) return; HideMenu();
-        try { IntPtr current = NativeMethods.GetForegroundWindow(); _switcher ??= new(this); _switcher.Show(AppWindows(), current, reverse, overview); }
+        try { IntPtr current = NativeMethods.ForegroundTaskWindow(); _switcher ??= new(this); _switcher.Show(AppWindows(), current); }
         catch (Exception ex) { Report("Could not switch windows", ex); }
     }
-    internal void ShowWindowOverview() => ShowSwitcher(false, true);
     internal void SwitcherClosed(SwitcherWindow window) { if (ReferenceEquals(window, _switcher)) _switcher = null; }
     internal void ShowDesktop()
     {
@@ -313,7 +367,7 @@ internal sealed class DesktopEnvironment
             _switcher?.Hide(); _desktopToggle.Toggle(AppWindows());
         }
         catch (Exception ex) { Report("Could not show the desktop", ex, false); }
-        Desktop.ShowSurface(); Taskbar.ShowBar();
+        Desktop.ShowSurface(); Taskbar.ShowBar(); UpdateTaskbar();
     }
     internal void Report(string message, Exception? error = null, bool visible = true)
     { Log.Write(message, error); if (!IsStopping && visible && Desktop is not null) Desktop.Surface.Report(error is null ? message : message + ": " + error.Message); }
@@ -348,17 +402,18 @@ internal sealed class DesktopEnvironment
     internal void Shutdown(DesktopExitCode? exitCode = null)
     {
         if (IsStopping) return; IsStopping = true;
-        _timer.Stop(); _saveTimer.Stop(); Session.Changed -= SessionChanged;
+        _timer.Stop(); _saveTimer.Stop(); _windowRefreshTimer.Stop(); Session.Changed -= SessionChanged;
         _cancel.Cancel();
         Environment.ExitCode = (int)(exitCode ?? (IsManagedDesktop ? DesktopExitCode.RestoreWindows : DesktopExitCode.Stop));
         void Cleanup(Action action) { try { action(); } catch (Exception ex) { Log.Write("Desktop shutdown cleanup failed", ex); } }
+        Cleanup(() => _dockPreview?.Close()); _dockPreview = null;
         Cleanup(() => _sections?.Close()); _sections = null;
         Cleanup(() => _menu?.Close()); _menu = null;
         Cleanup(() => _quickSettings?.Close()); _quickSettings = null;
         Cleanup(() => _files?.Close()); _files = null;
         Cleanup(() => _switcher?.Close()); _switcher = null;
         foreach (var picker in _pickers.ToArray()) Cleanup(picker.Close); _pickers.Clear();
-        Cleanup(() => _keyboard?.Dispose()); _keyboard = null;
+        Cleanup(() => _windowEvents?.Dispose()); _windowEvents = null;
         Cleanup(() => _pulse?.Dispose()); _pulse = null;
         Cleanup(() => _host?.Dispose()); _host = null;
         Cleanup(() => _integration?.Dispose()); _integration = null;

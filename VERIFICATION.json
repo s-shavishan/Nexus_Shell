@@ -1,35 +1,57 @@
 {
-  "version": "1.4.2",
-  "baselineCommit": "af26198808fbc31f92275847cabfdf461093e35f",
+  "version": "1.5.0",
+  "baselineCommit": "1cd328f83d28d606fe5e9da7250ee3d792725cd0",
   "baselineFiles": 199,
-  "sourceFiles": 199,
+  "incrementalBaselines": [
+    {
+      "version": "1.4.3",
+      "files": 203
+    },
+    {
+      "version": "1.4.4",
+      "files": 206
+    }
+  ],
+  "sourceFiles": 214,
   "implemented": [
-    "floating taskbar with stable appbar reservation",
-    "Nexus-only rounded window frames and resize handling",
-    "finite content entrances",
-    "Sections/Files tuck-and-return"
+    "finite dock launch/arrival/activation/minimize/restore cues, separate hover/press target and compositor underline",
+    "staggered Overview card entrances with cached stages and unloaded-target cleanup",
+    "independent delayed hover/keyboard window preview with one DWM relationship only while open",
+    "Fast/high-contrast/unavailable-source icon/title/control fallback and persistent hover-preview preference",
+    "dock and preview restore/minimize/maximize/restore-size/normal WM_CLOSE commands with live identity validation",
+    "preview hover corridor, menu/press/scroll/reposition/fullscreen/source-loss/shutdown dismissal and bounded UI updates",
+    "warm reference-adapted UI and independent desktop/dock/menu/Sections foundation preserved"
   ],
   "checksCompleted": [
-    "all 199 failed-build baseline Git blobs verified",
-    "source/XML/XAML/resources/publish/ownership/version checks",
-    "sealed Border guard rejects failed source and accepts corrected source",
-    "unchanged host takeover/recovery/startup and pinned dependencies"
+    "source/XML/XAML/resource/assets/publish/ownership/version and bounded-motion checks",
+    "C# syntax including new tests (tree-sitter; no type/API resolution)",
+    "unchanged palette/App.xaml/ShellTheme against delivered 1.4.4 and retained numeric contrast report",
+    "host/recovery/startup/updater implementation and dependency pins preserved"
+  ],
+  "checksRequiredForDelivery": [
+    "baseline Git blobs and delivered 1.4.3/1.4.4 source archive verification",
+    "clean applicability and exact source reconstruction for all three patches",
+    "ZIP entries/CRC and SHA-256"
+  ],
+  "testsAddedNotExecuted": [
+    "initial discovery/non-replay, real motion transitions and rapid minimize/restore sequence",
+    "3024 preview placement cases within existing 1008 monitor/DPI/layout cases",
+    "preview corridor/aspect fit and old/new settings migration/snapshot/persistence",
+    "owned native windows: stale maximize/close rejection, maximize/restore/maximize-from-minimized, graceful WM_CLOSE",
+    "owned top-level DWM registration/query/update/rejection/disposal and Win32 structure layout; conditional composition skip"
   ],
   "pending": [
-    "corrected native WinUI build and type/analyzer checks",
-    "publish/resource and full/update package validation",
-    "Windows 10/11 frame/minimize/focus and VirtualBox performance acceptance",
-    "actual audio-device acceptance"
+    ".NET core and Win32 test execution",
+    "native WinUI/host compilation including type/API and CA1416 checks",
+    "PowerShell updater and compiled-resource/package checks",
+    "Windows 10/11 DWM-over-WinUI preview rendering, pointer/keyboard/focus, accessibility and recovery acceptance",
+    "VirtualBox measured drag/frame timing and repeated app/menu/preview memory/resource checks"
   ],
-  "buildFix": "TaskbarView composes its rounded Border inside a Grid (CS0509)",
-  "observedCI": {
-    "commit": "af26198808fbc31f92275847cabfdf461093e35f",
-    "source": "user-supplied AppVeyor log",
-    "coreAndNativeTestWindows": "passed",
-    "placementCases": 1008,
-    "settingsMigrationAndPersistence": "passed",
-    "powerShellUpdaterChecks": "passed",
-    "audioDeviceAcceptance": "skipped: CI host has no audio output",
-    "uiCompilation": "failed with CS0509 before this fix"
-  }
+  "limitations": [
+    "source-only delivery; native compilation/runtime/performance unverified",
+    "dock cues do not redirect native app-window minimize destination",
+    "protected apps can show blank preview contents despite successful registration",
+    "native shell shortcuts require existing Windows shell backend",
+    "primary display only; app-native icon extraction, full tray/Jump Lists remain future work"
+  ]
 }

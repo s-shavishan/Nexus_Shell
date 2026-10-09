@@ -215,7 +215,10 @@ public sealed partial class MainWindow : Window
         ApplyWidgetLayout();
         if (page != "PC controls") _ = SuspendAudioAsync();
         if (changed && animate)
-            _motion?.Enter(page is "Apps" or "Gaming" ? AppLibraryView : page == "Home" ? HomeView : page == "Running apps" ? WindowOverviewView : page == "Explore" ? ExploreView : page == "PC controls" ? PcView : PageScroller);
+        {
+            if (page == "Home") _motion?.EnterStaggered([HomeSummaryCards, HomeSavedCard, HeroCard, HomeTaskCard, HomeFavoritesCard, HomeEssentialsCard, HomeNotesCard]);
+            else _motion?.Enter(page is "Apps" or "Gaming" ? AppLibraryView : page == "Running apps" ? WindowOverviewView : page == "Explore" ? ExploreView : page == "PC controls" ? PcView : PageScroller);
+        }
     }
 
     private void RefreshHome()
@@ -464,23 +467,33 @@ public sealed partial class MainWindow : Window
         if (PcVisible) _ = RefreshPcAsync();
 
     }
-    private void UpdateClock(bool force = false) { HomeGreeting.Text = "Welcome back, " + _state.DisplayName + "."; SidebarName.Text = _state.DisplayName; }
+    private void UpdateClock(bool force = false)
+    {
+        int hour = DateTime.Now.Hour;
+        string greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+        string text = greeting + ", " + _state.DisplayName;
+        if (force || HomeGreeting.Text != text) HomeGreeting.Text = text;
+        SidebarName.Text = _state.DisplayName;
+    }
     private void ApplyWidgetLayout()
     {
         double width = DesktopRoot.ActualWidth;
         bool sidebar = width >= 760 && DesktopRoot.ActualHeight >= 460;
-        Sidebar.Visibility = sidebar ? Visibility.Visible : Visibility.Collapsed; SidebarColumn.Width = new GridLength(sidebar ? 196 : 0);
+        Sidebar.Visibility = sidebar ? Visibility.Visible : Visibility.Collapsed; SidebarColumn.Width = new GridLength(sidebar ? 228 : 0);
+        ChromeSearchButton.Visibility = width >= 980 ? Visibility.Visible : Visibility.Collapsed;
         ControlPanel.Width = Math.Clamp(width - 48, 256, 400); ControlScroller.MaxHeight = Math.Max(120, DesktopRoot.ActualHeight - 110);
         CommandPanel.MaxHeight = Math.Max(180, DesktopRoot.ActualHeight - 64); CommandList.MaxHeight = Math.Max(60, Math.Min(360, DesktopRoot.ActualHeight - 260));
         UpdateExperienceLayout(); UpdateHomeColumns(); UpdateHero(); UpdateExploreLayout();
     }
     private void UpdateHero()
     {
-        HomeHeroArt.Visibility = !_state.ReducedEffects && !_highContrast && PageHost.ActualWidth >= 560
-            ? Visibility.Visible : Visibility.Collapsed;
+        HomeHeroArt.Visibility = Visibility.Collapsed;
         bool compact = PageHost.ActualWidth < 480;
-        HeroCard.Padding = new Thickness(compact ? 20 : 30);
-        HeroTitle.FontSize = compact ? 28 : 36;
+        HomeBody.Padding = new Thickness(compact ? 16 : 24);
+        HomeGreeting.FontSize = compact ? 26 : 34;
+        HomeWorkspacesButton.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        HeroCard.Padding = new Thickness(20);
+        HeroTitle.FontSize = 22;
         ShortcutRow.RowSpacing = compact ? 10 : 0;
         for (int index = 0; index < _shortcutCards.Length; index++)
         {
@@ -494,8 +507,9 @@ public sealed partial class MainWindow : Window
     {
         ApplyAuraPalette();
         bool highContrast = _highContrast;
-        bool colorsChanged = _renderedHighContrast != highContrast;
+        bool colorsChanged = _renderedHighContrast != highContrast || _renderedPalette != _environment.Theme.Palette.Name;
         _renderedHighContrast = highContrast;
+        _renderedPalette = _environment.Theme.Palette.Name;
         bool simple = _state.ReducedEffects || highContrast;
         bool animation = !simple && _isActive && _animationsEnabled;
         _motion?.SetEnabled(animation);
@@ -515,7 +529,7 @@ public sealed partial class MainWindow : Window
         }
     }
     private void Desktop_Loaded(object sender, RoutedEventArgs args)
-    { if (!_ready || _motion is not null) return; try { _motion = new MotionController(DesktopRoot); foreach (var c in _shortcutCards.Concat(_navigation)) _motion.AttachHover(c); ApplyEffects(); _motion.Enter(PageHost); } catch (Exception ex) { Log.Write("Sections motion unavailable", ex); } }
+    { if (!_ready || _motion is not null) return; try { _motion = new MotionController(DesktopRoot); foreach (var c in _shortcutCards.Concat(_navigation).Concat(_homeSummaries.Select(s => s.Button))) _motion.AttachHover(c); ApplyEffects(); _motion.Enter(PageHost); } catch (Exception ex) { Log.Write("Sections motion unavailable", ex); } }
     private void Window_Activated(object sender, WindowActivatedEventArgs args)
     {
         if (!_ready) return;
@@ -568,7 +582,14 @@ public sealed partial class MainWindow : Window
         // Nexus's taskbar already retains this window. Tuck it away directly
         // instead of asking Windows to draw a legacy minimized-window icon.
         _motion?.SetEnabled(false); _appWindow.Hide();
+        _environment.UpdateTaskbar();
     }
+    internal void ToggleFromDock()
+    {
+        if (NativeMethods.GetForegroundWindow() == _handle && NativeMethods.Visible(_handle) && !NativeMethods.IsMinimized(_handle)) Minimize();
+        else ShowNexus();
+    }
+    internal void MinimizeFromDock() => Minimize();
     private async Task ClearActivityAsync()
     {
         if (_dialogOpen) return;

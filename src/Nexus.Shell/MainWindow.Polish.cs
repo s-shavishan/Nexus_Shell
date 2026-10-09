@@ -7,10 +7,10 @@ public sealed partial class MainWindow
 {
     private void SetSegment(Button button, bool selected)
     {
-        button.Background = selected ? Resource(_highContrast ? "NexusAccent" : "NexusSegment") : _transparent;
-        button.Foreground = Resource(_highContrast && selected ? "NexusAccentText" : "NexusText");
-        button.BorderBrush = selected ? Resource("NexusBorder") : _transparent;
-        button.BorderThickness = new Thickness(selected ? 1 : 0);
+        button.Background = selected ? _environment.Theme.Surface("Accent") : _transparent;
+        button.Foreground = Resource(selected ? "NexusAccentText" : "NexusMuted");
+        button.BorderBrush = selected ? Resource("NexusAccent") : _transparent;
+        button.BorderThickness = new Thickness(_highContrast && selected ? 1 : 0);
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(button, selected ? "Selected" : "");
     }
 

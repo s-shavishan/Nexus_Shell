@@ -1,0 +1,48 @@
+{
+  "method": "Numerical sRGB samples from source palette values; 11 gradient positions and normal/hover/pressed washes. Native WinUI rendering and high-contrast acceptance remain pending.",
+  "minimumRequired": 4.5,
+  "palettes": [
+    {
+      "palette": "Solstice",
+      "minimumBody": 10.711,
+      "minimumMuted": 4.865,
+      "minimumActionIncludingHoverPressed": 5.825,
+      "minimumSelection": 8.695
+    },
+    {
+      "palette": "Ember",
+      "minimumBody": 12.665,
+      "minimumMuted": 8.04,
+      "minimumActionIncludingHoverPressed": 4.645,
+      "minimumSelection": 14.561
+    },
+    {
+      "palette": "Opal",
+      "minimumBody": 10.325,
+      "minimumMuted": 4.8,
+      "minimumActionIncludingHoverPressed": 5.767,
+      "minimumSelection": 8.312
+    },
+    {
+      "palette": "Lagoon",
+      "minimumBody": 8.626,
+      "minimumMuted": 5.617,
+      "minimumActionIncludingHoverPressed": 11.039,
+      "minimumSelection": 9.809
+    },
+    {
+      "palette": "Graphite",
+      "minimumBody": 8.882,
+      "minimumMuted": 5.443,
+      "minimumActionIncludingHoverPressed": 10.249,
+      "minimumSelection": 9.881
+    },
+    {
+      "palette": "Pearl",
+      "minimumBody": 8.882,
+      "minimumMuted": 5.359,
+      "minimumActionIncludingHoverPressed": 9.831,
+      "minimumSelection": 10.076
+    }
+  ]
+}

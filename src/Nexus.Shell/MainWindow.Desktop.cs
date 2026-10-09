@@ -17,16 +17,15 @@ public sealed partial class MainWindow
     private IReadOnlyList<RunningWindow> _desktopWindows = [];
     private WorkspaceProfile ActiveProfile => _state.Profiles.First(p => p.Id == _state.ActiveProfileId);
 
-    private void InitializeDesktop() { DesktopWorkspace.Normalize(_state); GlobalShortcutSwitch.IsOn = _state.GlobalShortcut; ResidentSwitch.IsOn = _state.KeepAvailable && _environment.Mode == DesktopSessionMode.Preview; ResidentSwitch.IsEnabled = _environment.Mode == DesktopSessionMode.Preview; ResumeWorkspaceSwitch.IsOn = _state.ResumeWorkspace; RenderProfileStrip(); RefreshDesktopControls(); }
+    private void InitializeDesktop() { DesktopWorkspace.Normalize(_state); ResidentSwitch.IsOn = _state.KeepAvailable && _environment.Mode == DesktopSessionMode.Preview; ResidentSwitch.IsEnabled = _environment.Mode == DesktopSessionMode.Preview; ResumeWorkspaceSwitch.IsOn = _state.ResumeWorkspace; RenderProfileStrip(); RefreshDesktopControls(); }
     
-    private void RefreshDesktopControls() { DesktopShortcutStatus.Text = _environment.HotkeyAvailable ? "Ctrl+Alt+Space opens the Start menu." : "Use taskbar search to open the Start menu."; }
+    private void RefreshDesktopControls() { DesktopShortcutStatus.Text = "Windows handles keyboard shortcuts. Open Nexus Start and search from the dock."; }
     
     private void ShowNexus() { _appWindow.Show(); if (_appWindow.Presenter is OverlappedPresenter p && p.State == OverlappedPresenterState.Minimized) p.Restore(); Activate(); NativeMethods.Activate(_handle); }
     private void HideNexus() { if (_dialogOpen || _picking) return; Close(); }
     private void ExitNexus() => _environment.Shutdown();
     private void HideNexus_Click(object sender, RoutedEventArgs args) => HideNexus();
     
-    private void GlobalShortcut_Toggled(object sender, RoutedEventArgs args) { if (!_ready) return; _state.GlobalShortcut = GlobalShortcutSwitch.IsOn; SaveState(); RefreshDesktopControls(); }
     private void Resident_Toggled(object sender, RoutedEventArgs args) { if (!_ready) return; _state.KeepAvailable = ResidentSwitch.IsOn; SaveState(); ShowStatus("Desktop and taskbar remain running when Sections closes."); }
     private void ResumeWorkspace_Toggled(object sender, RoutedEventArgs args)
     {
@@ -37,35 +36,40 @@ public sealed partial class MainWindow
     private void UpdateHomeColumns()
     {
         bool wide = PageHost.ActualWidth >= 780;
+        LayoutOverviewSummary();
         HomeCards.ColumnSpacing = wide ? 16 : 0;
-        HomePrimaryColumn.Width = new GridLength(1, GridUnitType.Star);
+        HomePrimaryColumn.Width = new GridLength(wide ? 2 : 1, GridUnitType.Star);
         HomeSecondaryColumn.Width = new GridLength(wide ? 1 : 0, GridUnitType.Star);
         HomeEssentialsCard.Visibility = _state.ShowHomeEssentials ? Visibility.Visible : Visibility.Collapsed;
         HomeNotesCard.Visibility = _state.ShowHomeNotes ? Visibility.Visible : Visibility.Collapsed;
-        var cards = new[] { HomeEssentialsCard, HomeTaskCard, HomeFavoritesCard, HomeNotesCard }
+        var cards = new[] { HomeSavedCard, HeroCard, HomeFavoritesCard, HomeTaskCard, HomeEssentialsCard, HomeNotesCard }
             .Where(card => card.Visibility == Visibility.Visible).ToArray();
         int columns = wide ? 2 : 1;
-        HomeCards.RowDefinitions.Clear();
-        for (int row = 0; row < (cards.Length + columns - 1) / columns; row++)
-            HomeCards.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        int rows = (cards.Length + columns - 1) / columns;
+        if (HomeCards.RowDefinitions.Count != rows)
+        {
+            HomeCards.RowDefinitions.Clear();
+            for (int row = 0; row < rows; row++) HomeCards.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        }
         for (int index = 0; index < cards.Length; index++)
         {
             Grid.SetRow(cards[index], index / columns); Grid.SetColumn(cards[index], index % columns);
         }
-        ProfileHeroActions.Orientation = PageHost.ActualWidth < 600 ? Orientation.Vertical : Orientation.Horizontal;
+        ProfileHeroActions.Orientation = Orientation.Vertical;
         LayoutProfileStrip();
     }
     private void RenderDesktopIdentity()
     {
         
         var profile = ActiveProfile;
-        HeroTitle.Text = profile.Id == "personal" ? "Your day, your space." : profile.Name + ". A space to begin.";
+        HeroTitle.Text = profile.Name + " workspace";
         HeroDescription.Text = profile.Description;
         UpdatePageTrail();
         ProfileOpenButton.Content = profile.Apps.Count + profile.SavedItemIds.Count == 0 ? "Set up workspace" : "Open " + profile.Name;
         ProfileOpenButton.IsEnabled = !_launchingWorkspace;
         ProfileDestinationButton.Content = profile.Page == "Home" ? "Your apps" : "Go to " + profile.Page;
         ProfileSummary.Text = profile.Apps.Count + " apps · " + profile.SavedItemIds.Count + " saved items";
+        HomeWorkspacesButton.IsEnabled = _state.Profiles.Count < 8 && !_launchingWorkspace;
         RenderProfileStrip();
         
     }
@@ -76,13 +80,14 @@ public sealed partial class MainWindow
         {
             var content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
             bool selected = profile.Id == _state.ActiveProfileId;
-            var glyph = Glyph(profile.Glyph, 18); var label = Text(profile.Name, 13);
-            glyph.Foreground = label.Foreground = Resource(_highContrast && selected ? "NexusAccentText" : "NexusText");
+            var glyph = Glyph(profile.Glyph, 17); var label = Text(profile.Name, 12);
+            glyph.Foreground = label.Foreground = Resource(selected ? "NexusAccentText" : "NexusMuted");
             content.Children.Add(glyph); content.Children.Add(label);
             var button = new Button { Content = content, HorizontalAlignment = HorizontalAlignment.Stretch,
-                HorizontalContentAlignment = HorizontalAlignment.Left, CornerRadius = new CornerRadius(18), Padding = new Thickness(16, 14, 16, 14),
-                Background = selected ? _selection : Resource("NexusCard"),
-                BorderBrush = profile.Id == _state.ActiveProfileId ? Resource("NexusAccent") : Resource("NexusBorder"), BorderThickness = new Thickness(1) };
+                Style = (Style)Application.Current.Resources["QuietButton"],
+                HorizontalContentAlignment = HorizontalAlignment.Left, CornerRadius = new CornerRadius(12), Padding = new Thickness(12, 10, 12, 10),
+                Background = selected ? _environment.Theme.Surface("Accent") : _transparent,
+                BorderBrush = Resource("NexusBorder"), BorderThickness = new Thickness(_highContrast ? 1 : 0) };
             button.Click += (_, _) => EnterProfile(profile.Id);
             ToolTipService.SetToolTip(button, profile.Description);
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, "Enter " + profile.Name + " workspace");
@@ -92,11 +97,14 @@ public sealed partial class MainWindow
     }
     private void LayoutProfileStrip()
     {
-        int columns = PageHost.ActualWidth < 520 ? 1 : PageHost.ActualWidth < 1000 ? 2 : 4;
+        const int columns = 1;
         int rows = Math.Max(1, (ProfileStrip.Children.Count + columns - 1) / columns);
-        ProfileStrip.ColumnDefinitions.Clear(); ProfileStrip.RowDefinitions.Clear();
-        for (int i = 0; i < columns; i++) ProfileStrip.ColumnDefinitions.Add(new ColumnDefinition());
-        for (int i = 0; i < rows; i++) ProfileStrip.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        if (ProfileStrip.ColumnDefinitions.Count != columns || ProfileStrip.RowDefinitions.Count != rows)
+        {
+            ProfileStrip.ColumnDefinitions.Clear(); ProfileStrip.RowDefinitions.Clear();
+            for (int i = 0; i < columns; i++) ProfileStrip.ColumnDefinitions.Add(new ColumnDefinition());
+            for (int i = 0; i < rows; i++) ProfileStrip.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        }
         for (int i = 0; i < ProfileStrip.Children.Count; i++)
         { Grid.SetRow((FrameworkElement)ProfileStrip.Children[i], i / columns); Grid.SetColumn((FrameworkElement)ProfileStrip.Children[i], i % columns); }
     }
@@ -109,6 +117,11 @@ public sealed partial class MainWindow
         ShowStatus(ActiveProfile.Name + " workspace selected. Open it when you’re ready.");
     }
     private void ProfileDestination_Click(object sender, RoutedEventArgs args) => Navigate(ActiveProfile.Page == "Home" ? "Apps" : ActiveProfile.Page);
+    private async void NewWorkspace_Click(object sender, RoutedEventArgs args)
+    {
+        try { await EditProfileAsync(new(Guid.NewGuid().ToString("N"), "New workspace", "", "Home", "\uE8B7", [], []), true); }
+        catch (Exception ex) { Error("Could not create the workspace", ex); }
+    }
     private async void ProfileEdit_Click(object sender, RoutedEventArgs args)
     {
         try { await EditProfileAsync(ActiveProfile); }
@@ -146,6 +159,7 @@ public sealed partial class MainWindow
     private async Task EditProfileAsync(WorkspaceProfile profile, bool create = false)
     {
         if (_dialogOpen || _launchingWorkspace) return;
+        if (create && _state.Profiles.Count >= 8) { ShowStatus("You can keep up to 8 workspaces. Configure an existing one in Workspaces."); return; }
         _dialogOpen = true;
         try
         {

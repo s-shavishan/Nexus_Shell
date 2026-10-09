@@ -58,13 +58,19 @@ internal sealed class FilesWindow : Window
     }
     private void Complete(IReadOnlyList<string> paths) { _selection.TrySetResult(paths); Close(); }
     internal void ShowFolder(string folder) { ReturnToWindow(); _ = View.NavigateAsync(folder); }
-    internal void ReturnToWindow() { bool hidden = _tucked; _tucked = false; NativeWindow.Show(); NativeMethods.Activate(Handle); if (hidden) _motion.Open(); }
+    internal void ReturnToWindow() { bool hidden = _tucked; _tucked = false; NativeWindow.Show(); NativeMethods.Activate(Handle); if (hidden) _motion.Open(); _environment.UpdateTaskbar(); }
+    internal void ToggleFromDock()
+    {
+        if (!_tucked && NativeMethods.GetForegroundWindow() == Handle && NativeMethods.Visible(Handle) && !NativeMethods.IsMinimized(Handle)) Minimize();
+        else ReturnToWindow();
+    }
+    internal void MinimizeFromDock() => Minimize();
     private void ToggleMaximize()
     {
         if (NativeWindow.Presenter is not OverlappedPresenter presenter) return;
         if (presenter.State == OverlappedPresenterState.Maximized) presenter.Restore(); else presenter.Maximize();
     }
-    private void Minimize() { _tucked = true; _motion.Hide(); NativeWindow.Hide(); }
+    private void Minimize() { _tucked = true; _motion.Hide(); NativeWindow.Hide(); _environment.UpdateTaskbar(); }
     internal void ApplyAppearance()
     {
         var theme = _environment.Theme;

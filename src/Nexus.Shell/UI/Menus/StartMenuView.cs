@@ -15,16 +15,21 @@ internal sealed record LauncherItem(string Name, string Detail, string IconUri, 
 internal sealed class StartMenuView : Grid
 {
     private readonly DesktopEnvironment _environment;
-    private readonly TextBox _search = new() { PlaceholderText = "Search your apps", FontSize = 15 };
+    private readonly TextBox _search = new() { PlaceholderText = "Search your apps", FontSize = 15, CornerRadius = new CornerRadius(20), Padding = new Thickness(16, 12, 16, 12) };
     private readonly ListView _results = new() { IsItemClickEnabled = true, SelectionMode = ListViewSelectionMode.Single };
-    private readonly TextBlock _name = new() { FontSize = 17, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
+    private readonly TextBlock _name = new() { FontSize = 21, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis };
+    private readonly Border _mark = new() { Width = 46, Height = 46, CornerRadius = new CornerRadius(16), VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock _hint = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap };
     private IReadOnlyList<AppEntry> _catalog = [];
     internal StartMenuView(DesktopEnvironment environment)
     {
         _environment = environment; Padding = new Thickness(20); RowSpacing = 16;
         foreach (var height in new[] { GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto }) RowDefinitions.Add(new() { Height = height });
-        var header = new StackPanel { Spacing = 4 }; header.Children.Add(_name); header.Children.Add(_hint); Children.Add(header);
+        var header = new Grid { ColumnSpacing = 14 };
+        header.ColumnDefinitions.Add(new() { Width = GridLength.Auto }); header.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) });
+        _mark.Child = new FontIcon { FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Segoe MDL2 Assets"), Glyph = "\uE80F", FontSize = 24 };
+        header.Children.Add(_mark);
+        var words = new StackPanel { Spacing = 5, VerticalAlignment = VerticalAlignment.Center }; words.Children.Add(_name); words.Children.Add(_hint); Grid.SetColumn(words, 1); header.Children.Add(words); Children.Add(header);
         Grid.SetRow(_search, 1); Children.Add(_search); Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_search, "Search Start menu apps");
         _search.TextChanged += (_, _) => Render();
         _search.KeyDown += (_, args) => { if (args.Key == VirtualKey.Down && _results.Items.Count > 0) { _results.SelectedIndex = 0; _results.Focus(FocusState.Programmatic); args.Handled = true; } else if (args.Key == VirtualKey.Enter && _results.Items.Count > 0) { Open((LauncherItem)_results.Items[_results.SelectedIndex >= 0 ? _results.SelectedIndex : 0]); args.Handled = true; } };
@@ -72,5 +77,10 @@ internal sealed class StartMenuView : Grid
     private void Open(LauncherItem item)
     { _environment.HideMenu(); if (item.App is null) _environment.ShowSections(); else _environment.Launch(item.App); }
     internal void ApplyAppearance()
-    { var theme = _environment.Theme; RequestedTheme = theme.ElementTheme; _name.Text = _environment.Session.State.DisplayName + "’s desktop"; _name.Foreground = theme.Brush("NexusText"); _results.Foreground = theme.Brush("NexusText"); _hint.Foreground = theme.Brush("NexusMuted"); }
+    {
+        var theme = _environment.Theme; RequestedTheme = theme.ElementTheme;
+        _name.Text = _environment.Session.State.DisplayName + "’s desktop"; _name.Foreground = theme.Brush("NexusText");
+        _results.Foreground = theme.Brush("NexusText"); _hint.Foreground = theme.Brush("NexusMuted");
+        _mark.Background = theme.Surface("Accent"); ((FontIcon)_mark.Child).Foreground = theme.Brush("NexusAccentText");
+    }
 }

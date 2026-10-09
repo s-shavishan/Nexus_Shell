@@ -16,6 +16,13 @@ internal static class NativeMethods
     [DllImport("user32.dll")] private static extern bool ShowWindowAsync(IntPtr window, int command);
     [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr window);
     [DllImport("user32.dll")] private static extern bool IsIconic(IntPtr window);
+    [DllImport("user32.dll")] internal static extern bool IsZoomed(IntPtr window);
+    [DllImport("user32.dll")] private static extern bool IsWindow(IntPtr window);
+    [DllImport("user32.dll")] private static extern IntPtr GetWindow(IntPtr window, uint command);
+    [DllImport("user32.dll")] private static extern IntPtr GetLastActivePopup(IntPtr window);
+    [DllImport("user32.dll")] internal static extern IntPtr GetAncestor(IntPtr window, uint flags);
+    [DllImport("user32.dll")] internal static extern bool GetWindowRect(IntPtr window, out ShellLayerInterop.Rect rect);
+    [DllImport("user32.dll")] internal static extern bool GetCursorPos(out ShellLayerInterop.Point point);
     [DllImport("user32.dll")] internal static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] internal static extern IntPtr FindWindow(string? className, string? name);
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] private static extern IntPtr GetWindowLongPtr(IntPtr window, int index);
@@ -58,15 +65,49 @@ internal static class NativeMethods
 
     internal static bool Activate(IntPtr window)
     {
-        if (window == IntPtr.Zero) return false;
-        if (IsIconic(window)) ShowWindowAsync(window, 9);
-        return SetForegroundWindow(window);
+        if (window == IntPtr.Zero || !IsWindow(window)) return false;
+        // Async commands avoid blocking Nexus on another application's UI thread.
+        bool restoring = IsIconic(window) && ShowWindowAsync(window, 9); // SW_RESTORE retains maximize placement
+        var popup = GetLastActivePopup(window);
+        var target = popup != IntPtr.Zero && IsWindowVisible(popup) ? popup : window;
+        return SetForegroundWindow(target) || restoring;
     }
     internal static bool Activate(RunningWindow window)
     {
-        if (window.Handle == IntPtr.Zero || window.ProcessId <= 0 ||
-            GetWindowThreadProcessId(window.Handle, out uint processId) == 0 || processId != window.ProcessId) return false;
+        if (!OwnsWindow(window)) return false;
         return Activate(window.Handle);
+    }
+    internal static bool OwnsWindow(RunningWindow window) => window.Handle != IntPtr.Zero && window.ProcessId > 0
+        && IsWindow(window.Handle) && GetWindowThreadProcessId(window.Handle, out uint id) != 0 && id == window.ProcessId;
+    internal static bool IsMinimized(IntPtr window) => IsIconic(window);
+    internal static IntPtr ForegroundTaskWindow()
+    {
+        var foreground = GetForegroundWindow();
+        var owner = GetAncestor(foreground, 3); // GA_ROOTOWNER: owned modal dialogs share their app's dock entry
+        return owner == IntPtr.Zero ? foreground : owner;
+    }
+    internal static bool Visible(IntPtr window) => IsWindowVisible(window);
+    internal static bool IsCloaked(IntPtr window) => DwmGetWindowAttribute(window, 14, out uint cloaked, 4) == 0 && cloaked != 0;
+    internal static bool Minimize(RunningWindow window) => OwnsWindow(window) && ShowWindowAsync(window.Handle, 6);
+    internal static bool MaximizeOrRestore(RunningWindow window)
+    {
+        if (!OwnsWindow(window)) return false;
+        bool queued = ShowWindowAsync(window.Handle, !IsIconic(window.Handle) && IsZoomed(window.Handle) ? 9 : 3);
+        // Do not queue SW_RESTORE after SW_MAXIMIZE for an iconic window.
+        // That would undo the requested maximize on a slow application's thread.
+        if (queued) SetForegroundWindow(window.Handle);
+        return queued;
+    }
+    internal static bool RequestClose(RunningWindow window) => OwnsWindow(window)
+        && PostMessage(window.Handle, 0x0010, IntPtr.Zero, IntPtr.Zero); // WM_CLOSE; the app owns save prompts
+    [DllImport("user32.dll", EntryPoint = "PostMessageW", ExactSpelling = true, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool PostMessage(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
+    internal static bool ToggleDockWindow(RunningWindow window)
+    {
+        if (!OwnsWindow(window)) return false;
+        return ForegroundTaskWindow() == window.Handle && !IsIconic(window.Handle)
+            ? ShowWindowAsync(window.Handle, 6) : Activate(window.Handle);
     }
     internal static void BeginDrag(IntPtr window)
     {
@@ -100,9 +141,10 @@ internal static class NativeMethods
             if (DwmGetWindowAttribute(window, 14, out uint cloaked, 4) == 0 && cloaked != 0) return true; // DWMWA_CLOAKED
             long style = GetWindowLongPtr(window, -20).ToInt64();
             if ((style & 0x80) != 0) return true; // WS_EX_TOOLWINDOW
+            if ((style & 0x40000) == 0 && GetWindow(window, 4) != IntPtr.Zero) return true; // owned dialog unless WS_EX_APPWINDOW
             var title = new StringBuilder(512);
             GetWindowText(window, title, title.Capacity);
-            if (title.Length == 0 || title.ToString() == "Program Manager") return true;
+            if (title.Length == 0 || ShellLayerInterop.IsExplorerDesktopWindow(window)) return true;
             GetWindowThreadProcessId(window, out uint id);
             if (id == (uint)Environment.ProcessId) return true;
             try
@@ -111,7 +153,7 @@ internal static class NativeMethods
                 if (process.SessionId == session) result.Add(new(window, title.ToString(), process.ProcessName, (int)id));
             }
             catch { /* A window can disappear while it is being enumerated. */ }
-            return result.Count < 80;
+            return true; // Overflow scrolls; never silently lose the 21st/81st app.
         }, IntPtr.Zero);
         return result;
     }

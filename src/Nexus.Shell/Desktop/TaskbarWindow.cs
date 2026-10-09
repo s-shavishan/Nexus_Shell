@@ -17,8 +17,10 @@ internal sealed class TaskbarWindow : Window, IDisposable
     private readonly DesktopEnvironment _environment;
     private readonly ITaskbarLayer _registration;
     private readonly WindowChrome _chrome;
-    private readonly DispatcherTimer _stacking = new() { Interval = TimeSpan.FromMilliseconds(500) };
-    private bool _queued, _disposed;
+    private readonly DispatcherTimer _visibilityTimer = new() { Interval = TimeSpan.FromMilliseconds(120) };
+    private readonly DockVisibility _visibility = new();
+    private bool _queued, _disposed, _shown = true, _arranging, _visibilityReported;
+    private IntPtr _lastForeground;
     internal TaskbarWindow(DesktopEnvironment environment)
     {
         _environment = environment; View = new(environment);
@@ -31,17 +33,24 @@ internal sealed class TaskbarWindow : Window, IDisposable
         ShellLayerInterop.ToolWindow(Handle, noActivate: true);
         _chrome = new(Handle, customClip: true);
         _registration = environment.IsManagedDesktop
-            ? new ExclusiveTaskbarRegistration(Handle, environment.Desktop.Handle, QueuePosition)
-            : new TaskbarRegistration(Handle, QueuePosition, hide => { if (hide) NativeWindow.Hide(); else NativeWindow.Show(false); });
+            ? new ExclusiveTaskbarRegistration(Handle, QueuePosition)
+            : new TaskbarRegistration(Handle, QueuePosition, hide => { _arranging = hide; RefreshVisibility(); });
         View.PreferredWidthChanged += QueuePosition;
-        _stacking.Tick += (_, _) => { if (!_disposed) _registration.RefreshStacking(); };
-        if (environment.IsManagedDesktop) _stacking.Start();
+        _visibilityTimer.Tick += (_, _) =>
+        {
+            if (_disposed) return;
+            var foreground = NativeMethods.ForegroundTaskWindow();
+            if (foreground != _lastForeground) { _lastForeground = foreground; View.RefreshWindowStates(); }
+            RefreshVisibility();
+        };
+        _visibilityTimer.Start();
         Closed += (_, _) => { Dispose(); if (!environment.IsStopping) environment.Shutdown(); };
         Position();
     }
     internal void Position()
     {
         if (_disposed) return;
+        _environment.HideDockPreview();
         _registration.Position(_environment.Session.State.CompactDock, _environment.Session.State.FloatingTaskbar, View.PreferredWidthDip);
         var reservation = _registration.Reservation; var bar = BarBounds;
         double scale = ShellLayerInterop.Scale(Handle);
@@ -52,12 +61,41 @@ internal sealed class TaskbarWindow : Window, IDisposable
         _chrome.SetClip(new ShellRect(bar.X - reservation.X, bar.Y - reservation.Y, bar.Width, bar.Height),
             _environment.Session.State.FloatingTaskbar && !_environment.Theme.HighContrast ? 22 : 0);
         var monitor = ShellLayerInterop.Monitor(Handle).Monitor.Bounds;
-        _environment.Desktop.Surface.SetWorkArea((monitor.Bottom - reservation.Y) / scale);
+        _environment.Desktop.Surface.SetWorkArea((monitor.Bottom - _registration.WorkArea.Bottom) / scale);
         _environment.PositionQuickSettings();
+        RefreshVisibility();
     }
     private void QueuePosition()
     { if (_queued || _disposed) return; _queued = true; DispatcherQueue.TryEnqueue(() => { _queued = false; Position(); }); }
-    internal void ShowBar() { NativeWindow.Show(false); Position(); }
+    internal void ShowBar() { Position(); RefreshVisibility(); }
+    internal void RefreshVisibility()
+    {
+        if (_disposed) return;
+        try
+        {
+            var monitor = ShellLayerInterop.Monitor(Handle).Monitor.Bounds;
+            var foreground = NativeMethods.ForegroundTaskWindow();
+            bool application = foreground != IntPtr.Zero && foreground != Handle && foreground != _environment.Desktop.Handle
+                && !ShellLayerInterop.IsExplorerDesktopWindow(foreground);
+            bool sameMonitor = application && ShellLayerInterop.Monitor(foreground).Monitor.Bounds == monitor;
+            bool maximized = sameMonitor && NativeMethods.IsZoomed(foreground);
+            bool fullscreen = sameMonitor && !maximized && NativeMethods.GetWindowRect(foreground, out var rect)
+                && rect.Left <= monitor.X && rect.Top <= monitor.Y && rect.Right >= monitor.Right && rect.Bottom >= monitor.Bottom;
+            _environment.UpdateDockPreviewPointer(fullscreen);
+            var revealArea = _environment.IsManagedDesktop ? monitor : _registration.WorkArea;
+            bool pointer = NativeMethods.GetCursorPos(out var point) && DockVisibility.InRevealArea(revealArea, BarBounds, point.X, point.Y, _shown, ShellLayerInterop.Scale(Handle));
+            bool show = !_arranging && _visibility.Update(_environment.Session.State.FloatingTaskbar, maximized, fullscreen,
+                _environment.DockInteraction || View.ContextMenuOpen, pointer, Environment.TickCount64);
+            // Hide/show only on transitions. Native Show Desktop can hide this
+            // tool window independently, so recover visibility when needed.
+            if (show && (!_shown || !NativeMethods.Visible(Handle)))
+            { bool reveal = !_shown; NativeWindow.Show(false); _shown = true; if (reveal) View.Reveal(); }
+            else if (!show && _shown) { NativeWindow.Hide(); _shown = false; }
+            _visibilityReported = false;
+        }
+        catch (Exception ex)
+        { if (!_visibilityReported) { _visibilityReported = true; _environment.Report("Could not update dock visibility", ex, false); } }
+    }
     internal void ApplyAppearance() { if (_disposed) return; View.ApplyAppearance(); Position(); }
-    public void Dispose() { if (_disposed) return; _disposed = true; _stacking.Stop(); View.PreferredWidthChanged -= QueuePosition; _registration.Dispose(); _chrome.Dispose(); View.Release(); }
+    public void Dispose() { if (_disposed) return; _disposed = true; _visibilityTimer.Stop(); View.PreferredWidthChanged -= QueuePosition; _registration.Dispose(); _chrome.Dispose(); View.Release(); }
 }
