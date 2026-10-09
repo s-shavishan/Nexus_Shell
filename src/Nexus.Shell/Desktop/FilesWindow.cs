@@ -28,7 +28,7 @@ internal sealed class FilesWindow : Window
     internal FilesWindow(DesktopEnvironment environment, FileSelectionRequest request, string folder)
     {
         _environment = environment; View = new(environment, request, Complete);
-        _frame.RowDefinitions.Add(new() { Height = new GridLength(48) }); _frame.RowDefinitions.Add(new() { Height = new GridLength(1, GridUnitType.Star) });
+        _frame.RowDefinitions.Add(new() { Height = new GridLength(54) }); _frame.RowDefinitions.Add(new() { Height = new GridLength(1, GridUnitType.Star) });
         var chrome = new Grid { Padding = new Thickness(8, 0, 12, 0) }; chrome.ColumnDefinitions.Add(new() { Width = GridLength.Auto }); chrome.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) });
         var controls = new StackPanel { Orientation = Orientation.Horizontal };
         Button Control(string label, Windows.UI.Color color, Action action)
@@ -43,7 +43,7 @@ internal sealed class FilesWindow : Window
         _title.PointerPressed += (_, e) => { if (e.GetCurrentPoint(_title).Properties.IsLeftButtonPressed) NativeMethods.BeginDrag(Handle); };
         _title.DoubleTapped += (_, _) => ToggleMaximize(); Grid.SetColumn(_title, 1); chrome.Children.Add(_title);
         _frame.Children.Add(chrome); Grid.SetRow(View, 1); _frame.Children.Add(View);
-        _surface = new Border { Child = _frame, CornerRadius = new CornerRadius(18) }; Content = _surface;
+        _surface = new Border { Child = _frame, CornerRadius = new CornerRadius(24), BorderThickness = new Thickness(1) }; Content = _surface;
         Handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
         NativeWindow = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(Handle));
         NativeWindow.Title = request.Title + " · Nexus";
@@ -51,7 +51,7 @@ internal sealed class FilesWindow : Window
         _chrome = new(Handle, resizable: true, tuck: Minimize);
         _motion = new(View, () => environment.Theme.Animations && !environment.Theme.HighContrast && !environment.Session.State.ReducedEffects);
         var work = ShellLayerInterop.Monitor(Handle).Work.Bounds; double scale = ShellLayerInterop.Scale(Handle);
-        int width = Math.Min(work.Width, (int)(1000 * scale)), height = Math.Min(work.Height, (int)(680 * scale));
+        int width = Math.Min(work.Width, (int)(1130 * scale)), height = Math.Min(work.Height, (int)(740 * scale));
         NativeWindow.MoveAndResize(new RectInt32(work.X + (work.Width - width) / 2, work.Y + (work.Height - height) / 2, width, height));
         Closed += (_, _) => { _motion.Dispose(); _chrome.Dispose(); View.Release(); _selection.TrySetResult([]); };
         ApplyAppearance(); Activate(); _motion.Open(); _ = View.NavigateAsync(folder);
@@ -75,7 +75,7 @@ internal sealed class FilesWindow : Window
     {
         var theme = _environment.Theme;
         _frame.RequestedTheme = theme.ElementTheme; _surface.Background = _frame.Background = theme.Brush("NexusSidebar");
-        _surface.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 18); _title.Foreground = theme.Brush("NexusText");
+        _surface.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 24); _surface.BorderBrush = theme.Brush("NexusBorder"); _title.Foreground = theme.Brush("NexusText");
         _chrome.SetCorners(theme.HighContrast); _motion.Refresh(); View.ApplyAppearance();
     }
 }

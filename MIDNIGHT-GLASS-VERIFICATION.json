@@ -1,0 +1,32 @@
+{
+  "base": "Nexus_Shell-main_2.zip",
+  "baseline_version": "1.5.0",
+  "changed_files": [
+    "src/Nexus.Shell/Desktop/FilesWindow.cs",
+    "src/Nexus.Shell/Desktop/QuickSettingsWindow.cs",
+    "src/Nexus.Shell/MainWindow.Experience.cs",
+    "src/Nexus.Shell/MainWindow.xaml",
+    "src/Nexus.Shell/Models/ShellState.cs",
+    "src/Nexus.Shell/Services/AuraPalette.cs",
+    "src/Nexus.Shell/Services/StateStore.cs",
+    "src/Nexus.Shell/UI/Controls/QuickSettingsView.cs",
+    "src/Nexus.Shell/UI/Desktop/DesktopSurface.cs",
+    "src/Nexus.Shell/UI/Files/FilesView.cs",
+    "src/Nexus.Shell/UI/Menus/StartMenuView.cs",
+    "src/Nexus.Shell/UI/ShellTheme.cs",
+    "src/Nexus.Shell/UI/Taskbar/TaskbarView.cs"
+  ],
+  "added_files": [
+    "MIDNIGHT-GLASS-START-HERE.md",
+    "src/Nexus.Shell/Assets/Wallpapers/Midnight.png"
+  ],
+  "deleted_files": [],
+  "validation": {
+    "source_validator": "PASS",
+    "xaml_xml": "PASS",
+    "windows_winui_build": "NOT RUN - Windows/.NET SDK unavailable",
+    "runtime": "NOT RUN - requires Windows",
+    "optional_tree_sitter": "NOT RUN - module unavailable"
+  },
+  "original_sha256": "030571e6e224b130f2f00a5a3fdb2d10e8864fb303281f251975ce3d6fe35cdd"
+}

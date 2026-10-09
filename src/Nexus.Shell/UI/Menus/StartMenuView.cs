@@ -15,15 +15,15 @@ internal sealed record LauncherItem(string Name, string Detail, string IconUri, 
 internal sealed class StartMenuView : Grid
 {
     private readonly DesktopEnvironment _environment;
-    private readonly TextBox _search = new() { PlaceholderText = "Search your apps", FontSize = 15, CornerRadius = new CornerRadius(20), Padding = new Thickness(16, 12, 16, 12) };
+    private readonly TextBox _search = new() { PlaceholderText = "Search apps and workspaces…", FontSize = 15, CornerRadius = new CornerRadius(22), Padding = new Thickness(16, 12, 16, 12) };
     private readonly ListView _results = new() { IsItemClickEnabled = true, SelectionMode = ListViewSelectionMode.Single };
     private readonly TextBlock _name = new() { FontSize = 21, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis };
-    private readonly Border _mark = new() { Width = 46, Height = 46, CornerRadius = new CornerRadius(16), VerticalAlignment = VerticalAlignment.Center };
+    private readonly Border _mark = new() { Width = 50, Height = 50, CornerRadius = new CornerRadius(17), VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock _hint = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap };
     private IReadOnlyList<AppEntry> _catalog = [];
     internal StartMenuView(DesktopEnvironment environment)
     {
-        _environment = environment; Padding = new Thickness(20); RowSpacing = 16;
+        _environment = environment; Padding = new Thickness(24); RowSpacing = 19;
         foreach (var height in new[] { GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto }) RowDefinitions.Add(new() { Height = height });
         var header = new Grid { ColumnSpacing = 14 };
         header.ColumnDefinitions.Add(new() { Width = GridLength.Auto }); header.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) });
@@ -79,7 +79,7 @@ internal sealed class StartMenuView : Grid
     internal void ApplyAppearance()
     {
         var theme = _environment.Theme; RequestedTheme = theme.ElementTheme;
-        _name.Text = _environment.Session.State.DisplayName + "’s desktop"; _name.Foreground = theme.Brush("NexusText");
+        _name.Text = "Nexus · " + _environment.Session.State.DisplayName; _name.Foreground = theme.Brush("NexusText");
         _results.Foreground = theme.Brush("NexusText"); _hint.Foreground = theme.Brush("NexusMuted");
         _mark.Background = theme.Surface("Accent"); ((FontIcon)_mark.Child).Foreground = theme.Brush("NexusAccentText");
     }

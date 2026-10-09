@@ -111,7 +111,7 @@ public sealed partial class MainWindow
                     BorderBrush = Resource("NexusBorder"), BorderThickness = new Thickness(1) });
             var moodTitle = Text(palette.Name, 17);
             content.Children.Add(swatches); content.Children.Add(moodTitle);
-            content.Children.Add(Text(mood == "Solstice" ? "Warm pearl & amber" : mood == "Ember" ? "Sunset & rose · new design" : mood == "Opal" ? "Luminous lavender" : mood == "Orbit" ? "Iris & charcoal" : mood == "Aurora" ? "Deep teal" : "Cool blue", 12, true));
+            content.Children.Add(Text(mood == "Midnight" ? "Midnight blue · frosted glass" : mood == "Solstice" ? "Warm pearl & amber" : mood == "Ember" ? "Sunset & rose · new design" : mood == "Opal" ? "Luminous lavender" : mood == "Orbit" ? "Iris & charcoal" : mood == "Aurora" ? "Deep teal" : "Cool blue", 12, true));
             var button = new Button { Tag = mood, Content = content, Style = (Style)Application.Current.Resources["AuraSurfaceButton"],
                 HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left,
                 Padding = new Thickness(20), CornerRadius = new CornerRadius(20) };
@@ -185,7 +185,7 @@ public sealed partial class MainWindow
     }
     private void RestoreAppearanceDefaults()
     {
-        _state.Wallpaper = "Solstice"; _state.NativeGlass = true; _state.ReducedEffects = false;
+        _state.Wallpaper = "Midnight"; _state.NativeGlass = true; _state.ReducedEffects = false;
         _state.DesktopLayout = true; _state.FocusMode = false; _state.Clock24Hour = true;
         _state.ShowClockWidget = true; _state.ShowSpaceWidget = true;
         _state.ShowHomeNotes = true; _state.ShowHomeEssentials = true; _state.CompactDock = false; _state.DockPreviews = true;

@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:ui="using:Nexus.Shell.UI" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="Nexus.Shell.MainWindow" Title="NEXUS — Solstice">
- <Grid x:Name="DesktopRoot" RequestedTheme="Light" Background="{ThemeResource NexusPanel}" Loaded="Desktop_Loaded" SizeChanged="Desktop_SizeChanged">
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:ui="using:Nexus.Shell.UI" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="Nexus.Shell.MainWindow" Title="NEXUS — Midnight Glass">
+ <Grid x:Name="DesktopRoot" RequestedTheme="Dark" Background="{ThemeResource NexusPanel}" Loaded="Desktop_Loaded" SizeChanged="Desktop_SizeChanged">
   <Grid.Resources>
    <ui:AppAccentConverter x:Key="AppAccent" />
    <ui:SavedKindConverter x:Key="SavedKind" />
@@ -113,7 +113,7 @@
   <Border x:Name="HomeBorder" CornerRadius="0" Background="{ThemeResource NexusPanel}" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="0" HorizontalAlignment="Stretch">
    <Grid>
     <Grid.RowDefinitions>
-     <RowDefinition x:Name="ChromeRow" Height="64" />
+     <RowDefinition x:Name="ChromeRow" Height="68" />
      <RowDefinition Height="*" />
      <RowDefinition x:Name="FooterRow" Height="34" />
     </Grid.RowDefinitions>
@@ -144,10 +144,10 @@
       </StackPanel>
       <Border Grid.Column="1" Background="Transparent" PointerPressed="DragArea_PointerPressed" />
       <TextBlock Visibility="Collapsed" IsHitTestVisible="False" x:Name="PageTitle" Text="Sections" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource NexusText}" TextTrimming="CharacterEllipsis" />
-      <Button x:Name="ChromeSearchButton" Grid.Column="1" Click="SearchApps_Click" Style="{StaticResource QuietButton}" MaxWidth="480" HorizontalAlignment="Stretch" Margin="24,0" Padding="14,8" CornerRadius="22" Background="{ThemeResource NexusInput}" AutomationProperties.Name="Search Nexus; Control K">
+      <Button x:Name="ChromeSearchButton" Grid.Column="1" Click="SearchApps_Click" Style="{StaticResource QuietButton}" MaxWidth="520" HorizontalAlignment="Stretch" Margin="24,0" Padding="14,8" CornerRadius="22" Background="{ThemeResource NexusInput}" AutomationProperties.Name="Search Nexus; Control K">
        <Grid ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
         <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE721;" FontSize="16" Foreground="{ThemeResource NexusMuted}"/>
-        <TextBlock Grid.Column="1" Text="Search anything…" Foreground="{ThemeResource NexusMuted}" FontSize="13" VerticalAlignment="Center"/>
+        <TextBlock Grid.Column="1" Text="Search apps, files and workspaces…" Foreground="{ThemeResource NexusMuted}" FontSize="13" VerticalAlignment="Center"/>
         <Border Grid.Column="2" CornerRadius="7" Padding="7,2" Background="{ThemeResource NexusSelection}"><TextBlock Text="Ctrl K" Foreground="{ThemeResource NexusMuted}" FontSize="10"/></Border>
        </Grid>
       </Button>
@@ -264,6 +264,7 @@
                </Button>
               </Grid>
               <ComboBox x:Name="WallpaperBox" Header="Desktop mood" SelectionChanged="Wallpaper_SelectionChanged" HorizontalAlignment="Stretch">
+               <ComboBoxItem Content="Midnight Glass · sapphire &amp; frost" />
                <ComboBoxItem Content="Solstice · warm pearl" />
                <ComboBoxItem Content="Ember · sunset &amp; rose" />
                <ComboBoxItem Content="Opal · luminous glass" />
@@ -305,10 +306,10 @@
     </Border>
     <Grid Grid.Row="1">
      <Grid.ColumnDefinitions>
-      <ColumnDefinition x:Name="SidebarColumn" Width="228" />
+      <ColumnDefinition x:Name="SidebarColumn" Width="244" />
       <ColumnDefinition Width="*" />
      </Grid.ColumnDefinitions>
-     <Border x:Name="Sidebar" Margin="12,12,0,12" CornerRadius="22" Background="{ThemeResource NexusSidebar}" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="1">
+     <Border x:Name="Sidebar" Margin="13,14,0,14" CornerRadius="24" Background="{ThemeResource NexusSidebar}" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="1">
       <Grid Margin="10,18,10,16">
        <Grid.RowDefinitions>
         <RowDefinition Height="*" />
@@ -426,7 +427,7 @@
    <Border x:Name="HeroCard" Padding="20" CornerRadius="22" Background="{ThemeResource NexusCard}" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="1">
  <StackPanel Spacing="14">
   <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-   <TextBlock Text="Workspace spotlight" FontSize="18" FontWeight="SemiBold" Foreground="{ThemeResource NexusText}"/>
+   <TextBlock Text="Workspace spotlight" FontSize="19" FontWeight="SemiBold" Foreground="{ThemeResource NexusText}"/>
    <Button Grid.Column="1" Content="•••" Click="ProfileEdit_Click" Style="{StaticResource IconButton}" AutomationProperties.Name="Configure current workspace"/>
   </Grid>
   <Border x:Name="HomeSpotlightArt" Height="112" CornerRadius="16" Background="{ThemeResource NexusIcon}">

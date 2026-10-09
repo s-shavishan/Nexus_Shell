@@ -7,7 +7,7 @@ namespace Nexus.Shell.UI;
 
 internal sealed class ShellTheme
 {
-    public AuraPalette Palette { get; private set; } = AuraPalette.For("Solstice");
+    public AuraPalette Palette { get; private set; } = AuraPalette.For("Midnight");
     public bool HighContrast { get; private set; }
     public bool Animations { get; private set; } = true;
     public bool Simple { get; private set; }

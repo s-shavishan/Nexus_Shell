@@ -42,26 +42,28 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     internal QuickSettingsView(DesktopEnvironment environment, Action close)
     {
         _environment = environment; _display = new(environment.Taskbar.Handle);
-        var body = new StackPanel { Spacing = 12, Margin = new Thickness(18) };
+        var body = new StackPanel { Spacing = 15, Margin = new Thickness(20) };
         var header = new Grid { ColumnSpacing = 10 };
         header.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
-        var title = Label("Quick settings", 23); title.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
+        var title = Label("Control Center", 24); title.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
         header.Children.Add(title);
         var dismiss = Button("Close", close, true); Grid.SetColumn(dismiss, 1); header.Children.Add(dismiss); body.Children.Add(header);
+        var subtitle = Label("NEXUS  /  MIDNIGHT DESKTOP", 11, true);
+        body.Children.Add(subtitle);
 
-        var audio = new StackPanel { Spacing = 6 };
+        var audio = new StackPanel { Spacing = 8 };
         audio.Children.Add(Label("Sound", 15));
         _audioMessage = Label(_audioState.Message, 12, true); audio.Children.Add(_audioMessage);
         AutomationProperties.SetName(_volume, "Output volume"); audio.Children.Add(_volume);
         _mute.Style = (Style)Application.Current.Resources["AuraSurfaceButton"]; audio.Children.Add(_mute);
         body.Children.Add(Card(audio));
 
-        var display = new StackPanel { Spacing = 6 }; display.Children.Add(Label("Brightness", 15));
+        var display = new StackPanel { Spacing = 8 }; display.Children.Add(Label("Brightness", 15));
         _displayMessage = Label(_displayState.Message, 12, true); display.Children.Add(_displayMessage);
         AutomationProperties.SetName(_brightness, "Display brightness"); display.Children.Add(_brightness); body.Children.Add(Card(display));
 
-        var visuals = new StackPanel { Spacing = 8 }; visuals.Children.Add(Label("Desktop performance", 15));
+        var visuals = new StackPanel { Spacing = 10 }; visuals.Children.Add(Label("Appearance & desktop", 16));
         foreach (string name in new[] { "Fast", "Balanced", "Full" }) _profile.Items.Add(name);
         AutomationProperties.SetName(_profile, "Desktop visual quality"); visuals.Children.Add(_profile);
         _profileMessage = Label("", 12, true); visuals.Children.Add(_profileMessage); visuals.Children.Add(_floating); visuals.Children.Add(_compact); visuals.Children.Add(_previews); body.Children.Add(Card(visuals));
@@ -114,7 +116,7 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     private TextBlock Label(string text, double size, bool muted = false)
     { var label = new TextBlock { Text = text, FontSize = size, TextWrapping = TextWrapping.Wrap }; _labels.Add((label, muted)); return label; }
     private Border Card(UIElement child)
-    { var card = new Border { Child = child, Padding = new Thickness(16), CornerRadius = new CornerRadius(18), BorderThickness = new Thickness(1) }; _cards.Add(card); return card; }
+    { var card = new Border { Child = child, Padding = new Thickness(19), CornerRadius = new CornerRadius(21), BorderThickness = new Thickness(1) }; _cards.Add(card); return card; }
     private static Button Button(string name, Action action, bool quiet = false)
     {
         var button = new Button { Content = name, Style = (Style)Application.Current.Resources[quiet ? "QuietButton" : "AuraSurfaceButton"], Padding = new Thickness(10, 7, 10, 7) };

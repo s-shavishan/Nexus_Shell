@@ -22,7 +22,7 @@ public sealed class ShellState
     public bool FocusMode { get; set; }
     public bool ReducedEffects { get; set; }
     public bool CatalogInitialized { get; set; }
-    public string Wallpaper { get; set; } = "Solstice";
+    public string Wallpaper { get; set; } = "Midnight";
     public bool NativeGlass { get; set; } = true;
     public List<ExploreSpace> ExploreSpaces { get; set; } = [];
     public string ActiveExploreSpaceId { get; set; } = "personal";
