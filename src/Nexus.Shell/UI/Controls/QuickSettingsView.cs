@@ -18,6 +18,7 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     private readonly TextBlock _audioMessage, _displayMessage, _profileMessage, _power, _network;
     private readonly ComboBox _profile = new() { HorizontalAlignment = HorizontalAlignment.Stretch };
     private readonly ToggleSwitch _compact = new() { Header = "Compact taskbar", OnContent = "On", OffContent = "Off" };
+    private readonly ToggleSwitch _floating = new() { Header = "Floating taskbar", OnContent = "Floating", OffContent = "Edge to edge" };
     private readonly List<(TextBlock Label, bool Muted)> _labels = [];
     private readonly List<Border> _cards = [];
     private readonly DispatcherTimer _poll = new() { Interval = TimeSpan.FromSeconds(5) };
@@ -62,7 +63,7 @@ internal sealed class QuickSettingsView : Grid, IDisposable
         var visuals = new StackPanel { Spacing = 8 }; visuals.Children.Add(Label("Desktop performance", 15));
         foreach (string name in new[] { "Fast", "Balanced", "Full" }) _profile.Items.Add(name);
         AutomationProperties.SetName(_profile, "Desktop visual quality"); visuals.Children.Add(_profile);
-        _profileMessage = Label("", 12, true); visuals.Children.Add(_profileMessage); visuals.Children.Add(_compact); body.Children.Add(Card(visuals));
+        _profileMessage = Label("", 12, true); visuals.Children.Add(_profileMessage); visuals.Children.Add(_floating); visuals.Children.Add(_compact); body.Children.Add(Card(visuals));
 
         var status = new StackPanel { Spacing = 4 };
         _power = Label("Reading power status…", 12, true); _network = Label("Reading network link…", 12, true);
@@ -102,6 +103,7 @@ internal sealed class QuickSettingsView : Grid, IDisposable
             DesktopVisuals.Apply(environment.Session.State, (DesktopVisualProfile)_profile.SelectedIndex); environment.SaveState(); RefreshPreferences();
         };
         _compact.Toggled += (_, _) => { if (!_syncing) { environment.Session.State.CompactDock = _compact.IsOn; environment.SaveState(); } };
+        _floating.Toggled += (_, _) => { if (!_syncing) { environment.Session.State.FloatingTaskbar = _floating.IsOn; environment.SaveState(); } };
         KeyDown += (_, args) => { if (args.Key == VirtualKey.Escape) { close(); args.Handled = true; } };
         _writes.Tick += (_, _) => { _writes.Stop(); _ = UpdateAudioAsync(false); _ = UpdateDisplayAsync(false); };
         _poll.Tick += (_, _) => { _ = UpdateAudioAsync(true); if (_displayTask is not null) _ = UpdateDisplayAsync(false); _ = UpdateStatusAsync(); };
@@ -129,13 +131,15 @@ internal sealed class QuickSettingsView : Grid, IDisposable
         try
         {
             var profile = DesktopVisuals.Read(_environment.Session.State);
-            _profile.SelectedIndex = (int)profile; _compact.IsOn = _environment.Session.State.CompactDock;
+            _profile.SelectedIndex = (int)profile; _compact.IsOn = _environment.Session.State.CompactDock; _floating.IsOn = _environment.Session.State.FloatingTaskbar;
             _profileMessage.Text = profile switch
             {
                 DesktopVisualProfile.Fast => "Best for VMs · simple background, no glass or motion.",
                 DesktopVisualProfile.Balanced => "Cached wallpaper and motion, with glass turned off.",
                 _ => "Cached wallpaper, motion and glass where available."
             };
+            if (profile != DesktopVisualProfile.Fast && !_environment.Theme.Animations)
+                _profileMessage.Text += " Animations are turned off in your Windows accessibility settings.";
         }
         finally { _syncing = false; }
     }

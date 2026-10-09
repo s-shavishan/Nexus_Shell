@@ -1,51 +1,23 @@
 {
-  "version": "1.4.1",
-  "baselineCommit": "a9f813df250f8c5b8f4a3fdadb05804fae867025",
-  "baselineFiles": 192,
-  "sourceFiles": 193,
-  "changedFiles": [
-    ".github/workflows/build-windows.yml",
-    "README.md",
-    "SOURCE-PATCH.md",
-    "START-HERE.md",
-    "appveyor.yml",
-    "docs/BUILD-HANDOFF.md",
-    "docs/CHANGELOG.md",
-    "docs/CSharp-API-check.txt",
-    "docs/Core-checks.txt",
-    "docs/DESIGN-AND-PERFORMANCE.md",
-    "docs/Host-API-check.txt",
-    "docs/NEXUS-DESKTOP-MODE.md",
-    "docs/RUN-PORTABLE.md",
-    "docs/Recovery-CSharp-check.txt",
-    "docs/SESSION-TAKEOVER-1.4.1.md",
-    "docs/Source-checks.txt",
-    "docs/TEST-DESKTOP-MODE.md",
-    "docs/UPDATING.md",
-    "docs/VALIDATION.md",
-    "scripts/build.ps1",
-    "scripts/package.ps1",
-    "scripts/validate-source.py",
-    "src/Nexus.DesktopHost/Nexus.DesktopHost.csproj",
-    "src/Nexus.DesktopHost/Program.cs",
-    "src/Nexus.Shell/Desktop/DesktopWindow.cs",
-    "src/Nexus.Shell/Interop/ShellLayerInterop.cs",
-    "src/Nexus.Shell/MainWindow.DesktopMode.cs",
-    "src/Nexus.Shell/Nexus.Shell.csproj",
-    "src/Nexus.Shell/Services/DesktopSessionRecovery.cs",
-    "src/Nexus.Shell/app.manifest",
-    "tests/Nexus.Core.Checks/DesktopModeChecks.cs"
+  "version": "1.4.2",
+  "baselineCommit": "d98e09ff916c16ee1321bbf285a228bc785f9653",
+  "baselineFiles": 194,
+  "sourceFiles": 199,
+  "implemented": [
+    "floating taskbar with stable appbar reservation",
+    "Nexus-only rounded window frames and resize handling",
+    "finite content entrances",
+    "Sections/Files tuck-and-return"
   ],
-  "patchSHA256": "a950251b813c03a9befa7d4a7a4ac41f0280b55ed00dec49eb09ef275fc81084",
   "checksCompleted": [
-    "source/XML/resources/publish/metadata",
-    "git patch whitespace/applicability",
-    "byte-for-byte source reconstruction"
+    "all 194 baseline Git blobs verified",
+    "source/XML/XAML/resources/publish/ownership/version checks",
+    "unchanged host takeover/recovery code and pinned dependencies"
   ],
   "pending": [
-    "new C# behavioral tests and type/analyzer checks",
-    "PowerShell checks",
-    "native Windows build",
-    "VirtualBox layer/focus/recovery/drag acceptance"
+    "new C# behavioral tests (1008 placement cases and persistence)",
+    "C# type/analyzer and native WinUI build",
+    "PowerShell updater/parser checks",
+    "Windows 10/11 frame/minimize/focus and VirtualBox performance acceptance"
   ]
 }

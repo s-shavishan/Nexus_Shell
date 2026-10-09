@@ -143,6 +143,7 @@ public sealed partial class MainWindow
         interfacePanel.Children.Add(PersonalizeToggle("Native glass", () => _state.NativeGlass, v => _state.NativeGlass = v,
             "Windows acrylic", "Layered surfaces"));
         interfacePanel.Children.Add(PersonalizeToggle("Reduced effects", () => _state.ReducedEffects, v => _state.ReducedEffects = v));
+        interfacePanel.Children.Add(PersonalizeToggle("Floating taskbar", () => _state.FloatingTaskbar, v => _state.FloatingTaskbar = v));
         interfacePanel.Children.Add(PersonalizeToggle("Compact taskbar", () => _state.CompactDock, v => _state.CompactDock = v,
             "Compact taskbar height", "Comfortable taskbar height"));
         var format = new ComboBox { Header = "Clock format", HorizontalAlignment = HorizontalAlignment.Stretch };

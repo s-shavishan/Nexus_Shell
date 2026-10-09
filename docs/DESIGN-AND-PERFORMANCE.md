@@ -1,9 +1,9 @@
-# Current desktop performance — 1.4.1
+# Current desktop performance — 1.4.2
 
-The user's VirtualBox report establishes a useful comparison: 1.4.0 works smoothly with the Windows taskbar present, while session takeover lags even in Fast. Preview and takeover also differ in desktop visibility, layering, work-area registration and keyboard handling, so the report does not isolate a single API as the cause.
+The user clarified that the smoother window-drag result came from **1.4.1 with Explorer still running**. Explorer-free operation was not the successful comparison. This update preserves 1.4.1's taskbar-only takeover and existing desktop-relative placement; Explorer's desktop remains active underneath the opaque Nexus desktop.
 
-1.4.1 removes two differences: session takeover no longer hides Progman/WorkerW windows, and the Nexus desktop now uses the same above-Explorer/below-app placement path as preview. Only Windows taskbars receive hide requests. The Nexus desktop is opaque and covers the retained Windows desktop on the primary display.
+Floating taskbar geometry has two parts: a stable full-width work-area reservation and a centered clipped visible surface. App-count changes adjust the visible dock without changing global work-area geometry. Existing cached work-area writes, asynchronous notifications, validated Explorer identity checks and hidden-panel polling suspension are retained.
 
-This change introduces no animation, extra timer, Explorer injection, process termination or desktop reparenting. It retains the 1.4.0 cached work-area reservation, asynchronous notifications, retained Explorer ownership checks, Fast/Balanced/Full profiles and hidden-panel polling suspension.
+Rounded window regions are cached by size/shape/DPI and only apply to Nexus HWNDs. There are no new timers, mouse hooks, infinite animations, global layout loops or Explorer stop/restart loops. Entrance/hover/press effects use finite compositor animations; their completion never controls input, focus or panel visibility. Fast and accessibility preferences suppress them.
 
-CPU/GPU usage, presented frame time and window movement in the real VM must be measured after a successful Windows build. Use SESSION-TAKEOVER-1.4.1.md. If lag remains, compare Nexus preview/session while keeping VM graphics settings unchanged; investigate the remaining work-area and keyboard differences with evidence.
+The code can target visible rough edges without claiming a measured speedup. Compare actual 1.4.2 Windows dragging to 1.4.1, with the same VM, resolution, graphics settings and performance profile. Verify render/focus/resize/recovery behavior from UI-POLISH-1.4.2.md before treating the UI update as accepted.

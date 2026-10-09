@@ -17,6 +17,10 @@ internal sealed class FilesWindow : Window
     internal AppWindow NativeWindow { get; }
     internal FilesView View { get; }
     private readonly Grid _frame = new();
+    private readonly Border _surface;
+    private readonly WindowChrome _chrome;
+    private readonly UI.SurfaceMotion _motion;
+    private bool _tucked;
     private readonly TextBlock _title;
     private readonly DesktopEnvironment _environment;
     private readonly TaskCompletionSource<IReadOnlyList<string>> _selection = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -38,25 +42,34 @@ internal sealed class FilesWindow : Window
         _title = new TextBlock { Text = request.Title + " · Nexus", FontSize = 14, VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Center, HorizontalAlignment = HorizontalAlignment.Stretch, TextTrimming = TextTrimming.CharacterEllipsis };
         _title.PointerPressed += (_, e) => { if (e.GetCurrentPoint(_title).Properties.IsLeftButtonPressed) NativeMethods.BeginDrag(Handle); };
         _title.DoubleTapped += (_, _) => ToggleMaximize(); Grid.SetColumn(_title, 1); chrome.Children.Add(_title);
-        _frame.Children.Add(chrome); Grid.SetRow(View, 1); _frame.Children.Add(View); Content = _frame;
+        _frame.Children.Add(chrome); Grid.SetRow(View, 1); _frame.Children.Add(View);
+        _surface = new Border { Child = _frame, CornerRadius = new CornerRadius(18) }; Content = _surface;
         Handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
         NativeWindow = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(Handle));
         NativeWindow.Title = request.Title + " · Nexus";
         if (NativeWindow.Presenter is OverlappedPresenter overlapped) overlapped.SetBorderAndTitleBar(false, false);
+        _chrome = new(Handle, resizable: true, tuck: Minimize);
+        _motion = new(View, () => environment.Theme.Animations && !environment.Theme.HighContrast && !environment.Session.State.ReducedEffects);
         var work = ShellLayerInterop.Monitor(Handle).Work.Bounds; double scale = ShellLayerInterop.Scale(Handle);
         int width = Math.Min(work.Width, (int)(1000 * scale)), height = Math.Min(work.Height, (int)(680 * scale));
         NativeWindow.MoveAndResize(new RectInt32(work.X + (work.Width - width) / 2, work.Y + (work.Height - height) / 2, width, height));
-        Closed += (_, _) => { View.Release(); _selection.TrySetResult([]); };
-        ApplyAppearance(); Activate(); _ = View.NavigateAsync(folder);
+        Closed += (_, _) => { _motion.Dispose(); _chrome.Dispose(); View.Release(); _selection.TrySetResult([]); };
+        ApplyAppearance(); Activate(); _motion.Open(); _ = View.NavigateAsync(folder);
     }
     private void Complete(IReadOnlyList<string> paths) { _selection.TrySetResult(paths); Close(); }
     internal void ShowFolder(string folder) { ReturnToWindow(); _ = View.NavigateAsync(folder); }
-    internal void ReturnToWindow() { NativeWindow.Show(); NativeMethods.Activate(Handle); }
+    internal void ReturnToWindow() { bool hidden = _tucked; _tucked = false; NativeWindow.Show(); NativeMethods.Activate(Handle); if (hidden) _motion.Open(); }
     private void ToggleMaximize()
     {
         if (NativeWindow.Presenter is not OverlappedPresenter presenter) return;
         if (presenter.State == OverlappedPresenterState.Maximized) presenter.Restore(); else presenter.Maximize();
     }
-    private void Minimize() { if (NativeWindow.Presenter is OverlappedPresenter presenter) presenter.Minimize(); }
-    internal void ApplyAppearance() { _frame.RequestedTheme = _environment.Theme.ElementTheme; _frame.Background = _environment.Theme.Brush("NexusSidebar"); _title.Foreground = _environment.Theme.Brush("NexusText"); View.ApplyAppearance(); }
+    private void Minimize() { _tucked = true; _motion.Hide(); NativeWindow.Hide(); }
+    internal void ApplyAppearance()
+    {
+        var theme = _environment.Theme;
+        _frame.RequestedTheme = theme.ElementTheme; _surface.Background = _frame.Background = theme.Brush("NexusSidebar");
+        _surface.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 18); _title.Foreground = theme.Brush("NexusText");
+        _chrome.SetCorners(theme.HighContrast); _motion.Refresh(); View.ApplyAppearance();
+    }
 }

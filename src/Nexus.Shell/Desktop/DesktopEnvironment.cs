@@ -37,6 +37,7 @@ internal sealed class DesktopEnvironment
     private int _usageTicks;
     private bool _usageTracking;
     private bool? _compact;
+    private bool? _floating;
     private (string, bool, bool, bool, bool, string)? _appearance;
     private MenuWindow? _menu;
     private QuickSettingsWindow? _quickSettings;
@@ -103,7 +104,8 @@ internal sealed class DesktopEnvironment
         _dirty = true; _saveTimer.Stop(); _saveTimer.Start();
         RefreshAppearance(); RefreshIntegration();
         Taskbar.View.Refresh(_windows);
-        if (_compact != Session.State.CompactDock) { _compact = Session.State.CompactDock; Taskbar.Position(); }
+        if (_compact != Session.State.CompactDock || _floating != Session.State.FloatingTaskbar)
+        { _compact = Session.State.CompactDock; _floating = Session.State.FloatingTaskbar; Taskbar.Position(); }
         _quickSettings?.RefreshPreferences();
         if (_usageTracking != Session.State.UsageTracking) { _usageTracking = Session.State.UsageTracking; ResetUsageSample(); }
     }
@@ -114,7 +116,7 @@ internal sealed class DesktopEnvironment
         var appearance = (Theme.Palette.Name, Theme.HighContrast, Theme.Animations, Session.State.ReducedEffects, Session.State.NativeGlass, Session.State.DisplayName);
         if (_appearance == appearance) return;
         _appearance = appearance; Desktop.Surface.ApplyAppearance();
-        Taskbar?.View.ApplyAppearance(); _menu?.ApplyAppearance(this);
+        Taskbar?.ApplyAppearance(); _menu?.ApplyAppearance(this);
         _files?.ApplyAppearance(); foreach (var picker in _pickers) picker.ApplyAppearance();
         _switcher?.ApplyAppearance();
         _quickSettings?.ApplyAppearance(); _sections?.RefreshSharedAppearance();

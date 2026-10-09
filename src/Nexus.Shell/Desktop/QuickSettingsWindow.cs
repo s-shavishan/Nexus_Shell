@@ -15,6 +15,8 @@ internal sealed class QuickSettingsWindow : Window
     private readonly AppWindow _window;
     private readonly QuickSettingsView _view;
     private readonly Border _frame;
+    private readonly WindowChrome _chrome;
+    private readonly UI.SurfaceMotion _motion;
     private bool _closed;
     internal bool IsOpen { get; private set; }
     internal QuickSettingsWindow(DesktopEnvironment environment)
@@ -27,14 +29,16 @@ internal sealed class QuickSettingsWindow : Window
         if (_window.Presenter is OverlappedPresenter presenter)
         { presenter.SetBorderAndTitleBar(false, false); presenter.IsResizable = presenter.IsMinimizable = presenter.IsMaximizable = false; }
         ShellLayerInterop.ToolWindow(_handle);
+        _chrome = new(_handle);
+        _motion = new(_view, () => environment.Theme.Animations && !environment.Theme.HighContrast && !environment.Session.State.ReducedEffects);
         Activated += (_, args) => { if (args.WindowActivationState == WindowActivationState.Deactivated) Hide(); };
-        Closed += (_, _) => { _closed = true; IsOpen = false; _view.Dispose(); environment.QuickSettingsClosed(this); };
+        Closed += (_, _) => { _closed = true; IsOpen = false; _motion.Dispose(); _chrome.Dispose(); _view.Dispose(); environment.QuickSettingsClosed(this); };
         ApplyAppearance();
     }
     internal void Show()
     {
         if (_closed) return; ApplyAppearance(); Position();
-        IsOpen = true; Activate(); _view.Open();
+        IsOpen = true; Activate(); _view.Open(); _motion.Open();
     }
     internal void Position()
     {
@@ -43,8 +47,13 @@ internal sealed class QuickSettingsWindow : Window
             _environment.Taskbar.BarBounds, ShellLayerInterop.Scale(_environment.Taskbar.Handle));
         ShellLayerInterop.SetWindowPos(_handle, ShellLayerInterop.Topmost, rect.X, rect.Y, rect.Width, rect.Height, 0x0010);
     }
-    internal void Hide() { if (_closed || !IsOpen) return; IsOpen = false; _view.Hide(); _window.Hide(); }
+    internal void Hide() { if (_closed || !IsOpen) return; IsOpen = false; _motion.Hide(); _view.Hide(); _window.Hide(); }
     internal void ApplyAppearance()
-    { _frame.RequestedTheme = _environment.Theme.ElementTheme; _frame.Background = _environment.Theme.Brush("NexusPanel"); _frame.BorderBrush = _environment.Theme.Brush("NexusBorder"); _view.ApplyAppearance(); }
+    {
+        var theme = _environment.Theme;
+        _frame.RequestedTheme = theme.ElementTheme; _frame.Background = theme.Brush("NexusPanel"); _frame.BorderBrush = theme.Brush("NexusBorder");
+        _frame.BorderThickness = new Thickness(theme.HighContrast ? 1 : 0); _frame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 18);
+        _chrome.SetCorners(theme.HighContrast); _motion.Refresh(); _view.ApplyAppearance();
+    }
     internal void RefreshPreferences() => _view.RefreshPreferences();
 }

@@ -7,7 +7,8 @@ namespace Nexus.Shell.Interop;
 internal interface ITaskbarLayer : IDisposable
 {
     ShellRect Bounds { get; }
-    void Position(bool compact);
+    ShellRect Reservation { get; }
+    void Position(bool compact, bool floating, double preferredWidthDip);
     void RefreshStacking();
 }
 
@@ -20,6 +21,7 @@ internal sealed class ExclusiveTaskbarRegistration : ITaskbarLayer
     private readonly DesktopWorkAreaReservation _workArea = new();
     private bool _disposed, _fullscreen;
     public ShellRect Bounds { get; private set; }
+    public ShellRect Reservation { get; private set; }
     [DllImport("user32.dll", EntryPoint = "SystemParametersInfoW", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)] private static extern bool SetWorkArea(uint action, uint parameter, ref ShellLayerInterop.Rect rect, uint flags);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool GetWindowRect(IntPtr window, out ShellLayerInterop.Rect rect);
@@ -28,17 +30,18 @@ internal sealed class ExclusiveTaskbarRegistration : ITaskbarLayer
         _handle = handle; _desktop = desktop; _reposition = reposition; _callback = Message;
         if (!ShellLayerInterop.SetWindowSubclass(handle, _callback, new UIntPtr(0x4E03), UIntPtr.Zero)) throw new Win32Exception("Could not attach the Nexus desktop taskbar.");
     }
-    public void Position(bool compact)
+    public void Position(bool compact, bool floating, double preferredWidthDip)
     {
         if (_disposed) return;
         var info = ShellLayerInterop.Monitor(_handle); var monitor = info.Monitor;
-        int height = (int)Math.Round(DesktopLayout.TaskbarHeight(compact) * ShellLayerInterop.Scale(_handle));
-        var bar = new ShellRect(monitor.Left, monitor.Bottom - height, monitor.Right - monitor.Left, height);
-        var work = monitor; work.Bottom = bar.Y;
-        bool moved = Bounds != bar;
+        double scale = ShellLayerInterop.Scale(_handle);
+        int height = Math.Min(monitor.Bottom - monitor.Top, DesktopLayout.TaskbarReservationHeight(compact, floating, scale));
+        var reservation = new ShellRect(monitor.Left, monitor.Bottom - height, monitor.Right - monitor.Left, height);
+        var work = monitor; work.Bottom = reservation.Y;
+        bool moved = Reservation != reservation;
         _workArea.Apply(work.Bounds, DesktopWorkArea.Apply);
-        Bounds = bar;
-        if (moved) ShellLayerInterop.SetWindowPos(_handle, _fullscreen ? ShellLayerInterop.Bottom : ShellLayerInterop.Topmost, bar.X, bar.Y, bar.Width, bar.Height, 0x0010);
+        Reservation = reservation; Bounds = DesktopLayout.TaskbarBounds(reservation, floating, preferredWidthDip, scale);
+        if (moved) ShellLayerInterop.SetWindowPos(_handle, _fullscreen ? ShellLayerInterop.Bottom : ShellLayerInterop.Topmost, reservation.X, reservation.Y, reservation.Width, reservation.Height, 0x0010);
     }
     public void RefreshStacking()
     {
@@ -63,7 +66,7 @@ internal sealed class ExclusiveTaskbarRegistration : ITaskbarLayer
         {
             var monitor = ShellLayerInterop.Monitor(_handle);
             // Do not overwrite a work-area change made by another component.
-            if (monitor.Work.Bounds == new ShellRect(Bounds.X, monitor.Monitor.Top, Bounds.Width, Bounds.Y - monitor.Monitor.Top))
+            if (monitor.Work.Bounds == new ShellRect(Reservation.X, monitor.Monitor.Top, Reservation.Width, Reservation.Y - monitor.Monitor.Top))
             { var full = monitor.Monitor; SetWorkArea(0x002F, 0, ref full, 2); }
         }
         finally { ShellLayerInterop.RemoveWindowSubclass(_handle, _callback, new UIntPtr(0x4E03)); }

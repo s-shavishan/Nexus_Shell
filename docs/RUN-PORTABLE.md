@@ -1,4 +1,4 @@
-# Run Nexus Shell 1.4.1
+# Run Nexus Shell 1.4.2
 
 Extract the full runnable Windows ZIP into a new folder. Keep both executables, their dependencies, PRI/XBF resources, Assets and helper files together.
 

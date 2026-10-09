@@ -1,3 +1,12 @@
+# 1.4.2 — floating taskbar and rounded windows
+
+- Default to a centered floating taskbar; retain compact/edge-to-edge preferences and safe work-area reservation.
+- Round Nexus native windows on Windows 10/11; remove bright non-client outlines while retaining resize/maximize/fullscreen.
+- Tuck Sections/Files into their retained Nexus taskbar entries instead of drawing legacy minimized-window icons.
+- Add finite popup/window entrances inside stable opaque frames; preserve Fast/accessibility motion settings.
+- Keep the 1.4.1 host/session takeover and recovery code unchanged, following the user’s smoother 1.4.1 test with Explorer retained.
+- Add 1,008 geometry cases and preference migration/persistence checks. New .NET/Windows execution remains pending.
+
 # 1.4.1 — taskbar-only session takeover
 
 - Hide only Explorer's Windows taskbars during supervised Nexus takeover; keep Progman/WorkerW desktop windows active underneath Nexus.

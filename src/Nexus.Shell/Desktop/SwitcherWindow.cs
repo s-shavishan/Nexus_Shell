@@ -17,17 +17,22 @@ internal sealed class SwitcherWindow : Window
     private readonly DesktopEnvironment _environment;
     private readonly AppWindow _native;
     private readonly Grid _root = new() { Padding = new Thickness(20), RowSpacing = 12 };
+    private readonly Border _frame;
+    private readonly WindowChrome _chrome;
+    private readonly UI.SurfaceMotion _motion;
     private readonly ListView _list = new() { SelectionMode = ListViewSelectionMode.Single, IsItemClickEnabled = true };
     private readonly TextBlock _title = new() { Text = "Your windows", FontSize = 20, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
     private readonly TextBlock _hint = new() { Text = "Alt+Tab to cycle · release Alt to return · Esc to cancel", FontSize = 12, TextWrapping = TextWrapping.Wrap };
     internal bool IsOpen { get; private set; }
     internal SwitcherWindow(DesktopEnvironment environment)
     {
-        _environment = environment; Content = _root;
+        _environment = environment; _frame = new Border { Child = _root, CornerRadius = new CornerRadius(18) }; Content = _frame;
         IntPtr handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
         _native = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(handle)); _native.Title = "Nexus window switcher"; _native.IsShownInSwitchers = false;
         if (_native.Presenter is OverlappedPresenter presenter) { presenter.SetBorderAndTitleBar(false, false); presenter.IsResizable = presenter.IsMaximizable = presenter.IsMinimizable = false; presenter.IsAlwaysOnTop = true; }
         ShellLayerInterop.ToolWindow(handle);
+        _chrome = new(handle);
+        _motion = new(_root, () => environment.Theme.Animations && !environment.Theme.HighContrast && !environment.Session.State.ReducedEffects);
         _root.RowDefinitions.Add(new() { Height = GridLength.Auto }); _root.RowDefinitions.Add(new() { Height = new GridLength(1, GridUnitType.Star) }); _root.RowDefinitions.Add(new() { Height = GridLength.Auto });
         _root.Children.Add(_title); Grid.SetRow(_list, 1); _root.Children.Add(_list); Grid.SetRow(_hint, 2); _root.Children.Add(_hint);
         _list.ItemTemplate = (DataTemplate)XamlReader.Load("""
@@ -43,7 +48,7 @@ internal sealed class SwitcherWindow : Window
         _list.KeyDown += (_, e) => { if (e.Key == VirtualKey.Enter) { CommitSelection(); e.Handled = true; } };
         var escape = new KeyboardAccelerator { Key = VirtualKey.Escape }; escape.Invoked += (_, e) => { Hide(); e.Handled = true; }; _root.KeyboardAccelerators.Add(escape);
         Activated += (_, e) => { if (e.WindowActivationState == WindowActivationState.Deactivated && IsOpen) Hide(); };
-        Closed += (_, _) => { IsOpen = false; environment.SwitcherClosed(this); };
+        Closed += (_, _) => { IsOpen = false; _motion.Dispose(); _chrome.Dispose(); environment.SwitcherClosed(this); };
         ApplyAppearance();
     }
     internal void Show(IReadOnlyList<RunningWindow> windows, IntPtr current, bool reverse, bool overview)
@@ -57,7 +62,7 @@ internal sealed class SwitcherWindow : Window
             double scale = ShellLayerInterop.Scale(WinRT.Interop.WindowNative.GetWindowHandle(this));
             int width = Math.Min(work.Width, (int)(540 * scale)), height = Math.Min(work.Height, (int)(400 * scale));
             _native.MoveAndResize(new RectInt32(work.X + (work.Width - width) / 2, work.Y + (work.Height - height) / 2, width, height));
-            IsOpen = true; ApplyAppearance(); _native.Show(); Activate();
+            IsOpen = true; ApplyAppearance(); _native.Show(); Activate(); _motion.Open();
         }
         int count = _list.Items.Count;
         if (count > 0)
@@ -69,6 +74,12 @@ internal sealed class SwitcherWindow : Window
     }
     private void Commit(SwitcherItem item) { Hide(); if (!NativeMethods.Activate(item.Window)) _environment.Report("That window is no longer available."); }
     internal void CommitSelection() { if (!IsOpen) return; if (_list.SelectedItem is SwitcherItem item) Commit(item); else Hide(); }
-    internal void Hide() { IsOpen = false; _native.Hide(); }
-    internal void ApplyAppearance() { _root.RequestedTheme = _environment.Theme.ElementTheme; _root.Background = _environment.Theme.Brush("NexusPanel"); _title.Foreground = _environment.Theme.Brush("NexusText"); _list.Foreground = _environment.Theme.Brush("NexusText"); _hint.Foreground = _environment.Theme.Brush("NexusMuted"); }
+    internal void Hide() { IsOpen = false; _motion.Hide(); _native.Hide(); }
+    internal void ApplyAppearance()
+    {
+        var theme = _environment.Theme; _root.RequestedTheme = theme.ElementTheme;
+        _frame.Background = _root.Background = theme.Brush("NexusPanel"); _frame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 18);
+        _title.Foreground = _list.Foreground = theme.Brush("NexusText"); _hint.Foreground = theme.Brush("NexusMuted");
+        _chrome.SetCorners(theme.HighContrast); _motion.Refresh();
+    }
 }

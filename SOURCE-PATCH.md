@@ -1,17 +1,15 @@
-# Updating the source to 1.4.1
+# Updating the source to 1.4.2
 
-`Nexus-1.4.0-to-1.4.1.patch` targets main commit **a9f813df250f8c5b8f4a3fdadb05804fae867025**, the 192-file 1.4.0 source. It narrows takeover to Windows taskbars and uses the existing desktop-relative placement path in session mode. It retains recovery for old session journals.
-
-From your existing Nexus_Shell source folder:
+The main source patch is `Nexus-1.4.1-to-1.4.2.patch`. Its verified baseline is the **194-file** GitHub tree at main commit **d98e09ff916c16ee1321bbf285a228bc785f9653** (1.4.1). Keep local edits; inspect a failing check before applying.
 
 ```powershell
-git apply --check --whitespace=error-all Nexus-1.4.0-to-1.4.1.patch
-git apply --whitespace=error-all Nexus-1.4.0-to-1.4.1.patch
+git apply --check --whitespace=error-all Nexus-1.4.1-to-1.4.2.patch
+git apply --whitespace=error-all Nexus-1.4.1-to-1.4.2.patch
 git diff --check
 ```
 
-Then commit/push through your usual workflow. AppVeyor runs core checks, the PowerShell updater/parser checks, the Windows build and resource/package verification. A successful build produces `Nexus-Shell-1.4.1-win-x64.zip` and `Nexus-Shell-1.4.1-Update-win-x64.zip`.
+If your local source is still the unchanged 1.4.0 tree at **a9f813df250f8c5b8f4a3fdadb05804fae867025**, use the included `Nexus-1.4.0-to-1.4.2.patch` instead. Apply exactly one patch. Neither patch should be forced onto another baseline.
 
-Use this patch once on 1.4.0. A failing check can mean it was already applied or your source differs; reconcile the diff before applying it. The patch archive and full-source archive are alternative source delivery routes, not executable Windows packages.
+Commit and push through the normal workflow. AppVeyor retains .NET core/platform checks, PowerShell updater/parser checks, native WinUI build/resource generation and package validation. Its expected artifacts are `Nexus-Shell-1.4.2-win-x64.zip` and `Nexus-Shell-1.4.2-Update-win-x64.zip`.
 
-The patch is checked by reconstructing the update from the baseline and comparing all source bytes. No added trailing-whitespace errors are permitted. Runtime dependencies remain pinned.
+The Source ZIP is an alternative complete tree. Both source routes require a Windows build. Runtime dependencies remain pinned, and the host's Explorer/session takeover code remains unchanged from 1.4.1. Review docs/UI-POLISH-1.4.2.md before native acceptance.

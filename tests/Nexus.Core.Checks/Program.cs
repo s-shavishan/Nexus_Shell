@@ -4,6 +4,7 @@ using Nexus.Shell.Interop;
 using System.Text.Json;
 
 DesktopModeChecks.Run();
+DesktopUiChecks.Run();
 
 static void Check(bool condition, string message)
 {

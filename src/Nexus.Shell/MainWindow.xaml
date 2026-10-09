@@ -117,7 +117,7 @@
      <RowDefinition Height="*" />
      <RowDefinition x:Name="FooterRow" Height="34" />
     </Grid.RowDefinitions>
-    <Border x:Name="WindowChrome" Background="{ThemeResource NexusSidebar}" CornerRadius="0" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="0,0,0,1">
+    <Border x:Name="WindowChrome" Background="{ThemeResource NexusSidebar}" CornerRadius="18,18,0,0" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="0,0,0,1">
      <Grid Margin="12,0">
       <Grid.ColumnDefinitions>
        <ColumnDefinition Width="Auto" />
@@ -299,11 +299,11 @@
     </Border>
     <Grid Grid.Row="1">
      <Grid.ColumnDefinitions>
-      <ColumnDefinition x:Name="SidebarColumn" Width="176" />
+      <ColumnDefinition x:Name="SidebarColumn" Width="196" />
       <ColumnDefinition Width="*" />
      </Grid.ColumnDefinitions>
      <Border x:Name="Sidebar" Background="{ThemeResource NexusSidebar}" BorderBrush="{ThemeResource NexusBorder}" BorderThickness="0,0,1,0">
-      <Grid Margin="10,20,10,16">
+      <Grid Margin="14,20,14,16">
        <Grid.RowDefinitions>
         <RowDefinition Height="*" />
         <RowDefinition Height="Auto" />

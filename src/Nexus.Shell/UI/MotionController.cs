@@ -28,7 +28,7 @@ public sealed class MotionController : IDisposable
         var easing = _easing = compositor.CreateCubicBezierEasingFunction(new Vector2(.2f, .8f), new Vector2(.2f, 1));
         _fade = compositor.CreateScalarKeyFrameAnimation();
         _fade.Duration = TimeSpan.FromMilliseconds(180);
-        _fade.InsertKeyFrame(0, .94f); _fade.InsertKeyFrame(1, 1, easing);
+        _fade.InsertKeyFrame(0, .68f); _fade.InsertKeyFrame(1, 1, easing);
         _enter = compositor.CreateVector3KeyFrameAnimation();
         _enter.Duration = TimeSpan.FromMilliseconds(240);
         _enter.InsertKeyFrame(0, new Vector3(0, 8, 0));

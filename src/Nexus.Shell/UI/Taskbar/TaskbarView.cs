@@ -7,9 +7,10 @@ using Nexus.Shell.Models;
 
 namespace Nexus.Shell.UI.Taskbar;
 
-internal sealed class TaskbarView : Grid
+internal sealed class TaskbarView : Border
 {
     private readonly DesktopEnvironment _environment;
+    private readonly Grid _body = new() { ColumnSpacing = 12, Padding = new Thickness(14, 6, 14, 6) };
     private readonly StackPanel _pins = new() { Orientation = Orientation.Horizontal, Spacing = 4 };
     private readonly StackPanel _windows = new() { Orientation = Orientation.Horizontal, Spacing = 4 };
     private readonly TextBlock _time = new() { FontSize = 12, TextAlignment = TextAlignment.Right };
@@ -18,31 +19,37 @@ internal sealed class TaskbarView : Grid
     private IReadOnlyList<AppEntry> _shownPins = [];
     private IReadOnlyList<RunningWindow> _shownWindows = [];
     private bool _shownSections, _shownFiles;
+    private readonly Button _search, _overview, _clockButton, _desktopButton;
+    private readonly Border _separator;
+    private double _reportedWidth;
+    internal event Action? PreferredWidthChanged;
+    internal double PreferredWidthDip => 416 + (_pins.Children.Count + _windows.Children.Count) * (_environment.Session.State.CompactDock ? 44 : 52);
     private MotionController? _motion;
     internal TaskbarView(DesktopEnvironment environment)
     {
-        _environment = environment; ColumnSpacing = 12; Padding = new Thickness(12, 4, 12, 4);
-        ColumnDefinitions.Add(new() { Width = GridLength.Auto }); ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) }); ColumnDefinitions.Add(new() { Width = GridLength.Auto });
+        _environment = environment; Child = _body;
+        _body.ColumnDefinitions.Add(new() { Width = GridLength.Auto }); _body.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) }); _body.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
         var start = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
         start.Children.Add(IconButton("Nexus", "Start", () => environment.ShowMenu(), true));
-        start.Children.Add(IconButton("Search", "Search apps", () => environment.ShowMenu(true), true));
-        Children.Add(start);
+        _search = IconButton("Search", "Search apps", () => environment.ShowMenu(true), true); start.Children.Add(_search);
+        _body.Children.Add(start);
         var middle = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, VerticalAlignment = VerticalAlignment.Center };
-        middle.Children.Add(_pins); middle.Children.Add(new Border { Width = 1, Height = 24, Background = environment.Theme.Brush("NexusBorder") }); middle.Children.Add(_windows);
+        _separator = new Border { Width = 1, Height = 22, VerticalAlignment = VerticalAlignment.Center };
+        middle.Children.Add(_pins); middle.Children.Add(_separator); middle.Children.Add(_windows);
         var scroll = new ScrollViewer { Content = middle, HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalAlignment = VerticalAlignment.Center };
-        Grid.SetColumn(scroll, 1); Children.Add(scroll);
+        Grid.SetColumn(scroll, 1); _body.Children.Add(scroll);
         var status = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
-        status.Children.Add(IconButton("Windows", "Switch windows", environment.ShowWindowOverview, true));
+        _overview = IconButton("Windows", "Switch windows", environment.ShowWindowOverview, true); status.Children.Add(_overview);
         status.Children.Add(IconButton("Settings", "Quick settings", environment.ShowQuickSettings, true));
         var clock = new StackPanel { Spacing = 2 }; clock.Children.Add(_time); clock.Children.Add(_date);
-        var clockButton = new Button { Content = clock, Style = (Style)Application.Current.Resources["QuietButton"], Padding = new Thickness(6) };
-        clockButton.Click += (_, _) => environment.ShowMenu(); status.Children.Add(clockButton);
-        var desktop = new Button { Width = 22, Height = 42, Content = new Border { Width = 2, Height = 28, Background = environment.Theme.Brush("NexusBorder") }, Style = (Style)Application.Current.Resources["QuietButton"] };
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(desktop, "Show Nexus desktop"); ToolTipService.SetToolTip(desktop, "Show Nexus desktop");
-        desktop.Click += (_, _) => environment.ShowDesktop(); status.Children.Add(desktop);
-        Grid.SetColumn(status, 2); Children.Add(status);
+        _clockButton = new Button { Content = clock, Style = (Style)Application.Current.Resources["QuietButton"], Padding = new Thickness(10, 5, 10, 5), CornerRadius = new CornerRadius(12) };
+        _clockButton.Click += (_, _) => environment.ShowMenu(); ToolTipService.SetToolTip(_clockButton, "Your clock · open Start"); status.Children.Add(_clockButton);
+        _desktopButton = new Button { Width = 24, Height = 40, Content = new FontIcon { FontFamily = new FontFamily("Segoe MDL2 Assets"), Glyph = "\uE740", FontSize = 13 }, Style = (Style)Application.Current.Resources["QuietButton"], Padding = new Thickness(0) };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_desktopButton, "Show Nexus desktop"); ToolTipService.SetToolTip(_desktopButton, "Show Nexus desktop");
+        _desktopButton.Click += (_, _) => environment.ShowDesktop(); status.Children.Add(_desktopButton);
+        Grid.SetColumn(status, 2); _body.Children.Add(status);
         Loaded += (_, _) =>
-        { try { _motion ??= new MotionController(this); foreach (var b in _iconButtons.Concat(_pins.Children.OfType<Button>()).Concat(_windows.Children.OfType<Button>())) _motion.AttachHover(b); ApplyAppearance(); } catch (Exception ex) { environment.Report("Taskbar motion unavailable", ex, false); } };
+        { try { _motion ??= new MotionController(_body); foreach (var b in _iconButtons.Concat(_pins.Children.OfType<Button>()).Concat(_windows.Children.OfType<Button>())) _motion.AttachHover(b); ApplyAppearance(); _motion.Enter(_body); } catch (Exception ex) { environment.Report("Taskbar motion unavailable", ex, false); } };
         ApplyAppearance();
     }
     private Button IconButton(string icon, string title, Action action, bool retain = false)
@@ -81,10 +88,30 @@ internal sealed class TaskbarView : Grid
     {
         bool compact = _environment.Session.State.CompactDock;
         foreach (var button in _iconButtons.Concat(_pins.Children.OfType<Button>()).Concat(_windows.Children.OfType<Button>())) { button.Width = compact ? 40 : 48; button.Height = compact ? 44 : 52; if (button.Content is Image i) i.Width = i.Height = compact ? 30 : 36; }
+        _separator.Visibility = _windows.Children.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+        double width = PreferredWidthDip;
+        if (_reportedWidth != width) { _reportedWidth = width; PreferredWidthChanged?.Invoke(); }
+    }
+    internal void SetAvailableWidth(double widthDip)
+    {
+        CornerRadius = new CornerRadius(_environment.Session.State.FloatingTaskbar && !_environment.Theme.HighContrast ? 22 : 0);
+        // Keep Start and Quick Settings reachable on small/scaled displays.
+        _search.Visibility = widthDip < 400 ? Visibility.Collapsed : Visibility.Visible;
+        _overview.Visibility = widthDip < 440 ? Visibility.Collapsed : Visibility.Visible;
+        _clockButton.Visibility = widthDip < 480 ? Visibility.Collapsed : Visibility.Visible;
+        _desktopButton.Visibility = widthDip < 600 ? Visibility.Collapsed : Visibility.Visible;
+        _date.Visibility = widthDip < 620 ? Visibility.Collapsed : Visibility.Visible;
     }
     internal void RefreshClock()
     { var now = DateTime.Now; _time.Text = now.ToString(_environment.Session.State.Clock24Hour ? "HH:mm" : "h:mm tt"); _date.Text = now.ToString("ddd, d MMM"); }
     internal void ApplyAppearance()
-    { var theme = _environment.Theme; RequestedTheme = theme.ElementTheme; Background = theme.Brush("NexusShell"); _time.Foreground = theme.Brush("NexusText"); _date.Foreground = theme.Brush("NexusMuted"); _motion?.SetEnabled(!theme.HighContrast && theme.Animations && !_environment.Session.State.ReducedEffects); ApplyDensity(); RefreshClock(); }
+    {
+        var theme = _environment.Theme; RequestedTheme = theme.ElementTheme; Background = theme.Brush("NexusPanel");
+        CornerRadius = new CornerRadius(_environment.Session.State.FloatingTaskbar && !theme.HighContrast ? 22 : 0);
+        BorderBrush = theme.Brush("NexusBorder"); BorderThickness = new Thickness(theme.HighContrast ? 1 : 0);
+        _separator.Background = theme.Brush("NexusBorder"); _time.Foreground = theme.Brush("NexusText"); _date.Foreground = theme.Brush("NexusMuted");
+        _clockButton.Background = theme.Brush("NexusCard");
+        _motion?.SetEnabled(!theme.HighContrast && theme.Animations && !_environment.Session.State.ReducedEffects); ApplyDensity(); RefreshClock();
+    }
     internal void Release() { _motion?.Dispose(); _iconButtons.Clear(); }
 }

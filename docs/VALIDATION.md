@@ -1,11 +1,11 @@
-# 1.4.1 validation
+# 1.4.2 validation
 
-Baseline: all 192 source files from 1.4.0 match main commit a9f813df250f8c5b8f4a3fdadb05804fae867025. AppVeyor build 54863707 succeeded for that baseline. The user's VirtualBox VM still lags in 1.4.0 Fast after takeover; it is responsive with the Windows taskbar present.
+Baseline: all **194** source blobs match GitHub main commit **d98e09ff916c16ee1321bbf285a228bc785f9653** (1.4.1). The user reports much smoother dragging in a short 1.4.1 VirtualBox test with Explorer retained. That is user runtime evidence for the baseline, not a native test of 1.4.2 or a complete diagnosis of earlier lag.
 
-1.4.1 changes taskbar-only takeover and native desktop placement. The added behavioral checks exercise preserved visible/hidden desktop windows, 1,000 unchanged maintenance passes without additional hide writes, reappearing/secondary taskbars, original-state recovery, durable taskbar-only journals and recovery of old journals containing WorkerW.
+The current Python source check passes: 76 required app files, 132 named XAML elements, 69 handlers, resources, assets, publish wiring, layer ownership and release metadata. Host takeover/recovery code, registry/session record logic, NuGet.Config, global.json and direct package references remain unchanged from 1.4.1.
 
-The authoring environment has no .NET or Windows runtime available for this update. New core tests, C# type/analyzer checks, PowerShell checks, native WinUI build and Windows execution are pending. Existing Core-checks.txt/CSharp-API-check.txt/Host-API-check.txt/Recovery-CSharp-check.txt are explicitly labeled historical 1.4.0 evidence.
+DesktopUiChecks adds 1,008 geometry cases, settings migration and snapshot/JSON persistence checks. The authoring environment has no .NET/Windows/PowerShell runtime. New C# test execution, type/analyzer checks, PowerShell checks, WinUI XBF/PRI generation and native execution remain pending. Historical 1.4.0 API/test logs do not validate this update.
 
-The existing Python source validation checks XML/XAML resources, handlers/content order, startup/Sections ownership, assets/publish wiring, host recovery wiring and 1.4.1 artifact naming. The release patch is verified with git apply --check --whitespace=error-all, then applied to a clean baseline; every reconstructed file is compared to the full source. ZIP entries/CRC and SHA-256 hashes are checked during packaging.
+Packaging verifies both source patches with git apply --check --whitespace=error-all, applies them to isolated baseline copies, compares every reconstructed source byte, and checks ZIP entries/CRC and SHA-256. Source/packaging checks cannot establish rounded-window rendering, native resize behavior, popup focus, minimized artifacts or VM frame timing.
 
-CI must execute the core checks and PowerShell updater/parser tests, build both host/UI, generate native XBF/PRI resources and validate the full/small packages. Then complete SESSION-TAKEOVER-1.4.1.md and the existing Windows acceptance guides. Source checks do not establish native layer ordering or resolve the user's window-drag lag.
+CI must execute core/platform checks and PowerShell updater/parser tests, build both host/UI and validate full/small packages. Complete UI-POLISH-1.4.2.md and existing desktop recovery checks on Windows.

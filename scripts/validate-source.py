@@ -29,6 +29,7 @@ required = [
     "Interop/ExclusiveTaskbarRegistration.cs", "Interop/ShellKeyboardHook.cs", "Interop/NexusDesktopToggle.cs", "Interop/ShortcutResolver.cs", "Interop/RecycleBinService.cs",
     "Interop/DesktopWorkArea.cs", "Services/DesktopWorkAreaReservation.cs", "Services/DesktopVisuals.cs",
     "Services/BrightnessController.cs", "Services/BrightnessScale.cs", "Desktop/QuickSettingsWindow.cs", "UI/Controls/QuickSettingsView.cs",
+    "Interop/WindowChrome.cs", "UI/SurfaceMotion.cs",
 ]
 for relative in required:
     assert (project / relative).is_file(), f"Missing file: {relative}"
@@ -196,7 +197,7 @@ closed = code[code.index("private void Window_Closed("):]
 assert "SaveFinal(" not in closed and "DetachSnapshot(" in closed, "Closing Sections must not finalize the desktop session"
 for file in [root / "appveyor.yml", root / ".github/workflows/build-windows.yml", root / "scripts/package.ps1", root / "scripts/build.ps1"]:
     body = file.read_text()
-    assert "Nexus-Shell-1.4.1" in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
+    assert "Nexus-Shell-1.4.2" in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
 print("Independent desktop ownership, Sections lifetime and CI versions OK")
 # Desktop replacement cannot silently instantiate Explorer or common picker UI.
 environment = (project / "Desktop/DesktopEnvironment.cs").read_text()

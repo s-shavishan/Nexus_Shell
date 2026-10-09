@@ -1,4 +1,4 @@
-# Nexus desktop sessions — 1.4.1
+# Nexus desktop sessions — 1.4.2
 
 ## Use Nexus now and restore Windows on exit
 

@@ -26,6 +26,7 @@ public sealed partial class MainWindow : Window
     
     private readonly AppWindow _appWindow;
     private readonly IntPtr _handle;
+    private readonly Interop.WindowChrome _chrome;
     
     private readonly Button[] _navigation;
     private readonly Button[] _shortcutCards;
@@ -68,7 +69,8 @@ public sealed partial class MainWindow : Window
             int initialHeight = Math.Max(420, Math.Min(800, workArea.Height - 80));
             _appWindow.MoveAndResize(new RectInt32(workArea.X + (workArea.Width - initialWidth) / 2,
                 workArea.Y + (workArea.Height - initialHeight) / 2, initialWidth, initialHeight));
-            if (_appWindow.Presenter is OverlappedPresenter presenter) presenter.SetBorderAndTitleBar(true, false);
+            if (_appWindow.Presenter is OverlappedPresenter presenter) presenter.SetBorderAndTitleBar(false, false);
+            _chrome = new(_handle, resizable: true, tuck: Minimize);
             var icon = Path.Combine(AppContext.BaseDirectory, "Assets", "Nexus.ico");
             if (File.Exists(icon)) _appWindow.SetIcon(icon);
             DisplayNameBox.Text = _state.DisplayName;
@@ -467,7 +469,7 @@ public sealed partial class MainWindow : Window
     {
         double width = DesktopRoot.ActualWidth;
         bool sidebar = width >= 760 && DesktopRoot.ActualHeight >= 460;
-        Sidebar.Visibility = sidebar ? Visibility.Visible : Visibility.Collapsed; SidebarColumn.Width = new GridLength(sidebar ? 176 : 0);
+        Sidebar.Visibility = sidebar ? Visibility.Visible : Visibility.Collapsed; SidebarColumn.Width = new GridLength(sidebar ? 196 : 0);
         ControlPanel.Width = Math.Clamp(width - 48, 256, 400); ControlScroller.MaxHeight = Math.Max(120, DesktopRoot.ActualHeight - 110);
         CommandPanel.MaxHeight = Math.Max(180, DesktopRoot.ActualHeight - 64); CommandList.MaxHeight = Math.Max(60, Math.Min(360, DesktopRoot.ActualHeight - 260));
         UpdateExperienceLayout(); UpdateHomeColumns(); UpdateHero(); UpdateExploreLayout();
@@ -497,6 +499,7 @@ public sealed partial class MainWindow : Window
         bool simple = _state.ReducedEffects || highContrast;
         bool animation = !simple && _isActive && _animationsEnabled;
         _motion?.SetEnabled(animation);
+        _chrome.SetCorners(highContrast);
         
         DesktopRoot.Background = Resource("NexusPanel");
         ApplyAuraSurfaces(simple);
@@ -512,7 +515,7 @@ public sealed partial class MainWindow : Window
         }
     }
     private void Desktop_Loaded(object sender, RoutedEventArgs args)
-    { if (!_ready || _motion is not null) return; try { _motion = new MotionController(DesktopRoot); foreach (var c in _shortcutCards) _motion.AttachHover(c); ApplyEffects(); } catch (Exception ex) { Log.Write("Sections motion unavailable", ex); } }
+    { if (!_ready || _motion is not null) return; try { _motion = new MotionController(DesktopRoot); foreach (var c in _shortcutCards.Concat(_navigation)) _motion.AttachHover(c); ApplyEffects(); _motion.Enter(PageHost); } catch (Exception ex) { Log.Write("Sections motion unavailable", ex); } }
     private void Window_Activated(object sender, WindowActivatedEventArgs args)
     {
         if (!_ready) return;
@@ -550,8 +553,9 @@ public sealed partial class MainWindow : Window
     {
         try
         {
+            _chrome.SetFullscreen(enabled);
             _appWindow.SetPresenter(enabled ? AppWindowPresenterKind.FullScreen : AppWindowPresenterKind.Overlapped);
-            if (!enabled && _appWindow.Presenter is OverlappedPresenter p) p.SetBorderAndTitleBar(true, false);
+            if (!enabled && _appWindow.Presenter is OverlappedPresenter p) p.SetBorderAndTitleBar(false, false);
             _state.FullScreen = enabled;
             
             SaveState();
@@ -561,7 +565,9 @@ public sealed partial class MainWindow : Window
     private void Minimize()
     {
         if (_state.FullScreen) SetFullScreen(false);
-        if (_appWindow.Presenter is OverlappedPresenter presenter) presenter.Minimize();
+        // Nexus's taskbar already retains this window. Tuck it away directly
+        // instead of asking Windows to draw a legacy minimized-window icon.
+        _motion?.SetEnabled(false); _appWindow.Hide();
     }
     private async Task ClearActivityAsync()
     {
@@ -698,6 +704,7 @@ public sealed partial class MainWindow : Window
         _ready = false; _uiTimer.Stop(); _searchTimer.Stop();
         _audioWriteTimer.Stop(); _audio?.Dispose(); _focusTimer.Stop(); _discoveryCancellation.Cancel();
         try { _motion?.Dispose(); } catch (Exception ex) { Log.Write("Sections motion cleanup skipped", ex); }
+        _chrome.Dispose();
         _discoveryCancellation.Dispose();
         if (!_environment.IsStopping) _environment.SaveState();
     }
