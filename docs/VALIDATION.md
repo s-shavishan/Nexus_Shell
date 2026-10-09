@@ -1,3 +1,15 @@
+# 1.5.0 build fix — validation update
+
+The user supplied AppVeyor build 54866264 for commit `dab35cd55915a6be0df22fd091dbc768e67ec83d`. .NET core policies, owned-window Win32 minimize/restore/maximize/close, owned DWM relationships and PowerShell updater checks passed. The build host had no available audio output, so real audio-device acceptance was skipped. Native UI publishing failed with three CS0246 errors in the obsolete Interop/ShellKeyboardHook.cs.
+
+Every filename/Git blob in that 215-file commit was verified. Its only difference from the delivered 214-file 1.5.0 source is the retained hook. The hotfix deletes it, adds an early AppVeyor check and an MSBuild guard, and improves the source-validator cleanup message. Version and artifact names stay 1.5.0. See [the build fix](BUILD-FIX-1.5.0.md).
+
+The fixed source and patch are checked locally for XML/resource/ownership/C# syntax and exact baseline reconstruction. Those checks do not resolve native UI types/APIs. A new native UI/host compile, resource/runnable packaging, rendering/focus and measured Windows/VirtualBox performance remain pending. No executable is supplied.
+
+---
+
+The following is the original source-delivery status before that user-run CI result:
+
 # 1.5.0 validation
 
 The cumulative baseline is the 199-file 1.4.2 GitHub tree at `1cd328f83d28d606fe5e9da7250ee3d792725cd0`. Incremental baselines are the 203-file prepared 1.4.3 and 206-file prepared 1.4.4 sources, verified against their delivered complete Source ZIPs. Earlier working-build reports do not establish acceptance of the new motion/preview features.

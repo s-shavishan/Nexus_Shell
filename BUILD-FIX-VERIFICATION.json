@@ -1,0 +1,55 @@
+{
+  "id": "1.5.0-build-fix",
+  "version": "1.5.0",
+  "baselineCommit": "dab35cd55915a6be0df22fd091dbc768e67ec83d",
+  "baselineTree": "fb2b2fa8e2884010bceebf3c41d9d2b06c89605a",
+  "baselineFiles": 215,
+  "fixedSourceFiles": 215,
+  "patch": "Nexus-1.5.0-Build-Fix.patch",
+  "patchSHA256": "809e382dc7ce2d60e83adc145bc4bdb88d4df6f9787d123e0ad90bf016fbefac",
+  "changedPaths": [
+    "VERIFICATION.json",
+    "appveyor.yml",
+    "docs/BUILD-FIX-1.5.0.md",
+    "docs/VALIDATION.md",
+    "scripts/validate-source.py",
+    "src/Nexus.Shell/Interop/ShellKeyboardHook.cs",
+    "src/Nexus.Shell/Nexus.Shell.csproj"
+  ],
+  "checksCompleted": [
+    "Every failing GitHub baseline filename/blob verified",
+    "No whitespace errors; clean patch application",
+    "Exact fixed-tree reconstruction of all 215 filenames and bytes",
+    "Source/XML/XAML/resource/assets/ownership/version checks",
+    "C# syntax parsing without type/API resolution",
+    "Explicit retired-hook source cleanup failure reproduced",
+    "All unaffected source bytes, dependency pins and version preserved"
+  ],
+  "reportedCI": {
+    "commit": "dab35cd55915a6be0df22fd091dbc768e67ec83d",
+    "passed": [
+      ".NET core checks including dock motion/preview/geometry/settings policies",
+      "owned Win32 minimize/restore/maximize/close/identity checks",
+      "owned DWM thumbnail registration/query/update/rejection/disposal",
+      "PowerShell updater runtime reuse/hash/destination/preservation checks"
+    ],
+    "skipped": [
+      "audio device acceptance: build host has no available output"
+    ],
+    "failed": "native WinUI compilation: three CS0246 errors in the retained keyboard hook",
+    "notEstablished": [
+      "native UI/host publishing success",
+      "runnable packaging",
+      "preview rendering/focus/motion and Windows/VirtualBox performance"
+    ]
+  },
+  "pending": [
+    "new native WinUI/host compile after hotfix including type/API checks",
+    "compiled-resource/full/update package generation",
+    "Windows 10/11 preview/motion/accessibility/focus/recovery acceptance",
+    "VirtualBox measured drag/frame timing and resource/memory comparison",
+    "physical audio/display device acceptance"
+  ],
+  "archive": "Nexus-Shell-1.5.0-Build-Fix.zip",
+  "archiveValidation": "All three ZIP entry names/bytes and CRC checked before delivery; SHA-256 recorded separately."
+}

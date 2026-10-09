@@ -251,11 +251,14 @@ print("Interop imports OK")
 
 # Global shortcuts belong to Windows. A leftover hook file would also compile
 # against removed key-state types, so check the whole tree rather than one caller.
+assert not (project / "Interop/ShellKeyboardHook.cs").exists(), (
+    "Remove src/Nexus.Shell/Interop/ShellKeyboardHook.cs from the repository. "
+    "It was retired; overlaying a new Source ZIP does not delete old files."
+)
 for source in project.rglob("*.cs"):
     assert not re.search(r"\b(?:SetWindowsHookEx|RegisterHotKey|ShellKeyboardState|ShellKeyAction)\b", source.read_text()), (
         f"Global shortcut interception remains: {source.relative_to(root)}"
     )
-assert not (project / "Interop/ShellKeyboardHook.cs").exists()
 print("Native Windows shortcut ownership OK")
 if options.syntax:
     from tree_sitter import Language, Parser

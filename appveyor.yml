@@ -3,6 +3,10 @@
 image: Visual Studio 2022
 
 build_script:
+  - ps: |
+      if (Test-Path '.\src\Nexus.Shell\Interop\ShellKeyboardHook.cs') {
+        throw 'Remove src/Nexus.Shell/Interop/ShellKeyboardHook.cs from the repository. This shortcut hook was retired; Windows owns native desktop shortcuts.'
+      }
   - ps: dotnet run --project .\tests\Nexus.Core.Checks\Nexus.Core.Checks.csproj --configuration Release
   - ps: .\scripts\test-update.ps1
   - ps: .\scripts\build.ps1 -UseMSBuild

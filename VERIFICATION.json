@@ -12,7 +12,7 @@
       "files": 206
     }
   ],
-  "sourceFiles": 214,
+  "sourceFiles": 215,
   "implemented": [
     "finite dock launch/arrival/activation/minimize/restore cues, separate hover/press target and compositor underline",
     "staggered Overview card entrances with cached stages and unloaded-target cleanup",
@@ -26,26 +26,21 @@
     "source/XML/XAML/resource/assets/publish/ownership/version and bounded-motion checks",
     "C# syntax including new tests (tree-sitter; no type/API resolution)",
     "unchanged palette/App.xaml/ShellTheme against delivered 1.4.4 and retained numeric contrast report",
-    "host/recovery/startup/updater implementation and dependency pins preserved"
+    "host/recovery/startup/updater implementation and dependency pins preserved",
+    "all GitHub baseline filenames/blobs verified; only retained shortcut hook differed from delivered 1.5.0"
   ],
   "checksRequiredForDelivery": [
-    "baseline Git blobs and delivered 1.4.3/1.4.4 source archive verification",
-    "clean applicability and exact source reconstruction for all three patches",
-    "ZIP entries/CRC and SHA-256"
-  ],
-  "testsAddedNotExecuted": [
-    "initial discovery/non-replay, real motion transitions and rapid minimize/restore sequence",
-    "3024 preview placement cases within existing 1008 monitor/DPI/layout cases",
-    "preview corridor/aspect fit and old/new settings migration/snapshot/persistence",
-    "owned native windows: stale maximize/close rejection, maximize/restore/maximize-from-minimized, graceful WM_CLOSE",
-    "owned top-level DWM registration/query/update/rejection/disposal and Win32 structure layout; conditional composition skip"
+    "exact failing GitHub baseline verified",
+    "source/XML/C# syntax checks after cleanup",
+    "clean hotfix patch applicability and exact fixed-tree reconstruction",
+    "ZIP entry/CRC and SHA-256 checks"
   ],
   "pending": [
-    ".NET core and Win32 test execution",
-    "native WinUI/host compilation including type/API and CA1416 checks",
-    "PowerShell updater and compiled-resource/package checks",
-    "Windows 10/11 DWM-over-WinUI preview rendering, pointer/keyboard/focus, accessibility and recovery acceptance",
-    "VirtualBox measured drag/frame timing and repeated app/menu/preview memory/resource checks"
+    "new native WinUI/host compile after hotfix including type/API checks",
+    "compiled-resource/full/update package generation",
+    "Windows 10/11 preview/motion/accessibility/focus/recovery acceptance",
+    "VirtualBox measured drag/frame timing and resource/memory comparison",
+    "physical audio/display device acceptance"
   ],
   "limitations": [
     "source-only delivery; native compilation/runtime/performance unverified",
@@ -53,5 +48,37 @@
     "protected apps can show blank preview contents despite successful registration",
     "native shell shortcuts require existing Windows shell backend",
     "primary display only; app-native icon extraction, full tray/Jump Lists remain future work"
-  ]
+  ],
+  "buildFix": {
+    "id": "1.5.0-build-fix",
+    "baselineCommit": "dab35cd55915a6be0df22fd091dbc768e67ec83d",
+    "baselineFiles": 215,
+    "reportedBuild": "https://ci.appveyor.com/project/s-shavishan/nexus-shell/builds/54866264",
+    "cause": "Retired Interop/ShellKeyboardHook.cs remained in GitHub and referenced removed ShellKeyAction/ShellKeyboardState types.",
+    "changes": [
+      "delete retired keyboard hook",
+      "early AppVeyor cleanup check",
+      "MSBuild guard before XamlPreCompile/CoreCompile",
+      "explicit source-validator cleanup message"
+    ],
+    "versionPolicy": "Version and compiled artifact names stay 1.5.0."
+  },
+  "testsConfirmedBySuppliedCI": {
+    "commit": "dab35cd55915a6be0df22fd091dbc768e67ec83d",
+    "passed": [
+      ".NET core checks including dock motion/preview/geometry/settings policies",
+      "owned Win32 minimize/restore/maximize/close/identity checks",
+      "owned DWM thumbnail registration/query/update/rejection/disposal",
+      "PowerShell updater runtime reuse/hash/destination/preservation checks"
+    ],
+    "skipped": [
+      "audio device acceptance: build host has no available output"
+    ],
+    "failed": "native WinUI compilation: three CS0246 errors in the retained keyboard hook",
+    "notEstablished": [
+      "native UI/host publishing success",
+      "runnable packaging",
+      "preview rendering/focus/motion and Windows/VirtualBox performance"
+    ]
+  }
 }

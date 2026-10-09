@@ -49,4 +49,10 @@
     <Error Condition="!Exists('$(PublishDir)resources.pri') and !Exists('$(PublishDir)$(TargetName).pri')"
            Text="The app resource index is missing from publish output. Nexus cannot load MainWindow.xaml without its generated PRI/XBF resources." />
   </Target>
+  <!-- ZIP overlays and browser uploads can leave retired files in an old tree.
+       Stop with an explicit cleanup instruction before either C# compile pass. -->
+  <Target Name="NexusRetiredShortcutGuard" BeforeTargets="XamlPreCompile;CoreCompile">
+    <Error Condition="Exists('$(MSBuildProjectDirectory)/Interop/ShellKeyboardHook.cs')"
+           Text="Remove Interop/ShellKeyboardHook.cs from the source tree. It is a retired global-shortcut hook; Windows owns native desktop shortcuts." />
+  </Target>
 </Project>
