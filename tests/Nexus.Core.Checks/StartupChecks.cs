@@ -53,6 +53,7 @@ internal static class StartupChecks
             WindowSwitcherPolicy.Request(()=>calls++,_=>reports++);
             Check(calls == 1 && reports == 0,"Supported switcher calls proceed.");
             WindowSwitcherPolicy.Request(()=>throw new NotImplementedException(),_=>reports++);
+            WindowSwitcherPolicy.Request(()=>throw new NotImplementedException(),_=>reports++);
             Check(reports == 1,"The observed E_NOTIMPL permits native fallback.");
             rejected = false;
             try { WindowSwitcherPolicy.Request(()=>throw new COMException("Other failure",unchecked((int)0x80004005)),_=>reports++); } catch (COMException) { rejected = true; }

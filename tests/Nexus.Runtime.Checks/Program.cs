@@ -32,10 +32,11 @@ internal static class RuntimeChecks
     }
     internal static async Task RunAsync(bool noNativeIpc)
     {
-        await StateAsync(); await FilesAsync(); await ConnectionChecks.RunAsync();
+        await StateAsync(); await FilesAsync(); await SettingsChecks.RunAsync(); await ConnectionChecks.RunAsync();
         if (noNativeIpc) Console.WriteLine("SKIP: actual named-pipe tests explicitly disabled for this restricted test environment.");
         else await PipesAsync();
         await WindowsJobChecks.RunAsync();
+        await WindowsSettingsChecks.RunAsync();
         Console.WriteLine($"PASS: {_checks} runtime assertions; durable state, uncertain-save reconciliation, caller cancellation, and simulated Files recovery. Native checks skipped: {noNativeIpc || !OperatingSystem.IsWindows()}.");
     }
     private static async Task StateAsync()

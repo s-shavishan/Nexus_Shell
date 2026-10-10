@@ -1,6 +1,6 @@
 namespace Nexus.Runtime;
 
-public sealed class CoreRouter(CoreStateRepository state, FilesCoordinator files)
+public sealed class CoreRouter(CoreStateRepository state, FilesCoordinator files, SystemSettingsCoordinator? settings = null)
 {
     private int _stop;
     public bool StopRequested => Volatile.Read(ref _stop) != 0;
@@ -20,6 +20,9 @@ public sealed class CoreRouter(CoreStateRepository state, FilesCoordinator files
                 return RuntimeProtocol.Success(request.Id, state.Commit(RuntimeProtocol.Payload<StateCommit>(request.Payload)));
             case RuntimeOperations.OpenFiles:
                 return RuntimeProtocol.Success(request.Id, await files.OpenAsync(request.Id, RuntimeProtocol.Payload<FilesLaunch>(request.Payload), cancellation).ConfigureAwait(false));
+            case RuntimeOperations.Settings:
+                if (settings is null) throw new RuntimeFailure("settings-unavailable", "This Core has no settings service. Keep the complete Nexus build together.");
+                return RuntimeProtocol.Success(request.Id, await settings.ExecuteAsync(RuntimeProtocol.Payload<SettingsRequest>(request.Payload), cancellation).ConfigureAwait(false));
             case RuntimeOperations.Work: return RuntimeProtocol.Success(request.Id, files.Work(request.ProcessId));
             case RuntimeOperations.Next:
                 // Wrap nullable commands in an object so every reply has an object body.

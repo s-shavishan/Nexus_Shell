@@ -11,9 +11,10 @@ public static class RuntimeOperations
 {
     public const string Health = "runtime.health", Stop = "runtime.stop", ReadState = "state.read", CommitState = "state.commit";
     public const string OpenFiles = "files.open", Work = "files.work", Next = "files.next", Ready = "files.ready", Complete = "files.complete", Pulse = "files.pulse";
+    public const string Settings = "settings.execute";
     public static bool Allows(string role, string operation) => role switch
     {
-        "desktop" => operation is Health or Stop or ReadState or CommitState or OpenFiles,
+        "desktop" => operation is Health or Stop or ReadState or CommitState or OpenFiles or Settings,
         "files" => operation is Work or Next or Ready or Complete or Pulse,
         _ => false
     };

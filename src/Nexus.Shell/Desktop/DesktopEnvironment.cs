@@ -59,7 +59,7 @@ internal sealed partial class DesktopEnvironment
 
     internal DesktopEnvironment(ShellSession session, CoreProcessSession core, DesktopSessionMode mode = DesktopSessionMode.Preview, string? hostToken = null, int? hostPid = null)
     {
-        Session = session; _core = core;
+        Session = session; _core = core; Notifications.Quiet = Session.State.QuietNotifications;
         Mode = mode; Menus = new(this); _usage = new(Session.State); _usageTracking = Session.State.UsageTracking;
         if (IsManagedDesktop)
         {
@@ -116,6 +116,7 @@ internal sealed partial class DesktopEnvironment
     private void SessionChanged()
     {
         if (IsStopping) return;
+        Notifications.Quiet = Session.State.QuietNotifications;
         _dirty = true; _saveTimer.Stop(); _saveTimer.Start();
         RefreshAppearance(); RefreshIntegration();
         if (!Session.State.DockPreviews) HideDockPreview();
@@ -309,6 +310,14 @@ internal sealed partial class DesktopEnvironment
         catch (Exception ex) { Report("Could not open Quick Settings", ex); }
     }
     internal void QuickSettingsClosed(QuickSettingsWindow window) { if (ReferenceEquals(_quickSettings, window)) _quickSettings = null; }
+    internal void ShowControlCenter(string section)
+    {
+        if (IsStopping) return; HideDockPreview(); _menu?.HideMenu(); _notifications?.Hide();
+        try { _quickSettings ??= new(this); _quickSettings.Show(section); }
+        catch (Exception ex) { Report("Could not open Control Center", ex); }
+    }
+    internal Task<SettingsSnapshot> ExecuteSettingsAsync(SettingsRequest request)
+        => _core.ExecuteSettingsAsync(request with { Window = Taskbar.Handle.ToInt64() }, _cancel.Token);
     internal void PositionQuickSettings() { if (_quickSettings?.IsOpen == true) _quickSettings.Position(); }
     internal void PositionDesktopPanels() { _topBar?.Position(); PositionQuickSettings(); if (_notifications?.IsOpen == true) _notifications.Position(); }
     internal void SetDesktopFullscreen(bool fullscreen) => _topBar?.SetFullscreen(fullscreen);
@@ -346,7 +355,9 @@ internal sealed partial class DesktopEnvironment
     private static bool IsExplorer(string target) => Path.GetFileName(target.Trim().Trim('"')).Equals("explorer.exe", StringComparison.OrdinalIgnoreCase);
     internal void OpenTargetChecked(string target)
     {
-        if (target.StartsWith("ms-settings:", StringComparison.OrdinalIgnoreCase)) { OpenSettings(target); return; }
+        if (SettingsRules.SectionForUri(target) is { } settingsSection) { ShowControlCenter(settingsSection); return; }
+        if (target == "nexus:settings") { ShowControlCenter("Desktop"); return; }
+        if (target.StartsWith("ms-settings:", StringComparison.OrdinalIgnoreCase)) { OpenAdvancedWindowsSettings(target); return; }
         if (target == "nexus:sections") { ShowSections(); return; }
         if (target == "nexus:notes") { ShowUtility("Notes"); return; }
         if (target == "nexus:calculator") { ShowUtility("Calculator"); return; }
@@ -373,10 +384,10 @@ internal sealed partial class DesktopEnvironment
         else if (File.Exists(target)) start.WorkingDirectory = Path.GetDirectoryName(target)!;
         Process.Start(start);
     }
-    private async void OpenSettings(string target)
+    internal async void OpenAdvancedWindowsSettings(string target = "ms-settings:")
     {
         try { await AppCatalog.OpenSettingsAsync(target); }
-        catch (Exception error) { if (!IsStopping) Report("Could not open Windows Settings. Control Panel remains available in Control Center", error); }
+        catch (Exception error) { if (!IsStopping) Report("Windows did not open its advanced settings. Nexus Control Center remains available", error); }
     }
     internal async void ShowFiles(string? folder = null)
     {

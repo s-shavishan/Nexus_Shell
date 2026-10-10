@@ -48,7 +48,9 @@ internal static class ConnectionChecks
             using var state = new CoreStateRepository(new StateStore(folder));
             bool stopped = false;
             using var files = new FilesCoordinator(_ => new FakeProcess(() => stopped = true), (_, _) => true);
-            var router = new CoreRouter(state, files);
+            var settingsBackend = new SettingsChecks.Backend((request, _) => Task.FromResult(new SettingsSnapshot(default, request.Section,
+                Sound: new(true, "output", "Test speakers", (float)((request.Change?.Value ?? 60) / 100), request.Change?.Enabled ?? false, [], ""))));
+            var router = new CoreRouter(state, files, new SystemSettingsCoordinator(settingsBackend));
             async Task<RuntimeResponse> Request(string role, string operation, object payload)
             {
                 var pair = Duplex.Pair(); using var client = pair.Client; using var server = pair.Server;
@@ -65,6 +67,15 @@ internal static class ConnectionChecks
             if (!saved.Ok || new StateStore(folder).Load().QuickNote != loaded.State.QuickNote) throw new Exception("Connection commit did not persist.");
             var rejected = await Request("files", RuntimeOperations.CommitState, new StateCommit(loaded.State, 1, Guid.NewGuid()));
             if (rejected.Ok || rejected.Code != "forbidden" || state.Revision != 1) throw new Exception("Connection role authorization failed.");
+            var settingsRead = await Request("desktop", RuntimeOperations.Settings, new SettingsRequest("Sound"));
+            var snapshot = RuntimeProtocol.Payload<SettingsSnapshot>(settingsRead.Payload);
+            if (!settingsRead.Ok || snapshot.Epoch == Guid.Empty || snapshot.Sound!.Volume != .6f) throw new Exception("Production connection did not return the settings service state.");
+            var settingsWrite = await Request("desktop", RuntimeOperations.Settings, new SettingsRequest("Sound", Change: new("volume", "output", Value: 20, Epoch: snapshot.Epoch)));
+            if (!settingsWrite.Ok || RuntimeProtocol.Payload<SettingsSnapshot>(settingsWrite.Payload).Sound!.Volume != .2f) throw new Exception("Production settings mutation failed.");
+            var settingsDenied = await Request("files", RuntimeOperations.Settings, new SettingsRequest("Sound"));
+            if (settingsDenied.Ok || settingsDenied.Code != "forbidden" || settingsBackend.Calls != 2) throw new Exception("Files must not access desktop hardware controls.");
+            var settingsStale = await Request("desktop", RuntimeOperations.Settings, new SettingsRequest("Sound", Change: new("volume", "output", Value: 99, Epoch: Guid.NewGuid())));
+            if (settingsStale.Ok || settingsStale.Code != "settings-stale" || settingsBackend.Calls != 2) throw new Exception("The production connection accepted a stale device command.");
             var pair = Duplex.Pair(); using var serverSide = pair.Server; using var clientSide = pair.Client;
             using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             var handling = RuntimeConnection.ServeAsync(serverSide, _ => true, router.DispatchAsync, stop.Token);

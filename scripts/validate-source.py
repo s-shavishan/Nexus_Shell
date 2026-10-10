@@ -232,7 +232,7 @@ closed = code[code.index("private void Window_Closed("):]
 assert "SaveFinal(" not in closed and "DetachSnapshot(" in closed, "Closing Sections must not finalize the desktop session"
 for file in [root / "appveyor.yml", root / ".github/workflows/build-windows.yml", root / "scripts/package.ps1", root / "scripts/build.ps1"]:
     body = file.read_text()
-    assert "Nexus-Shell-2.0.0" in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
+    assert "Nexus-Shell-2.1.0" in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
 print("Independent desktop ownership, Sections lifetime and CI versions OK")
 # Desktop replacement cannot silently instantiate Explorer or common picker UI.
 environment = (project / "Desktop/DesktopEnvironment.cs").read_text()
@@ -306,6 +306,20 @@ for packages in json.loads((project / "packages.lock.json").read_text())["depend
         if entry.get("type") == "Project" and package.lower() == "nexus.runtime":
             assert entry["version"] == runtime_version, "Runtime version and locked project reference differ"
 print("Runtime project lock version OK")
+for relative in ["src/Nexus.Runtime/SystemSettingsContract.cs", "src/Nexus.Runtime/SystemSettingsCoordinator.cs", "src/Nexus.Runtime/SettingsIntentBuffer.cs",
+                 "src/Nexus.Core/Settings/WindowsSettingsBackend.cs", "src/Nexus.Core/Settings/NetworkSettings.cs", "src/Nexus.Core/Settings/BluetoothSettings.cs",
+                 "src/Nexus.Core/Settings/DisplaySettings.cs", "src/Nexus.Core/Settings/PowerSettings.cs", "src/Nexus.Core/Settings/WifiProfile.cs",
+                 "tests/Nexus.Runtime.Checks/SettingsChecks.cs", "tests/Nexus.Runtime.Checks/WindowsSettingsChecks.cs"]:
+    assert (root / relative).is_file(), f"Missing Core settings service file: {relative}"
+quick = (project / "UI/Controls/QuickSettingsView.cs").read_text()
+assert "new AudioController" not in quick and "new BrightnessController" not in quick, "Control Center hardware must remain owned by Core"
+assert "ExecuteSettingsAsync" in quick and "SettingsIntentBuffer" in quick and "SettingsRules.SectionForUri" in environment
+assert "WindowsSettingsBackend" in (root / "src/Nexus.Core/Program.cs").read_text()
+backdrop = (project / "UI/LiquidGlassBackdrop.cs").read_text()
+callback = backdrop.split("protected override void OnDefaultSystemBackdropConfigurationChanged", 1)[1].split("private void ReleaseController", 1)[0]
+assert "base.OnDefaultSystemBackdropConfigurationChanged" not in callback and "GetDefaultSystemBackdropConfiguration(" not in callback, "Invalid-target backdrop regression: do not re-enter the detached native target"
+assert '"--no-native-ipc"' not in (root / ".github/workflows/build-windows.yml").read_text(), "Windows CI must run native checks"
+print("Core-owned control service, settings routes, command buffer and invalid-target regression wiring OK")
 if options.syntax:
     from tree_sitter import Language, Parser
     import tree_sitter_c_sharp

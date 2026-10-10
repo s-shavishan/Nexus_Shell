@@ -41,6 +41,7 @@ public sealed class ShellState
     public bool CompactDock { get; set; }
     public bool FloatingTaskbar { get; set; } = true;
     public bool DockPreviews { get; set; } = true;
+    public bool QuietNotifications { get; set; }
     public bool RememberRecentItems { get; set; } = true;
     public List<RecentCommand> RecentCommands { get; set; } = [];
     public bool DesktopLayout { get; set; } = true;
@@ -69,6 +70,7 @@ public sealed class ShellState
         FocusMode = FocusMode, ReducedEffects = ReducedEffects, CatalogInitialized = CatalogInitialized,
         Clock24Hour = Clock24Hour, ShowClockWidget = ShowClockWidget, ShowSpaceWidget = ShowSpaceWidget,
         ShowHomeNotes = ShowHomeNotes, ShowHomeEssentials = ShowHomeEssentials, CompactDock = CompactDock, FloatingTaskbar = FloatingTaskbar, DockPreviews = DockPreviews,
+        QuietNotifications = QuietNotifications,
         RememberRecentItems = RememberRecentItems, RecentCommands = [.. RecentCommands],
         ExploreSpaces = [.. ExploreSpaces], ActiveExploreSpaceId = ActiveExploreSpaceId,
         ExploreSelectedItemId = ExploreSelectedItemId, ExploreView = ExploreView,

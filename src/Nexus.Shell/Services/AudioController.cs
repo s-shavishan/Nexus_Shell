@@ -39,12 +39,14 @@ public sealed class AudioController : IDisposable
     }
     public Task<AudioSnapshot> ReadAsync() => Queue(Read);
     public Task<bool> SuspendAsync() => Queue(() => { Disconnect(); return true; });
-    public Task<AudioSnapshot> ChangeAsync(string deviceId, IReadOnlyList<AudioChange> changes) => Queue(() =>
+    public Task<AudioSnapshot> ChangeAsync(string deviceId, IReadOnlyList<AudioChange> changes, CancellationToken cancellation = default) => Queue(() =>
     {
+        cancellation.ThrowIfCancellationRequested();
         EnsureEndpoint();
         if (deviceId != _deviceId) throw new InvalidOperationException("The audio output changed. Refresh before changing its volume.");
         foreach (var change in changes)
         {
+            cancellation.ThrowIfCancellationRequested();
             if (change.Volume is float level && (!float.IsFinite(level) || level < 0 || level > 1))
                 throw new ArgumentOutOfRangeException(nameof(changes));
             var context = EventContext;

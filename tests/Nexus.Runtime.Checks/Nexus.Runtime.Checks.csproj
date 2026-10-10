@@ -9,5 +9,14 @@
   <ItemGroup>
     <ProjectReference Include="../../src/Nexus.Runtime/Nexus.Runtime.csproj" />
     <Compile Include="../../src/Nexus.Core/FilesProcessJob.cs" Link="FilesProcessJob.cs" />
+    <Compile Include="../../src/Nexus.Core/Settings/NetworkSettings.cs" Link="Native/NetworkSettings.cs" />
+    <Compile Include="../../src/Nexus.Core/Settings/WifiProfile.cs" Link="Native/WifiProfile.cs" />
+    <Compile Include="../../src/Nexus.Core/Settings/BluetoothSettings.cs" Link="Native/BluetoothSettings.cs" />
+    <Compile Include="../../src/Nexus.Core/Settings/DisplaySettings.cs" Link="Native/DisplaySettings.cs" />
+    <Compile Include="../../src/Nexus.Core/Settings/PowerSettings.cs" Link="Native/PowerSettings.cs" />
+    <Compile Include="../../src/Nexus.Core/Settings/WindowsSettingsBackend.cs" Link="Native/WindowsSettingsBackend.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/AudioController.cs" Link="Native/AudioController.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/BrightnessController.cs" Link="Native/BrightnessController.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/BrightnessScale.cs" Link="Native/BrightnessScale.cs" />
   </ItemGroup>
 </Project>

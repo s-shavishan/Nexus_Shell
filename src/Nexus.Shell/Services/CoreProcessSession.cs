@@ -117,6 +117,21 @@ internal sealed class CoreProcessSession : IAsyncDisposable
         }
         catch (Exception ex) { await TransportFailedAsync(client, ex).ConfigureAwait(false); throw; }
     }
+    internal async Task<SettingsSnapshot> ExecuteSettingsAsync(SettingsRequest request, CancellationToken cancellation)
+    {
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellation, _operations.Token);
+        var client = await ClientAsync().ConfigureAwait(false);
+        try
+        {
+            return await client.CallAsync<SettingsSnapshot>(RuntimeOperations.Settings, request, TimeSpan.FromSeconds(10), linked.Token).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            // Device failures are RuntimeFailure replies, not Core health failures.
+            // A possibly-applied command is never automatically retried.
+            await TransportFailedAsync(client, ex).ConfigureAwait(false); throw;
+        }
+    }
     public async ValueTask DisposeAsync()
     {
         _disposed = true; _operations.Cancel();

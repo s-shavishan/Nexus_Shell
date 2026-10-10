@@ -89,7 +89,7 @@ public sealed partial class MainWindow
         shell.Children.Add(ActionButton("Study & focus timer", () => Navigate("Study")));
         shell.Children.Add(ActionButton("Workspaces", () => Navigate("Workspaces")));
         shell.Children.Add(ActionButton("Personalize Nexus", () => Navigate("Personalize")));
-        shell.Children.Add(ActionButton("Advanced Windows settings", () => _environment.OpenTarget("ms-settings:")));
+        shell.Children.Add(ActionButton("Advanced Windows settings", () => _environment.OpenAdvancedWindowsSettings()));
         shell.Children.Add(ActionButton("Control Panel", () => _environment.OpenTargetChecked(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "control.exe"))));
         shell.Children.Add(ActionButton("Task Manager", () => _environment.OpenTargetChecked(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "Taskmgr.exe"))));
         shell.Children.Add(Text("Live data refreshes every five seconds while this view is active. Audio changes are applied only when you use a slider or mute button.", 11, true));

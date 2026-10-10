@@ -33,10 +33,17 @@ public sealed partial class MainWindow
         try
         {
             if (!Microsoft.UI.Composition.SystemBackdrops.DesktopAcrylicController.IsSupported()) { _glassUnavailable = true; return; }
-            if (_auraGlass is null) { _auraGlass = new UI.LiquidGlassBackdrop(); _auraGlass.Failed += () => DesktopRoot.DispatcherQueue.TryEnqueue(() => { _glassUnavailable = true; _auraGlass = null; SystemBackdrop = null; ApplyAuraSurfaces(true); }); SystemBackdrop = _auraGlass; }
+            if (_auraGlass is null)
+            {
+                var source = _auraGlass = new UI.LiquidGlassBackdrop();
+                source.Failed += () => DesktopRoot.DispatcherQueue.TryEnqueue(() =>
+                { if (!ReferenceEquals(source, _auraGlass)) return; _glassUnavailable = true; _auraGlass = null; try { SystemBackdrop = null; if (DesktopRoot.IsLoaded) ApplyAuraSurfaces(true); } catch (Exception error) { Log.Write("Sections glass fallback arrived after close", error); } });
+                SystemBackdrop = _auraGlass;
+            }
             _auraGlass.SetTint(AuraColorValue("FF" + palette.Panel[2..]));
         }
-        catch (Exception error) { SystemBackdrop = null; _auraGlass = null; _glassUnavailable = true; Log.Write("Sections glass unavailable; using solid surfaces", error); }
+        catch (Exception error)
+        { _auraGlass = null; _glassUnavailable = true; try { SystemBackdrop = null; } catch (Exception cleanup) { Log.Write("Sections glass cleanup failed", cleanup); } Log.Write("Sections glass unavailable; using solid surfaces", error); }
     }
     private void ApplyAuraSurfaces(bool simple)
     {

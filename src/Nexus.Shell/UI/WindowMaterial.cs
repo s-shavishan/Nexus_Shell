@@ -12,11 +12,14 @@ namespace Nexus.Shell.UI;
 internal sealed class WindowMaterial
 {
     private bool _failed, _enabled;
+    private bool _observedWindow, _closed;
     private LiquidGlassBackdrop? _backdrop;
     internal void Apply(Window window, Border frame, DesktopEnvironment environment, string role = "Frame")
         => Apply(window, frame, environment.Theme, environment.Session.State, role);
     internal void Apply(Window window, Border frame, ShellTheme theme, ShellState state, string role = "Frame")
     {
+        if (_closed) return;
+        if (!_observedWindow) { _observedWindow = true; window.Closed += (_, _) => _closed = true; }
         bool glass = !_failed && state.NativeGlass && !state.ReducedEffects && !theme.HighContrast;
         try
         {
@@ -25,13 +28,18 @@ internal sealed class WindowMaterial
             if (glass != _enabled)
             {
                 _backdrop = glass ? new LiquidGlassBackdrop() : null;
-                if (_backdrop is not null) _backdrop.Failed += () => frame.DispatcherQueue.TryEnqueue(() => { _failed = true; _enabled = false; window.SystemBackdrop = null; frame.Background = theme.Surface("Sidebar"); });
+                if (_backdrop is { } source) source.Failed += () => frame.DispatcherQueue.TryEnqueue(() =>
+                { if (_closed || !ReferenceEquals(source, _backdrop)) return; _failed = true; _enabled = false; try { window.SystemBackdrop = null; frame.Background = theme.Surface("Sidebar"); } catch (Exception error) { Log.Write("Glass fallback arrived after window close", error); } });
                 window.SystemBackdrop = _backdrop; _enabled = glass;
             }
             _backdrop?.SetTint(ShellTheme.Color("FF" + theme.Palette.Panel[2..]));
             frame.Background = glass ? theme.Glass(role) : theme.Surface("Sidebar");
         }
         catch (Exception ex)
-        { _failed = true; _enabled = false; window.SystemBackdrop = null; frame.Background = theme.Surface("Sidebar"); Log.Write("Window material unavailable; using the palette fallback", ex); }
+        {
+            _failed = true; _enabled = false;
+            try { window.SystemBackdrop = null; frame.Background = theme.Surface("Sidebar"); } catch (Exception error) { Log.Write("Window glass fallback cleanup failed", error); }
+            Log.Write("Window material unavailable; using the palette fallback", ex);
+        }
     }
 }

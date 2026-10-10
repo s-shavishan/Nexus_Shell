@@ -51,7 +51,7 @@ internal static class MajorDesktopChecks
         foreach (var monitor in new[] { new ShellRect(-1920, -200, 1920, 1080), new ShellRect(0, 0, 320, 480), new ShellRect(20, 20, 1, 1) })
         foreach (double scale in new[] { .5, 1, 1.5, 4, double.NaN })
         {
-            foreach (var rectangle in new[] { DesktopLayout.LaunchpadBounds(monitor, scale), DesktopLayout.PanelBounds(monitor, scale), DesktopLayout.ManagedWorkArea(monitor, false, true, scale) })
+            foreach (var rectangle in new[] { DesktopLayout.LaunchpadBounds(monitor, scale), DesktopLayout.PanelBounds(monitor, scale), DesktopLayout.PanelBounds(monitor, scale, 540, 740), DesktopLayout.ManagedWorkArea(monitor, false, true, scale) })
                 Check(rectangle.Width > 0 && rectangle.Height > 0 && rectangle.X >= monitor.X && rectangle.Y >= monitor.Y && rectangle.Right <= monitor.Right && rectangle.Bottom <= monitor.Bottom, "Major desktop surfaces must fit negative-origin/tiny/scaled monitors.");
         }
         var work = DesktopLayout.ManagedWorkArea(new(0, 0, 1920, 1080), false, true, 1.5);

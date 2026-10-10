@@ -53,7 +53,8 @@ internal static class Program
                 catch { try { if (!process.HasExited) process.Kill(entireProcessTree: false); } finally { process.Dispose(); } throw; }
                 Log("Started Files process " + process.Id); return new Worker(process);
             }, (window, processId) => GetWindowThreadProcessId(new IntPtr(window), out uint actual) != 0 && actual == processId);
-            var router = new CoreRouter(repository, files);
+            using var settingsBackend = new Nexus.Core.Settings.WindowsSettingsBackend(parentId, error => Log("Core device settings failed", error));
+            var router = new CoreRouter(repository, files, new SystemSettingsCoordinator(settingsBackend));
             using var stop = new CancellationTokenSource();
             var server = new RuntimeServer(pipeName, (pipe, request) => PipePeer.IsClient(pipe, request.ProcessId)
                 && (request.Role == "desktop" ? request.ProcessId == parentId && !parent.HasExited : files.IsWorker(request.ProcessId)), router.DispatchAsync,

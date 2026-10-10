@@ -24,7 +24,7 @@ internal sealed class DesktopMenus(DesktopEnvironment environment)
     internal MenuFlyout NexusMenu()
     {
         var menu = new MenuFlyout(); menu.Items.Add(Item("About Nexus Shell", () => environment.ShowSections("Personalize")));
-        menu.Items.Add(Item("Windows Settings…", () => environment.OpenTarget("ms-settings:")));
+        menu.Items.Add(Item("Nexus Settings…", () => environment.OpenTarget("nexus:settings")));
         menu.Items.Add(Item("Launchpad…", () => environment.ShowMenu())); menu.Items.Add(new MenuFlyoutSeparator());
         menu.Items.Add(Item("Refresh desktop", environment.RefreshDesktop)); menu.Items.Add(Item("Lock screen", environment.LockScreen));
         menu.Items.Add(new MenuFlyoutSeparator()); menu.Items.Add(Item(environment.IsManagedDesktop ? "Return to Windows…" : "Exit Nexus", environment.RequestExit)); return menu;

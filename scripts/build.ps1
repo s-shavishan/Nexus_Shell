@@ -7,7 +7,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $projectFile = Join-Path $projectRoot 'src\Nexus.Shell\Nexus.Shell.csproj'
-$publishDirectory = Join-Path $projectRoot 'artifacts\Nexus-Shell-2.0.0-win-x64'
+$publishDirectory = Join-Path $projectRoot 'artifacts\Nexus-Shell-2.1.0-win-x64'
 $logDirectory = Join-Path $projectRoot 'artifacts\logs'
 
 if ($env:OS -ne 'Windows_NT') { throw 'WinUI must be built on Windows. Use an included Windows cloud-build route in START-HERE.md.' }
@@ -99,6 +99,7 @@ try {
     Copy-Item (Join-Path $projectRoot 'docs\FOUNDATION-1.7.0.md') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'docs\STARTUP-1.8.0.md') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'docs\MAJOR-2.0.0.md') $publishDirectory
+    Copy-Item (Join-Path $projectRoot 'docs\CONTROL-CENTER-2.1.0.md') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'scripts\restore-windows-desktop.ps1') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'scripts\restore-sign-in.ps1') $publishDirectory
     Set-Content (Join-Path $publishDirectory 'Launch-Nexus.bat') "@echo off`r`nstart `"`" `"%~dp0Nexus.Shell.exe`"" -Encoding ASCII

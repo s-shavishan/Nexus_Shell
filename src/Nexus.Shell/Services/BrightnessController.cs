@@ -14,10 +14,10 @@ internal sealed class BrightnessController(IntPtr window)
 {
     private readonly object _gate = new();
     internal Task<BrightnessSnapshot> ReadAsync() => Task.Run(() => { lock (_gate) return Access(null, null); });
-    internal Task<BrightnessSnapshot> ChangeAsync(string expectedDevice, double percent) => Task.Run(() =>
-    { lock (_gate) return Access(expectedDevice, percent); });
+    internal Task<BrightnessSnapshot> ChangeAsync(string expectedDevice, double percent, CancellationToken cancellation = default) => Task.Run(() =>
+    { lock (_gate) return Access(expectedDevice, percent, cancellation); });
 
-    private BrightnessSnapshot Access(string? expectedDevice, double? percent)
+    private BrightnessSnapshot Access(string? expectedDevice, double? percent, CancellationToken cancellation = default)
     {
         PhysicalMonitor[] physical = [];
         bool acquired = false;
@@ -28,7 +28,7 @@ internal sealed class BrightnessController(IntPtr window)
             if (monitor == IntPtr.Zero || !GetMonitorInfo(monitor, ref info))
                 return BrightnessSnapshot.Unavailable("The display is unavailable. Choose Refresh.");
             if (!GetNumberOfPhysicalMonitorsFromHMONITOR(monitor, out uint count) || count != 1)
-                return BrightnessSnapshot.Unavailable("Brightness is unavailable for this display. Use Windows display settings.");
+                return BrightnessSnapshot.Unavailable("This display or VM does not expose hardware brightness controls.");
             physical = new PhysicalMonitor[count];
             if (!GetPhysicalMonitorsFromHMONITOR(monitor, count, physical))
                 return BrightnessSnapshot.Unavailable("This display does not expose hardware brightness controls.");
@@ -39,10 +39,11 @@ internal sealed class BrightnessController(IntPtr window)
                 throw new InvalidOperationException("The display changed. Refresh before changing brightness.");
             if (!GetMonitorCapabilities(display.Handle, out uint capabilities, out _) || (capabilities & 2) == 0
                 || !GetMonitorBrightness(display.Handle, out uint minimum, out uint current, out uint maximum))
-                return BrightnessSnapshot.Unavailable("Brightness is not supported here. Use Windows display settings.");
+                return BrightnessSnapshot.Unavailable("This display does not support hardware brightness control.");
             double level = BrightnessScale.Percent(minimum, current, maximum);
             if (percent is double requested)
             {
+                cancellation.ThrowIfCancellationRequested();
                 if (!SetMonitorBrightness(display.Handle, BrightnessScale.Native(requested, minimum, maximum)))
                     throw new Win32Exception(Marshal.GetLastWin32Error(), "The display rejected the brightness change.");
                 if (!GetMonitorBrightness(display.Handle, out minimum, out current, out maximum))
@@ -51,6 +52,7 @@ internal sealed class BrightnessController(IntPtr window)
             }
             return new(true, id, display.Description, level, "");
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             Log.Write("Hardware brightness unavailable", ex);

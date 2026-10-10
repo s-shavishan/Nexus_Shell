@@ -1,9 +1,9 @@
-# Start here — Nexus 2.0.0
+# Start here — Nexus 2.1.0
 
 1. Extract the complete Source ZIP into a fresh folder, or apply exactly one matching patch from SOURCE-PATCH.md.
 2. Build on Windows with the commands in README.md, or commit/push the reviewed source and retrieve the CI build artifacts.
-3. Extract the full `Nexus-Shell-2.0.0-win-x64.zip` into a separate version folder. Close the older Nexus before launching the new one.
-4. Snapshot the VM, start `Launch-Nexus.bat` in preview, then follow `MAJOR-2.0.0.md` in the compiled folder (or docs/MAJOR-2.0.0.md in source).
-5. Test supervised takeover using `Launch-Nexus-Desktop.bat` and the **2.0** restore helper before enabling automatic startup or shell replacement.
+3. Extract the full `Nexus-Shell-2.1.0-win-x64.zip` into a separate version folder. Close the older Nexus before launching the new one.
+4. Snapshot the VM, start `Launch-Nexus.bat` in preview, then follow `CONTROL-CENTER-2.1.0.md` in the compiled folder (or docs/CONTROL-CENTER-2.1.0.md in source).
+5. Test supervised takeover using `Launch-Nexus-Desktop.bat`, the current restore helper, and the existing MAJOR-2.0.0.md regressions before enabling automatic startup or shell replacement.
 
-All visuals and native recovery need new Windows acceptance. The earlier 1.8 test report does not certify this 2.0 build. Keep the old build and VM snapshot available.
+The Source and Patch ZIPs contain no executable. The reported 2.0 test pass and the portable 2.1 checks do not certify this Windows build. Wi-Fi/Bluetooth controls need real or passed-through adapters; unsupported VM brightness and absent radios should produce capability messages.
