@@ -70,7 +70,8 @@ internal sealed class DesktopSurface : Grid
     }
     private void RefreshClock()
     {
-        _weekday.Text = DateTime.Now.ToString("dddd"); _day.Text = DateTime.Now.ToString("d"); _month.Text = DateTime.Now.ToString("MMM yyyy");
+        var now = DateTime.Now; _weekday.Text = now.ToString("dddd"); _day.Text = now.ToString("dd"); _month.Text = now.ToString("MMM yyyy");
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_calendar, now.ToString("D") + ". Today's tasks. Open Study.");
     }
     private void BuildCalendar()
     {

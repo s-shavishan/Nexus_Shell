@@ -1,0 +1,106 @@
+Nexus Shell 2.1.1 — captured Linux source/API checks
+Windows native build and VM acceptance pending.
+
+Runtime compilation
+Exit code: 0
+(no diagnostics)
+
+Nexus.Core compilation
+Exit code: 0
+(no diagnostics)
+
+Nexus.DesktopHost compilation
+Exit code: 0
+(no diagnostics)
+
+Nexus.Core.Checks compilation
+Exit code: 0
+(no diagnostics)
+
+Nexus.Runtime.Checks compilation
+Exit code: 0
+(no diagnostics)
+
+Shell-API compilation
+Exit code: 0
+warning CS1701: Assuming assembly reference 'System.Runtime, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a' used by 'Microsoft.WinUI' matches identity 'System.Runtime, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a' of 'System.Runtime', you may need to supply runtime policy
+warning CS1701: Assuming assembly reference 'System.Runtime, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a' used by 'Microsoft.InteractiveExperiences.Projection' matches identity 'System.Runtime, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a' of 'System.Runtime', you may need to supply runtime policy
+warning CS1702: Assuming assembly reference 'Microsoft.Windows.SDK.NET, Version=10.0.17763.38, Culture=neutral, PublicKeyToken=31bf3856ad364e35' used by 'Microsoft.WinUI' matches identity 'Microsoft.Windows.SDK.NET, Version=10.0.19041.38, Culture=neutral, PublicKeyToken=31bf3856ad364e35' of 'Microsoft.Windows.SDK.NET', you may need to supply runtime policy
+warning CS1701: Assuming assembly reference 'System.Numerics.Vectors, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a' used by 'Microsoft.InteractiveExperiences.Projection' matches identity 'System.Numerics.Vectors, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a' of 'System.Numerics.Vectors', you may need to supply runtime policy
+warning CS1701: Assuming assembly reference 'WinRT.Runtime, Version=2.1.0.0, Culture=neutral, PublicKeyToken=99ea127f02d97709' used by 'Microsoft.WinUI' matches identity 'WinRT.Runtime, Version=2.2.0.0, Culture=neutral, PublicKeyToken=99ea127f02d97709' of 'WinRT.Runtime', you may need to supply runtime policy
+warning CS1702: Assuming assembly reference 'Microsoft.Windows.SDK.NET, Version=10.0.17763.38, Culture=neutral, PublicKeyToken=31bf3856ad364e35' used by 'Microsoft.InteractiveExperiences.Projection' matches identity 'Microsoft.Windows.SDK.NET, Version=10.0.19041.38, Culture=neutral, PublicKeyToken=31bf3856ad364e35' of 'Microsoft.Windows.SDK.NET', you may need to supply runtime policy
+/workspace/scratch/0521938f28ac/validation-tools/checks/XamlFields.cs(2,366): warning CS0414: The field 'MainWindow.FooterRow' is assigned but its value is never used
+/workspace/scratch/0521938f28ac/validation-tools/checks/XamlFields.cs(2,5043): warning CS0414: The field 'MainWindow.ProfileConfigureButton' is assigned but its value is never used
+/workspace/scratch/0521938f28ac/validation-tools/checks/XamlFields.cs(1,138): warning CS0414: The field 'App.NexusButtonRoot' is assigned but its value is never used
+/workspace/scratch/0521938f28ac/validation-tools/checks/XamlFields.cs(2,6445): warning CS0414: The field 'MainWindow.HomeOverviewButton' is assigned but its value is never used
+/workspace/scratch/0521938f28ac/validation-tools/checks/XamlFields.cs(1,341): warning CS0414: The field 'App.PointerOver' is assigned but its value is never used
+/workspace/scratch/0521938f28ac/validation-tools/checks/XamlFields.cs(1,469): warning CS0414: The field 'App.Disabled' is assigned but its value is never used
+/workspace/scratch/0521938f28ac/validation-tools/checks/XamlFields.cs(2,291): warning CS0414: The field 'MainWindow.ChromeRow' is assigned but its value is never used
+/workspace/scratch/0521938f28ac/validation-tools/checks/XamlFields.cs(1,536): warning CS0414: The field 'App.NexusButtonChrome' is assigned but its value is never used
+/workspace/scratch/0521938f28ac/validation-tools/checks/XamlFields.cs(1,213): warning CS0414: The field 'App.CommonStates' is assigned but its value is never used
+/workspace/scratch/0521938f28ac/validation-tools/checks/XamlFields.cs(1,695): warning CS0414: The field 'App.NexusButtonContent' is assigned but its value is never used
+/workspace/scratch/0521938f28ac/validation-tools/checks/XamlFields.cs(1,407): warning CS0414: The field 'App.Pressed' is assigned but its value is never used
+/workspace/scratch/0521938f28ac/validation-tools/checks/XamlFields.cs(1,612): warning CS0414: The field 'App.NexusHoverWash' is assigned but its value is never used
+/workspace/scratch/0521938f28ac/validation-tools/checks/XamlFields.cs(1,280): warning CS0414: The field 'App.Normal' is assigned but its value is never used
+
+core-run
+Exit code: 0
+PASS: Windows Pro capability, backup-before-policy, upgrade rollback, foreign-policy preservation, partial recovery retry, file I/O/filtering/bounds, restart/heartbeat policy.
+PASS: session takeover/restoration, durable visibility and work-area recovery, refused journal writes, reused handles, denied-policy recovery and denied-policy handling.
+PASS: dock identity, stable order, title changes, 130-window overflow, handle reuse, removal and auto-hide/reveal/fullscreen policy.
+PASS: dock motion transitions/initial discovery, rapid state sequence, preview pointer corridor/aspect fit and preference persistence.
+PASS: 1008 floating/appbar/menu placement and work-area cases across monitor origins, DPI and overflow; settings migration and persistence.
+PASS: desktop session saves after Sections closes/reopens, ordered/final writes, scaled Start bounds, native appbar layout and desktop shortcuts.
+PASS: unchanged work-area writes, failed-update retry, persistent visual profiles, scaled Quick Settings and brightness range validation.
+PASS: Explore migration, capture, note/tag search, persistent selection, independent snapshots, archive round-trip, reference deduplication, atomic import capacity and note launch exclusion.
+PASS: separate-space references, case-sensitive URLs, null imported fields, damaged/missing settings recovery, final-save ordering and atomic oversized-save rejection.
+PASS: decimal calculator/error recovery, shared notes/pins/stale edits, metadata file sorting, history commit, fullscreen priority, Spotlight placement and theme aliases.
+PASS: PC CPU counter semantics, bounded monitor layouts, stale-window rejection and workspace recovery.
+PASS: Aura palette contrast, safe default and glass preference persistence.
+PASS: navigation branching/bounds, categorized search, live recent resolution, privacy opt-out and personalization migration.
+PASS: timing, paused recovery, command search, legacy migration, bounded workspace data, JSON round-trip, and independent snapshots.
+PASS: 66 Start-key checks; standalone left/right Win, repeats, native chords, injected input, secure-desktop resync and native input layout. Actual input routing requires Windows acceptance.
+PASS: 31 startup checks; supervised/legacy launch, folder selection, foreign-entry preservation, conflict refusal, switcher fallback, and policy-account binding.
+PASS: 80 major desktop checks; minimized-caption recovery/ownership, bounded notifications, Launchpad paging/filtering and menu-bar geometry.
+PASS: desktop migration, bounded profiles, launch-plan deduplication, nested snapshots, native structure layout, and atomic persistence.
+
+runtime-run
+Exit code: 0
+PASS: durable revisions, profile writer lease, failed writes, legacy migration, lost acknowledgements, and recovery-copy discovery.
+PASS: 30 simulated isolated picker crashes, browser reuse, cancellation, readiness/heartbeat timeouts, process bounds, and restart cooldown.
+PASS: 98 settings assertions; allowlist, stale epochs, timeouts, cancellation, bounded final intents, routes, persistence and x64 native layouts. Hardware calls require Windows VM acceptance.
+PASS: production stream connection, framed state commit, role rejection, disconnect cancellation, empty-probe handling, and invalid/truncated frame rejection (OS transport replaced).
+SKIP: actual named-pipe tests explicitly disabled for this restricted test environment.
+SKIP: Windows job cleanup and external-app breakaway require Windows.
+SKIP: native settings reads and HWND ownership require Windows.
+PASS: 101 runtime assertions; durable state, uncertain-save reconciliation, caller cancellation, and simulated Files recovery. Native checks skipped: True.
+
+powershell-parse
+Exit code: 0
+PASS: all PowerShell scripts parse.
+
+Source validation
+Exit code: 0
+XML OK: src/Nexus.Shell/MainWindow.xaml
+XML OK: src/Nexus.Shell/App.xaml
+XML OK: src/Nexus.Shell/Nexus.Shell.csproj
+XML OK: src/Nexus.Shell/app.manifest
+XML OK: NuGet.Config
+XAML content ordering OK
+Native runtime template XML OK: 9 templates
+Desktop WinRT event compatibility OK
+WinUI sealed Border inheritance OK
+WinUI Thickness constructors OK
+C# UI brush resources OK
+Native vector assets and publish wiring OK
+Cached wallpaper assets and publish wiring OK
+Independent desktop ownership, Sections lifetime and CI versions OK
+Nexus desktop mode, Files/pickers, switcher, host recovery and build/update ownership OK
+Interop imports OK
+Native Windows combinations, standalone Start routing and cleanup ownership OK
+Native utility lifetime, material fallback and own-window minimize wiring OK
+Isolated Files ownership, shared runtime projects, Core publish and update ownership OK
+Runtime project lock version OK
+Core-owned control service, settings routes, command buffer and invalid-target regression wiring OK
+PASS: 111 project files, 140 named elements, 70 handlers, resources, icon, JSON, and build references.
+C# / XAML compilation and Windows launch still required.

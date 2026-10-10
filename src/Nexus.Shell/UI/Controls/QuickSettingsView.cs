@@ -317,6 +317,10 @@ internal sealed class QuickSettingsView : Grid, IDisposable
         Preference(desktop, "Desktop clock", () => state.ShowClockWidget, value => state.ShowClockWidget = value);
         Preference(desktop, "Space widget", () => state.ShowSpaceWidget, value => state.ShowSpaceWidget = value);
         Preference(desktop, "Quiet Nexus alerts", () => state.QuietNotifications, value => state.QuietNotifications = value);
+        var signIn = Card("Desktop at sign-in", _environment.IsManagedDesktop
+            ? "Nexus is managing this desktop session. Sign-in replacement and startup alongside Windows are separate choices."
+            : "This is a preview alongside Windows. Use session mode to give the standalone Windows key to Nexus Launchpad.");
+        signIn.Children.Add(ActionButton("Review startup and sign-in setup…", () => _environment.ShowSections("Personalize")));
     }
     private void Advanced() => _environment.OpenAdvancedWindowsSettings(_section switch
     { "Sound" => "ms-settings:sound", "Network" => "ms-settings:network-status", "Bluetooth" => "ms-settings:bluetooth", "Display" => "ms-settings:display", "Power" => "ms-settings:powersleep", _ => "ms-settings:" });

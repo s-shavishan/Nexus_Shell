@@ -8,6 +8,8 @@ namespace Nexus.Shell.Interop;
 internal sealed class DesktopIntegration : IDisposable
 {
     internal const uint SummonMessage = 0x8000 + 41;
+    internal const uint LaunchpadMessage = 0x8000 + 43;
+    internal const uint StartUnavailableMessage = 0x8000 + 44;
     private const uint TrayMessage = 0x8000 + 42;
     private const uint SubclassId = 0x4E58;
     private readonly IntPtr _window;
@@ -96,6 +98,8 @@ internal sealed class DesktopIntegration : IDisposable
             if (!_disposed)
             {
                 if (message == SummonMessage) { _dispatch("show"); return IntPtr.Zero; }
+                if (message == LaunchpadMessage) { _dispatch("start"); return IntPtr.Zero; }
+                if (message == StartUnavailableMessage) { _dispatch("start-unavailable"); return IntPtr.Zero; }
                 if (message == TrayMessage)
                 {
                     uint action = unchecked((uint)lParam.ToInt64()); // legacy icon callback, deliberately no NIM_SETVERSION

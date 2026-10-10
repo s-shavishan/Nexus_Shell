@@ -9,6 +9,8 @@
   <ItemGroup>
     <ProjectReference Include="../../src/Nexus.Runtime/Nexus.Runtime.csproj" />
     <Compile Include="../../src/Nexus.Shell/Services/NexusStartupPolicy.cs" Link="NexusStartupPolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/StartKeyGesture.cs" Link="StartKeyGesture.cs" />
+    <Compile Include="../../src/Nexus.Shell/Interop/StartKeyRouter.cs" Link="StartKeyRouter.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/WindowSwitcherPolicy.cs" Link="WindowSwitcherPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DesktopPolicyRequest.cs" Link="DesktopPolicyRequest.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/MinimizedWindowPolicy.cs" Link="MinimizedWindowPolicy.cs" />

@@ -1,8 +1,17 @@
-# Nexus Shell 2.1.0 — Core settings and Control Center
+# Nexus Shell 2.1.1 — Launchpad and sign-in setup
 
-Nexus is a native C# / WinUI desktop environment on Windows. This update addresses the five desktop crashes in the supplied Windows 10 logs and moves everyday device controls into the existing per-user Nexus Core service. Control Center is a desktop surface; this release adds no standalone application.
+Nexus is a native C# / WinUI desktop environment on Windows. The existing Core-backed Control Center remains included. This focused update routes a standalone Windows key to Nexus Launchpad in managed sessions, exposes sign-in policy conflicts before setup, and corrects the clipped calendar date.
 
-## Changes in 2.1
+## Changes in 2.1.1
+
+- **Start key:** standalone left/right Windows keys toggle Nexus Launchpad in managed desktop mode. Native combinations pass through. Injection denial preserves the physical key-up; the dock button remains available.
+- **Sign-in setup:** active policy and recovery ownership are shown before replacement. Windows command casing/outer whitespace no longer create a false conflict. Unmatched policies and their recovery records are retained.
+- **Read-only diagnosis:** `Inspect-Nexus-Startup.bat` reports shell policy, startup and recovery values. Startup alongside Windows and replacement of Explorer after authentication are explained separately.
+- **Calendar:** a two-digit day fits its day column; the full date is available to accessibility.
+
+Follow [Start/sign-in acceptance](docs/START-AND-SIGNIN-2.1.1.md). The uploaded 2.1 logs establish a sign-in policy mismatch but do not include its current value. The VM conflict needs that value before it can be resolved safely. Native input masking and rendering still need Windows acceptance.
+
+## Included Core settings update
 
 - **Glass lifecycle:** the failing default-configuration callback no longer calls back into the detached native target. Connection, tint, configuration and cleanup errors use a solid fallback. Queued callbacks check their backdrop owner before touching a window.
 - **Control Center:** six accessible sections with glass cards, a fixed navigation/header/footer, scrolling content, inline device messages and monitor-bounded placement.
@@ -35,11 +44,13 @@ dotnet run --project tests/Nexus.Runtime.Checks/Nexus.Runtime.Checks.csproj -c R
 .\scripts\package.ps1
 ```
 
-CI publishes `Nexus-Shell-2.1.0-win-x64.zip` and the smaller update ZIP. Keep the complete published folder together, including Nexus.Shell, DesktopHost, Core, Nexus.Runtime and compiled UI resources. See [source patch routes](SOURCE-PATCH.md) and [start here](START-HERE.md).
+CI publishes `Nexus-Shell-2.1.1-win-x64.zip` and the smaller update ZIP. Keep the complete published folder together, including Nexus.Shell, DesktopHost, Core, Nexus.Runtime and compiled UI resources. See [source patch routes](SOURCE-PATCH.md) and [start here](START-HERE.md).
 
 ## Validation
 
-The uploaded 2.0 logs show five backdrop callback exceptions and matching native exits, six failed Windows Settings activations, and healthy durable Core revisions. The valid settings/backup files provide no evidence of settings corruption; the logs do not establish the cause of Windows' activation failure. Source/API and portable checks are recorded in [2.1 validation evidence](docs/CONTROL-CHECKS-2.1.0.md). Native XAML compilation, device APIs, Explorer-independent use, glass rendering and sustained stability still require [Windows VM acceptance](docs/CONTROL-CENTER-2.1.0.md).
+The uploaded 2.1 sample contains two sign-in policy refusals, healthy Core revision loads and an intentional Return-to-Windows exit (20); it contains no new unhandled UI exception. Settings and backup parse at revisions 8 and 7. This short sample does not establish sustained stability. Source/API and portable checks are recorded in [2.1.1 validation evidence](docs/START-CHECKS-2.1.1.md). Native XAML compilation, input delivery, Explorer-independent sign-in, glass rendering and device behavior require [Windows VM acceptance](docs/START-AND-SIGNIN-2.1.1.md).
+
+The [proposed Nexus 3.0 desktop pack](docs/NEXT-DESKTOP-PACK.md) is a roadmap, not included functionality. Its first milestone is independently recoverable shell panels.
 
 ## Session foundation
 

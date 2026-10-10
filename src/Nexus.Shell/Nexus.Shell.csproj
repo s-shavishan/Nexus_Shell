@@ -20,7 +20,7 @@
     <PublishTrimmed>false</PublishTrimmed>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>2.1.0</Version>
+    <Version>2.1.1</Version>
     <Product>White Dreams Nexus Shell</Product>
     <Description>Nexus desktop shell, native file browsing and Windows-backed system controls.</Description>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
@@ -57,6 +57,6 @@
        Stop with an explicit cleanup instruction before either C# compile pass. -->
   <Target Name="NexusRetiredShortcutGuard" BeforeTargets="XamlPreCompile;CoreCompile">
     <Error Condition="Exists('$(MSBuildProjectDirectory)/Interop/ShellKeyboardHook.cs')"
-           Text="Remove Interop/ShellKeyboardHook.cs from the source tree. It is a retired global-shortcut hook; Windows owns native desktop shortcuts." />
+           Text="Remove Interop/ShellKeyboardHook.cs from the source tree. It is a retired global-shortcut hook; Windows owns native key combinations." />
   </Target>
 </Project>

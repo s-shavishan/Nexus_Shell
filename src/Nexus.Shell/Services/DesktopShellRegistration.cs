@@ -52,6 +52,7 @@ public sealed class WindowsDesktopSettings : IUserDesktopSettings
     }
 }
 public sealed record DesktopShellBackup(int Format, string Command, ShellRegistryValue? PreviousShell, ShellRegistryValue? PreviousStartup);
+public sealed record DesktopSignInStatus(ShellRegistryValue? Current, bool Selected, bool Owned, bool Conflict, bool HasRecovery);
 public sealed class DesktopShellRegistration(IUserDesktopSettings settings, string backupPath)
 {
     public static string DefaultBackupPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WhiteDreams", "NexusShell", "desktop-shell-backup.json");
@@ -87,15 +88,23 @@ public sealed class DesktopShellRegistration(IUserDesktopSettings settings, stri
     }
     private static bool ExplorerDefault(ShellRegistryValue? value) => value is null || value.Text.Trim().Trim('"').Equals("explorer.exe", StringComparison.OrdinalIgnoreCase)
         || value.Text.Trim().Trim('"').Equals(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe"), StringComparison.OrdinalIgnoreCase);
-    public bool Uses(string hostPath) => settings.Shell?.Text == CommandFor(hostPath);
-    public bool OwnsCurrentSetting => ReadBackup() is { } backup && settings.Shell?.Text == backup.Command;
+    private static bool SameCommand(string? left, string? right) => left is not null && right is not null
+        && left.Trim().Equals(right.Trim(), StringComparison.OrdinalIgnoreCase);
+    public bool Uses(string hostPath) => SameCommand(settings.Shell?.Text, CommandFor(hostPath));
+    public bool OwnsCurrentSetting => ReadBackup() is { } backup && SameCommand(settings.Shell?.Text, backup.Command);
+    public DesktopSignInStatus Inspect(string hostPath)
+    {
+        var current = settings.Shell; var backup = ReadBackup();
+        bool owned = backup is not null && SameCommand(current?.Text, backup.Command);
+        return new(current, SameCommand(current?.Text, CommandFor(hostPath)), owned, !owned && !ExplorerDefault(current), backup is not null);
+    }
     public void Enable(string hostPath, DesktopCapabilities capabilities)
     {
         if (!capabilities.SupportsCustomInterface) throw new NotSupportedException("Desktop sign-in requires a supported Windows Pro, Enterprise or Education edition.");
         if (!File.Exists(hostPath)) throw new FileNotFoundException("The published Nexus desktop host is missing.", hostPath);
         string command = CommandFor(hostPath); var prior = ReadBackup(); var current = settings.Shell; var startup = settings.NexusStartup;
-        bool ours = prior is not null && current?.Text == prior.Command;
-        if (!ours && !ExplorerDefault(current)) throw new InvalidOperationException("Another custom desktop is configured. Nexus will not replace its policy.");
+        bool ours = prior is not null && SameCommand(current?.Text, prior.Command);
+        if (!ours && !ExplorerDefault(current)) throw new InvalidOperationException("The current sign-in shell does not match the saved Nexus recovery record. Review the current command in Personalize or run Inspect-Nexus-Startup.bat before changing sign-in. The existing policy was retained.");
         var backup = ours ? prior! with { Command = command } : new DesktopShellBackup(1, command, current, settings.NexusStartup);
         // Write recovery data before changing sign-in. Only this user's two values are touched.
         SaveBackup(backup);
@@ -104,7 +113,7 @@ public sealed class DesktopShellRegistration(IUserDesktopSettings settings, stri
         {
             try
             {
-                if (settings.Shell?.Text == command) settings.Shell = current;
+                if (SameCommand(settings.Shell?.Text, command)) settings.Shell = current;
                 if (settings.NexusStartup is null) settings.NexusStartup = startup;
                 // A failed path update must leave recovery pointing at the still-active host.
                 if (ours && prior is not null && settings.Shell == current) SaveBackup(prior);
@@ -120,7 +129,7 @@ public sealed class DesktopShellRegistration(IUserDesktopSettings settings, stri
         var current = settings.Shell;
         if (current != backup.PreviousShell)
         {
-            if (current?.Text != backup.Command) throw new InvalidOperationException("The desktop policy changed after Nexus was configured; recovery will not overwrite it.");
+            if (!SameCommand(current?.Text, backup.Command)) throw new InvalidOperationException("The desktop policy changed after Nexus was configured; recovery will not overwrite it.");
             settings.Shell = backup.PreviousShell;
         }
         if (settings.NexusStartup is null) settings.NexusStartup = backup.PreviousStartup;

@@ -10,6 +10,7 @@ internal static class StartupChecks
     }
     internal static void Run()
     {
+        StartKeyChecks.Run();
         int count = 0;
         void Check(bool result, string message) { count++; if (!result) throw new Exception(message); }
         string folder = Path.Combine(Path.GetTempPath(), "Nexus-startup-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(folder);
@@ -66,6 +67,24 @@ internal static class StartupChecks
             rejected = false;
             try { DesktopPolicyRequest.Parse(["--policy-action","anything","--user-sid","S-1-5-21-100"]); } catch (ArgumentException) { rejected = true; }
             Check(rejected,"Reject undeclared helper actions.");
+            string recovery = Path.Combine(folder, "sign-in.json");
+            var registration = new DesktopShellRegistration(settings, recovery);
+            settings.Shell = new("explorer.exe"); settings.NexusStartup = null;
+            var initial = registration.Inspect(host);
+            Check(!initial.Conflict && !initial.Owned && !initial.Selected && !initial.HasRecovery, "Default Explorer policy needs no conflict repair.");
+            registration.Enable(host, new(true, "Professional", 19045));
+            settings.Shell = new("  " + DesktopShellRegistration.CommandFor(host).ToUpperInvariant() + "  ");
+            var existing = registration.Inspect(host);
+            Check(existing.Selected && existing.Owned && !existing.Conflict && existing.HasRecovery, "Windows command casing/outer whitespace must not create a false foreign-policy conflict.");
+            registration.Enable(host, new(true, "Professional", 19045));
+            Check(registration.Restore() && settings.Shell?.Text == "explorer.exe", "Case-normalized ownership still restores the original exact value.");
+            settings.Shell = new("foreign-shell.exe"); var foreignStatus = registration.Inspect(host);
+            Check(foreignStatus.Conflict && !foreignStatus.Owned && !foreignStatus.Selected, "A foreign policy must be reported before requesting changes.");
+            string savedRecovery = File.ReadAllText(recovery); rejected = false;
+            try { registration.Enable(host, new(true, "Professional", 19045)); } catch (InvalidOperationException) { rejected = true; }
+            Check(rejected && settings.Shell.Text == "foreign-shell.exe" && File.ReadAllText(recovery) == savedRecovery, "Conflict inspection must never overwrite a foreign shell or its recovery record.");
+            File.Delete(recovery); settings.Shell = new(DesktopShellRegistration.CommandFor(host));
+            Check(registration.Inspect(host) is { Selected: true, Conflict: true, Owned: false, HasRecovery: false }, "A selected Nexus executable alone is not proof of recovery ownership.");
             Console.WriteLine("PASS: " + count + " startup checks; supervised/legacy launch, folder selection, foreign-entry preservation, conflict refusal, switcher fallback, and policy-account binding.");
         }
         finally { Directory.Delete(folder,true); }

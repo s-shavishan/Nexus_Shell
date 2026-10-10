@@ -50,6 +50,7 @@ internal sealed partial class DesktopEnvironment
     private NotificationWindow? _notifications;
     private MenuBarWindow? _topBar;
     private DesktopIntegration? _integration;
+    private StartKeyRouter? _startKey;
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(5) };
     private readonly DispatcherTimer _saveTimer = new() { Interval = TimeSpan.FromSeconds(2) };
     private readonly CancellationTokenSource _cancel = new();
@@ -95,13 +96,16 @@ internal sealed partial class DesktopEnvironment
             {
                 if (IsStopping) return;
                 if (command == "exit") RequestExit(); else if (command == "search") ShowMenu(true);
+                else if (command == "start") ShowMenu();
+                else if (command == "start-unavailable") Report("Windows-key routing is unavailable in this context. Use Launchpad in the Nexus dock.");
                 else if (command == "show") ShowDesktop();
                 else if (command == "tray-lost") Report("The Windows notification icon is unavailable. The Nexus taskbar is still running.");
             }));
             RefreshIntegration(); Desktop.ShowSurface(); Taskbar.ShowBar();
+            if (IsManagedDesktop) _ = ConnectStartKeyAsync();
             _topBar.SetFullscreen(false);
             progress?.Invoke(StartupStep.Dock);
-            // Native Windows shortcuts are never intercepted. Events observe
+            // Native Windows key combinations pass through. Events observe
             // app lifecycle only; the five-second tick is a recovery fallback.
             try { _windowEvents = new(QueueWindowEvent, includeOwnProcess: true); }
             catch (Exception ex) { Report("Window notifications unavailable; the dock will use periodic refresh", ex); }
@@ -113,6 +117,11 @@ internal sealed partial class DesktopEnvironment
         catch { Shutdown(DesktopExitCode.Stop); throw; }
     }
     internal void SaveState() => Session.NotifyChanged();
+    private async Task ConnectStartKeyAsync()
+    {
+        try { _startKey = new StartKeyRouter(Desktop.Handle); await _startKey.Ready; if (!IsStopping) Log.Write("Standalone Windows key connected to Nexus Launchpad"); }
+        catch (Exception error) { if (!IsStopping) Report("The Windows key could not connect to Launchpad. Use its dock button", error); _startKey?.Dispose(); }
+    }
     private void SessionChanged()
     {
         if (IsStopping) return;
@@ -489,6 +498,7 @@ internal sealed partial class DesktopEnvironment
         foreach (var utility in _utilities.Values.ToArray()) Cleanup(utility.Close); _utilities.Clear();
         Cleanup(() => _switcher?.Close()); _switcher = null;
         Cleanup(() => _windowEvents?.Dispose()); _windowEvents = null;
+        Cleanup(() => _startKey?.Dispose()); _startKey = null;
         Cleanup(() => _integration?.Dispose()); _integration = null;
         // Keep the desktop alive until the bounded final save completes.
         try { await Session.SaveFinalAsync().WaitAsync(TimeSpan.FromSeconds(8)); }

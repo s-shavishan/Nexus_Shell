@@ -38,7 +38,7 @@ required = [
     "Services/CoreProcessSession.cs", "Desktop/FilesEnvironment.cs",
     "Desktop/StartupWindow.cs", "Services/NexusStartupPolicy.cs", "Services/WindowSwitcherPolicy.cs",
     "Desktop/MenuBarWindow.cs", "Desktop/NotificationWindow.cs", "UI/Desktop/MenuBarView.cs",
-    "UI/LiquidGlassBackdrop.cs", "UI/WindowTransition.cs", "Services/LaunchpadCatalog.cs",
+    "UI/LiquidGlassBackdrop.cs", "UI/WindowTransition.cs", "Services/LaunchpadCatalog.cs", "Services/StartKeyGesture.cs", "Interop/StartKeyRouter.cs",
     "Services/MinimizedWindowPolicy.cs", "Services/NotificationInbox.cs",
     "Services/DesktopPolicyRequest.cs", "Services/DesktopPolicyElevation.cs", "Services/StartupStep.cs",
 ]
@@ -232,7 +232,7 @@ closed = code[code.index("private void Window_Closed("):]
 assert "SaveFinal(" not in closed and "DetachSnapshot(" in closed, "Closing Sections must not finalize the desktop session"
 for file in [root / "appveyor.yml", root / ".github/workflows/build-windows.yml", root / "scripts/package.ps1", root / "scripts/build.ps1"]:
     body = file.read_text()
-    assert "Nexus-Shell-2.1.0" in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
+    assert "Nexus-Shell-2.1.1" in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
 print("Independent desktop ownership, Sections lifetime and CI versions OK")
 # Desktop replacement cannot silently instantiate Explorer or common picker UI.
 environment = (project / "Desktop/DesktopEnvironment.cs").read_text()
@@ -271,17 +271,23 @@ for source in project.rglob("*.cs"):
         assert "using Nexus.Shell.Interop;" in body or "Interop.NativeMethods." in body, f"Missing interop import: {source}"
 print("Interop imports OK")
 
-# Global shortcuts belong to Windows. A leftover hook file would also compile
-# against removed key-state types, so check the whole tree rather than one caller.
+# Native combinations belong to Windows. Only the standalone Start-key router
+# may install a hook; a leftover general shortcut hook still fails validation.
 assert not (project / "Interop/ShellKeyboardHook.cs").exists(), (
     "Remove src/Nexus.Shell/Interop/ShellKeyboardHook.cs from the repository. "
     "It was retired; overlaying a new Source ZIP does not delete old files."
 )
 for source in project.rglob("*.cs"):
+    if source == project / "Interop/StartKeyRouter.cs":
+        continue
     assert not re.search(r"\b(?:SetWindowsHookEx|RegisterHotKey|ShellKeyboardState|ShellKeyAction)\b", source.read_text()), (
         f"Global shortcut interception remains: {source.relative_to(root)}"
     )
-print("Native Windows shortcut ownership OK")
+start_router = (project / "Interop/StartKeyRouter.cs").read_text()
+assert "CallNextHookEx" in start_router and "sent == inputs.Length" in start_router and "StartKeyGesture" in start_router
+assert "if (IsManagedDesktop) _ = ConnectStartKeyAsync()" in environment
+assert "_startKey?.Dispose()" in environment
+print("Native Windows combinations, standalone Start routing and cleanup ownership OK")
 
 for relative in ["Desktop/FilesWindow.cs", "Desktop/UtilityWindow.cs", "MainWindow.xaml.cs"]:
     assert "presenter.Minimize()" in (project / relative).read_text(), f"Native minimize must remain available: {relative}"
