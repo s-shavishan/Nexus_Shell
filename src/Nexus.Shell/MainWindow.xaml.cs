@@ -70,7 +70,7 @@ public sealed partial class MainWindow : Window
             _appWindow.MoveAndResize(new RectInt32(workArea.X + (workArea.Width - initialWidth) / 2,
                 workArea.Y + (workArea.Height - initialHeight) / 2, initialWidth, initialHeight));
             if (_appWindow.Presenter is OverlappedPresenter presenter) presenter.SetBorderAndTitleBar(false, false);
-            _chrome = new(_handle, resizable: true, tuck: Minimize);
+            _chrome = new(_handle, resizable: true);
             var icon = Path.Combine(AppContext.BaseDirectory, "Assets", "Nexus.ico");
             if (File.Exists(icon)) _appWindow.SetIcon(icon);
             DisplayNameBox.Text = _state.DisplayName;
@@ -579,9 +579,8 @@ public sealed partial class MainWindow : Window
     private void Minimize()
     {
         if (_state.FullScreen) SetFullScreen(false);
-        // Nexus's taskbar already retains this window. Tuck it away directly
-        // instead of asking Windows to draw a legacy minimized-window icon.
-        _motion?.SetEnabled(false); _appWindow.Hide();
+        _motion?.SetEnabled(false);
+        if (_appWindow.Presenter is OverlappedPresenter presenter) presenter.Minimize();
         _environment.UpdateTaskbar();
     }
     internal void ToggleFromDock()

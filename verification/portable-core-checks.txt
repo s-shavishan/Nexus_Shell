@@ -1,0 +1,15 @@
+PASS: Windows Pro capability, backup-before-policy, upgrade rollback, foreign-policy preservation, partial recovery retry, file I/O/filtering/bounds, restart/heartbeat policy.
+PASS: session takeover/restoration, durable visibility and work-area recovery, refused journal writes, reused handles, denied-policy recovery and denied-policy handling.
+PASS: dock identity, stable order, title changes, 130-window overflow, handle reuse, removal and auto-hide/reveal/fullscreen policy.
+PASS: dock motion transitions/initial discovery, rapid state sequence, preview pointer corridor/aspect fit and preference persistence.
+PASS: 1008 floating/appbar/menu placement and work-area cases across monitor origins, DPI and overflow; settings migration and persistence.
+PASS: desktop session saves after Sections closes/reopens, ordered/final writes, scaled Start bounds, native appbar layout and desktop shortcuts.
+PASS: unchanged work-area writes, failed-update retry, persistent visual profiles, scaled Quick Settings and brightness range validation.
+PASS: Explore migration, capture, note/tag search, persistent selection, independent snapshots, archive round-trip, reference deduplication, atomic import capacity and note launch exclusion.
+PASS: separate-space references, case-sensitive URLs, null imported fields, damaged/missing settings recovery, final-save ordering and atomic oversized-save rejection.
+PASS: decimal calculator/error recovery, shared notes/pins/stale edits, metadata file sorting, history commit, fullscreen priority, Spotlight placement and theme aliases.
+PASS: PC CPU counter semantics, bounded monitor layouts, stale-window rejection and workspace recovery.
+PASS: Aura palette contrast, safe default and glass preference persistence.
+PASS: navigation branching/bounds, categorized search, live recent resolution, privacy opt-out and personalization migration.
+PASS: timing, paused recovery, command search, legacy migration, bounded workspace data, JSON round-trip, and independent snapshots.
+PASS: desktop migration, bounded profiles, launch-plan deduplication, nested snapshots, native structure layout, and atomic persistence.

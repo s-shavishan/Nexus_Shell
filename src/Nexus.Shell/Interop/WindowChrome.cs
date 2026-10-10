@@ -19,6 +19,7 @@ internal sealed class WindowChrome : IDisposable
     [DllImport("dwmapi.dll")] private static extern int DwmSetWindowAttribute(IntPtr window, uint attribute, ref int value, uint size);
     private readonly IntPtr _handle;
     private readonly bool _resizable, _customClip;
+    private readonly int _minimumWidth, _minimumHeight;
     private readonly Action? _tuck;
     private readonly ShellLayerInterop.SubclassProc _callback;
     private readonly UIntPtr _id = new(0x4E10);
@@ -26,8 +27,9 @@ internal sealed class WindowChrome : IDisposable
     private (ShellRect Rectangle, int Diameter, bool Clear)? _applied;
     private double _radius = 18;
     private bool _fullscreen, _disposed, _applying, _reported, _regionsEnabled = true;
-    internal WindowChrome(IntPtr handle, bool resizable = false, bool customClip = false, Action? tuck = null)
+    internal WindowChrome(IntPtr handle, bool resizable = false, bool customClip = false, Action? tuck = null, int minimumWidth = 480, int minimumHeight = 360)
     {
+        _minimumWidth = Math.Max(160, minimumWidth); _minimumHeight = Math.Max(160, minimumHeight);
         _handle = handle; _resizable = resizable; _customClip = customClip; _tuck = tuck; _callback = Message;
         if (!ShellLayerInterop.SetWindowSubclass(handle, _callback, _id, UIntPtr.Zero)) throw new Win32Exception("Could not attach the Nexus window frame.");
         // DWMNCRP_DISABLED removes Windows 10's bright non-client outline.
@@ -96,7 +98,7 @@ internal sealed class WindowChrome : IDisposable
                     var monitor = ShellLayerInterop.Monitor(window); var info = Marshal.PtrToStructure<MinMaxInfo>(lp);
                     info.MaximumPosition = new() { X = monitor.Work.Left - monitor.Monitor.Left, Y = monitor.Work.Top - monitor.Monitor.Top };
                     info.MaximumSize = new() { X = monitor.Work.Right - monitor.Work.Left, Y = monitor.Work.Bottom - monitor.Work.Top };
-                    info.MinimumTrackSize = new() { X = Math.Min(info.MaximumSize.X, (int)(480 * ShellLayerInterop.Scale(window))), Y = Math.Min(info.MaximumSize.Y, (int)(360 * ShellLayerInterop.Scale(window))) };
+                    info.MinimumTrackSize = new() { X = Math.Min(info.MaximumSize.X, (int)(_minimumWidth * ShellLayerInterop.Scale(window))), Y = Math.Min(info.MaximumSize.Y, (int)(_minimumHeight * ShellLayerInterop.Scale(window))) };
                     Marshal.StructureToPtr(info, lp, false); return IntPtr.Zero;
                 }
             }

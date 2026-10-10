@@ -47,7 +47,7 @@ internal sealed class TaskbarView : Grid
     private readonly Border _separator;
     private double _reportedWidth;
     internal event Action? PreferredWidthChanged;
-    internal double PreferredWidthDip => 416 + (_pins.Children.Count + _windows.Children.Count) * (_environment.Session.State.CompactDock ? 44 : 52);
+    internal double PreferredWidthDip => (_environment.Session.State.FloatingTaskbar ? 280 : 416) + (_pins.Children.Count + _windows.Children.Count) * (_environment.Session.State.CompactDock ? 44 : 52);
     private AcrylicBrush? _dockGlass;
     private bool _glassFailed;
     private MotionController? _motion;
@@ -98,8 +98,7 @@ internal sealed class TaskbarView : Grid
     }
     private Button IconButton(string icon, string title, Action action, bool retain = false)
     {
-        string glyph = icon switch { "Nexus" => "\uE80F", "Search" => "\uE721", "Windows" => "\uE7F4", "Settings" => "\uE713", _ => "" };
-        UIElement face = retain && glyph.Length > 0 ? new FontIcon { FontFamily = new FontFamily("Segoe MDL2 Assets"), Glyph = glyph, FontSize = 22 } : NexusIcons.Image(icon, 36);
+        UIElement face = NexusIcons.Image(icon, 36);
         var button = new Button { Content = face, Style = (Style)Application.Current.Resources["DockButton"], Width = 48, Height = 52 };
         button.Loaded += (_, _) => _motion?.AttachHover(button);
         button.Click += (_, _) => action(); ToolTipService.SetToolTip(button, title); Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, title);
@@ -152,7 +151,7 @@ internal sealed class TaskbarView : Grid
     private DockItem CreateWindowButton(RunningWindow window)
     {
         var item = new DockItem(window) { NewlyOpened = _baselineReconciled };
-        string icon = window.ProcessId == Environment.ProcessId ? window.Title == "Sections" ? "Apps" : "Files" : NexusIcons.ForProcess(window.ProcessName);
+        string icon = window.ProcessId == Environment.ProcessId ? window.Title switch { "Sections" => "Apps", "Notes" => "Note", "Calculator" => "Calculator", _ => "Files" } : NexusIcons.ForProcess(window.ProcessName);
         var face = new Grid(); var iconHost = new Grid(); item.Icon = NexusIcons.Image(icon, 32); iconHost.Children.Add(item.Icon); face.Children.Add(iconHost);
         item.Indicator = new Border { Width = 22, Height = 3, CornerRadius = new CornerRadius(2), VerticalAlignment = VerticalAlignment.Bottom, HorizontalAlignment = HorizontalAlignment.Center };
         face.Children.Add(item.Indicator);
@@ -263,7 +262,7 @@ internal sealed class TaskbarView : Grid
         // Keep Start and Quick Settings reachable on small/scaled displays.
         _search.Visibility = widthDip < 400 ? Visibility.Collapsed : Visibility.Visible;
         _overview.Visibility = widthDip < 440 ? Visibility.Collapsed : Visibility.Visible;
-        _clockButton.Visibility = widthDip < 480 ? Visibility.Collapsed : Visibility.Visible;
+        _clockButton.Visibility = widthDip < 480 || _environment.Session.State.FloatingTaskbar ? Visibility.Collapsed : Visibility.Visible;
         _desktopButton.Visibility = widthDip < 600 ? Visibility.Collapsed : Visibility.Visible;
         _date.Visibility = widthDip < 620 ? Visibility.Collapsed : Visibility.Visible;
     }
@@ -300,8 +299,7 @@ internal sealed class TaskbarView : Grid
         _frame.BorderBrush = theme.Brush("NexusBorder"); _frame.BorderThickness = new Thickness(theme.HighContrast ? 1 : 1);
         _separator.Background = theme.Brush("NexusBorder"); _time.Foreground = theme.Brush("NexusText"); _date.Foreground = theme.Brush("NexusMuted");
         _clockButton.Background = theme.Brush("NexusSelection");
-        foreach (var button in _iconButtons) { button.Background = theme.Brush("NexusSelection"); button.Foreground = theme.Brush("NexusText"); }
-        _start.Background = theme.Surface("Accent"); _start.Foreground = theme.Brush("NexusAccentText");
+        foreach (var button in _iconButtons) { button.Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent); button.Foreground = theme.Brush("NexusText"); }
         foreach (var item in _items.Values) item.State = null;
         RefreshWindowStates();
         ApplyDensity(); RefreshClock();

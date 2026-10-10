@@ -1,21 +1,35 @@
-# Nexus Shell 1.5.0 — motion and window previews
+# Nexus Shell 1.6.0 — Midnight Glass
 
-The dock now responds to real window state: a finite launch lift, arrival cue for newly opened windows, activation feedback, downward minimize cue and upward restore cue. Its active underline smoothly changes length and opacity inside a fixed layout slot. Hover and press run on a separate container, so state motion cannot overwrite them. Overview cards enter in a short stagger.
+A native C# / WinUI desktop surface for Windows, with an independent desktop, dock, launcher, file browser, Control Center and workspace window.
 
-Hover an open app for a window preview and restore, minimize, maximize/restore-size or close controls. The preview is an independent, non-activating window above the icon. Move into it across the gap, or press Down on a focused dock button / choose Window preview in its context menu for keyboard access. Escape dismisses it. The context menu exposes the same window commands. Close asks the app to close normally, including its own save prompts.
+This update follows the Midnight Glass reference: a night-mountain wallpaper, compact desktop menus, centered Spotlight launcher, colorful dock artwork, three-pane Files, floating Notes and Calculator, and a date/task card with your actual Study tasks.
 
-Balanced/Full use one native DWM thumbnail while a card is open. Fast and high contrast use the app icon, title and controls. Minimized/hidden windows also use a card. Protected apps can show blank contents. Toggle **Quick Settings → Dock hover previews** or **Sections → Personalize → Dock hover previews** to turn previews off. No screenshots are saved and closed previews keep no thumbnail. Motion respects Fast/Reduced effects, high contrast and Windows animation settings.
+## What changed
 
-Ember's burgundy surfaces, orange-to-rose accents, rounded sidebar/search and real workspace/resource cards remain. Desktop, dock, Start, Quick Settings, Files, window overview, previews and Sections are independent windows sharing state. Sections opens from its desktop shortcut. Floating mode reserves no work-area strip and retains maximize auto-hide / bottom-edge reveal.
+- **Files:** switch between grid and list, sort by name/date/size/type, navigate back and forward, filter the current folder, preview raster images, and inspect file metadata. Pickers still support single/multiple selection, folders and save destinations.
+- **Notes:** a floating editor with search, pinning and deletion confirmation. Board notes are shared with Explore; Quick note is shared with Study. Existing notes are preserved.
+- **Calculator:** decimal arithmetic, percent, sign, backspace, chained operations and repeated equals. Invalid calculations show a recoverable error.
+- **Control Center:** connection status, real audio and brightness controls, visual profiles, dock preferences and a Focus desktop action that hides desktop icons and the date/task card.
+- **Window reliability:** Files and Sections use native minimize. Own content-window notifications update the dock; utility windows participate in previews, overview, Show desktop and shutdown. Fullscreen takes priority over stale dock interaction holds.
+- **Themes:** canonicalize saved Graphite/Lagoon/Pearl aliases without resetting content. Each floating window owns its material and fallback.
 
-The host still hides Windows taskbars in managed session mode and restores Windows on exit. Explorer infrastructure, Windows services, recovery/startup/update implementation and dependency pins are preserved. Windows owns desktop shortcuts.
+Select **Sections → Personalize → Midnight Glass** if an existing saved theme is active. New installations use Midnight Glass by default. App icons are original Nexus vectors; Windows system dialogs and external application windows retain their own appearance.
 
-## Build and test
+## Build on Windows
 
-Apply one matching patch from [SOURCE-PATCH.md](SOURCE-PATCH.md), then commit/push for the Windows CI build. Routes cover GitHub main's 1.4.2 tree at `1cd328f83d28d606fe5e9da7250ee3d792725cd0` and prepared 1.4.3/1.4.4 source. Complete source is an alternative route. Source ZIPs contain no executable.
+Requires the existing .NET 8 SDK and Windows app build tools. Dependency versions are pinned in the project and lock file.
 
-Local source/XML/resource/ownership and C# syntax checks, unchanged palette contrast and exact patch/ZIP reconstruction checks are recorded separately from native execution. This Linux authoring environment has no .NET, WinUI or PowerShell runtime. Native build, .NET/Win32 checks, package checks and Windows/VirtualBox acceptance remain pending; performance is not claimed as measured.
+```powershell
+python scripts/validate-source.py
+dotnet run --project tests/Nexus.Core.Checks/Nexus.Core.Checks.csproj -c Release
+.\scripts\build.ps1 -UseMSBuild
+.\scripts\package.ps1
+```
 
-After CI succeeds, extract `Nexus-Shell-1.5.0-win-x64.zip` into a fresh folder and exit the old Nexus before launching it. Compare Fast and Balanced and complete [motion and preview acceptance](docs/MOTION-DOCK-1.5.0.md), [dock acceptance](docs/DOCK-RELIABILITY-1.4.3.md), [session recovery](docs/NEXUS-DESKTOP-MODE.md) and [validation status](docs/VALIDATION.md). Choose Personalize → Ember for the supplied reference's warm appearance.
+GitHub Actions and AppVeyor package `Nexus-Shell-1.6.0-win-x64.zip` and the smaller `Nexus-Shell-1.6.0-Update-win-x64.zip`. Follow [portable startup](docs/RUN-PORTABLE.md) and [desktop session setup](docs/NEXUS-DESKTOP-MODE.md).
 
-Dock icon cues do not redirect Windows' own minimize animation into the Nexus icon. Full tray/Jump List contracts, app-native icons and additional-display shell surfaces remain future work.
+## Validation
+
+The portable core checks pass, including the new arithmetic, notes, file sorting/history, fullscreen and theme migration regressions. C# type checking against the pinned WinUI and Windows SDK assemblies passes with temporary XAML field declarations. Source/XML/resource/runtime-template checks pass.
+
+Native Windows XAML compilation, PRI/XBF packaging, actual material rendering and Windows desktop acceptance are still required. See [validation details](docs/VALIDATION.md) and [the acceptance checklist](docs/MIDNIGHT-GLASS-1.6.0.md). The supplied concept is a design reference; pixel-level equivalence has not been measured on Windows.

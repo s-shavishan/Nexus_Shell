@@ -1,25 +1,22 @@
-# 1.5.0 build fix — validation update
+# 1.6.0 validation
 
-The user supplied AppVeyor build 54866264 for commit `dab35cd55915a6be0df22fd091dbc768e67ec83d`. .NET core policies, owned-window Win32 minimize/restore/maximize/close, owned DWM relationships and PowerShell updater checks passed. The build host had no available audio output, so real audio-device acceptance was skipped. Native UI publishing failed with three CS0246 errors in the obsolete Interop/ShellKeyboardHook.cs.
+Baseline: `0184d98d5a36b433995fbf8d1b9e6e982f434ac2` from `s-shavishan/Nexus_Shell` main.
 
-Every filename/Git blob in that 215-file commit was verified. Its only difference from the delivered 214-file 1.5.0 source is the retained hook. The hotfix deletes it, adds an early AppVeyor check and an MSBuild guard, and improves the source-validator cleanup message. Version and artifact names stay 1.5.0. See [the build fix](BUILD-FIX-1.5.0.md).
+## Completed in the Linux authoring environment
 
-The fixed source and patch are checked locally for XML/resource/ownership/C# syntax and exact baseline reconstruction. Those checks do not resolve native UI types/APIs. A new native UI/host compile, resource/runnable packaging, rendering/focus and measured Windows/VirtualBox performance remain pending. No executable is supplied.
+- All portable `Nexus.Core.Checks` tests compiled with .NET 8 Roslyn and executed on the .NET 8 runtime. Tests cover existing settings/recovery/layout/dock behavior plus decimal arithmetic/error recovery, shared notes and snapshots, stale-note edits, metadata file sorting, history commit, fullscreen interaction priority, Spotlight bounds and persisted theme aliases.
+- All app C# source type-checked against the project's restored Windows App SDK 1.8 and Windows SDK .NET projections. Temporary XAML field declarations supplied the named controls and InitializeComponent methods, so this checks C# API and type resolution but does not compile XAML or run WinUI. Reference-version unification and unused temporary-field warnings were emitted; no C# errors remained.
+- `python scripts/validate-source.py`: XML, native runtime template XML, custom resources, assets, publish wiring, desktop-host recovery ownership, independent window lifetime and Windows shortcut ownership.
+- `git diff --check`.
 
----
+The .NET CLI entry point could not run normally in this environment because Process.StartTime was unavailable. Roslyn and the test executable ran directly through the same installed .NET runtime; these are actual C# tests, not reimplementations.
 
-The following is the original source-delivery status before that user-run CI result:
+## Pending
 
-# 1.5.0 validation
+Windows XAML compilation, PRI/XBF publishing, PowerShell updater/package checks, native UI startup, DWM/backdrop behavior, native minimize/restore, event timing, DPI/resizing and pixel-level reference comparison. No measured frame-rate, memory reduction or pixel-perfect rendering is claimed.
 
-The cumulative baseline is the 199-file 1.4.2 GitHub tree at `1cd328f83d28d606fe5e9da7250ee3d792725cd0`. Incremental baselines are the 203-file prepared 1.4.3 and 206-file prepared 1.4.4 sources, verified against their delivered complete Source ZIPs. Earlier working-build reports do not establish acceptance of the new motion/preview features.
+Run the checked-in Windows pipeline and complete [the acceptance sequence](MIDNIGHT-GLASS-1.6.0.md) before treating a packaged build as validated. Earlier verification JSON files describe previous source snapshots and are historical evidence only.
 
-Local checks pass for source/XML/XAML content order, resources/assets, publish wiring, event handlers, independent-layer ownership and CI versions. Tree-sitter parses C# source/tests without syntax errors; it does not resolve types or APIs. No global keyboard hook/registration is introduced. Sealed-Border, Thickness and bounded-motion guards remain.
+## Delivery
 
-The palette/App.xaml/ShellTheme values are unchanged from 1.4.4. The retained numeric contrast report covers body/muted and action/selection surfaces. Host C#, session/registry recovery, startup/updater implementation, NuGet.Config, global.json and dependency pins remain byte-identical. UI/host and artifact versions advance to 1.5.0.
-
-Each patch is checked with git apply --check --whitespace=error-all, applied in an isolated baseline and compared by every filename/byte to the complete source. ZIP entries/CRC and SHA-256 are checked. PATCH-VERIFICATION.json records delivery evidence separately from repository VERIFICATION.json.
-
-New .NET tests are added for actual pure policy transitions/geometry/preferences and owned-window Win32 maximize/close/DWM behavior; they have not executed in this Linux environment. There is no .NET, Windows or PowerShell runtime here. Native WinUI/host compilation, CA1416/type checks, .NET/Win32 tests, PowerShell and resource/package checks remain pending.
-
-Windows 10/11 and VirtualBox still need the manual motion/preview/focus/frame/memory/drag checks in MOTION-DOCK-1.5.0.md. Live DWM content over the WinUI viewport is specifically unverified. API success cannot establish that a protected app supplies visible contents; some apps can show a blank preview. Static cards and dock context actions remain available. No frame-rate, memory or lag reduction is claimed as measured.
+The GitHub connection permitted repository reads but rejected blob uploads and branch creation with HTTP 403, `Resource not accessible by integration`. No remote branch or pull request was created and main was not changed. Complete source and a binary-capable Git patch are provided instead. The patch is checked against the baseline above and includes the wallpaper.

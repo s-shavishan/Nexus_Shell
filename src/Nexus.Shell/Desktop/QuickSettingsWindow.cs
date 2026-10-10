@@ -17,6 +17,7 @@ internal sealed class QuickSettingsWindow : Window
     private readonly Border _frame;
     private readonly WindowChrome _chrome;
     private readonly UI.SurfaceMotion _motion;
+    private readonly UI.WindowMaterial _material = new();
     private bool _closed;
     internal bool IsOpen { get; private set; }
     internal QuickSettingsWindow(DesktopEnvironment environment)
@@ -51,7 +52,7 @@ internal sealed class QuickSettingsWindow : Window
     internal void ApplyAppearance()
     {
         var theme = _environment.Theme;
-        _frame.RequestedTheme = theme.ElementTheme; _frame.Background = theme.Surface("Sidebar"); _frame.BorderBrush = theme.Brush("NexusBorder");
+        _frame.RequestedTheme = theme.ElementTheme; _material.Apply(this, _frame, _environment); _frame.BorderBrush = theme.Brush("NexusBorder");
         _frame.BorderThickness = new Thickness(1); _frame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 26);
         _chrome.SetCorners(theme.HighContrast); _motion.Refresh(); _view.ApplyAppearance();
     }

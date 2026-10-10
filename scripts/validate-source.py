@@ -32,6 +32,9 @@ required = [
     "Interop/WindowChrome.cs", "UI/SurfaceMotion.cs",
     "Services/DockMotionPolicy.cs", "Services/DockPreviewPolicy.cs", "UI/Taskbar/DockMotionController.cs",
     "Interop/WindowThumbnail.cs", "Desktop/DockPreviewWindow.cs", "Desktop/DesktopEnvironment.Dock.cs",
+    "Desktop/UtilityWindow.cs", "Desktop/DesktopEnvironment.Utilities.cs", "UI/WindowMaterial.cs",
+    "UI/Controls/NotesView.cs", "UI/Controls/CalculatorView.cs", "Services/NotesWorkspace.cs",
+    "Services/CalculatorEngine.cs", "Services/FilePresentation.cs",
 ]
 for relative in required:
     assert (project / relative).is_file(), f"Missing file: {relative}"
@@ -59,6 +62,17 @@ for path in project.glob("*.xaml"):
                 )
                 seen_content = True
 print("XAML content ordering OK")
+
+# Native views also load templates at runtime. Include these literal templates
+# in XML checks so malformed markup cannot slip past MainWindow.xaml checks.
+templates = 0
+for source in project.rglob("*.cs"):
+    body = source.read_text(encoding="utf-8")
+    for match in re.finditer(r'XamlReader\.Load\(\s*"""\s*(.*?)\s*"""\s*\)', body, re.S):
+        ET.fromstring(match[1]); templates += 1
+    for match in re.finditer(r'XamlReader\.Load\("(<ItemsPanelTemplate[^"\n]*)"\)', body):
+        ET.fromstring(match[1]); templates += 1
+print(f"Native runtime template XML OK: {templates} templates")
 
 for path in project.glob("*.xaml"):
     for node in ET.parse(path).getroot().iter():
@@ -182,7 +196,7 @@ assert project_xml.findtext("PropertyGroup/WindowsPackageType") == "None"
 icon_content = project_xml.find("ItemGroup/Content[@Include='Assets\\Icons\\*.svg']")
 assert icon_content is not None and icon_content.attrib.get("CopyToPublishDirectory") == "PreserveNewest", "Native vector icons must be published"
 icon_names = {p.stem for p in (project / "Assets/Icons").glob("*.svg")}
-assert {"Nexus", "Explore", "Study", "Files", "Apps", "Browser", "Search", "Settings", "Windows", "Note", "Document", "Terminal", "Game"} <= icon_names
+assert {"Nexus", "Explore", "Study", "Files", "Apps", "Browser", "Search", "Settings", "Windows", "Note", "Document", "Terminal", "Game", "Calculator", "Picture", "Archive", "Video", "Music"} <= icon_names
 for path in (project / "Assets/Icons").glob("*.svg"):
     for node in ET.parse(path).getroot().iter():
         assert node.tag.rsplit("}", 1)[-1] not in {"script", "image", "filter", "animate", "text"}, f"Unsupported/external vector content: {path}"
@@ -212,7 +226,7 @@ closed = code[code.index("private void Window_Closed("):]
 assert "SaveFinal(" not in closed and "DetachSnapshot(" in closed, "Closing Sections must not finalize the desktop session"
 for file in [root / "appveyor.yml", root / ".github/workflows/build-windows.yml", root / "scripts/package.ps1", root / "scripts/build.ps1"]:
     body = file.read_text()
-    assert "Nexus-Shell-1.5.0" in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
+    assert "Nexus-Shell-1.6.0" in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
 print("Independent desktop ownership, Sections lifetime and CI versions OK")
 # Desktop replacement cannot silently instantiate Explorer or common picker UI.
 environment = (project / "Desktop/DesktopEnvironment.cs").read_text()
@@ -260,6 +274,14 @@ for source in project.rglob("*.cs"):
         f"Global shortcut interception remains: {source.relative_to(root)}"
     )
 print("Native Windows shortcut ownership OK")
+
+for relative in ["Desktop/FilesWindow.cs", "Desktop/UtilityWindow.cs", "MainWindow.xaml.cs"]:
+    assert "presenter.Minimize()" in (project / relative).read_text(), f"Native minimize must remain available: {relative}"
+for relative in ["Desktop/FilesWindow.cs", "Desktop/MenuWindow.cs", "Desktop/QuickSettingsWindow.cs", "Desktop/UtilityWindow.cs"]:
+    assert "WindowMaterial" in (project / relative).read_text(), f"Missing material/fallback ownership: {relative}"
+assert "includeOwnProcess: true" in environment, "Own content-window minimize events must be observed"
+assert "UtilityWindows()" in environment and "_utilities.Values.ToArray()" in environment, "Utility windows must participate in the dock and shutdown"
+print("Native utility lifetime, material fallback and own-window minimize wiring OK")
 if options.syntax:
     from tree_sitter import Language, Parser
     import tree_sitter_c_sharp

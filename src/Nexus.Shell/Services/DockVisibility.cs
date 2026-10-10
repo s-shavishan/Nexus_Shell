@@ -7,9 +7,11 @@ public sealed class DockVisibility
     private long _holdUntil;
     public bool Update(bool floating, bool maximized, bool fullscreen, bool interacting, bool pointerInRevealArea, long now)
     {
+        // Presentation apps and borderless games must never be covered by a
+        // stale preview/menu. Fullscreen always wins over an interaction hold.
+        if (fullscreen) { _holdUntil = 0; return false; }
         if (!floating) { _holdUntil = 0; return !fullscreen || interacting; }
         if (interacting) { _holdUntil = now + 450; return true; }
-        if (fullscreen) { _holdUntil = 0; return false; }
         if (!maximized) { _holdUntil = 0; return true; }
         if (pointerInRevealArea) _holdUntil = now + 450;
         return now < _holdUntil;

@@ -76,6 +76,7 @@ DesktopFoundationChecks.Run(Check);
 DesktopPerformanceChecks.Run(Check);
 ExploreChecks.Run(Check);
 ReliabilityChecks.Run(Check);
+MidnightChecks.Run(Check);
 PcControlChecks.Run(Check);
 Check(AuraPalette.For("old-unknown").Name == "Pearl", "Unknown mood values should use the safe default palette.");
 var glassState = new ShellState { NativeGlass = true };

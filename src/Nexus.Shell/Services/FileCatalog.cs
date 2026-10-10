@@ -4,7 +4,9 @@ public enum FileSelectionKind { Browse, OpenFile, OpenFiles, Folder, SaveFile }
 public sealed record FileSelectionRequest(FileSelectionKind Kind, string Title = "My files", string[]? Extensions = null, string SuggestedName = "");
 public sealed record FileEntry(string Name, string Path, bool IsFolder, string Detail)
 {
-    public string IconUri => "ms-appx:///Assets/Icons/" + (IsFolder ? "Files" : "Document") + ".svg";
+    public long Bytes { get; init; }
+    public DateTime ModifiedUtc { get; init; }
+    public string IconUri => "ms-appx:///Assets/Icons/" + FilePresentation.Icon(Path, IsFolder) + ".svg";
 }
 public sealed record FolderSnapshot(string Path, IReadOnlyList<FileEntry> Entries, bool Limited);
 
@@ -25,8 +27,10 @@ public static class FileCatalog
             {
                 bool folder = (File.GetAttributes(item) & FileAttributes.Directory) != 0;
                 if (!folder && !Accepts(item, extensions)) continue;
-                string detail = folder ? "Folder" : Size(new FileInfo(item).Length) + " · " + System.IO.Path.GetExtension(item).TrimStart('.').ToUpperInvariant();
-                entries.Add(new(System.IO.Path.GetFileName(item), item, folder, detail));
+                var info = folder ? (FileSystemInfo)new DirectoryInfo(item) : new FileInfo(item);
+                long bytes = info is FileInfo file ? file.Length : 0;
+                string detail = folder ? "Folder" : Size(bytes) + " · " + System.IO.Path.GetExtension(item).TrimStart('.').ToUpperInvariant();
+                entries.Add(new(System.IO.Path.GetFileName(item), item, folder, detail) { Bytes = bytes, ModifiedUtc = info.LastWriteTimeUtc });
             }
             catch (IOException) { } catch (UnauthorizedAccessException) { }
         }

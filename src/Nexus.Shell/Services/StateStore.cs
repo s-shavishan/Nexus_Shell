@@ -76,7 +76,7 @@ public sealed class StateStore
             state.DisplayName = state.DisplayName[..Math.Min(state.DisplayName.Length, 40)];
             state.PinnedApps ??= [];
             state.Activity ??= [];
-            state.Wallpaper = AuraPalette.Moods.Contains(state.Wallpaper) ? state.Wallpaper : "Midnight";
+            state.Wallpaper = AuraPalette.NormalizeMood(state.Wallpaper);
             state.QuickNote ??= "";
             state.QuickNote = state.QuickNote[..Math.Min(state.QuickNote.Length, 10_000)];
             state.FocusDay ??= "";

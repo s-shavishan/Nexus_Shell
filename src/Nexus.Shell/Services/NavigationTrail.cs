@@ -9,6 +9,8 @@ public sealed class NavigationTrail
     public bool CanGoBack => _index > 0;
     public bool CanGoForward => _index >= 0 && _index < _pages.Count - 1;
     public string? Current => _index >= 0 ? _pages[_index] : null;
+    public string? BackTarget => CanGoBack ? _pages[_index - 1] : null;
+    public string? ForwardTarget => CanGoForward ? _pages[_index + 1] : null;
     public int Count => _pages.Count;
 
     public void Visit(string page)

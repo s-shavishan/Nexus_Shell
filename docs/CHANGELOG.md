@@ -1,3 +1,11 @@
+# 1.6.0 — Midnight Glass and native utilities
+
+- Rework the desktop menus, centered launcher, dock artwork/clock placement and upper-right Control Center around the Midnight Glass reference; bundle the matching night landscape.
+- Add grid/list Files, metadata sorting, navigation history, folder title/selection, keyboard navigation and bounded selection-safe image previews.
+- Add floating Notes and Calculator; wire them into the dock, overview, Show desktop, shared settings and shutdown.
+- Use native minimize for Files and Sections; observe own content-window events, prioritize fullscreen dock suppression and preserve theme aliases on reload.
+- Add regression checks, runtime template/resource validation and a Windows acceptance checklist. Native Windows visual/packaging validation remains pending.
+
 # 1.5.0 — dock motion and window previews
 
 - Add finite launch/arrival/activation/minimize/restore icon cues and compositor underline state changes; separate them from hover/press.

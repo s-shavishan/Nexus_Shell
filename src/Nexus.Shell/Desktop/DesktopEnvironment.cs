@@ -93,7 +93,7 @@ internal sealed partial class DesktopEnvironment
             RefreshIntegration(); Desktop.ShowSurface(); Taskbar.ShowBar();
             // Native Windows shortcuts are never intercepted. Events observe
             // app lifecycle only; the five-second tick is a recovery fallback.
-            try { _windowEvents = new(QueueWindowEvent); }
+            try { _windowEvents = new(QueueWindowEvent, includeOwnProcess: true); }
             catch (Exception ex) { Report("Window notifications unavailable; the dock will use periodic refresh", ex); }
             RefreshDesktop(); UpdateTaskbar(); _timer.Start();
             _pulse?.Set();
@@ -113,6 +113,8 @@ internal sealed partial class DesktopEnvironment
         if (_compact != Session.State.CompactDock || _floating != Session.State.FloatingTaskbar)
         { _compact = Session.State.CompactDock; _floating = Session.State.FloatingTaskbar; Taskbar.Position(); }
         _quickSettings?.RefreshPreferences();
+        Desktop.Surface.RefreshContent();
+        _sections?.RefreshSharedNotes();
         if (_usageTracking != Session.State.UsageTracking) { _usageTracking = Session.State.UsageTracking; ResetUsageSample(); }
     }
     internal void RefreshAppearance()
@@ -124,6 +126,7 @@ internal sealed partial class DesktopEnvironment
         _appearance = appearance; HideDockPreview(); Desktop.Surface.ApplyAppearance();
         Taskbar?.ApplyAppearance(); _menu?.ApplyAppearance(this);
         _files?.ApplyAppearance(); foreach (var picker in _pickers) picker.ApplyAppearance();
+        foreach (var utility in _utilities.Values) utility.ApplyAppearance();
         _switcher?.ApplyAppearance();
         _quickSettings?.ApplyAppearance(); _sections?.RefreshSharedAppearance();
     }
@@ -192,6 +195,9 @@ internal sealed partial class DesktopEnvironment
     private void QueueWindowEvent(WindowEvent change)
     {
         if (IsStopping) return;
+        // Observe native minimize/restore of Nexus content windows too, while
+        // ignoring our tool windows and popups to avoid self-refresh loops.
+        if (NativeMethods.WindowProcessId(change.Window) == Environment.ProcessId && !IsOwnAppWindow(change.Window)) return;
         _foregroundChanged |= change.IsForeground;
         if (_windowEventQueued) return; _windowEventQueued = true;
         if (!Desktop.DispatcherQueue.TryEnqueue(() =>
@@ -210,6 +216,7 @@ internal sealed partial class DesktopEnvironment
         if (_sections is not null) windows.Add(new(WinRT.Interop.WindowNative.GetWindowHandle(_sections), "Sections", "nexus", Environment.ProcessId));
         if (_files is not null) windows.Add(new(_files.Handle, "Files", "nexus", Environment.ProcessId));
         foreach (var picker in _pickers) windows.Add(new(picker.Handle, picker.NativeWindow.Title, "nexus", Environment.ProcessId));
+        windows.AddRange(UtilityWindows());
         return windows;
     }
     internal void ToggleDockWindow(RunningWindow window)
@@ -219,6 +226,7 @@ internal sealed partial class DesktopEnvironment
         if (_sections is not null && window.Handle == WinRT.Interop.WindowNative.GetWindowHandle(_sections)) _sections.ToggleFromDock();
         else if (_files is not null && window.Handle == _files.Handle) _files.ToggleFromDock();
         else if (_pickers.FirstOrDefault(p => p.Handle == window.Handle) is { } picker) picker.ToggleFromDock();
+        else if (UtilityFor(window) is { } utility) utility.Toggle();
         else if (!NativeMethods.ToggleDockWindow(window)) Report("Windows could not switch this app. Try the window overview.");
         Taskbar.View.RefreshWindowStates(); UpdateTaskbar();
     }
@@ -229,6 +237,7 @@ internal sealed partial class DesktopEnvironment
         if (_sections is not null && window.Handle == WinRT.Interop.WindowNative.GetWindowHandle(_sections)) _sections.OpenSection(null);
         else if (_files is not null && window.Handle == _files.Handle) _files.ReturnToWindow();
         else if (_pickers.FirstOrDefault(p => p.Handle == window.Handle) is { } picker) picker.ReturnToWindow();
+        else if (UtilityFor(window) is { } utility) utility.Restore();
         else if (!NativeMethods.Activate(window)) Report("Windows could not switch this app. Try the window overview.");
         UpdateTaskbar();
     }
@@ -239,6 +248,7 @@ internal sealed partial class DesktopEnvironment
         if (_sections is not null && window.Handle == WinRT.Interop.WindowNative.GetWindowHandle(_sections)) _sections.MinimizeFromDock();
         else if (_files is not null && window.Handle == _files.Handle) _files.MinimizeFromDock();
         else if (_pickers.FirstOrDefault(p => p.Handle == window.Handle) is { } picker) picker.MinimizeFromDock();
+        else if (UtilityFor(window) is { } utility) utility.Minimize();
         else if (!NativeMethods.Minimize(window)) Report("Windows could not minimize this app.");
         UpdateTaskbar();
     }
@@ -301,6 +311,8 @@ internal sealed partial class DesktopEnvironment
     internal void OpenTargetChecked(string target)
     {
         if (target == "nexus:sections") { ShowSections(); return; }
+        if (target == "nexus:notes") { ShowUtility("Notes"); return; }
+        if (target == "nexus:calculator") { ShowUtility("Calculator"); return; }
         if (target is "nexus:recycle" or "shell:RecycleBinFolder") { ShowFiles("nexus:recycle"); return; }
         if (target == "nexus:files" || IsExplorer(target)) { ShowFiles(); return; }
         if (Directory.Exists(target)) { ShowFiles(target); return; }
@@ -350,6 +362,7 @@ internal sealed partial class DesktopEnvironment
         if (_sections is not null) windows.Add(new(WinRT.Interop.WindowNative.GetWindowHandle(_sections), "Sections", "nexus", Environment.ProcessId));
         if (_files is not null) windows.Add(new(_files.Handle, "Files", "nexus", Environment.ProcessId));
         foreach (var picker in _pickers) windows.Add(new(picker.Handle, picker.NativeWindow.Title, "nexus", Environment.ProcessId));
+        windows.AddRange(UtilityWindows());
         return windows;
     }
     internal void ShowWindowOverview()
@@ -411,6 +424,7 @@ internal sealed partial class DesktopEnvironment
         Cleanup(() => _menu?.Close()); _menu = null;
         Cleanup(() => _quickSettings?.Close()); _quickSettings = null;
         Cleanup(() => _files?.Close()); _files = null;
+        foreach (var utility in _utilities.Values.ToArray()) Cleanup(utility.Close); _utilities.Clear();
         Cleanup(() => _switcher?.Close()); _switcher = null;
         foreach (var picker in _pickers.ToArray()) Cleanup(picker.Close); _pickers.Clear();
         Cleanup(() => _windowEvents?.Dispose()); _windowEvents = null;

@@ -18,6 +18,7 @@ internal sealed class MenuWindow : Window
     private readonly Border _frame;
     private readonly WindowChrome _chrome;
     private readonly UI.SurfaceMotion _motion;
+    private readonly UI.WindowMaterial _material = new();
     private bool _closed;
     internal MenuWindow(DesktopEnvironment environment)
     {
@@ -38,15 +39,15 @@ internal sealed class MenuWindow : Window
     {
         if (_closed) return;
         ApplyAppearance(environment);
-        var rect = DesktopLayout.MenuBounds(ShellLayerInterop.Monitor(environment.Taskbar.Handle).Monitor.Bounds, taskbar, ShellLayerInterop.Scale(environment.Taskbar.Handle));
+        var rect = DesktopLayout.SpotlightBounds(ShellLayerInterop.Monitor(environment.Taskbar.Handle).Monitor.Bounds, ShellLayerInterop.Scale(environment.Taskbar.Handle));
         ShellLayerInterop.SetWindowPos(_handle, ShellLayerInterop.Topmost, rect.X, rect.Y, rect.Width, rect.Height, 0x0010);
         IsOpen = true; Activate(); _ = _view.OpenAsync(search); _motion.Open();
     }
     internal void HideMenu() { if (_closed || !IsOpen) return; IsOpen = false; _motion.Hide(); NativeWindow.Hide(); }
     internal void ApplyAppearance(DesktopEnvironment environment)
     {
-        _frame.RequestedTheme = environment.Theme.ElementTheme; _frame.Background = environment.Theme.Surface("Sidebar"); _frame.BorderBrush = environment.Theme.Brush("NexusBorder");
-        _frame.BorderThickness = new Thickness(environment.Theme.HighContrast ? 1 : 0); _frame.CornerRadius = new CornerRadius(environment.Theme.HighContrast ? 0 : 22);
+        _frame.RequestedTheme = environment.Theme.ElementTheme; _material.Apply(this, _frame, environment); _frame.BorderBrush = environment.Theme.Brush("NexusBorder");
+        _frame.BorderThickness = new Thickness(1); _frame.CornerRadius = new CornerRadius(environment.Theme.HighContrast ? 0 : 22);
         _chrome.SetCorners(environment.Theme.HighContrast); _motion.Refresh(); _view.ApplyAppearance();
     }
 }

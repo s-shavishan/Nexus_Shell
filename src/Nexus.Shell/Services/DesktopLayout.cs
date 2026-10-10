@@ -28,8 +28,17 @@ public static class DesktopLayout
     }
     public static ShellRect QuickSettingsBounds(ShellRect monitor, ShellRect bar, double scale)
     {
-        var rect = MenuBounds(monitor, bar, scale, 392, 650);
-        return rect with { X = Math.Clamp(bar.Right - rect.Width, monitor.X, Math.Max(monitor.X, monitor.Right - rect.Width)) };
+        var rect = MenuBounds(monitor, bar, scale, 356, 630);
+        int gap = Math.Max(4, (int)Math.Round(14 * Scale(scale)));
+        return rect with { X = Math.Max(monitor.X, monitor.Right - rect.Width - gap), Y = Math.Clamp(monitor.Y + (int)Math.Round(50 * Scale(scale)), monitor.Y, Math.Max(monitor.Y, bar.Y - gap - rect.Height)) };
+    }
+    public static ShellRect SpotlightBounds(ShellRect monitor, double scale)
+    {
+        scale = Scale(scale); int gap = Math.Max(4, (int)Math.Round(16 * scale));
+        int width = Math.Min(Math.Max(1, monitor.Width - gap * 2), (int)Math.Round(650 * scale));
+        int height = Math.Min(Math.Max(1, monitor.Height - gap * 2), (int)Math.Round(470 * scale));
+        int top = Math.Min(gap * 5, Math.Max(gap, (monitor.Height - height) / 3));
+        return new(monitor.X + (monitor.Width - width) / 2, monitor.Y + Math.Min(top, Math.Max(0, monitor.Height - height)), width, height);
     }
     public static ShellRect PreviewBounds(ShellRect monitor, ShellRect bar, ShellRect anchor, double scale)
     {

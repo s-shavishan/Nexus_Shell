@@ -1,23 +1,21 @@
-# Updating the source to 1.5.0
+# Updating the source to 1.6.0
 
-Extract the delivery ZIP outside the repository. Apply **one** matching patch. Copy only that patch into your source folder; keep APPLY-1.5.0.md and PATCH-VERIFICATION.json outside the repository.
+The patch targets `s-shavishan/Nexus_Shell` main at `0184d98d5a36b433995fbf8d1b9e6e982f434ac2` (1.5.0). Extract the patch ZIP outside your repository and keep its delivery files there. Preserve local edits before applying; do not force an applicability error.
 
-| Your current source | Patch |
-| --- | --- |
-| GitHub main's working 1.4.2 hotfix at `1cd328f83d28d606fe5e9da7250ee3d792725cd0` | `Nexus-1.4.2-to-1.5.0.patch` |
-| Prepared 1.4.3 source | `Nexus-1.4.3-to-1.5.0.patch` |
-| Prepared 1.4.4 source | `Nexus-1.4.4-to-1.5.0.patch` |
-
-For current main:
+From the repository root in PowerShell, substitute the actual path to the extracted patch:
 
 ```powershell
-git apply --check --whitespace=error-all Nexus-1.4.2-to-1.5.0.patch
-git apply --whitespace=error-all Nexus-1.4.2-to-1.5.0.patch
+$nexusPatch = 'C:\Downloads\Nexus-Shell-1.6.0-Patch\Nexus-Shell-1.5.0-to-1.6.0.patch'
+git apply --check --whitespace=error-all $nexusPatch
+if ($LASTEXITCODE -ne 0) { throw 'Patch does not apply cleanly; inspect your source version and local edits.' }
+git apply --whitespace=error-all $nexusPatch
+if ($LASTEXITCODE -ne 0) { throw 'Patch application failed.' }
 git diff --check
+git status --short
 ```
 
-For 1.4.3/1.4.4, substitute the matching patch in both commands. Preserve local edits and inspect any applicability error. Do not combine these patches or apply an older upgrade first. The cumulative patch already contains previous UI/dock changes. The complete Source ZIP is an alternative source tree.
+The complete Source ZIP is an alternative: extract it into a fresh directory. Both downloads contain source, including the new wallpaper, rather than compiled Windows executables. Review the changes and commit/push through your usual workflow.
 
-Commit/push through the normal workflow. AppVeyor retains .NET core/Win32, PowerShell updater, native WinUI/host, compiled-resource and packaging checks. Expected compiled artifacts are `Nexus-Shell-1.5.0-win-x64.zip` and `Nexus-Shell-1.5.0-Update-win-x64.zip`, with hashes. Neither source ZIP contains an executable.
+Run `python scripts/validate-source.py`, then the checked-in Windows build pipeline or `scripts/build.ps1` and `scripts/package.ps1`. Expected compiled artifacts are `Nexus-Shell-1.6.0-win-x64.zip` and `Nexus-Shell-1.6.0-Update-win-x64.zip`.
 
-Read docs/MOTION-DOCK-1.5.0.md before native acceptance. Host/recovery, startup/updater implementation and dependency pins are preserved; native compilation and VM performance remain unverified here.
+Read [the 1.6.0 changes and acceptance sequence](docs/MIDNIGHT-GLASS-1.6.0.md) and [validation evidence](docs/VALIDATION.md). Windows XAML compilation, packaging and native visual acceptance still need to be completed.

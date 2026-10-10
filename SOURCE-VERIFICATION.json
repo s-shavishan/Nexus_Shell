@@ -1,0 +1,967 @@
+{
+  "version": "1.6.0",
+  "baseline_commit": "0184d98d5a36b433995fbf8d1b9e6e982f434ac2",
+  "source_commit": "3f7d8a0da14965b6844ba6a64841d390b6a9dd4d",
+  "source_tree": "5ca279d4abb649f7825f3802a63cc517d80fd244",
+  "patch_reconstructed_tree": "5ca279d4abb649f7825f3802a63cc517d80fd244",
+  "patch_sha256": "59148b7ca555765f3e0b3c6d202a06569badf243dd4d0d5448980412bcd2d95e",
+  "changed_files": 54,
+  "source_files": 234,
+  "archive_exclusions": [
+    ".git",
+    "untracked build output",
+    "WhiteDreams/NexusShell/nexus.log (historical runtime log)"
+  ],
+  "completed_checks": [
+    "15 portable core check groups",
+    "WinUI C# type resolution with temporary XAML declarations",
+    "source/XML/assets validator",
+    "git diff --check",
+    "binary patch apply and identical Git tree"
+  ],
+  "pending_checks": [
+    "Windows XAML compilation and PRI/XBF publishing",
+    "PowerShell package/updater checks",
+    "native UI startup and reference visual comparison",
+    "native HWND minimize/restore and event timing",
+    "DPI, resize and backdrop behavior"
+  ],
+  "files": {
+    ".github/workflows/build-windows.yml": {
+      "bytes": 1815,
+      "sha256": "52d1564c173c4312eb95a61ab2d4cff4a388827c7ed9249f45a5086be92cedd0"
+    },
+    ".gitignore": {
+      "bytes": 62,
+      "sha256": "1c66fb239b7db5b73796109f8a917bfa94357e67d8cdbd0d9d230f1aa8f8d8f0"
+    },
+    "BUILD-FIX-VERIFICATION.json": {
+      "bytes": 2361,
+      "sha256": "3d1a1ff31787b742a3eb344c16742cc3e3d998e43f09037da2c8e9003c57eda3"
+    },
+    "Build-and-Run.bat": {
+      "bytes": 213,
+      "sha256": "db9b9a6788ecaade64b0e77a6be1e4d86301a6eb93a3165b8dc28140d97fd586"
+    },
+    "MIDNIGHT-GLASS-START-HERE.md": {
+      "bytes": 1138,
+      "sha256": "722bce5b26bd9719ac845560eedeb4717de087096a68881df5519fff5ee2e721"
+    },
+    "MIDNIGHT-GLASS-VERIFICATION.json": {
+      "bytes": 1187,
+      "sha256": "634fd59b90603729a4fd16d1b17da65792484107276b09a1f5ce4e225ac57bbc"
+    },
+    "Nexus.Shell.sln": {
+      "bytes": 1316,
+      "sha256": "f692ec3e772444fca702533110a8b8cb3628ade6b21b57fe0147cb40fb2a4ff2"
+    },
+    "NuGet.Config": {
+      "bytes": 197,
+      "sha256": "aec93b5637ab6d62470979a008990a4a336a287ab83a3f2541849ae735674055"
+    },
+    "README.md": {
+      "bytes": 3112,
+      "sha256": "6ee9d6694d411431615baa0993e768ffe189e84e3c297b3c4423046191ac488d"
+    },
+    "SOURCE-PATCH.md": {
+      "bytes": 1506,
+      "sha256": "7b167eb7f63826019e4f317caabf6fa4c4d390133343bc2861a913bf66d11ecd"
+    },
+    "START-HERE.md": {
+      "bytes": 854,
+      "sha256": "810aa30dd921adaf8071e1eb8477aff5ee7ace1bf3f2cecd7402ec837da44f5b"
+    },
+    "VERIFICATION.json": {
+      "bytes": 4020,
+      "sha256": "f2650556d3da793c6e46181c60bffffeaf7660112ee871eae7c5ccf7b6713791"
+    },
+    "appveyor.yml": {
+      "bytes": 990,
+      "sha256": "43fe4162737f97ea78d813335b67d3ea9b7646853a7fb85d47e76bcdba3df8a4"
+    },
+    "docs/Aura-contrast-checks.json": {
+      "bytes": 202,
+      "sha256": "318a8737573868a81bc32396801ef793c651537a35b99dcd3337c6c53ea79542"
+    },
+    "docs/BUILD-FIX-1.5.0.md": {
+      "bytes": 2005,
+      "sha256": "a425f9afd32bac181c8d0e03b9497033fba6ca5edcc3bffcc75f7a095fb12226"
+    },
+    "docs/BUILD-HANDOFF.md": {
+      "bytes": 1633,
+      "sha256": "e0c7229ed4a95a8e7ecf7f3f47814fb68b0d61a042a85b4e01a03c105819f064"
+    },
+    "docs/CHANGELOG.md": {
+      "bytes": 25244,
+      "sha256": "9d76f22cf336e43cdee09b58004f9c2c3931cfd5f2f42813fe7124ca44d139e0"
+    },
+    "docs/CSharp-API-check.txt": {
+      "bytes": 311,
+      "sha256": "608890589428b1f12daf52aac3d9dc9ee571e214d3aaa3a2495cedbbe201187d"
+    },
+    "docs/Core-checks.txt": {
+      "bytes": 1704,
+      "sha256": "791531cb0af40548155378f54a8239b88ae4fd4a5a984fc48331ec8e70346730"
+    },
+    "docs/DESIGN-AND-PERFORMANCE.md": {
+      "bytes": 1411,
+      "sha256": "503f0efaa3b79f8ce31b711d0bea4a1c6c767f48c8a308cfcc8f7e00ec5aff4c"
+    },
+    "docs/DESKTOP-FOUNDATION.md": {
+      "bytes": 5891,
+      "sha256": "2e58e517ec54053215989539f539b6ac0bff12d458f4bc2e737c7d95674863e1"
+    },
+    "docs/DOCK-RELIABILITY-1.4.3.md": {
+      "bytes": 10198,
+      "sha256": "543176d5fb2022f03b2b74dc0e78031e5543516469ecee95a873403c4c2a786a"
+    },
+    "docs/Host-API-check.txt": {
+      "bytes": 202,
+      "sha256": "e41d9772cf9c7ae8fe07e2ddfb96ac1ef8c5b356c0ac68714f514ff3079ed521"
+    },
+    "docs/MIDNIGHT-GLASS-1.6.0.md": {
+      "bytes": 4219,
+      "sha256": "a2516424b6518a273e5827a2afe646d01e7f63b2efb5a8792a661ac40820c2e1"
+    },
+    "docs/MOTION-DOCK-1.5.0.md": {
+      "bytes": 8089,
+      "sha256": "65a127b97e3f71599dd5389554e88f938733837977a6093e0e1ff2cf8a23bd0c"
+    },
+    "docs/NEXUS-DESKTOP-MODE.md": {
+      "bytes": 6766,
+      "sha256": "505f8440b66d848d8750eb70d9ce9a2aaba0d2947baf08f0e7673f6b0447f6c7"
+    },
+    "docs/Nexus-0.8.0-Desktop-reference.png": {
+      "bytes": 251621,
+      "sha256": "c63048fac8c15a495b210fe4fc7f7b438c6b8415a950ffe0742bd2224f4fa17e"
+    },
+    "docs/Nexus-0.8.0-Desktop-reference.svg": {
+      "bytes": 14634,
+      "sha256": "050b19dff509fd9fb235679299f85b941256744cbfb97eefaeea353f9ab4883d"
+    },
+    "docs/Nexus-0.8.0-Explore-reference.png": {
+      "bytes": 212224,
+      "sha256": "c844098eec8a2c8c7d502f56c3ead054dd3f8b18a1909f88a37304c79bc5f122"
+    },
+    "docs/Nexus-0.8.0-Explore-reference.svg": {
+      "bytes": 16442,
+      "sha256": "0879367748b6a963225caee34e881479a8b427819120fcceaeb41af99e4cbd48"
+    },
+    "docs/Nexus-0.9.0-Desktop-reference.png": {
+      "bytes": 265792,
+      "sha256": "42f3ae98deca71cff99c5cbc3e21890a4b0ee7ea889429244512a27ca81ea93b"
+    },
+    "docs/Nexus-0.9.0-Desktop-reference.svg": {
+      "bytes": 28741,
+      "sha256": "c290d891255f7867d903eacde302685596fd96cc09e882c7154d7ac1223d2592"
+    },
+    "docs/Nexus-0.9.0-Explore-reference.png": {
+      "bytes": 249183,
+      "sha256": "209b4c922a68ea68908fbfe5ec107cd799e42476ae6fe0d407b5747fe982284d"
+    },
+    "docs/Nexus-0.9.0-Explore-reference.svg": {
+      "bytes": 32972,
+      "sha256": "697fd7f132365bd274080d1ed109fb899b33cf6b6f834e0d53906b2ab1436187"
+    },
+    "docs/Nexus-1.1.0-Ember-desktop-reference.png": {
+      "bytes": 174268,
+      "sha256": "e24b39b79124a7c474937dd6a1b68f4164b3a3e59e94983656c4590856ffca95"
+    },
+    "docs/Nexus-1.1.0-Ember-desktop-reference.svg": {
+      "bytes": 30400,
+      "sha256": "a71252aa51bfcfe59da28f7cafd7ebeb81d8113209a52017cb990685cf1302a0"
+    },
+    "docs/Nexus-1.1.0-Ember-explore-reference.png": {
+      "bytes": 142373,
+      "sha256": "c6f60c6c4a1f0f578575d04d10a97f2e450990d082418143551239494d12bd5c"
+    },
+    "docs/Nexus-1.1.0-Ember-explore-reference.svg": {
+      "bytes": 40417,
+      "sha256": "eb20604db8ed58a33d694bdd8940f3e35c7d8e346fdb64f70cb29f6c63b83620"
+    },
+    "docs/Nexus-1.1.0-Solstice-desktop-reference.png": {
+      "bytes": 202991,
+      "sha256": "1ab3473385326451f742206ee5741d4230eb92702e1695aa23b3008d9627f64e"
+    },
+    "docs/Nexus-1.1.0-Solstice-desktop-reference.svg": {
+      "bytes": 30382,
+      "sha256": "48b3ea9d25f9a21c3eadd836f9112d836a3742ae827e277372f83d27ccdadd72"
+    },
+    "docs/Nexus-1.1.0-Solstice-explore-reference.png": {
+      "bytes": 152819,
+      "sha256": "af2cdabccb81012d7a57e9eaa21c44cd1808caa630fdb4ead9f7d59f66c86938"
+    },
+    "docs/Nexus-1.1.0-Solstice-explore-reference.svg": {
+      "bytes": 40425,
+      "sha256": "94bfc418412478249568d6cc5f4c94e4d59474f4919ec142acee077ba17d8610"
+    },
+    "docs/Nexus-1.2.0-Desktop-reference.png": {
+      "bytes": 123113,
+      "sha256": "fa9a42408d4924ce0b0dff57fa7173f31d4ca2fb9ba5df64d5aa5629f3430310"
+    },
+    "docs/Nexus-1.2.0-Desktop-reference.svg": {
+      "bytes": 14988,
+      "sha256": "76362682d405f0bb134f603fc5e49b8c5a264f91d3eb75e82926d3f2962a373d"
+    },
+    "docs/Nexus-1.2.0-Sections-and-Start-reference.png": {
+      "bytes": 113772,
+      "sha256": "91460dc13013660ec5cf43c51e708f78fd196a914cececeeb2eb0933fd1ccedc"
+    },
+    "docs/Nexus-1.2.0-Sections-and-Start-reference.svg": {
+      "bytes": 46265,
+      "sha256": "a53c1431829da228db34926bd92ab87306e30ece81ddff9e3dd08c93c04ae4b6"
+    },
+    "docs/Nexus-1.3.0-Desktop-reference.png": {
+      "bytes": 124399,
+      "sha256": "489ac0bafcec366bf351a125d3f7fc9136b8ea3609f2518cc22b802eecb98ac6"
+    },
+    "docs/Nexus-1.3.0-Desktop-reference.svg": {
+      "bytes": 15876,
+      "sha256": "181c167c7ed6d62bb029bf801b52a0974c20fc9b9c3f02ed354216999fa0d373"
+    },
+    "docs/Nexus-1.3.0-Files-and-Start-reference.png": {
+      "bytes": 117603,
+      "sha256": "6ee70fad9d07e3585f8b8690c10d7b3bfb76a715b3c0701392489e74a2d0a225"
+    },
+    "docs/Nexus-1.3.0-Files-and-Start-reference.svg": {
+      "bytes": 36263,
+      "sha256": "4a86acce73d4bea0f4515d6b9cd4b1816f938069bfc4888d0bc01533f20a80e4"
+    },
+    "docs/Nexus-Aura-details.png": {
+      "bytes": 173681,
+      "sha256": "7f4af4a39ceaba02bca158ea087af0ef0218e1e69cc417afd52d2d4af5d7e627"
+    },
+    "docs/Nexus-Aura-details.svg": {
+      "bytes": 24453,
+      "sha256": "68da7b734ba7e895eb842f8ece5056ad7b66b6b270f81275550c25920b6f5885"
+    },
+    "docs/Nexus-Aura-preview.png": {
+      "bytes": 193055,
+      "sha256": "1480fadca9cbb5da0d2c185ced1e1265f85ce30bc3a254f458de5de8e77efa45"
+    },
+    "docs/Nexus-Aura-preview.svg": {
+      "bytes": 15789,
+      "sha256": "65b2f982ccc676c5a85ad7ba3b49870cbac1ea213f6966c5c5a3cd32bcf508d8"
+    },
+    "docs/Nexus-Desktop-preview.png": {
+      "bytes": 198222,
+      "sha256": "c6129e2470bcf6ccc960c0d60e011e529b67cd24ed30194788e7734eae020d47"
+    },
+    "docs/Nexus-Desktop-preview.svg": {
+      "bytes": 15687,
+      "sha256": "8e660d72758300db1808db075b42e8444bbe6a6f754db7cb9e38e8d2b2243647"
+    },
+    "docs/Nexus-Experience-preview.png": {
+      "bytes": 185109,
+      "sha256": "cffbeafbb9dcb30ebf46822d21c69bd42824aa650d4af311fdc1f8576e19acac"
+    },
+    "docs/Nexus-Experience-preview.svg": {
+      "bytes": 16197,
+      "sha256": "5321e215c3f5fdee41260d8fa814fe0ed608f39d0fad1e604e339375362a36e9"
+    },
+    "docs/Nexus-Experience-search.png": {
+      "bytes": 170184,
+      "sha256": "f1fd1f19441e10466591cdaa36ce2457d755904659eadbbec0ed2374fb006ef5"
+    },
+    "docs/Nexus-Experience-search.svg": {
+      "bytes": 21941,
+      "sha256": "c13f9ec696eb09f1134f5120e2bb09a058b357f3011c874a92c96dd6be49685a"
+    },
+    "docs/Nexus-Orbit-preview.png": {
+      "bytes": 184201,
+      "sha256": "9391ae9a46952df6b51bd4473e686128e4a7d6605eb5a3f952b24432ddc5618b"
+    },
+    "docs/Nexus-Orbit-preview.svg": {
+      "bytes": 19651,
+      "sha256": "366c8f018037b11a8a11fcbdb52cdad401e446f5f67deaed0ae34ab9634d3fc2"
+    },
+    "docs/PC-CONTROLS.md": {
+      "bytes": 5284,
+      "sha256": "32532514d93be2f901ab91ed39dd90d1c78b362a8adabeae8baffdfb23999b81"
+    },
+    "docs/QUICK-SETTINGS-AND-PERFORMANCE.md": {
+      "bytes": 6790,
+      "sha256": "1ffba14255e6f8e70a7a521ed23a2656202fc268f195a0d399e6b7744f037ef3"
+    },
+    "docs/RUN-PORTABLE.md": {
+      "bytes": 1760,
+      "sha256": "26229eb2cbce84cb83de22ef86ad56f4126d2b854414f58dae3ef107007ec608"
+    },
+    "docs/Recovery-CSharp-check.txt": {
+      "bytes": 206,
+      "sha256": "6f9fe2c86964b6bd3c405d24d81e766d9b95e6371e890774c6315137e15bcfb3"
+    },
+    "docs/SESSION-TAKEOVER-1.4.1.md": {
+      "bytes": 3591,
+      "sha256": "e80be4f2d41c13266cf2389f6563787d17fd82015d173a8cdb882fa1f63f3c19"
+    },
+    "docs/STARTUP-PRIVILEGES.md": {
+      "bytes": 2463,
+      "sha256": "3eacf5b65245b0f1f0be569c53d304eb60ad7e425cc9dc5557e13e492a63bf51"
+    },
+    "docs/Solstice-palettes.json": {
+      "bytes": 71925,
+      "sha256": "d88c30a809a0ae650d82d18ba74053d9acff1713e903dfd20f5d7580fad2dcf5"
+    },
+    "docs/Source-checks.txt": {
+      "bytes": 1063,
+      "sha256": "1e4b01b54c38f0fdb26463201981359b88ad74d10bd6ef0235aaf29932d41946"
+    },
+    "docs/TEST-DESKTOP-FOUNDATION.md": {
+      "bytes": 3403,
+      "sha256": "d5e938896e903e03b53963a799782c4362b5c4fc302b7183a450b49e989f7a14"
+    },
+    "docs/TEST-DESKTOP-MODE.md": {
+      "bytes": 4569,
+      "sha256": "be454e4fb58952313d51e8d26517494923a88ba61e60bc384477501df402b892"
+    },
+    "docs/TEST-WINDOWS.md": {
+      "bytes": 25755,
+      "sha256": "e0eeb38afe989276af85fd7e11cc58d522d3df376b017be384b48efe80d7bb28"
+    },
+    "docs/UI-POLISH-1.4.2.md": {
+      "bytes": 6483,
+      "sha256": "56b2691d3c820f7240184ab71a14654fa8f39580d237192efd38b63c2cd8714c"
+    },
+    "docs/UI-POLISH.md": {
+      "bytes": 9313,
+      "sha256": "efbec8b2402244d71ecc58158de480df27f31bdcfc186368564b1d6ba98bf2ae"
+    },
+    "docs/UI-STABILITY-1.4.4.md": {
+      "bytes": 5219,
+      "sha256": "8f46afa7957fa02141da59e1113997f09acd6cf9c1026423388a6768d6d9c3a5"
+    },
+    "docs/UPDATING.md": {
+      "bytes": 2724,
+      "sha256": "8565e39cd0a1d9179e796fc22f60827e6cb7468b19ba85b4bd17107d73cb5760"
+    },
+    "docs/VALIDATION.md": {
+      "bytes": 2341,
+      "sha256": "7563973dfc026e18a69caa3797c4958d122975032b1bf486c72c9adefc5680ff"
+    },
+    "docs/Warm-contrast-1.4.4.json": {
+      "bytes": 1322,
+      "sha256": "ed3ee47c4d1a8f5149ca21492eb97f8c413de5d30a970a24a54479fac3b25d87"
+    },
+    "global.json": {
+      "bytes": 110,
+      "sha256": "84aa96f48aa20d14456121b5ac5f18967f29f7da504c6f886218c701687f47fa"
+    },
+    "scripts/apply-update.ps1": {
+      "bytes": 6846,
+      "sha256": "d82a00923b8885f28154a50ae95de29a45b95c3bc73c00ba369adabbe0d2c550"
+    },
+    "scripts/build.ps1": {
+      "bytes": 7354,
+      "sha256": "8df31de164ea23cd82ae1dfa54686615f5d9150e8236e95024689e78c8b0d5b9"
+    },
+    "scripts/design-preview.py": {
+      "bytes": 9560,
+      "sha256": "869b62bfd1544406522fff63b620f9b0eb8f6939c69dec8e9ffb8b293786b287"
+    },
+    "scripts/desktop-preview.py": {
+      "bytes": 8926,
+      "sha256": "f737183c193b9b46c2cbaef3162ad331e74f7afb3eb66a2459811989c1b915a1"
+    },
+    "scripts/diagnostics.ps1": {
+      "bytes": 1720,
+      "sha256": "4651fb0b3c95d8527c9e753bcd29854ebe50cceebfb0368535f50d37e6eedf3b"
+    },
+    "scripts/disable-startup.ps1": {
+      "bytes": 244,
+      "sha256": "3892d18d6ed6e6c7fd89742b4aec5aee5e42a0065f6f10b8875bbc4e6159288d"
+    },
+    "scripts/foundation-preview.py": {
+      "bytes": 7208,
+      "sha256": "07e781a437e4808bf7c01fa40ab5e7d23338b352ecfa330162bfbbdece6d4822"
+    },
+    "scripts/generate-icons.py": {
+      "bytes": 5779,
+      "sha256": "32705998f2fb860e1afbaaa30a5603069621a6490db4af513b5623c062ed1db9"
+    },
+    "scripts/measure-resources.ps1": {
+      "bytes": 3527,
+      "sha256": "4859adbffc7afba378f6cacc3807664f2eea33461fcd3cd9551c4084c3e82101"
+    },
+    "scripts/opal-preview.py": {
+      "bytes": 9476,
+      "sha256": "adac3dd2ace51abf0fc326004b87a9be3e836e5e8b3924b37ffa78a8537a2801"
+    },
+    "scripts/package-update.ps1": {
+      "bytes": 5881,
+      "sha256": "95012cfb83e3b8a15094b7dfa46dc4766ea6052c4e803d2d06a827a17115ef14"
+    },
+    "scripts/package.ps1": {
+      "bytes": 3093,
+      "sha256": "b4e89692f05a2a9e99f9139c220bba006c4d1de792a9e19d78cb6a7347f965f0"
+    },
+    "scripts/render-wallpapers.py": {
+      "bytes": 1897,
+      "sha256": "b79125d6942e50056be4cfc799e73cdb8e354c91be5fbbb8ee546a6832f2b881"
+    },
+    "scripts/restore-windows-desktop.ps1": {
+      "bytes": 15731,
+      "sha256": "2b1f76e5336e9e43c5a91dd3214b47fa3157fc7f1d58b0b5c248775b45d5936c"
+    },
+    "scripts/solstice-preview.py": {
+      "bytes": 9730,
+      "sha256": "c569e0eda1bd2eaeae1f96f90f3894da0dbd62bbc707ff64e18036f91539922d"
+    },
+    "scripts/test-update.ps1": {
+      "bytes": 7436,
+      "sha256": "39759580cbc47742b5943cc3860aa175abecc6def3bdbb4a0bc4b4571daa1d36"
+    },
+    "scripts/validate-source.py": {
+      "bytes": 21289,
+      "sha256": "614a8c3254f4af4483f4c51ac032b2b7d036e9854229ad08bc5b659cce4380c3"
+    },
+    "scripts/verify-resources.ps1": {
+      "bytes": 5015,
+      "sha256": "a83e6a55344423cc4b3907eee0ea9d919bf2a47afa65c430a36ebaeb6baa3010"
+    },
+    "src/Nexus.DesktopHost/Nexus.DesktopHost.csproj": {
+      "bytes": 1003,
+      "sha256": "5b5d5cf95a136e6f7ded1c6a5dd69cd56fd746189fc650b59876939a027dd880"
+    },
+    "src/Nexus.DesktopHost/Program.cs": {
+      "bytes": 12881,
+      "sha256": "b2b1bf63f46beeeadab2420c86bfd87a2a54d32ede36fe753997943732951235"
+    },
+    "src/Nexus.DesktopHost/WindowsDesktopSurfaces.cs": {
+      "bytes": 5667,
+      "sha256": "62c9975dd934af5edab159691a8acc59d5c58c8310b452d134d29bbd89f9a4d2"
+    },
+    "src/Nexus.Shell/App.xaml": {
+      "bytes": 60741,
+      "sha256": "5d3d372d6092d799b2881078001be8631e032884bf1a833f2e685d53fd1c0589"
+    },
+    "src/Nexus.Shell/App.xaml.cs": {
+      "bytes": 4774,
+      "sha256": "3664cd28930f7cb6938dc2cf464449b7b85b5ee3db7fa187ee146274a6c820d9"
+    },
+    "src/Nexus.Shell/Assets/Icons/Apps.svg": {
+      "bytes": 1137,
+      "sha256": "c0969d57865726411b5d3123d0d5508b3a97041aa0ad2dd11a2339ce241777f3"
+    },
+    "src/Nexus.Shell/Assets/Icons/Archive.svg": {
+      "bytes": 610,
+      "sha256": "881f4aa7d2eda51ef6280373dca14a67795bb400e3db5712a6ffbf21b231d134"
+    },
+    "src/Nexus.Shell/Assets/Icons/Browser.svg": {
+      "bytes": 1195,
+      "sha256": "c6447297adbbed59d1c89595d7d1b767ae18df2d587d5d36a143d7e758a451fc"
+    },
+    "src/Nexus.Shell/Assets/Icons/Calculator.svg": {
+      "bytes": 801,
+      "sha256": "fad00d9b1c827a77ed8b0f378a0910d98f2f5229cb403507f3ee7ecc86abcf02"
+    },
+    "src/Nexus.Shell/Assets/Icons/Document.svg": {
+      "bytes": 860,
+      "sha256": "2e734b3e40ee3ce7e58b994b44683167bc057d992e41c7999cc944d030257ac8"
+    },
+    "src/Nexus.Shell/Assets/Icons/Explore.svg": {
+      "bytes": 1142,
+      "sha256": "a8ef2bc1c82570397f13e1af379aa16378037ccf93c4465c53d4d526a80c8f1f"
+    },
+    "src/Nexus.Shell/Assets/Icons/Files.svg": {
+      "bytes": 932,
+      "sha256": "de8eeec738d2506b40c8547d3c50ec04d66dbc9b5406e6826d3f4fbb64423b89"
+    },
+    "src/Nexus.Shell/Assets/Icons/Game.svg": {
+      "bytes": 1152,
+      "sha256": "6b34bee0398bd3964671011dffed3ccf71f0af183bcb52d4ce12abb46f279f7a"
+    },
+    "src/Nexus.Shell/Assets/Icons/Music.svg": {
+      "bytes": 521,
+      "sha256": "7b39d95f4dc238b7bb4420a83dc30ca185e558d9a1d5e2dba5de0e40d6cdfdfa"
+    },
+    "src/Nexus.Shell/Assets/Icons/Nexus.svg": {
+      "bytes": 1211,
+      "sha256": "1cc24791f21a293c613a24a9fec88891bbca1d9a05f513f8bca290042044a8a3"
+    },
+    "src/Nexus.Shell/Assets/Icons/Note.svg": {
+      "bytes": 857,
+      "sha256": "7699cd5a49434983c19c57a119e7fbb52b5ee920bedc7852aca6d842b589587d"
+    },
+    "src/Nexus.Shell/Assets/Icons/Picture.svg": {
+      "bytes": 530,
+      "sha256": "da4f967da5a31e55e34e3db170cb3a122fd515de81ced49708e9e8c9d12a5002"
+    },
+    "src/Nexus.Shell/Assets/Icons/Search.svg": {
+      "bytes": 1148,
+      "sha256": "54befa710372c165d9bc8baaa378c6f2f6eb3734beb0d9d90ddcf07747f812ed"
+    },
+    "src/Nexus.Shell/Assets/Icons/Settings.svg": {
+      "bytes": 1769,
+      "sha256": "860362efb8eae7c29215845148d1d3689703542d5a9fc730f2b7db9f0f1730b0"
+    },
+    "src/Nexus.Shell/Assets/Icons/Study.svg": {
+      "bytes": 1158,
+      "sha256": "bd6005f7c7c865cbcebdfee947b98525141dc6a0f9e832e8f85c5b97bfe31795"
+    },
+    "src/Nexus.Shell/Assets/Icons/Terminal.svg": {
+      "bytes": 1005,
+      "sha256": "9bcbde3b617b916f9e4dab628c2c4688cd16be00ca91185aa10260fdbba8b5dc"
+    },
+    "src/Nexus.Shell/Assets/Icons/Video.svg": {
+      "bytes": 396,
+      "sha256": "ca88e155bffcb9f4cfa121870b0bcdf68a2ec2bafc0ed255af84557cbf47e1db"
+    },
+    "src/Nexus.Shell/Assets/Icons/Windows.svg": {
+      "bytes": 1115,
+      "sha256": "6fc320f2bf69848eeb2a76df7a01c15bcf5a6bb44fc7c3c4aaae67d39e51b66e"
+    },
+    "src/Nexus.Shell/Assets/Nexus-Mark.svg": {
+      "bytes": 318,
+      "sha256": "7b7c94ed7bb35fbd6df3498fd239b19cb852cccebcec8589fdd3881384c16aba"
+    },
+    "src/Nexus.Shell/Assets/Nexus.ico": {
+      "bytes": 21080,
+      "sha256": "227881cbe38677918492d5d640810a4ef7f88f443c6d72d134ffb7e08708be8d"
+    },
+    "src/Nexus.Shell/Assets/Wallpapers/Ember.png": {
+      "bytes": 165314,
+      "sha256": "3fffc43bf1cba4035837569400820c7e1d756726e04cc39ca06833630683e7b6"
+    },
+    "src/Nexus.Shell/Assets/Wallpapers/Graphite.png": {
+      "bytes": 167741,
+      "sha256": "a494432d5c9e8ad412af67a541d914292ec74bfc57c24478bbf0f398d3a18c41"
+    },
+    "src/Nexus.Shell/Assets/Wallpapers/Lagoon.png": {
+      "bytes": 154343,
+      "sha256": "8f777fe163e672ef868211da2298db970f915e5179b0e9a5cc192009cac065a9"
+    },
+    "src/Nexus.Shell/Assets/Wallpapers/Midnight.png": {
+      "bytes": 2685981,
+      "sha256": "bc920f6218fab5fc0a5693747b84a1dfda70eb7b9ff102f6a933dafe5ff7e500"
+    },
+    "src/Nexus.Shell/Assets/Wallpapers/Opal.png": {
+      "bytes": 191161,
+      "sha256": "ca31d54f3c736b4c1c9193410abb2c254d0cc0578975a2e2f73f34cd638e8729"
+    },
+    "src/Nexus.Shell/Assets/Wallpapers/Pearl.png": {
+      "bytes": 154804,
+      "sha256": "142e760ecb341d61d1792451984ccbd37ae3cacdb8433de006b44efc366e011f"
+    },
+    "src/Nexus.Shell/Assets/Wallpapers/Solstice.png": {
+      "bytes": 210534,
+      "sha256": "0c5c077bae9f8c564d5fc6e4c570c68e4384fec9adafc15419bd97c65c937c0c"
+    },
+    "src/Nexus.Shell/Desktop/DesktopEnvironment.Dock.cs": {
+      "bytes": 2399,
+      "sha256": "4da91ccfa14ba619c1ebf21d722af6010473b95b823e673bd3a5ca0086064348"
+    },
+    "src/Nexus.Shell/Desktop/DesktopEnvironment.Utilities.cs": {
+      "bytes": 1831,
+      "sha256": "ff6f74540a0f453e79bc37bbd57c2a25aeda53b517c1eebb659e120aad87882d"
+    },
+    "src/Nexus.Shell/Desktop/DesktopEnvironment.cs": {
+      "bytes": 26315,
+      "sha256": "496cd74d251346fe20220ad8669732894ba2ed0678a4567dd2ff4aad9562f4a3"
+    },
+    "src/Nexus.Shell/Desktop/DesktopWindow.cs": {
+      "bytes": 2275,
+      "sha256": "42f48ae543e08d18d1114684f592a03b695fce5c78d02646d084329ed984d238"
+    },
+    "src/Nexus.Shell/Desktop/DockPreviewWindow.cs": {
+      "bytes": 12836,
+      "sha256": "a5c4fc06d564b805d2529b131e35094fca7c5294eb3a6a2609847fbe67912fef"
+    },
+    "src/Nexus.Shell/Desktop/FilesWindow.cs": {
+      "bytes": 6254,
+      "sha256": "986640173569123991ebd462760aa4f76f445506066341e79db212673c936f54"
+    },
+    "src/Nexus.Shell/Desktop/MenuWindow.cs": {
+      "bytes": 3031,
+      "sha256": "d06fa8ce36dfa49cf5b57997795a513e85151a5c02e82411c0576b0928499d23"
+    },
+    "src/Nexus.Shell/Desktop/QuickSettingsWindow.cs": {
+      "bytes": 3193,
+      "sha256": "6e581731e9a6e96b5c925dfd88a5365e9cea427d4df1e5ce2ba73a1cbb3b50a3"
+    },
+    "src/Nexus.Shell/Desktop/SwitcherWindow.cs": {
+      "bytes": 5889,
+      "sha256": "54a952d837bed1a18d78951618793c39a95e374828703216a6d6abafec9b888a"
+    },
+    "src/Nexus.Shell/Desktop/TaskbarWindow.cs": {
+      "bytes": 6230,
+      "sha256": "097bc39d75dfb1f42a292b0d554121483d4aa12db858537c04c569e423f30bbb"
+    },
+    "src/Nexus.Shell/Desktop/UtilityWindow.cs": {
+      "bytes": 4997,
+      "sha256": "fd860363807ec390b87ee88b6f1e857100ed1ad5b5db1638b389cfb4bfb47057"
+    },
+    "src/Nexus.Shell/Interop/DesktopIntegration.cs": {
+      "bytes": 7668,
+      "sha256": "cab9b20b6deb2a711610f3596ed6698a8a5c5dace2083def413ddaab5493c742"
+    },
+    "src/Nexus.Shell/Interop/DesktopWorkArea.cs": {
+      "bytes": 2155,
+      "sha256": "505ab24cc1de0f51c1f77cbaa7e3d2dffcfae3d52357585c2abf2e8a5bb2cf6a"
+    },
+    "src/Nexus.Shell/Interop/ExclusiveTaskbarRegistration.cs": {
+      "bytes": 3555,
+      "sha256": "bec0e751fada118e2bde8b318c309c021e9fc2b4072d57c123a14789bc2a2751"
+    },
+    "src/Nexus.Shell/Interop/NativeMethods.cs": {
+      "bytes": 9844,
+      "sha256": "102fed31347bfc6b93683d09cb1e47e3ce4cd3ded025062d4deda020198badd0"
+    },
+    "src/Nexus.Shell/Interop/NexusDesktopToggle.cs": {
+      "bytes": 2410,
+      "sha256": "4adcbc81b02dded77b904830b57d2a9ed986caf74a0ea482140fbb072a7a94be"
+    },
+    "src/Nexus.Shell/Interop/RecycleBinService.cs": {
+      "bytes": 991,
+      "sha256": "703f71fd6e7dfc0779a8302e4e418e01b705a1857271d626b7ae4b8e1b3ad445"
+    },
+    "src/Nexus.Shell/Interop/ShellLayerInterop.cs": {
+      "bytes": 8024,
+      "sha256": "eb3c91484830a2840ed41176d297975ebca81cdb5cb8c9b97dc8c5cc2a849463"
+    },
+    "src/Nexus.Shell/Interop/ShortcutResolver.cs": {
+      "bytes": 2508,
+      "sha256": "007225cebeb680c2f1161f5a5a03b2bf7274a059c254ca32768092d2d99dbb94"
+    },
+    "src/Nexus.Shell/Interop/TaskbarRegistration.cs": {
+      "bytes": 5788,
+      "sha256": "7255bea8168a3ccbd6ce531ac2d4e401a62648a483ff8cadcf96c69a047f7ab5"
+    },
+    "src/Nexus.Shell/Interop/WindowChrome.cs": {
+      "bytes": 7813,
+      "sha256": "9c52b27821a6d53a2b3749aab4aad8dd9b5a73671236d56d6d4ea44c0494d4a1"
+    },
+    "src/Nexus.Shell/Interop/WindowEventObserver.cs": {
+      "bytes": 3556,
+      "sha256": "819eaf2d29d85e49d0a0b54c99b6fc1208c33c9a19d01cf63ae7972ec3055b76"
+    },
+    "src/Nexus.Shell/Interop/WindowThumbnail.cs": {
+      "bytes": 3809,
+      "sha256": "817361c4556df09ebf37e3f4526e887ee50a58c9510b805ced031aceea53fd2d"
+    },
+    "src/Nexus.Shell/MainWindow.Appearance.cs": {
+      "bytes": 4697,
+      "sha256": "c97d57c4c7c0e5a91b67ae7252602da3c99110011635e1f48f016808181ae195"
+    },
+    "src/Nexus.Shell/MainWindow.Desktop.cs": {
+      "bytes": 18932,
+      "sha256": "415223b04aa634ab849b7686f26ae07b8ea41833b5835f0bd62cf30b29589f1b"
+    },
+    "src/Nexus.Shell/MainWindow.DesktopMode.cs": {
+      "bytes": 8535,
+      "sha256": "9035836008e7c016b864e02afbafc74d7531bc48a3c8219e431fc11db407daf2"
+    },
+    "src/Nexus.Shell/MainWindow.Experience.cs": {
+      "bytes": 13510,
+      "sha256": "60703045fa28b423ad5c349be593a3d9777e8618e0d6132f958387f25f380e16"
+    },
+    "src/Nexus.Shell/MainWindow.Explore.cs": {
+      "bytes": 35706,
+      "sha256": "a6f0062cd167769d70535460e37e0b6ee6ed67f432a23693acee1ba12d98b99b"
+    },
+    "src/Nexus.Shell/MainWindow.Orbit.cs": {
+      "bytes": 12720,
+      "sha256": "aba4ea3001d99aedbc79e04a07e71cae6bf08c4633ecb37e75c0368163773f9e"
+    },
+    "src/Nexus.Shell/MainWindow.Overview.cs": {
+      "bytes": 8031,
+      "sha256": "3f08b0d1695b3c37371487eba538cb28dbec9ac8e52da7de6a735efbb97a234e"
+    },
+    "src/Nexus.Shell/MainWindow.PcControls.cs": {
+      "bytes": 19697,
+      "sha256": "741b07d997fd710053f723bcd7fa1a1268f8ebfaee55334e17e6470057034822"
+    },
+    "src/Nexus.Shell/MainWindow.Polish.cs": {
+      "bytes": 643,
+      "sha256": "16043c55b8fac08fbe9dc01980d7ac5e3f26a2ea9f6047a029cd14d37de1e892"
+    },
+    "src/Nexus.Shell/MainWindow.Workspaces.cs": {
+      "bytes": 18613,
+      "sha256": "5154a14288f01e05472b1ab25e4415b94617115b4ad1c7a746e5e63596cbdca2"
+    },
+    "src/Nexus.Shell/MainWindow.xaml": {
+      "bytes": 61923,
+      "sha256": "601d1d58f533b81c9ed6886beb5f1e0107b055e70de3eedb148315d435ea97b1"
+    },
+    "src/Nexus.Shell/MainWindow.xaml.cs": {
+      "bytes": 37207,
+      "sha256": "ee6b8c8516db4f92857f2d6dacd644b8ee5936a679f9b18ef603246b4312349b"
+    },
+    "src/Nexus.Shell/Models/ShellState.cs": {
+      "bytes": 5161,
+      "sha256": "466c2937c18f3e72d9f5c84d1fc79cbcfe5cfd6cd6af209d35fd6e2240834a3b"
+    },
+    "src/Nexus.Shell/Nexus.Shell.csproj": {
+      "bytes": 3661,
+      "sha256": "39e5e81aa86960dc934e0df5017415cc49b36061c501c2ae5cd5e1032bb8a6ee"
+    },
+    "src/Nexus.Shell/Services/AppCatalog.cs": {
+      "bytes": 4450,
+      "sha256": "124c5f6e84c8d38b40604da855fb3d78a43179e7cc35308c63d1f976d2b6b718"
+    },
+    "src/Nexus.Shell/Services/AudioController.cs": {
+      "bytes": 16361,
+      "sha256": "0812c4d24ba730f61249805a69812938783c183a27a87dd719dd347b4f6e8508"
+    },
+    "src/Nexus.Shell/Services/AuraPalette.cs": {
+      "bytes": 9209,
+      "sha256": "b3b9f981990d530f13dc12dd1d1db21eabb7d27c488f2eb5cba143d2c1be2517"
+    },
+    "src/Nexus.Shell/Services/BrightnessController.cs": {
+      "bytes": 5525,
+      "sha256": "3414e6624bb2ee998a6a2c29c83849530f67dffb4a519236e6eee04811855225"
+    },
+    "src/Nexus.Shell/Services/BrightnessScale.cs": {
+      "bytes": 749,
+      "sha256": "bc89448bb7d4d39dbff2293f407a818f6a88df877b0bb0f3985d1782780ab670"
+    },
+    "src/Nexus.Shell/Services/CalculatorEngine.cs": {
+      "bytes": 3594,
+      "sha256": "c8f7b90806b61ddc0a283729b038abd492cb42007268f645b96fdf9ec0cbf6e3"
+    },
+    "src/Nexus.Shell/Services/CommandSearch.cs": {
+      "bytes": 907,
+      "sha256": "598222170df16b37266345a9fb3147a880cb59547093ea80db0d821517d666be"
+    },
+    "src/Nexus.Shell/Services/DesktopCatalog.cs": {
+      "bytes": 2306,
+      "sha256": "d4b93763aeaf77b4693c516818f162c7c1b27c45e5e1b1fe6a501289bd29e229"
+    },
+    "src/Nexus.Shell/Services/DesktopLayout.cs": {
+      "bytes": 4235,
+      "sha256": "16e6e8b09f035137a057d93893b6120f667a49d6569dc38d5efa5429841382da"
+    },
+    "src/Nexus.Shell/Services/DesktopSessionRecord.cs": {
+      "bytes": 2937,
+      "sha256": "2374f82e6acd311e8b6198eca3ba6682589567b7c72cb6afb2e1829a37b55bbb"
+    },
+    "src/Nexus.Shell/Services/DesktopSessionRecovery.cs": {
+      "bytes": 3181,
+      "sha256": "a99ec19b0a8958f296375df72f36cf97cb37c4ab6d3a7475a069751ea7352c10"
+    },
+    "src/Nexus.Shell/Services/DesktopShellPolicy.cs": {
+      "bytes": 1118,
+      "sha256": "6ababa770435bf0ebbd0d725067721843d60541aa2f626309c22d3274a642118"
+    },
+    "src/Nexus.Shell/Services/DesktopShellRegistration.cs": {
+      "bytes": 8080,
+      "sha256": "8014f0e9f98a8a5403129513abb7e28ccd4d39bb4382280a8d88d9634a4ab999"
+    },
+    "src/Nexus.Shell/Services/DesktopVisuals.cs": {
+      "bytes": 679,
+      "sha256": "af2221e81e2ea5a336f1875af47ec439cae4e141d7fc1f951ee31095e6eff28d"
+    },
+    "src/Nexus.Shell/Services/DesktopWorkAreaReservation.cs": {
+      "bytes": 510,
+      "sha256": "aaefdb2b057e5df9117d002e82a9e87c70b13d33ba70c120d95e6f97b8e956c4"
+    },
+    "src/Nexus.Shell/Services/DesktopWorkspace.cs": {
+      "bytes": 3858,
+      "sha256": "09834642f6ec68215eff92b251382353bf7e1a1e3bd3e5785c3f51d8b3cdf6d3"
+    },
+    "src/Nexus.Shell/Services/DockMotionPolicy.cs": {
+      "bytes": 1169,
+      "sha256": "3215c66b1b7f9a224ef2dc4efdda9016c07910c59f6a517f6b1d5f9fcb885c75"
+    },
+    "src/Nexus.Shell/Services/DockPreviewPolicy.cs": {
+      "bytes": 1665,
+      "sha256": "ef99b3af0133ab75f048be667b6b6050352a54dc7d54d0b862c761a76b913638"
+    },
+    "src/Nexus.Shell/Services/DockVisibility.cs": {
+      "bytes": 1468,
+      "sha256": "7d7ba21432a5e0c71586565a86be1d8d587bac67fedffb2461df1f962d5f8915"
+    },
+    "src/Nexus.Shell/Services/DockWindowSet.cs": {
+      "bytes": 1183,
+      "sha256": "1a20f2cc6875574b929f9203aafa9a663e6164f52580d0133df895f83898f5dc"
+    },
+    "src/Nexus.Shell/Services/ExploreWorkspace.cs": {
+      "bytes": 10265,
+      "sha256": "a4d7974670e4d99ce1a9d066f53e4f09d781438bb67dc37c2480c51eee5c235b"
+    },
+    "src/Nexus.Shell/Services/FileCatalog.cs": {
+      "bytes": 4343,
+      "sha256": "ff11d8091b513d3842df06502f543e37c5b80d0eac2ee226265d239114c77fc6"
+    },
+    "src/Nexus.Shell/Services/FilePresentation.cs": {
+      "bytes": 1918,
+      "sha256": "9943e330e0d9b498d1ccfa511ddbdeba1990952e8412f29e9d57e735ec192fd1"
+    },
+    "src/Nexus.Shell/Services/FocusSession.cs": {
+      "bytes": 2353,
+      "sha256": "b17c1f03c41f610f7f032d97301067d9719e5a4a019765781697553b1c7ac931"
+    },
+    "src/Nexus.Shell/Services/Log.cs": {
+      "bytes": 1940,
+      "sha256": "7198e7e814613247a839cb370c57fc1d87b3a95412886718710340aad32e5a8c"
+    },
+    "src/Nexus.Shell/Services/NavigationTrail.cs": {
+      "bytes": 1108,
+      "sha256": "375a7558c87c9aff9dee9f87e668439ac7b3c54dad2d6e6692c67052664e50f5"
+    },
+    "src/Nexus.Shell/Services/NotesWorkspace.cs": {
+      "bytes": 2227,
+      "sha256": "c2be278388e12e5c06fbbb2774bf3cd80cb419123eff62148de67e4ea99b9b48"
+    },
+    "src/Nexus.Shell/Services/PcMetrics.cs": {
+      "bytes": 4428,
+      "sha256": "46fd3440e0ec66c9d2a6f31ae1fb31bbd28ff3d26be47fe90624e97a37503f55"
+    },
+    "src/Nexus.Shell/Services/ResourceSampler.cs": {
+      "bytes": 1149,
+      "sha256": "abfa8b61c00a93c70572be31d0c709e0c59b58fea047fa68aba2c87bc1447912"
+    },
+    "src/Nexus.Shell/Services/ShellExperience.cs": {
+      "bytes": 2670,
+      "sha256": "1ee8d6a145a14c063269c0535ea448534818bf43fb16158b73c3792d65e377e9"
+    },
+    "src/Nexus.Shell/Services/ShellSession.cs": {
+      "bytes": 1592,
+      "sha256": "ee5c901ef9002c7ee46da21b07e10a4bae191e14f8d57c8844e947aebabacaef"
+    },
+    "src/Nexus.Shell/Services/StartupRegistration.cs": {
+      "bytes": 1477,
+      "sha256": "6e7835a37de193907a4213efae8eb425ba20c5eeb7267ee657b8d07c753cf0e8"
+    },
+    "src/Nexus.Shell/Services/StateStore.cs": {
+      "bytes": 7057,
+      "sha256": "dfc186182cc1ccaf2d7348f2506b62f9d90382fa961460d3a1bc75f12630b089"
+    },
+    "src/Nexus.Shell/Services/UsageTracker.cs": {
+      "bytes": 1091,
+      "sha256": "f82a1b3dbd229aa308a3851b1b9165cd7b56372bb88303f903df59ca70e8c2f7"
+    },
+    "src/Nexus.Shell/Services/WindowLayouts.cs": {
+      "bytes": 6085,
+      "sha256": "edaa90d3a8a0377966954e962201f96fc85b774ce5460d27a58b2329020391f9"
+    },
+    "src/Nexus.Shell/Services/WorkspaceState.cs": {
+      "bytes": 1311,
+      "sha256": "baeaf0777c99138809889271a12b9131c896b227de6869021d1c90ec96f6dcf6"
+    },
+    "src/Nexus.Shell/UI/AppAccentConverter.cs": {
+      "bytes": 1682,
+      "sha256": "2c4d96ec9bfc35266c149f9a1e5d97e2de3809a096c7010aa8e0960a21763f34"
+    },
+    "src/Nexus.Shell/UI/Controls/CalculatorView.cs": {
+      "bytes": 4106,
+      "sha256": "3fb91a81c9767f8781ea301d46f8a3c3ecaaf827e2c8102ef63545db7f51ccff"
+    },
+    "src/Nexus.Shell/UI/Controls/NotesView.cs": {
+      "bytes": 8404,
+      "sha256": "c94a828ceac28ad71a72a5364305a9a841726f785ea23de87ff2c42f7414adcc"
+    },
+    "src/Nexus.Shell/UI/Controls/QuickSettingsView.cs": {
+      "bytes": 17693,
+      "sha256": "03780b38df79dc3a6935814506758ac356db2f9bbb825cfa3f92f1160b2d2b4a"
+    },
+    "src/Nexus.Shell/UI/Desktop/DesktopSurface.cs": {
+      "bytes": 12703,
+      "sha256": "297b598efda3a57a79d045c20060d63982be696bc3b34f928781c4b37549f758"
+    },
+    "src/Nexus.Shell/UI/Files/FilesView.cs": {
+      "bytes": 29604,
+      "sha256": "6fdfdebfc4cf2113d8fa4453e7e056f3955dd551d69a92753fe5ec50ef8459fd"
+    },
+    "src/Nexus.Shell/UI/Menus/DesktopMenus.cs": {
+      "bytes": 3434,
+      "sha256": "6319fde2178b17fed23e6e79536ffb732adbeb1dc5d37bb589b0dcf3e064c1e7"
+    },
+    "src/Nexus.Shell/UI/Menus/StartMenuView.cs": {
+      "bytes": 7817,
+      "sha256": "ac14df11ebb48121f85a1d9ed4b3d494fff3cd20fe39ab75f3c4a78c8b0492f2"
+    },
+    "src/Nexus.Shell/UI/MotionController.cs": {
+      "bytes": 11563,
+      "sha256": "6d33444da0608a25e3d454b4a027c71fc8113ec798c091151181866bf5bc5e2d"
+    },
+    "src/Nexus.Shell/UI/NexusIcons.cs": {
+      "bytes": 3417,
+      "sha256": "85bf614df4211490e957880d9044c626b0474083e7bdffb935b9a47f45c4f4ca"
+    },
+    "src/Nexus.Shell/UI/SavedKindConverter.cs": {
+      "bytes": 568,
+      "sha256": "2a516195f52957e47d033972a1463e663537374a3812031770131cc1a8e41dd4"
+    },
+    "src/Nexus.Shell/UI/ShellTheme.cs": {
+      "bytes": 3948,
+      "sha256": "78853716a0a98813fa1e50e488054af1d41f0b00c6aa4c2d0947801af3529f41"
+    },
+    "src/Nexus.Shell/UI/SurfaceMotion.cs": {
+      "bytes": 1294,
+      "sha256": "9588841644bb9070e500c8fcc99a72ea0c1a6db591dfd8ce996b7da5b67b6159"
+    },
+    "src/Nexus.Shell/UI/Taskbar/DockMotionController.cs": {
+      "bytes": 6512,
+      "sha256": "c26cbb5a9c2c5e04713245a6ecb34ac9b0bddc4cd79a892cc11c7d7c5a31bb78"
+    },
+    "src/Nexus.Shell/UI/Taskbar/TaskbarView.cs": {
+      "bytes": 22495,
+      "sha256": "938c850fdf08fdb3dff180746352b96615d058a8f5938ed9658e956d68c65dde"
+    },
+    "src/Nexus.Shell/UI/WindowMaterial.cs": {
+      "bytes": 1231,
+      "sha256": "dac2638df56a08df597fecf0377cba6c9ef8f4654003f5151fb4ac88d6c5edd7"
+    },
+    "src/Nexus.Shell/app.manifest": {
+      "bytes": 910,
+      "sha256": "00d3d1f6a056212d00897e28fdd7b27d9010666c3aec508543b8e787011b6b53"
+    },
+    "src/Nexus.Shell/packages.lock.json": {
+      "bytes": 3572,
+      "sha256": "4ab1d910bd6c4716c9125dd37803971ed645af039cbf81edeb19ac3af546fc47"
+    },
+    "tests/Nexus.Core.Checks/DesktopFoundationChecks.cs": {
+      "bytes": 4860,
+      "sha256": "8e6b7bdd4c9fe1bf4624ed45b4f3949f10c3f0975fba38a722eadf5faeb3e0df"
+    },
+    "tests/Nexus.Core.Checks/DesktopModeChecks.cs": {
+      "bytes": 17386,
+      "sha256": "b1a682f07530d29f284ee58a35e2abc03653300f5aa9aa967ecd83af031413a4"
+    },
+    "tests/Nexus.Core.Checks/DesktopNativeChecks.cs": {
+      "bytes": 13219,
+      "sha256": "c3bbacfc5172d0a3f5a5a061a51cb71b9e25a3c95609c472be7fc5585ce62954"
+    },
+    "tests/Nexus.Core.Checks/DesktopPerformanceChecks.cs": {
+      "bytes": 4265,
+      "sha256": "5f5091767fc03334cafb24c34b79279aef642c6ebb708fe428383a1ad765d0e3"
+    },
+    "tests/Nexus.Core.Checks/DesktopUiChecks.cs": {
+      "bytes": 4157,
+      "sha256": "188614fc9ac99607469b790177cdb454e785c2fad926763b58f076b0c04b5750"
+    },
+    "tests/Nexus.Core.Checks/DockChecks.cs": {
+      "bytes": 3732,
+      "sha256": "c565c6505559a549098f87fa71f61adf12b1f44e266368a3674d94bff92f7692"
+    },
+    "tests/Nexus.Core.Checks/DockExperienceChecks.cs": {
+      "bytes": 5018,
+      "sha256": "a18689ee55aad288c1ac5dc98ffc98c3bcbf946bf91b1d07198d8bf9efc08f13"
+    },
+    "tests/Nexus.Core.Checks/ExploreChecks.cs": {
+      "bytes": 7123,
+      "sha256": "685638afcc503a453748c08013df417142f97e041f7e7c2e09faa9e925b81eff"
+    },
+    "tests/Nexus.Core.Checks/MidnightChecks.cs": {
+      "bytes": 6269,
+      "sha256": "0d5998260825ef15926765ce34b024098c8f51dfc5bc82f43b9fb5b57e0b52c5"
+    },
+    "tests/Nexus.Core.Checks/Nexus.Core.Checks.csproj": {
+      "bytes": 4414,
+      "sha256": "12a2df37b32379dafaa56a575335b0058546360952e298effeef4c5fdac25060"
+    },
+    "tests/Nexus.Core.Checks/PcControlChecks.cs": {
+      "bytes": 4165,
+      "sha256": "c03b55b485860c6b59e72dd427902aff6ea0623612e6a5bbe5ecebad3781725c"
+    },
+    "tests/Nexus.Core.Checks/Program.cs": {
+      "bytes": 19544,
+      "sha256": "2f44270aba5fabe0fb863f79b8a27ea95e6d7f1e8330f39d9af443233a019816"
+    },
+    "tests/Nexus.Core.Checks/ReliabilityChecks.cs": {
+      "bytes": 4354,
+      "sha256": "0b06833ca2ddf8412b259c9a23d64918a732fab0d6e12e7c40d5af948beaac1e"
+    }
+  }
+}

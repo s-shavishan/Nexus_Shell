@@ -15,6 +15,7 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     private readonly Slider _volume = new() { Minimum = 0, Maximum = 100, StepFrequency = 1, IsEnabled = false };
     private readonly Slider _brightness = new() { Minimum = 0, Maximum = 100, StepFrequency = 1, IsEnabled = false };
     private readonly Button _mute = new() { Content = "Mute", IsEnabled = false };
+    private readonly Button _focus;
     private readonly TextBlock _audioMessage, _displayMessage, _profileMessage, _power, _network;
     private readonly ComboBox _profile = new() { HorizontalAlignment = HorizontalAlignment.Stretch };
     private readonly ToggleSwitch _compact = new() { Header = "Compact taskbar", OnContent = "On", OffContent = "Off" };
@@ -42,15 +43,17 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     internal QuickSettingsView(DesktopEnvironment environment, Action close)
     {
         _environment = environment; _display = new(environment.Taskbar.Handle);
-        var body = new StackPanel { Spacing = 15, Margin = new Thickness(20) };
+        var body = new StackPanel { Spacing = 10, Margin = new Thickness(13) };
         var header = new Grid { ColumnSpacing = 10 };
         header.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
-        var title = Label("Control Center", 24); title.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
+        var title = Label("Control Center", 16); title.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
         header.Children.Add(title);
         var dismiss = Button("Close", close, true); Grid.SetColumn(dismiss, 1); header.Children.Add(dismiss); body.Children.Add(header);
-        var subtitle = Label("NEXUS  /  MIDNIGHT DESKTOP", 11, true);
-        body.Children.Add(subtitle);
+        var connectivity = new Grid { ColumnSpacing = 10 }; connectivity.ColumnDefinitions.Add(new()); connectivity.ColumnDefinitions.Add(new());
+        var network = new StackPanel { Spacing = 6 }; network.Children.Add(Label("Connection", 14)); _network = Label("Reading network link…", 11, true); network.Children.Add(_network); network.Children.Add(Button("Network settings", () => environment.OpenTarget("ms-settings:network"), true)); connectivity.Children.Add(Card(network));
+        var focus = new StackPanel { Spacing = 6 }; focus.Children.Add(Label("☾  Focus desktop", 14)); focus.Children.Add(Label("A clear space to work", 11, true));
+        _focus = Button("Hide desktop icons", () => { environment.Session.State.FocusMode = !environment.Session.State.FocusMode; environment.SaveState(); RefreshPreferences(); }); focus.Children.Add(_focus); var focusCard = Card(focus); Grid.SetColumn(focusCard, 1); connectivity.Children.Add(focusCard); body.Children.Add(connectivity);
 
         var audio = new StackPanel { Spacing = 8 };
         audio.Children.Add(Label("Sound", 15));
@@ -63,20 +66,23 @@ internal sealed class QuickSettingsView : Grid, IDisposable
         _displayMessage = Label(_displayState.Message, 12, true); display.Children.Add(_displayMessage);
         AutomationProperties.SetName(_brightness, "Display brightness"); display.Children.Add(_brightness); body.Children.Add(Card(display));
 
-        var visuals = new StackPanel { Spacing = 10 }; visuals.Children.Add(Label("Appearance & desktop", 16));
+        var visuals = new StackPanel { Spacing = 8 }; visuals.Children.Add(Label("Appearance", 15));
         foreach (string name in new[] { "Fast", "Balanced", "Full" }) _profile.Items.Add(name);
         AutomationProperties.SetName(_profile, "Desktop visual quality"); visuals.Children.Add(_profile);
-        _profileMessage = Label("", 12, true); visuals.Children.Add(_profileMessage); visuals.Children.Add(_floating); visuals.Children.Add(_compact); visuals.Children.Add(_previews); body.Children.Add(Card(visuals));
+        _profileMessage = Label("", 11, true); visuals.Children.Add(_profileMessage);
+        var advanced = new StackPanel { Spacing = 8 }; advanced.Children.Add(_floating); advanced.Children.Add(_compact); advanced.Children.Add(_previews);
+        visuals.Children.Add(new Expander { Header = "Dock preferences", Content = advanced, HorizontalAlignment = HorizontalAlignment.Stretch });
+        visuals.Children.Add(Button("Choose desktop mood", () => environment.ShowSections("Personalize"))); body.Children.Add(Card(visuals));
 
         var status = new StackPanel { Spacing = 4 };
-        _power = Label("Reading power status…", 12, true); _network = Label("Reading network link…", 12, true);
-        status.Children.Add(_power); status.Children.Add(_network); body.Children.Add(status);
+        _power = Label("Reading power status…", 11, true);
+        status.Children.Add(_power); body.Children.Add(status);
         var actions = new Grid { ColumnSpacing = 8, RowSpacing = 8 };
         actions.ColumnDefinitions.Add(new()); actions.ColumnDefinitions.Add(new()); actions.RowDefinitions.Add(new()); actions.RowDefinitions.Add(new());
         void AddAction(string name, Action action, int row, int column)
         { var button = Button(name, action); button.HorizontalAlignment = HorizontalAlignment.Stretch; Grid.SetRow(button, row); Grid.SetColumn(button, column); actions.Children.Add(button); }
-        AddAction("Settings", () => environment.OpenTarget("ms-settings:"), 0, 0);
-        AddAction("Control Panel", () => environment.OpenTarget("control.exe"), 0, 1);
+        AddAction("Notes", () => environment.ShowUtility("Notes"), 0, 0);
+        AddAction("Calculator", () => environment.ShowUtility("Calculator"), 0, 1);
         AddAction("Task Manager", () => environment.OpenTarget("taskmgr.exe"), 1, 0);
         AddAction("More controls", () => environment.ShowSections("PC controls"), 1, 1);
         body.Children.Add(actions);
@@ -116,7 +122,7 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     private TextBlock Label(string text, double size, bool muted = false)
     { var label = new TextBlock { Text = text, FontSize = size, TextWrapping = TextWrapping.Wrap }; _labels.Add((label, muted)); return label; }
     private Border Card(UIElement child)
-    { var card = new Border { Child = child, Padding = new Thickness(19), CornerRadius = new CornerRadius(21), BorderThickness = new Thickness(1) }; _cards.Add(card); return card; }
+    { var card = new Border { Child = child, Padding = new Thickness(13), CornerRadius = new CornerRadius(16), BorderThickness = new Thickness(1) }; _cards.Add(card); return card; }
     private static Button Button(string name, Action action, bool quiet = false)
     {
         var button = new Button { Content = name, Style = (Style)Application.Current.Resources[quiet ? "QuietButton" : "AuraSurfaceButton"], Padding = new Thickness(10, 7, 10, 7) };
@@ -136,6 +142,7 @@ internal sealed class QuickSettingsView : Grid, IDisposable
         {
             var profile = DesktopVisuals.Read(_environment.Session.State);
             _profile.SelectedIndex = (int)profile; _compact.IsOn = _environment.Session.State.CompactDock; _floating.IsOn = _environment.Session.State.FloatingTaskbar; _previews.IsOn = _environment.Session.State.DockPreviews;
+            _focus.Content = _environment.Session.State.FocusMode ? "Show desktop icons" : "Hide desktop icons";
             _profileMessage.Text = profile switch
             {
                 DesktopVisualProfile.Fast => "Best for VMs · simple background and window cards, no glass or motion.",

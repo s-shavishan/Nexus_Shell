@@ -15,7 +15,9 @@ public static class AppCatalog
             new("files", "Files", "nexus:files", "\uE8B7", "System"),
             new("browser", "Browser", "https://www.google.com", "\uE774", "Browser"),
             new("terminal", "Terminal", Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "cmd.exe"), "\uE756", "Development"),
-            new("settings", "Settings", "ms-settings:", "\uE713", "System")
+            new("settings", "Settings", "ms-settings:", "\uE713", "System"),
+            new("calculator", "Calculator", "nexus:calculator", "\uE8EF", "Utility"),
+            new("notes", "Notes", "nexus:notes", "\uE70B", "Utility")
         };
         var firefox = FindApp("firefox.exe", Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Mozilla Firefox", "firefox.exe"));
         var code = FindApp("Code.exe", Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Microsoft VS Code", "Code.exe"));

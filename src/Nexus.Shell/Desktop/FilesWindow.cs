@@ -20,6 +20,7 @@ internal sealed class FilesWindow : Window
     private readonly Border _surface;
     private readonly WindowChrome _chrome;
     private readonly UI.SurfaceMotion _motion;
+    private readonly UI.WindowMaterial _material = new();
     private bool _tucked;
     private readonly TextBlock _title;
     private readonly DesktopEnvironment _environment;
@@ -28,27 +29,28 @@ internal sealed class FilesWindow : Window
     internal FilesWindow(DesktopEnvironment environment, FileSelectionRequest request, string folder)
     {
         _environment = environment; View = new(environment, request, Complete);
-        _frame.RowDefinitions.Add(new() { Height = new GridLength(54) }); _frame.RowDefinitions.Add(new() { Height = new GridLength(1, GridUnitType.Star) });
+        _frame.RowDefinitions.Add(new() { Height = new GridLength(44) }); _frame.RowDefinitions.Add(new() { Height = new GridLength(1, GridUnitType.Star) });
         var chrome = new Grid { Padding = new Thickness(8, 0, 12, 0) }; chrome.ColumnDefinitions.Add(new() { Width = GridLength.Auto }); chrome.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) });
         var controls = new StackPanel { Orientation = Orientation.Horizontal };
         Button Control(string label, Windows.UI.Color color, Action action)
         {
-            var button = new Button { Content = new Ellipse { Width = 10, Height = 10, Fill = new SolidColorBrush(color) }, Width = 36, Height = 44, Style = (Style)Application.Current.Resources["QuietButton"] };
+            var button = new Button { Content = new Ellipse { Width = 12, Height = 12, Fill = new SolidColorBrush(color) }, Width = 26, Height = 36, Padding = new Thickness(0), Style = (Style)Application.Current.Resources["QuietButton"] };
             button.Click += (_, _) => action(); ToolTipService.SetToolTip(button, label); Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, label); return button;
         }
         controls.Children.Add(Control("Close", Windows.UI.Color.FromArgb(255, 220, 76, 71), Close));
         controls.Children.Add(Control("Minimize", Windows.UI.Color.FromArgb(255, 202, 145, 27), Minimize));
         controls.Children.Add(Control("Maximize or restore", Windows.UI.Color.FromArgb(255, 37, 152, 87), ToggleMaximize)); chrome.Children.Add(controls);
-        _title = new TextBlock { Text = request.Title + " · Nexus", FontSize = 14, VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Center, HorizontalAlignment = HorizontalAlignment.Stretch, TextTrimming = TextTrimming.CharacterEllipsis };
+        _title = new TextBlock { Text = request.Title, FontSize = 13, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Left, Margin = new Thickness(28, 0, 0, 0), HorizontalAlignment = HorizontalAlignment.Stretch, TextTrimming = TextTrimming.CharacterEllipsis };
         _title.PointerPressed += (_, e) => { if (e.GetCurrentPoint(_title).Properties.IsLeftButtonPressed) NativeMethods.BeginDrag(Handle); };
         _title.DoubleTapped += (_, _) => ToggleMaximize(); Grid.SetColumn(_title, 1); chrome.Children.Add(_title);
+        if (request.Kind == FileSelectionKind.Browse) View.FolderChanged += title => { _title.Text = title; NativeWindow.Title = title + " · Nexus Files"; };
         _frame.Children.Add(chrome); Grid.SetRow(View, 1); _frame.Children.Add(View);
         _surface = new Border { Child = _frame, CornerRadius = new CornerRadius(24), BorderThickness = new Thickness(1) }; Content = _surface;
         Handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
         NativeWindow = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(Handle));
         NativeWindow.Title = request.Title + " · Nexus";
         if (NativeWindow.Presenter is OverlappedPresenter overlapped) overlapped.SetBorderAndTitleBar(false, false);
-        _chrome = new(Handle, resizable: true, tuck: Minimize);
+        _chrome = new(Handle, resizable: true);
         _motion = new(View, () => environment.Theme.Animations && !environment.Theme.HighContrast && !environment.Session.State.ReducedEffects);
         var work = ShellLayerInterop.Monitor(Handle).Work.Bounds; double scale = ShellLayerInterop.Scale(Handle);
         int width = Math.Min(work.Width, (int)(1130 * scale)), height = Math.Min(work.Height, (int)(740 * scale));
@@ -70,11 +72,16 @@ internal sealed class FilesWindow : Window
         if (NativeWindow.Presenter is not OverlappedPresenter presenter) return;
         if (presenter.State == OverlappedPresenterState.Maximized) presenter.Restore(); else presenter.Maximize();
     }
-    private void Minimize() { _tucked = true; _motion.Hide(); NativeWindow.Hide(); _environment.UpdateTaskbar(); }
+    private void Minimize()
+    {
+        _tucked = true; _motion.Hide();
+        if (NativeWindow.Presenter is OverlappedPresenter presenter) presenter.Minimize();
+        _environment.UpdateTaskbar();
+    }
     internal void ApplyAppearance()
     {
         var theme = _environment.Theme;
-        _frame.RequestedTheme = theme.ElementTheme; _surface.Background = _frame.Background = theme.Brush("NexusSidebar");
+        _frame.RequestedTheme = theme.ElementTheme; _frame.Background = null; _material.Apply(this, _surface, _environment);
         _surface.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 24); _surface.BorderBrush = theme.Brush("NexusBorder"); _title.Foreground = theme.Brush("NexusText");
         _chrome.SetCorners(theme.HighContrast); _motion.Refresh(); View.ApplyAppearance();
     }

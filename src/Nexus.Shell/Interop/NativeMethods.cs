@@ -80,6 +80,9 @@ internal static class NativeMethods
     internal static bool OwnsWindow(RunningWindow window) => window.Handle != IntPtr.Zero && window.ProcessId > 0
         && IsWindow(window.Handle) && GetWindowThreadProcessId(window.Handle, out uint id) != 0 && id == window.ProcessId;
     internal static bool IsMinimized(IntPtr window) => IsIconic(window);
+    internal static int WindowProcessId(IntPtr window) { GetWindowThreadProcessId(window, out uint id); return (int)id; }
+    [DllImport("user32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool LockWorkStation();
+    internal static bool LockScreen() => LockWorkStation();
     internal static IntPtr ForegroundTaskWindow()
     {
         var foreground = GetForegroundWindow();

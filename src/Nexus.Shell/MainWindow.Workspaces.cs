@@ -114,7 +114,7 @@ public sealed partial class MainWindow
         };
         _studyNote.TextChanged += (_, _) =>
         {
-            if (!_ready || _studyNote is null) return;
+            if (!_ready || _studyNote is null || _state.QuickNote == _studyNote.Text) return;
             _state.QuickNote = _studyNote.Text;
             if (QuickNotesBox.Text != _state.QuickNote) QuickNotesBox.Text = _state.QuickNote;
             SaveState();
@@ -178,10 +178,16 @@ public sealed partial class MainWindow
     }
     private void QuickNotes_TextChanged(object sender, TextChangedEventArgs args)
     {
-        if (!_ready) return;
+        if (!_ready || _state.QuickNote == QuickNotesBox.Text) return;
         _state.QuickNote = QuickNotesBox.Text;
         if (_studyNote is not null && _studyNote.Text != _state.QuickNote) _studyNote.Text = _state.QuickNote;
         SaveState();
+    }
+    internal void RefreshSharedNotes()
+    {
+        if (!_ready) return;
+        if (QuickNotesBox.Text != _state.QuickNote) QuickNotesBox.Text = _state.QuickNote;
+        if (_studyNote is not null && _studyNote.Text != _state.QuickNote) _studyNote.Text = _state.QuickNote;
     }
 
     private void OpenSaved(SavedItem item)

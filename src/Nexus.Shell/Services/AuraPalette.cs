@@ -36,6 +36,11 @@ public sealed record AuraPalette(string Name, string Canvas, string Panel, strin
     string Muted, string HeroStart, string HeroEnd, string WallpaperEnd)
 {
     public static readonly string[] Moods = ["Midnight", "Solstice", "Ember", "Opal", "Orbit", "Aurora", "Slate"];
+    public static string NormalizeMood(string? mood) => mood switch
+    {
+        "Graphite" => "Slate", "Lagoon" => "Aurora", "Pearl" => "Orbit",
+        _ => Moods.Contains(mood ?? "") ? mood! : "Midnight"
+    };
     public bool IsLight => Name is "Solstice" or "Opal";
     public string AccentEnd => Name == "Midnight" ? "FF8195F4" : Name == "Ember" ? "FFBA2B52" : Accent;
     public string DockStart => Name == "Midnight" ? "DF283752" : Name == "Ember" ? "F2491D1D" : Panel;
