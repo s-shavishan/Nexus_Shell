@@ -132,6 +132,12 @@ internal sealed class CoreProcessSession : IAsyncDisposable
             await TransportFailedAsync(client, ex).ConfigureAwait(false); throw;
         }
     }
+    internal async Task<PanelSyncResult> SyncControlCenterAsync(PanelSync state, CancellationToken cancellation)
+    {
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellation, _operations.Token);
+        var client = await ClientAsync().ConfigureAwait(false);
+        return await client.CallAsync<PanelSyncResult>(RuntimeOperations.PanelSync, state, TimeSpan.FromSeconds(3), linked.Token).ConfigureAwait(false);
+    }
     public async ValueTask DisposeAsync()
     {
         _disposed = true; _operations.Cancel();

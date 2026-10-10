@@ -16,14 +16,18 @@ internal sealed class MenuBarView : Grid, IDisposable
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(15) };
     private readonly Grid _controls = new() { Width = 17, Height = 17 };
     private readonly List<Button> _buttons = [];
+    private bool _disposed;
+    private int _refreshQueued;
     internal MenuBarView(DesktopEnvironment environment)
     {
-        _environment = environment; Padding = new Thickness(15, 0, 15, 0); ColumnSpacing = 8;
+        _environment = environment; Padding = new Thickness(10, 0, 12, 0); ColumnSpacing = 8;
+        KeyboardAcceleratorPlacementMode = Microsoft.UI.Xaml.Input.KeyboardAcceleratorPlacementMode.Hidden;
         ColumnDefinitions.Add(new()); ColumnDefinitions.Add(new() { Width = GridLength.Auto });
         var left = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 1, VerticalAlignment = VerticalAlignment.Center };
         void Menu(string text, MenuFlyout flyout, bool bold = false)
         { var button = Basic(text, text + " menu"); button.FontWeight = bold ? Microsoft.UI.Text.FontWeights.SemiBold : Microsoft.UI.Text.FontWeights.Normal; button.Flyout = flyout; left.Children.Add(button); }
-        Menu("◈", environment.Menus.NexusMenu()); Menu("Desktop", environment.Menus.NexusMenu(), true);
+        var nexus = Basic(NexusIcons.Image("Launchpad", 19), "Nexus menu"); nexus.Width = 34; nexus.Padding = new Thickness(5, 0, 5, 0); nexus.Flyout = environment.Menus.NexusMenu(); left.Children.Add(nexus);
+        Menu("Desktop", environment.Menus.NexusMenu(), true);
         Menu("File", environment.Menus.FileMenu()); Menu("View", environment.Menus.ViewMenu()); Menu("Window", environment.Menus.WindowMenu());
         var help = Basic("Help", "Nexus help and personalization"); help.Click += (_, _) => environment.ShowSections("Personalize"); left.Children.Add(help); Children.Add(left);
         var right = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
@@ -51,18 +55,23 @@ internal sealed class MenuBarView : Grid, IDisposable
     }
     private Button Basic(object content, string name)
     {
-        var button = new Button { Content = content, FontSize = 13, MinHeight = 28, Height = 30, CornerRadius = new CornerRadius(5), Padding = new Thickness(9, 0, 9, 0), Style = (Style)Application.Current.Resources["QuietButton"] };
+        var button = new Button { Content = content, FontSize = 12, MinHeight = 28, Height = 28, CornerRadius = new CornerRadius(6), Padding = new Thickness(8, 0, 8, 0), Style = (Style)Application.Current.Resources["QuietButton"] };
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, name); ToolTipService.SetToolTip(button, name); _buttons.Add(button); return button;
     }
-    private void QueueRefresh() => DispatcherQueue.TryEnqueue(Refresh);
+    private void QueueRefresh()
+    {
+        if (_disposed || Interlocked.Exchange(ref _refreshQueued, 1) != 0) return;
+        if (!DispatcherQueue.TryEnqueue(() => { Interlocked.Exchange(ref _refreshQueued, 0); if (!_disposed) Refresh(); })) Interlocked.Exchange(ref _refreshQueued, 0);
+    }
     internal void Refresh()
     {
-        _clock.Text = DateTime.Now.ToString(ActualWidth < 650 ? "HH:mm" : _environment.Session.State.Clock24Hour ? "ddd d MMM  HH:mm" : "ddd d MMM  h:mm tt");
-        int unread = _environment.Notifications.Unread; _badge.Text = unread > 0 ? unread.ToString() : "";
+        if (_disposed) return;
+        _clock.Text = DateTime.Now.ToString(DesktopPresentation.ClockFormat(ActualWidth < 650, _environment.Session.State.Clock24Hour));
+        int unread = _environment.Notifications.Unread; _badge.Text = unread > 0 ? (unread > 9 ? "9+" : unread.ToString()) : "";
         _badge.Visibility = unread > 0 ? Visibility.Visible : Visibility.Collapsed;
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_notification, unread + " unread Nexus notifications");
     }
     internal void ApplyAppearance()
     { RequestedTheme = _environment.Theme.ElementTheme; foreach (var button in _buttons) button.Foreground = _environment.Theme.Brush("NexusText"); foreach (var line in _controls.Children.OfType<Border>()) line.Background = _environment.Theme.Brush("NexusText"); foreach (var dot in _controls.Children.OfType<Ellipse>()) dot.Fill = _environment.Theme.Brush("NexusText"); _clock.Foreground = _environment.Theme.Brush("NexusText"); _badge.Foreground = _environment.Theme.Brush("NexusAccent"); Refresh(); }
-    public void Dispose() { _timer.Stop(); _environment.Notifications.Changed -= QueueRefresh; }
+    public void Dispose() { if (_disposed) return; _disposed = true; _timer.Stop(); _environment.Notifications.Changed -= QueueRefresh; }
 }

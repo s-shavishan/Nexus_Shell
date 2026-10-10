@@ -17,7 +17,7 @@ internal static class Program
         }
         catch { }
     }
-    private sealed class Worker(Process process) : IFilesProcess
+    private sealed class Worker(Process process) : IFilesProcess, IControlCenterProcess
     {
         public int Id => process.Id;
         public bool HasExited => process.HasExited;
@@ -53,18 +53,28 @@ internal static class Program
                 catch { try { if (!process.HasExited) process.Kill(entireProcessTree: false); } finally { process.Dispose(); } throw; }
                 Log("Started Files process " + process.Id); return new Worker(process);
             }, (window, processId) => GetWindowThreadProcessId(new IntPtr(window), out uint actual) != 0 && actual == processId);
+            using var panels = new ControlCenterCoordinator(toolId =>
+            {
+                var start = new ProcessStartInfo(Path.Combine(AppContext.BaseDirectory, "Nexus.Shell.exe")) { UseShellExecute = false, WorkingDirectory = AppContext.BaseDirectory };
+                start.ArgumentList.Add("--control-center-worker"); start.ArgumentList.Add("--core-pipe"); start.ArgumentList.Add(pipeName);
+                start.ArgumentList.Add("--core-pid"); start.ArgumentList.Add(Environment.ProcessId.ToString()); start.ArgumentList.Add("--tool-id"); start.ArgumentList.Add(toolId.ToString("N"));
+                var process = Process.Start(start) ?? throw new InvalidOperationException("Control Center did not start.");
+                try { job.Add(process); }
+                catch { try { if (!process.HasExited) process.Kill(entireProcessTree: false); } finally { process.Dispose(); } throw; }
+                Log("Started Control Center worker " + process.Id); return new Worker(process);
+            }, (window, processId) => GetWindowThreadProcessId(new IntPtr(window), out uint actual) != 0 && actual == processId);
             using var settingsBackend = new Nexus.Core.Settings.WindowsSettingsBackend(parentId, error => Log("Core device settings failed", error));
-            var router = new CoreRouter(repository, files, new SystemSettingsCoordinator(settingsBackend));
+            var router = new CoreRouter(repository, files, new SystemSettingsCoordinator(settingsBackend), panels);
             using var stop = new CancellationTokenSource();
             var server = new RuntimeServer(pipeName, (pipe, request) => PipePeer.IsClient(pipe, request.ProcessId)
-                && (request.Role == "desktop" ? request.ProcessId == parentId && !parent.HasExited : files.IsWorker(request.ProcessId)), router.DispatchAsync,
+                && (request.Role switch { "desktop" => request.ProcessId == parentId && !parent.HasExited, "files" => files.IsWorker(request.ProcessId), "controlcenter" => panels.IsWorker(request.ProcessId), _ => false }), router.DispatchAsync,
                 error => Log("Core request failed", error));
             var running = server.RunAsync(stop.Token);
             Log("Core ready for desktop process " + parentId + "; revision " + repository.Revision);
             try
             {
                 while (!parent.HasExited && !router.StopRequested && !running.IsCompleted)
-                { files.Monitor(); await Task.Delay(250).ConfigureAwait(false); }
+                { files.Monitor(); panels.Monitor(); await Task.Delay(250).ConfigureAwait(false); }
             }
             finally { stop.Cancel(); }
             await running.ConfigureAwait(false);

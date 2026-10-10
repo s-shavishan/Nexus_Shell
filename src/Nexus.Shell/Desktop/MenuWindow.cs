@@ -18,6 +18,7 @@ internal sealed class MenuWindow : Window
     private readonly Border _frame;
     private readonly WindowChrome _chrome;
     private readonly UI.SurfaceMotion _motion;
+    private readonly UI.WindowTransition _transition;
     private readonly UI.WindowMaterial _material = new();
     private bool _closed;
     internal MenuWindow(DesktopEnvironment environment)
@@ -29,10 +30,11 @@ internal sealed class MenuWindow : Window
         if (NativeWindow.Presenter is OverlappedPresenter presenter)
         { presenter.SetBorderAndTitleBar(false, false); presenter.IsResizable = presenter.IsMinimizable = presenter.IsMaximizable = false; }
         ShellLayerInterop.ToolWindow(_handle);
-        _chrome = new(_handle);
-        _motion = new(_view, () => environment.Theme.Animations && !environment.Theme.HighContrast && !environment.Session.State.ReducedEffects);
+        _chrome = new(_handle, closeRequested: HideMenu);
+        _motion = new(_frame, () => environment.Theme.Animations && !environment.Theme.HighContrast && !environment.Session.State.ReducedEffects);
+        _transition = new(_frame, () => environment.Theme.Animations && !environment.Theme.HighContrast && !environment.Session.State.ReducedEffects);
         Activated += (_, args) => { if (args.WindowActivationState == WindowActivationState.Deactivated) HideMenu(); };
-        Closed += (_, _) => { _closed = true; IsOpen = false; _motion.Dispose(); _chrome.Dispose(); environment.MenuClosed(this); };
+        Closed += (_, _) => { _closed = true; IsOpen = false; _transition.Dispose(); _motion.Dispose(); _chrome.Dispose(); environment.MenuClosed(this); };
         ApplyAppearance(environment);
     }
     internal void ShowMenu(DesktopEnvironment environment, ShellRect taskbar, bool search)
@@ -42,12 +44,12 @@ internal sealed class MenuWindow : Window
         var monitor = ShellLayerInterop.Monitor(environment.Taskbar.Handle).Monitor.Bounds;
         var rect = search ? DesktopLayout.SpotlightBounds(monitor, ShellLayerInterop.Scale(environment.Taskbar.Handle)) : DesktopLayout.LaunchpadBounds(monitor, ShellLayerInterop.Scale(environment.Taskbar.Handle));
         ShellLayerInterop.SetWindowPos(_handle, ShellLayerInterop.Topmost, rect.X, rect.Y, rect.Width, rect.Height, 0x0010);
-        IsOpen = true; Activate(); _ = _view.OpenAsync(search); _motion.Open();
+        _transition.Cancel(); _frame.IsHitTestVisible = true; IsOpen = true; Activate(); _ = _view.OpenAsync(search); _motion.Open();
     }
-    internal void HideMenu() { if (_closed || !IsOpen) return; IsOpen = false; _view.Hide(); _motion.Hide(); NativeWindow.Hide(); }
+    internal async void HideMenu() { if (_closed || !IsOpen) return; IsOpen = false; _frame.IsHitTestVisible = false; _view.Hide(); await _transition.CloseAsync(() => { _motion.Hide(); NativeWindow.Hide(); }); }
     internal void ApplyAppearance(DesktopEnvironment environment)
     {
-        _frame.RequestedTheme = environment.Theme.ElementTheme; _material.Apply(this, _frame, environment); _frame.BorderBrush = environment.Theme.Brush("NexusBorder");
+        _frame.RequestedTheme = environment.Theme.ElementTheme; _material.Apply(this, _frame, environment); _frame.BorderBrush = environment.Theme.Edge;
         _frame.BorderThickness = new Thickness(1); _frame.CornerRadius = new CornerRadius(environment.Theme.HighContrast ? 0 : 22);
         _chrome.SetCorners(environment.Theme.HighContrast, 22); _motion.Refresh(); _view.ApplyAppearance();
     }

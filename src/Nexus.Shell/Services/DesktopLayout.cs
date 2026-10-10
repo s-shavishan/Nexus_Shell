@@ -8,7 +8,7 @@ public readonly record struct ShellRect(int X, int Y, int Width, int Height)
 
 public static class DesktopLayout
 {
-    public const int MenuBarHeight = 32;
+    public const int MenuBarHeight = MenuBarLayout.ReservationHeight;
     public static ShellRect ManagedWorkArea(ShellRect monitor, bool compact, bool floating, double scale)
     {
         var work = TaskbarWorkArea(monitor, compact, floating, scale);

@@ -10,7 +10,7 @@ namespace Nexus.Shell.Desktop;
 
 internal sealed class QuickSettingsWindow : Window
 {
-    private readonly DesktopEnvironment _environment;
+    private readonly ControlCenterEnvironment _environment;
     private readonly IntPtr _handle;
     private readonly AppWindow _window;
     private readonly QuickSettingsView _view;
@@ -20,9 +20,12 @@ internal sealed class QuickSettingsWindow : Window
     private readonly UI.WindowMaterial _material = new();
     private bool _closed;
     internal bool IsOpen { get; private set; }
-    internal QuickSettingsWindow(DesktopEnvironment environment)
+    internal IntPtr Handle => _handle;
+    internal QuickSettingsView View => _view;
+    private readonly UI.WindowTransition _transition;
+    internal QuickSettingsWindow(ControlCenterEnvironment environment)
     {
-        _environment = environment; _view = new(environment, Hide);
+        _environment = environment; _view = new(environment, environment.Hide);
         _frame = new Border { Child = _view, CornerRadius = new CornerRadius(16), BorderThickness = new Thickness(1) }; Content = _frame;
         _handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
         _window = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(_handle));
@@ -30,28 +33,30 @@ internal sealed class QuickSettingsWindow : Window
         if (_window.Presenter is OverlappedPresenter presenter)
         { presenter.SetBorderAndTitleBar(false, false); presenter.IsResizable = presenter.IsMinimizable = presenter.IsMaximizable = false; }
         ShellLayerInterop.ToolWindow(_handle);
-        _chrome = new(_handle);
-        _motion = new(_view, () => environment.Theme.Animations && !environment.Theme.HighContrast && !environment.Session.State.ReducedEffects);
-        Activated += (_, args) => { if (args.WindowActivationState == WindowActivationState.Deactivated) Hide(); };
-        Closed += (_, _) => { _closed = true; IsOpen = false; _motion.Dispose(); _chrome.Dispose(); _view.Dispose(); environment.QuickSettingsClosed(this); };
+        _chrome = new(_handle, closeRequested: environment.Hide);
+        _motion = new(_frame, () => environment.Theme.Animations && !environment.Theme.HighContrast && !environment.State.ReducedEffects);
+        _transition = new(_frame, () => environment.Theme.Animations && !environment.Theme.HighContrast && !environment.State.ReducedEffects);
+        Activated += (_, args) => { if (IsOpen && args.WindowActivationState == WindowActivationState.Deactivated) environment.Hide(); };
+        Closed += (_, _) => { _closed = true; IsOpen = false; _transition.Dispose(); _motion.Dispose(); _chrome.Dispose(); _view.Dispose(); environment.Stop(); };
         ApplyAppearance();
     }
     internal void Show(string? section = null)
     {
         if (_closed) return; ApplyAppearance(); Position();
-        bool wasOpen = IsOpen; IsOpen = true; Activate(); _view.Open(section); if (!wasOpen) _motion.Open();
+        bool wasOpen = IsOpen; _transition.Cancel(); _frame.IsHitTestVisible = true; IsOpen = true; Activate(); _view.Open(section); if (!wasOpen) _motion.Open();
     }
     internal void Position()
     {
         if (_closed) return;
-        var rect = DesktopLayout.PanelBounds(ShellLayerInterop.Monitor(_environment.Taskbar.Handle).Monitor.Bounds, ShellLayerInterop.Scale(_environment.Taskbar.Handle), 540, 740);
+        var monitor = _environment.Snapshot.Desired.Monitor;
+        var rect = DesktopLayout.PanelBounds(new(monitor.X, monitor.Y, monitor.Width, monitor.Height), monitor.Scale, 540, 740);
         ShellLayerInterop.SetWindowPos(_handle, ShellLayerInterop.Topmost, rect.X, rect.Y, rect.Width, rect.Height, 0x0010);
     }
-    internal void Hide() { if (_closed || !IsOpen) return; IsOpen = false; _motion.Hide(); _view.Hide(); _window.Hide(); }
+    internal async void HideSurface() { if (_closed || !IsOpen) return; IsOpen = false; _frame.IsHitTestVisible = false; _view.Hide(); await _transition.CloseAsync(() => { _motion.Hide(); _window.Hide(); }); }
     internal void ApplyAppearance()
     {
         var theme = _environment.Theme;
-        _frame.RequestedTheme = theme.ElementTheme; _material.Apply(this, _frame, _environment); _frame.BorderBrush = theme.Brush("NexusBorder");
+        _frame.RequestedTheme = theme.ElementTheme; _material.Apply(this, _frame, theme, _environment.State); _frame.BorderBrush = theme.Edge;
         _frame.BorderThickness = new Thickness(1); _frame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 22);
         _chrome.SetCorners(theme.HighContrast, 22); _motion.Refresh(); _view.ApplyAppearance();
     }

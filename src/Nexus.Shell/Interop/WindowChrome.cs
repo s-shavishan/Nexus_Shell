@@ -23,19 +23,24 @@ internal sealed class WindowChrome : IDisposable
     private readonly Action? _tuck;
     private readonly Action<bool>? _stateChanged;
     private readonly Action? _minimizeRequested;
+    private readonly Action? _closeRequested;
     private bool _wasMinimized;
     internal event Action? Restored;
+    internal event Action? Resized;
     private bool? _maximized;
+    internal bool IsAttached => _maximized == true;
     private readonly ShellLayerInterop.SubclassProc _callback;
     private readonly UIntPtr _id = new(0x4E10);
     private ShellRect? _clip;
     private (ShellRect Rectangle, int Diameter, bool Clear)? _applied;
     private double _radius = 14;
     private bool _fullscreen, _disposed, _applying, _reported, _regionsEnabled = true;
-    internal WindowChrome(IntPtr handle, bool resizable = false, bool customClip = false, Action? tuck = null, int minimumWidth = 480, int minimumHeight = 360, Action<bool>? stateChanged = null, Action? minimizeRequested = null)
+    private bool _interactiveResize;
+    private (int Width, int Height)? _size;
+    internal WindowChrome(IntPtr handle, bool resizable = false, bool customClip = false, Action? tuck = null, int minimumWidth = 480, int minimumHeight = 360, Action<bool>? stateChanged = null, Action? minimizeRequested = null, Action? closeRequested = null)
     {
         _minimumWidth = Math.Max(160, minimumWidth); _minimumHeight = Math.Max(160, minimumHeight);
-        _handle = handle; _resizable = resizable; _customClip = customClip; _tuck = tuck; _stateChanged = stateChanged; _minimizeRequested = minimizeRequested; _callback = Message;
+        _handle = handle; _resizable = resizable; _customClip = customClip; _tuck = tuck; _stateChanged = stateChanged; _minimizeRequested = minimizeRequested; _closeRequested = closeRequested; _callback = Message;
         if (!ShellLayerInterop.SetWindowSubclass(handle, _callback, _id, UIntPtr.Zero)) throw new Win32Exception("Could not attach the Nexus window frame.");
         // DWMNCRP_DISABLED removes Windows 10's bright non-client outline.
         int policy = 1; _ = DwmSetWindowAttribute(handle, 2, ref policy, 4);
@@ -60,7 +65,7 @@ internal sealed class WindowChrome : IDisposable
         if (_disposed || _applying || !_regionsEnabled || IsIconic(_handle) || !GetWindowRect(_handle, out var window)) return;
         int width = window.Right - window.Left, height = window.Bottom - window.Top;
         if (width <= 0 || height <= 0 || (_customClip && _clip is null)) return;
-        bool clear = !_customClip && (_fullscreen || IsZoomed(_handle));
+        bool clear = !_customClip && (_fullscreen || MenuBarLayout.Attached(window.Bounds, ShellLayerInterop.Monitor(_handle).Work.Bounds, IsZoomed(_handle), ShellLayerInterop.Scale(_handle)));
         if (_maximized != clear) { _maximized = clear; _stateChanged?.Invoke(clear); }
         var rectangle = _clip ?? new ShellRect(0, 0, width, height);
         int diameter = (int)Math.Round(Math.Min(_radius * ShellLayerInterop.Scale(_handle) * 2, Math.Min(rectangle.Width, rectangle.Height)));
@@ -95,9 +100,25 @@ internal sealed class WindowChrome : IDisposable
             {
                 if (message == NativeMethods.NexusMinimizeMessage && _minimizeRequested is not null) { _minimizeRequested(); return IntPtr.Zero; }
                 if (message == NativeMethods.NexusRestoreMessage) { Restored?.Invoke(); return IntPtr.Zero; }
+                if (message == 0x0231) _interactiveResize = true;
+                if (message == 0x0232) _interactiveResize = false;
+                if (message == 0x0112 && (wp.ToUInt64() & 0xFFF0) == 0xF060 && _closeRequested is not null) { _closeRequested(); return IntPtr.Zero; }
                 if (_tuck is not null && message == 0x0112 && (wp.ToUInt64() & 0xFFF0) == 0xF020)
                 { _tuck(); return IntPtr.Zero; }
-                if (message == 0x0083) return IntPtr.Zero; // whole HWND is client area
+                if (message == 0x0083)
+                {
+                    // RECT is also the first member of NCCALCSIZE_PARAMS.
+                    // A maximized borderless HWND can extend beyond rcWork;
+                    // clamp its client origin so the custom title row stays visible.
+                    if (_resizable && !_fullscreen && IsZoomed(window) && lp != IntPtr.Zero)
+                    {
+                        var proposed = Marshal.PtrToStructure<ShellLayerInterop.Rect>(lp);
+                        var bounds = MenuBarLayout.ClientBounds(proposed.Bounds, ShellLayerInterop.Monitor(window).Work.Bounds, true);
+                        proposed.Left = bounds.X; proposed.Top = bounds.Y; proposed.Right = bounds.Right; proposed.Bottom = bounds.Bottom;
+                        Marshal.StructureToPtr(proposed, lp, false);
+                    }
+                    return wp == UIntPtr.Zero ? IntPtr.Zero : new IntPtr(0x0300); // WVR_REDRAW
+                }
                 if (message == 0x0085) return IntPtr.Zero;
                 if (message == 0x0086) return new IntPtr(1);
                 if (message == 0x0084) { var hit = ResizeHit(lp); if (hit != IntPtr.Zero) return hit; }
@@ -116,6 +137,12 @@ internal sealed class WindowChrome : IDisposable
         var result = ShellLayerInterop.DefSubclassProc(window, message, wp, lp);
         if (!_disposed && message == 0x0005) { bool minimized = wp.ToUInt64() == 1; bool restoring = _wasMinimized && !minimized; _wasMinimized = minimized; if (restoring) Restored?.Invoke(); }
         if (!_disposed && message is 0x0005 or 0x0047 or 0x02E0) Refresh();
+        if (!_disposed && _resizable && message == 0x0005 && wp.ToUInt64() != 1 && GetWindowRect(window, out var current))
+        {
+            var size = (current.Right - current.Left, current.Bottom - current.Top);
+            bool changed = _size is { } previous && previous != size; _size = size;
+            if (changed && !_interactiveResize && !_wasMinimized) Resized?.Invoke();
+        }
         return result;
     }
     public void Dispose()

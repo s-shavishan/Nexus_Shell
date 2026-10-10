@@ -48,9 +48,11 @@ internal static class ConnectionChecks
             using var state = new CoreStateRepository(new StateStore(folder));
             bool stopped = false;
             using var files = new FilesCoordinator(_ => new FakeProcess(() => stopped = true), (_, _) => true);
-            var settingsBackend = new SettingsChecks.Backend((request, _) => Task.FromResult(new SettingsSnapshot(default, request.Section,
-                Sound: new(true, "output", "Test speakers", (float)((request.Change?.Value ?? 60) / 100), request.Change?.Enabled ?? false, [], ""))));
-            var router = new CoreRouter(state, files, new SystemSettingsCoordinator(settingsBackend));
+            long settingsWindow = 0;
+            var settingsBackend = new SettingsChecks.Backend((request, _) => { settingsWindow = request.Window; return Task.FromResult(new SettingsSnapshot(default, request.Section,
+                Sound: new(true, "output", "Test speakers", (float)((request.Change?.Value ?? 60) / 100), request.Change?.Enabled ?? false, [], ""))); });
+            using var panels = new ControlCenterCoordinator(_ => new FakePanel(), (window, pid) => window == 1000 && pid == 100);
+            var router = new CoreRouter(state, files, new SystemSettingsCoordinator(settingsBackend), panels);
             async Task<RuntimeResponse> Request(string role, string operation, object payload)
             {
                 var pair = Duplex.Pair(); using var client = pair.Client; using var server = pair.Server;
@@ -76,6 +78,18 @@ internal static class ConnectionChecks
             if (settingsDenied.Ok || settingsDenied.Code != "forbidden" || settingsBackend.Calls != 2) throw new Exception("Files must not access desktop hardware controls.");
             var settingsStale = await Request("desktop", RuntimeOperations.Settings, new SettingsRequest("Sound", Change: new("volume", "output", Value: 99, Epoch: Guid.NewGuid())));
             if (settingsStale.Ok || settingsStale.Code != "settings-stale" || settingsBackend.Calls != 2) throw new Exception("The production connection accepted a stale device command.");
+            var panelSync = await Request("desktop", RuntimeOperations.PanelSync, new PanelSync(new(1, true, "Sound", new(0, 0, 1920, 1080, 1, 50, true)), ControlCenterPreferences.From(loaded.State), []));
+            if (!panelSync.Ok) throw new Exception("Production connection did not launch the panel.");
+            var panelDenied = await Request("controlcenter", RuntimeOperations.CommitState, new StateCommit(loaded.State, 1, Guid.NewGuid()));
+            if (panelDenied.Ok || panelDenied.Code != "forbidden" || state.Revision != 1) throw new Exception("The panel gained state-write authority.");
+            var panelReady = await Request("controlcenter", RuntimeOperations.PanelReady, new PanelReady(1000));
+            if (!panelReady.Ok) throw new Exception("The panel's owned HWND was not accepted.");
+            var panelRead = await Request("controlcenter", RuntimeOperations.Settings, new SettingsRequest("Sound"));
+            if (!panelRead.Ok || settingsBackend.Calls != 3) throw new Exception("Core-backed panel device reads failed.");
+            var panelDisplay = await Request("controlcenter", RuntimeOperations.Settings, new SettingsRequest("Display", Window: 999999));
+            if (!panelDisplay.Ok || settingsWindow != 50) throw new Exception("The panel selected an arbitrary HWND instead of the authenticated desktop's display window.");
+            var hidden = await Request("controlcenter", RuntimeOperations.PanelHide, new PanelHidden(1));
+            if (!hidden.Ok || RuntimeProtocol.Payload<PanelSnapshot>(hidden.Payload).Desired.Visible) throw new Exception("Framed panel hide did not reach its supervisor.");
             var pair = Duplex.Pair(); using var serverSide = pair.Server; using var clientSide = pair.Client;
             using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             var handling = RuntimeConnection.ServeAsync(serverSide, _ => true, router.DispatchAsync, stop.Token);
@@ -118,4 +132,6 @@ internal static class ConnectionChecks
         public void Stop() { HasExited = true; stopped(); }
         public void Dispose() { }
     }
+    private sealed class FakePanel : IControlCenterProcess
+    { public int Id => 100; public bool HasExited { get; private set; } public void Stop() => HasExited = true; public void Dispose() { } }
 }

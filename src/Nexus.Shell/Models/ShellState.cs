@@ -61,6 +61,7 @@ public sealed class ShellState
     public List<AppEntry> PinnedApps { get; set; } = [];
     public Dictionary<string, double> UsageSeconds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public List<ActivityEntry> Activity { get; set; } = [];
+    public List<Nexus.Shell.Services.DesktopNotice> NotificationHistory { get; set; } = [];
 
     // Snapshot on the UI thread before handing persistence to a worker thread.
     public ShellState Snapshot() => new()
@@ -81,7 +82,7 @@ public sealed class ShellState
         Wallpaper = Wallpaper, QuickNote = QuickNote, FocusMinutes = FocusMinutes,
         FocusDay = FocusDay, FocusCompleted = FocusCompleted, SavedItems = [.. SavedItems],
         FocusRemainingSeconds = FocusRemainingSeconds, FocusTaskId = FocusTaskId, Tasks = [.. Tasks],
-        PinnedApps = [.. PinnedApps], Activity = [.. Activity],
+        PinnedApps = [.. PinnedApps], Activity = [.. Activity], NotificationHistory = [.. NotificationHistory],
         UsageSeconds = new(UsageSeconds, StringComparer.OrdinalIgnoreCase)
     };
 }

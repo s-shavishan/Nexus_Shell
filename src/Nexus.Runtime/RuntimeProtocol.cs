@@ -12,10 +12,12 @@ public static class RuntimeOperations
     public const string Health = "runtime.health", Stop = "runtime.stop", ReadState = "state.read", CommitState = "state.commit";
     public const string OpenFiles = "files.open", Work = "files.work", Next = "files.next", Ready = "files.ready", Complete = "files.complete", Pulse = "files.pulse";
     public const string Settings = "settings.execute";
+    public const string PanelSync = "panel.sync", PanelPulse = "panel.pulse", PanelReady = "panel.ready", PanelHide = "panel.hide", PanelAction = "panel.action";
     public static bool Allows(string role, string operation) => role switch
     {
-        "desktop" => operation is Health or Stop or ReadState or CommitState or OpenFiles or Settings,
+        "desktop" => operation is Health or Stop or ReadState or CommitState or OpenFiles or Settings or PanelSync,
         "files" => operation is Work or Next or Ready or Complete or Pulse,
+        "controlcenter" => operation is PanelPulse or PanelReady or PanelHide or PanelAction or Settings,
         _ => false
     };
 }

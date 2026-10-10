@@ -48,8 +48,32 @@ internal sealed class ShellTheme
         string key = "glass:" + role;
         if (_surfaces.TryGetValue(key, out var cached)) return cached;
         string color = Palette.Panel[2..];
-        string alpha = role switch { "Frame" => "24", "Dock" => "42", "MenuBar" => "50", "Card" => "32", _ => "58" };
-        return _surfaces[key] = Gradient(alpha + color, (Palette.IsLight ? "60FFFFFF" : "64101C32"));
+        string alpha = role switch { "Frame" => "28", "Dock" => "38", "MenuBar" => "34", "Card" => "26", "Input" => "48", _ => "40" };
+        var brush = Gradient(alpha + color, Palette.IsLight ? "92FFFFFF" : "78091121");
+        brush.StartPoint = new(0, 0); brush.EndPoint = new(0, 1);
+        brush.GradientStops.Insert(1, new() { Color = Color((Palette.IsLight ? "54FFFFFF" : "1EFFFFFF")), Offset = .08 });
+        return _surfaces[key] = brush;
+    }
+    public Brush Material(string role, bool glass)
+    {
+        if (HighContrast) return Brush(role == "Frame" ? "NexusPanel" : "NexusSidebar");
+        if (glass && !Simple) return Glass(role);
+        string key = "opaque:" + role;
+        if (_surfaces.TryGetValue(key, out var cached)) return cached;
+        string color = role == "Card" ? Palette.Card : role == "Input" ? Palette.Tokens["NexusInput"] : Palette.Panel;
+        return _surfaces[key] = new SolidColorBrush(Color("FF" + color[2..]));
+    }
+    public Brush Edge
+    {
+        get
+        {
+            if (HighContrast || Simple) return Brush("NexusBorder");
+            const string key = "edge";
+            if (_surfaces.TryGetValue(key, out var cached)) return cached;
+            var edge = Gradient(Palette.IsLight ? "B0FFFFFF" : "76D8E9FF", Palette.IsLight ? "30313B52" : "183D527C");
+            edge.StartPoint = new(0, 0); edge.EndPoint = new(0, 1);
+            return _surfaces[key] = edge;
+        }
     }
     // Reuse finite, lightweight paint across independent shell surfaces. No blur
     // or new gradient allocation is needed for a clock tick or window event.

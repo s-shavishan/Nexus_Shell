@@ -1,24 +1,22 @@
-# Nexus Shell 2.1.1 — Launchpad and sign-in setup
+# Nexus Shell 3.1.0 — Midnight Glass desktop
 
-Nexus is a native C# / WinUI desktop environment on Windows. The existing Core-backed Control Center remains included. This focused update routes a standalone Windows key to Nexus Launchpad in managed sessions, exposes sign-in policy conflicts before setup, and corrects the clipped calendar date.
+Nexus is a native C# / WinUI desktop environment on Windows. This update redesigns the actual desktop surfaces and strengthens their lifecycle behavior. It builds on 3.0.0's supervised Control Center, coordinated motion and durable Nexus notification history.
 
-## Changes in 2.1.1
+## Changes in 3.1.0
 
-- **Start key:** standalone left/right Windows keys toggle Nexus Launchpad in managed desktop mode. Native combinations pass through. Injection denial preserves the physical key-up; the dock button remains available.
-- **Sign-in setup:** active policy and recovery ownership are shown before replacement. Windows command casing/outer whitespace no longer create a false conflict. Unmatched policies and their recovery records are retained.
-- **Read-only diagnosis:** `Inspect-Nexus-Startup.bat` reports shell policy, startup and recovery values. Startup alongside Windows and replacement of Explorer after authentication are explained separately.
-- **Calendar:** a two-digit day fits its day column; the full date is available to accessibility.
+- **Glass hierarchy:** translucent vertical surfaces, a restrained highlight and a fine gradient edge replace uniform fills. Disabled glass, reduced effects, high contrast and backdrop failure use readable solid surfaces. The Midnight landscape is a small, static native SVG with a cached PNG/solid fallback.
+- **Menu bar and dock:** cleaner type/spacing, a Nexus menu icon, larger 40 DIP dock app icons, pin context actions and the existing floating/attached geometry. Compact menu bars now respect 12-hour time. Paint is reused instead of allocating a transparent brush for every window state change.
+- **Launchpad:** a stronger heading, integrated search with visible keyboard focus, larger icons, a Pinned filter, direct pin/unpin actions, bounded page indicators and a useful empty state. Pins use the desktop's existing state writer.
+- **Control Center:** six distinct navigation tiles, clearer device cards, restrained preference switches, inline failure feedback and activity indication. The progress slot stays fixed and its animation stops when idle. Unchanged network/Bluetooth/power snapshots keep focus and confirmations intact.
+- **Notifications:** date groups, All / Warnings & errors filters, an empty state, clearer dismissal controls and saved history. Duplicate paint requests are coalesced and unchanged content is retained.
+- **Files and calendar:** consistent traffic-light colors, a separated title strip, lighter sidebar/inspector frames and removal of a redundant full-window paint layer. The desktop date widget is now a keyboard-accessible button.
+- **Stability:** responses and preference errors belong to a specific panel opening. Old results cannot replace a newer opening's device state or error. No-op alert dismissal/clear operations do not schedule unnecessary saves. Existing authentication, device epochs and no-replay rules remain in place.
 
-Follow [Start/sign-in acceptance](docs/START-AND-SIGNIN-2.1.1.md). The uploaded 2.1 logs establish a sign-in policy mismatch but do not include its current value. The VM conflict needs that value before it can be resolved safely. Native input masking and rendering still need Windows acceptance.
+See the [UI preview](docs/UI-3.1.0-preview.png) and [UI changes, validation and VM guide](docs/UI-3.1.0.md). The preview is a design projection using the repository's actual icons and wallpaper; it is not a Windows screenshot. Native Windows compilation, rendering and sustained resource measurements remain acceptance gates.
 
-## Included Core settings update
+## Integrated controls
 
-- **Glass lifecycle:** the failing default-configuration callback no longer calls back into the detached native target. Connection, tint, configuration and cleanup errors use a solid fallback. Queued callbacks check their backdrop owner before touching a window.
-- **Control Center:** six accessible sections with glass cards, a fixed navigation/header/footer, scrolling content, inline device messages and monitor-bounded placement.
-- **Core settings service:** typed hardware snapshots and allowlisted commands, separate request lanes, an eight-second device deadline, fresh epochs after restart, and no automatic replay of uncertain hardware writes.
-- **Settings routes:** root Settings, Sound, Network, Bluetooth, Display, Power and personalization shortcuts open the corresponding Nexus controls. Advanced Windows controls remain an explicit escape for unsupported features.
-- **Desktop preferences:** wallpaper palettes, glass, reduced effects, dock layout/previews, clock/widgets and quiet Nexus alerts save through Core. Quiet alerts now survive restart.
-- **Stability:** coalesced final slider intents, bounded command buffers, cancellation before queued device mutations, polling only while open, password-entry protection from polling, and one diagnostic for the expected optional switcher API fallback.
+Core-backed sound, display, network, Bluetooth, power and Nexus preferences remain included, with separate device lanes, fresh service epochs, bounded requests and explicit unsupported capabilities.
 
 | Section | Integrated controls | Remaining advanced controls |
 | --- | --- | --- |
@@ -29,7 +27,7 @@ Follow [Start/sign-in acceptance](docs/START-AND-SIGNIN-2.1.1.md). The uploaded 
 | Power | Battery/AC status, existing power-plan selection, lock | Sleep timers and plan editing |
 | Desktop | Nexus wallpaper, dock, effects, widgets, clock and quiet-alert preferences | Windows-wide personalization and app-toast capture |
 
-The earlier Launchpad, menu bar, dock/native window behavior, Nexus notification inbox, supervised startup and Files isolation remain included. See [2.0 desktop acceptance](docs/MAJOR-2.0.0.md) for those regressions. Glass uses Windows acrylic blur/tint and may fall back on unsupported graphics or accessibility settings.
+The earlier Launchpad, dock/window overview, supervised startup, independent Files/picker process, Start-key routing, sign-in policy inspection and recovery helpers remain included. Glass uses supported Windows acrylic blur/tint with a solid fallback. The existing foreign sign-in policy needs diagnostic output before ownership can be reconciled; it is preserved.
 
 ## Build on Windows
 
@@ -44,16 +42,8 @@ dotnet run --project tests/Nexus.Runtime.Checks/Nexus.Runtime.Checks.csproj -c R
 .\scripts\package.ps1
 ```
 
-CI publishes `Nexus-Shell-2.1.1-win-x64.zip` and the smaller update ZIP. Keep the complete published folder together, including Nexus.Shell, DesktopHost, Core, Nexus.Runtime and compiled UI resources. See [source patch routes](SOURCE-PATCH.md) and [start here](START-HERE.md).
+CI publishes `Nexus-Shell-3.1.0-win-x64.zip` and the smaller update ZIP. Keep the complete published folder together, including Nexus.Shell, DesktopHost, Core, Nexus.Runtime and compiled UI resources. See [source patch routes](SOURCE-PATCH.md) and [start here](START-HERE.md).
 
-## Validation
+## Next milestones
 
-The uploaded 2.1 sample contains two sign-in policy refusals, healthy Core revision loads and an intentional Return-to-Windows exit (20); it contains no new unhandled UI exception. Settings and backup parse at revisions 8 and 7. This short sample does not establish sustained stability. Source/API and portable checks are recorded in [2.1.1 validation evidence](docs/START-CHECKS-2.1.1.md). Native XAML compilation, input delivery, Explorer-independent sign-in, glass rendering and device behavior require [Windows VM acceptance](docs/START-AND-SIGNIN-2.1.1.md).
-
-The [proposed Nexus 3.0 desktop pack](docs/NEXT-DESKTOP-PACK.md) is a roadmap, not included functionality. Its first milestone is independently recoverable shell panels.
-
-## Session foundation
-
-Core starts per user with Nexus and owns revisioned, atomic preferences plus the hardware settings service. Files browsers/pickers run in isolated `--files-worker` processes, with cancellation, deadlines, heartbeat supervision and a bounded process count. Lost save acknowledgements reconcile by commit ID; hardware writes deliberately use no such retry. Final-save failures attempt an independent recovery copy. Only one writer may own a user's settings profile at a time.
-
-Desktop, dock, Sections, Notes and Calculator still share the main UI process. Windows continues to own boot, authentication, drivers, security and native application services. Boot/sign-in replacement, blanket Windows service removal and durable file-operation jobs are outside this release. The readiness UI starts after Windows authentication.
+The Control Center process is the first panel boundary. Launchpad/dock separation, dock per monitor, expanded file jobs/device controls, Windows app notifications and shell compatibility work remain in [the Session Core roadmap](docs/NEXT-DESKTOP-PACK.md), each with native acceptance gates. No new standalone app is added.

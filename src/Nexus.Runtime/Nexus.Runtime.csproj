@@ -5,10 +5,11 @@
     <Nullable>enable</Nullable>
     <Platforms>AnyCPU;x64</Platforms>
     <PlatformTarget>AnyCPU</PlatformTarget>
-    <Version>2.1.1</Version>
+    <Version>3.1.0</Version>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../Nexus.Shell/Models/ShellState.cs" Link="Models/ShellState.cs" />
+    <Compile Include="../Nexus.Shell/Models/DesktopNotice.cs" Link="Models/DesktopNotice.cs" />
     <Compile Include="../Nexus.Shell/Services/StateStore.cs" Link="State/StateStore.cs" />
     <Compile Include="../Nexus.Shell/Services/AuraPalette.cs" Link="State/AuraPalette.cs" />
     <Compile Include="../Nexus.Shell/Services/WorkspaceState.cs" Link="State/WorkspaceState.cs" />

@@ -135,6 +135,12 @@ internal static class NativeMethods
         try { using var process = Process.GetProcessById((int)id); return process.ProcessName; }
         catch { return null; }
     }
+    internal static bool IsOwnToolWindow(IntPtr window)
+    {
+        if (window == IntPtr.Zero) return false;
+        GetWindowThreadProcessId(window, out uint id);
+        return id == (uint)Environment.ProcessId && (GetWindowLongPtr(window, -20).ToInt64() & 0x80) != 0;
+    }
 
     internal static double IdleSeconds()
     {

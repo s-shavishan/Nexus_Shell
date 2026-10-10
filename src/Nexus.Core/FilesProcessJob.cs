@@ -3,8 +3,8 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-// Only the explicitly assigned Files workers belong to this job. Silent
-// breakaway keeps applications opened by Files outside Nexus's lifetime.
+// Only explicitly assigned Files and Control Center workers belong to this
+// job. Silent breakaway keeps user applications outside Nexus's lifetime.
 internal sealed class FilesProcessJob : IDisposable
 {
     [StructLayout(LayoutKind.Sequential)] private struct BasicLimits

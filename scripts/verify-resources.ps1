@@ -20,6 +20,13 @@ if ([version]$AppVersion -ge [version]'1.4.0') {
         $wallpaperFiles += Get-Item $asset
     }
 }
+if ([version]$AppVersion -ge [version]'3.1.0') {
+    $scene = Join-Path $publishRoot 'Assets\Wallpapers\MidnightGlass.svg'
+    if (-not (Test-Path $scene -PathType Leaf)) { throw 'The Midnight Glass wallpaper is missing from the published build.' }
+    [xml]$vector = Get-Content $scene -Raw
+    if ($vector.DocumentElement.LocalName -ne 'svg') { throw 'The Midnight Glass wallpaper is invalid.' }
+    $wallpaperFiles += Get-Item $scene
+}
 if ([version]$AppVersion -ge [version]'0.9.0') {
     foreach ($name in @('Nexus','Explore','Study','Files','Apps','Browser','Search','Settings','Windows','Note','Document','Terminal','Game')) {
         $asset = Join-Path $publishRoot ("Assets\Icons\" + $name + '.svg')

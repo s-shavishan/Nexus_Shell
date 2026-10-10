@@ -16,9 +16,9 @@ internal sealed class DesktopSurface : Grid
     private readonly DesktopEnvironment _environment;
     private readonly Image _wallpaper = new() { Stretch = Stretch.UniformToFill, IsHitTestVisible = false };
     private readonly GridView _icons;
-    private readonly Border _calendar = new() { Width = 322, Padding = new Thickness(16), CornerRadius = new CornerRadius(21), BorderThickness = new Thickness(1), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(20, 20, 20, 106) };
-    private readonly TextBlock _weekday = new() { FontSize = 14, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
-    private readonly TextBlock _day = new() { FontSize = 42 };
+    private readonly Button _calendar = new() { Width = 322, Padding = new Thickness(16), CornerRadius = new CornerRadius(21), BorderThickness = new Thickness(1), HorizontalAlignment = HorizontalAlignment.Right, HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(20, 20, 20, 106), Style = (Style)Application.Current.Resources["QuietButton"] };
+    private readonly TextBlock _weekday = new() { FontSize = 12, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis };
+    private readonly TextBlock _day = new() { FontSize = 42, FontWeight = Microsoft.UI.Text.FontWeights.Light };
     private readonly TextBlock _month = new() { FontSize = 12 };
     private readonly StackPanel _tasks = new() { Spacing = 10 };
     private (string Palette, bool Contrast, bool Focus, bool Visible, string Tasks)? _calendarContent;
@@ -29,6 +29,13 @@ internal sealed class DesktopSurface : Grid
     internal DesktopSurface(DesktopEnvironment environment)
     {
         _environment = environment; KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden;
+        _wallpaper.ImageFailed += (_, error) =>
+        {
+            if (environment.IsStopping) return;
+            Log.Write("Desktop wallpaper used its fallback: " + error.ErrorMessage);
+            _wallpaper.Source = _wallpaperName == "Midnight" && _wallpaper.Source is SvgImageSource
+                ? new BitmapImage(new Uri("ms-appx:///Assets/Wallpapers/Midnight.png")) : null;
+        };
         Children.Add(_wallpaper);
         BuildCalendar();
         _icons = new GridView { Margin = new Thickness(20, 48, 20, 100), SelectionMode = ListViewSelectionMode.Single,
@@ -63,6 +70,7 @@ internal sealed class DesktopSurface : Grid
         _clockTimer.Tick += (_, _) => RefreshClock();
         Loaded += (_, _) => { RefreshClock(); _clockTimer.Start(); };
         Unloaded += (_, _) => _clockTimer.Stop();
+        SizeChanged += (_, _) => { _calendar.MaxWidth = Math.Max(1, ActualWidth - 40); ApplyWidgetVisibility(); };
         var enter = new KeyboardAccelerator { Key = VirtualKey.K, Modifiers = VirtualKeyModifiers.Control };
         enter.Invoked += (_, args) => { environment.ShowMenu(true); args.Handled = true; }; KeyboardAccelerators.Add(enter);
         ApplyAppearance();
@@ -75,10 +83,10 @@ internal sealed class DesktopSurface : Grid
     }
     private void BuildCalendar()
     {
-        var body = new Grid { ColumnSpacing = 16 }; body.ColumnDefinitions.Add(new() { Width = new GridLength(86) }); body.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) });
+        var body = new Grid { ColumnSpacing = 16 }; body.ColumnDefinitions.Add(new() { Width = new GridLength(94) }); body.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) });
         var date = new StackPanel(); date.Children.Add(_weekday); date.Children.Add(_day); date.Children.Add(_month); body.Children.Add(date);
-        Grid.SetColumn(_tasks, 1); body.Children.Add(_tasks); _calendar.Child = body;
-        _calendar.Tapped += (_, _) => _environment.ShowSections("Study");
+        Grid.SetColumn(_tasks, 1); body.Children.Add(_tasks); _calendar.Content = body;
+        _calendar.Click += (_, _) => _environment.ShowSections("Study");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_calendar, "Today's date and tasks. Open Study.");
     }
     internal void RefreshContent()
@@ -87,7 +95,7 @@ internal sealed class DesktopSurface : Grid
         var content = (_environment.Theme.Palette.Name, _environment.Theme.HighContrast, _environment.Session.State.FocusMode, _environment.Session.State.ShowClockWidget, string.Join("\0", tasks.Select(t => t.Id + ":" + t.Title)));
         if (_calendarContent == content) return; _calendarContent = content;
         _icons.Visibility = _environment.Session.State.FocusMode ? Visibility.Collapsed : Visibility.Visible;
-        _calendar.Visibility = _environment.Session.State.ShowClockWidget && !_environment.Session.State.FocusMode ? Visibility.Visible : Visibility.Collapsed;
+        ApplyWidgetVisibility();
         _tasks.Children.Clear();
         if (tasks.Length == 0) _tasks.Children.Add(new TextBlock { Text = "A little space for today.\nOpen Study to add a task.", FontSize = 12, Foreground = _environment.Theme.Brush("NexusMuted"), TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center });
         foreach (var task in tasks)
@@ -98,6 +106,7 @@ internal sealed class DesktopSurface : Grid
         }
         RefreshClock();
     }
+    private void ApplyWidgetVisibility() => _calendar.Visibility = _environment.Session.State.ShowClockWidget && !_environment.Session.State.FocusMode && ActualWidth >= 300 ? Visibility.Visible : Visibility.Collapsed;
     private DesktopShortcut? ItemAt(object source)
     {
         var element = source as DependencyObject;
@@ -124,12 +133,14 @@ internal sealed class DesktopSurface : Grid
     internal void ApplyAppearance()
     {
         var theme = _environment.Theme; RequestedTheme = theme.ElementTheme;
-        _calendar.Background = theme.Surface("Sidebar"); _calendar.BorderBrush = theme.Brush("NexusBorder"); _weekday.Foreground = theme.Brush("NexusAccent"); _day.Foreground = theme.Brush("NexusText"); _month.Foreground = theme.Brush("NexusMuted");
+        _calendar.Background = theme.Material("Card", _environment.Session.State.NativeGlass); _calendar.BorderBrush = theme.Edge; _calendar.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 21); _weekday.Foreground = theme.Brush("NexusAccent"); _day.Foreground = theme.Brush("NexusText"); _month.Foreground = theme.Brush("NexusMuted");
         _wallpaper.Visibility = theme.HighContrast || _environment.Session.State.ReducedEffects ? Visibility.Collapsed : Visibility.Visible;
         Background = theme.Surface("Canvas");
         if (_wallpaperName != theme.Palette.Name)
         {
-            _wallpaper.Source = new BitmapImage(new Uri("ms-appx:///Assets/Wallpapers/" + theme.Palette.Name + ".png"));
+            _wallpaper.Source = theme.Palette.Name == "Midnight"
+                ? new SvgImageSource(new Uri("ms-appx:///Assets/Wallpapers/MidnightGlass.svg"))
+                : new BitmapImage(new Uri("ms-appx:///Assets/Wallpapers/" + theme.Palette.Name + ".png"));
             _wallpaperName = theme.Palette.Name;
         }
         RefreshContent();

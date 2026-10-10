@@ -28,9 +28,12 @@ try {
     foreach ($name in @('Launch-Nexus-Desktop.bat', 'Restore-Windows-Desktop.bat', 'restore-windows-desktop.ps1')) { Set-Content (Join-Path $pub $name) 'new launch/recovery helper' -Encoding ASCII }
     Set-Content (Join-Path $pub 'resources.pri') 'app index' -Encoding ASCII
     Set-Content (Join-Path $pub 'MainWindow.xbf') 'compiled UI' -Encoding ASCII
+    New-Item (Join-Path $pub 'Assets/Wallpapers') -ItemType Directory -Force | Out-Null
+    $sceneSource = Join-Path (Split-Path $PSScriptRoot -Parent) 'src/Nexus.Shell/Assets/Wallpapers/MidnightGlass.svg'
+    Copy-Item $sceneSource (Join-Path $pub 'Assets/Wallpapers/MidnightGlass.svg')
     Set-Content (Join-Path $pub 'coreclr.dll') 'same runtime' -Encoding ASCII
     Set-Content (Join-Path $pub 'Microsoft.UI.Xaml.dll') 'same WinUI' -Encoding ASCII
-    $resources = @('resources.pri', 'MainWindow.xbf') | ForEach-Object {
+    $resources = @('resources.pri', 'MainWindow.xbf', 'Assets/Wallpapers/MidnightGlass.svg') | ForEach-Object {
         $file = Join-Path $pub $_
         [ordered]@{ File = $_; Length = (Get-Item $file).Length; SHA256 = (Get-FileHash $file -Algorithm SHA256).Hash.ToLowerInvariant() }
     }
@@ -49,6 +52,9 @@ try {
     Assert-Check ((Get-Content (Join-Path $base 'Nexus.Shell.exe') -Raw).Trim() -eq 'old app') 'The old folder must remain intact.'
     Assert-Check ((Get-Content (Join-Path $target 'resources.pri') -Raw).Trim() -eq 'app index') 'The new app resource index is required.'
     Assert-Check (Test-Path (Join-Path $target 'MainWindow.xbf')) 'Loose compiled UI was omitted.'
+    $installedScene = Join-Path $target 'Assets/Wallpapers/MidnightGlass.svg'
+    Assert-Check (Test-Path $installedScene) 'The new wallpaper must be included in the app payload.'
+    Assert-Check ((Get-FileHash $installedScene -Algorithm SHA256).Hash -eq (Get-FileHash $sceneSource -Algorithm SHA256).Hash) 'The installed wallpaper bytes must match the verified source.'
     Assert-Check ((Get-Content (Join-Path $target 'Nexus.DesktopHost.dll') -Raw).Trim() -eq 'new host') 'The new desktop host must be shipped as app payload.'
     foreach ($name in @('Nexus.Core.exe', 'Nexus.Core.dll', 'Nexus.Core.deps.json', 'Nexus.Core.runtimeconfig.json', 'Nexus.Runtime.dll')) {
         Assert-Check ((Get-Content (Join-Path $target $name) -Raw).Trim() -eq 'new core') 'Core and its protocol assembly must come from the new payload.'
@@ -67,6 +73,12 @@ try {
     Reject-Update $bad
     Assert-Check (-not (Test-Path $bad)) 'A damaged update must fail before creating an app folder.'
     Copy-Item (Join-Path $pub 'Nexus.Shell.exe') (Join-Path $unpacked 'payload') -Force
+    $scenePayload = Join-Path $unpacked 'payload/Assets/Wallpapers/MidnightGlass.svg'
+    Set-Content $scenePayload '<svg>damaged scene</svg>' -Encoding ASCII
+    $badScene = Join-Path $fixture 'bad-scene'
+    Reject-Update $badScene
+    Assert-Check (-not (Test-Path $badScene)) 'A damaged wallpaper must fail before creating the new app folder.'
+    Copy-Item $sceneSource $scenePayload -Force
     $manifestPath = Join-Path $unpacked 'Update-Manifest.json'
     $originalManifest = Get-Content $manifestPath -Raw
     # An app binary/resource must not be silently reused as a runtime file.

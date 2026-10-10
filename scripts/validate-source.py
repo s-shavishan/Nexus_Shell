@@ -40,7 +40,9 @@ required = [
     "Desktop/MenuBarWindow.cs", "Desktop/NotificationWindow.cs", "UI/Desktop/MenuBarView.cs",
     "UI/LiquidGlassBackdrop.cs", "UI/WindowTransition.cs", "Services/LaunchpadCatalog.cs", "Services/StartKeyGesture.cs", "Interop/StartKeyRouter.cs",
     "Services/MinimizedWindowPolicy.cs", "Services/NotificationInbox.cs",
+    "Services/MenuBarLayout.cs", "Models/DesktopNotice.cs", "Desktop/ControlCenterEnvironment.cs", "Desktop/DesktopEnvironment.ControlCenter.cs",
     "Services/DesktopPolicyRequest.cs", "Services/DesktopPolicyElevation.cs", "Services/StartupStep.cs",
+    "Services/SurfaceSession.cs", "Services/DesktopPresentation.cs", "UI/ShellControls.cs", "Assets/Wallpapers/MidnightGlass.svg",
 ]
 for relative in required:
     assert (project / relative).is_file(), f"Missing file: {relative}"
@@ -213,6 +215,11 @@ for source in project.glob("*.xaml"):
             assert uri.rsplit("/", 1)[-1].removesuffix(".svg") in icon_names, f"Missing icon: {uri}"
 print("Native vector assets and publish wiring OK")
 wallpaper_content = project_xml.find("ItemGroup/Content[@Include='Assets\\Wallpapers\\*.png']")
+vector_wallpaper_content = project_xml.find("ItemGroup/Content[@Include='Assets\\Wallpapers\\*.svg']")
+assert vector_wallpaper_content is not None and vector_wallpaper_content.attrib.get("CopyToPublishDirectory") == "PreserveNewest", "The Midnight SVG must be copied into the published desktop"
+for node in ET.parse(project / "Assets/Wallpapers/MidnightGlass.svg").getroot().iter():
+    assert node.tag.rsplit("}", 1)[-1] not in {"script", "image", "filter", "animate", "text"}, "Wallpaper vectors must remain native, static and self-contained"
+assert "MidnightGlass.svg" in (project / "UI/Desktop/DesktopSurface.cs").read_text() and "ImageFailed" in (project / "UI/Desktop/DesktopSurface.cs").read_text(), "The desktop needs both the new scene and a decode fallback"
 assert wallpaper_content is not None and wallpaper_content.attrib.get("CopyToPublishDirectory") == "PreserveNewest"
 for mood in ["Solstice", "Ember", "Opal", "Lagoon", "Graphite", "Pearl"]:
     png = (project / "Assets/Wallpapers" / (mood + ".png")).read_bytes()
@@ -232,7 +239,7 @@ closed = code[code.index("private void Window_Closed("):]
 assert "SaveFinal(" not in closed and "DetachSnapshot(" in closed, "Closing Sections must not finalize the desktop session"
 for file in [root / "appveyor.yml", root / ".github/workflows/build-windows.yml", root / "scripts/package.ps1", root / "scripts/build.ps1"]:
     body = file.read_text()
-    assert "Nexus-Shell-2.1.1" in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
+    assert "Nexus-Shell-3.1.0" in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
 print("Independent desktop ownership, Sections lifetime and CI versions OK")
 # Desktop replacement cannot silently instantiate Explorer or common picker UI.
 environment = (project / "Desktop/DesktopEnvironment.cs").read_text()
@@ -326,6 +333,15 @@ callback = backdrop.split("protected override void OnDefaultSystemBackdropConfig
 assert "base.OnDefaultSystemBackdropConfigurationChanged" not in callback and "GetDefaultSystemBackdropConfiguration(" not in callback, "Invalid-target backdrop regression: do not re-enter the detached native target"
 assert '"--no-native-ipc"' not in (root / ".github/workflows/build-windows.yml").read_text(), "Windows CI must run native checks"
 print("Core-owned control service, settings routes, command buffer and invalid-target regression wiring OK")
+panel = (project / "Desktop/ControlCenterEnvironment.cs").read_text()
+coordinator = (root / "src/Nexus.Runtime/ControlCenterCoordinator.cs").read_text()
+assert '"--control-center-worker"' in (project / "App.xaml.cs").read_text() and '"--control-center-worker"' in (root / "src/Nexus.Core/Program.cs").read_text()
+assert '"controlcenter"' in panel and "CoreProcessSession" not in panel and "CommitState" not in panel and "StateStore(" not in panel
+assert "ControlCenterPreferences.Set" in (project / "Desktop/DesktopEnvironment.ControlCenter.cs").read_text()
+assert "_retiring" in coordinator and "RuntimeRestartBudget" in coordinator and "ExpireActions" in coordinator
+assert "MenuBarLayout.Attached" in (project / "Desktop/TaskbarWindow.cs").read_text() and "MenuBarLayout.ClientBounds" in (project / "Interop/WindowChrome.cs").read_text()
+assert "NotificationHistory = [.. NotificationHistory]" in (project / "Models/ShellState.cs").read_text()
+print("Supervised Control Center, preference ownership, attached-bar framing and durable alert history wiring OK")
 if options.syntax:
     from tree_sitter import Language, Parser
     import tree_sitter_c_sharp

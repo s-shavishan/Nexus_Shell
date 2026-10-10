@@ -29,16 +29,17 @@ internal sealed class WindowMaterial
             {
                 _backdrop = glass ? new LiquidGlassBackdrop() : null;
                 if (_backdrop is { } source) source.Failed += () => frame.DispatcherQueue.TryEnqueue(() =>
-                { if (_closed || !ReferenceEquals(source, _backdrop)) return; _failed = true; _enabled = false; try { window.SystemBackdrop = null; frame.Background = theme.Surface("Sidebar"); } catch (Exception error) { Log.Write("Glass fallback arrived after window close", error); } });
+                { if (_closed || !ReferenceEquals(source, _backdrop)) return; _failed = true; _enabled = false; try { window.SystemBackdrop = null; frame.Background = theme.Material(role, false); } catch (Exception error) { Log.Write("Glass fallback arrived after window close", error); } });
                 window.SystemBackdrop = _backdrop; _enabled = glass;
             }
             _backdrop?.SetTint(ShellTheme.Color("FF" + theme.Palette.Panel[2..]));
-            frame.Background = glass ? theme.Glass(role) : theme.Surface("Sidebar");
+            frame.Background = theme.Material(role, glass);
+            frame.BorderBrush = theme.Edge;
         }
         catch (Exception ex)
         {
             _failed = true; _enabled = false;
-            try { window.SystemBackdrop = null; frame.Background = theme.Surface("Sidebar"); } catch (Exception error) { Log.Write("Window glass fallback cleanup failed", error); }
+            try { window.SystemBackdrop = null; frame.Background = theme.Material(role, false); } catch (Exception error) { Log.Write("Window glass fallback cleanup failed", error); }
             Log.Write("Window material unavailable; using the palette fallback", ex);
         }
     }

@@ -1,6 +1,6 @@
-# Proposed next major update — Nexus 3.0 Session Core
+# Nexus 3.x Session Core roadmap
 
-This is a proposal, not implemented functionality. The 2.1.1 update handles the current Start-key report and improves sign-in diagnosis. The next major version should change how the desktop survives failure and handles everyday PC work.
+The 3.0.0 candidate implements the first recovery boundary (Control Center), floating/attached menu-bar and frame motion, snap/title-control protection, and persistent Nexus alert history. The broader systems below remain staged work. See [delivered scope and Windows gates](SESSION-CORE-3.0.0.md).
 
 | Priority | Desktop system | User-visible result | Main acceptance gate |
 | --- | --- | --- | --- |
@@ -12,11 +12,11 @@ This is a proposal, not implemented functionality. The 2.1.1 update handles the 
 | 6 | Everyday shell compatibility | Notification-area compatibility research, safe device removal, keyboard/input indicators, clipboard history and screenshot controls | Supported API boundaries, original application menus, explicit capture/history controls and no secure-desktop capture |
 | 7 | Coherent glass and motion | One material/spacing system; linked dock/window/panel transitions, clear contrast and reduced motion; measured frame and memory budgets | Real Windows rendering, VM GPU fallback, high contrast, mixed DPI and one-hour resource measurement |
 
-The first milestone should be **independent panel recovery**, with the existing Core protocol extended to supervise surface identities and health. Split one surface first, validate restart/focus/input/settings behavior, then extend the pattern to Launchpad and dock. Expanding features before establishing those recovery boundaries repeats the current shared-UI failure problem.
+The first implemented milestone is **independent Control Center recovery**, with the Core protocol extended to supervise its identity/window/heartbeat. Complete Windows restart/focus/input/settings acceptance, then extend the pattern to Launchpad and dock. Expanding features before establishing those recovery boundaries repeats the current shared-UI failure problem.
 
 Use supported DWM thumbnails for live overview when available. Named Nexus layout workspaces should not be presented as a complete replacement for Windows virtual desktops: the public IVirtualDesktopManager API covers window membership/location, not a complete create/switch/enumerate controller. Keep any further integration behind a separately validated compatibility boundary.
 
-The current notification inbox contains Nexus session alerts. Reading other applications' notifications needs Windows' User Notification Listener capability and access permission; the current unpackaged delivery needs identity/capability work before that is promised. A taskbar notification-area compatibility layer also needs separate research; drawing icons alone does not implement the Shell_NotifyIcon contract.
+The current notification inbox saves bounded Nexus alert history through Core. Reading other applications' notifications needs Windows' User Notification Listener capability and access permission; the current unpackaged delivery needs identity/capability work before that is promised. A taskbar notification-area compatibility layer also needs separate research; drawing icons alone does not implement the Shell_NotifyIcon contract.
 
 Windows remains the driver, security, authentication and service platform. Nexus should own its desktop lifecycle and integrations rather than remove required Windows services. No standalone application is part of this proposal.
 

@@ -41,6 +41,19 @@ internal static class MajorDesktopChecks
         Parallel.For(0, 150, i => inbox.Publish("Event " + i, "Detail " + i, now: now.AddMinutes(1)));
         Check(inbox.Items.Count == 80 && inbox.Items.Select(item => item.Id).Distinct().Count() == 80, "Concurrent publishers must retain a bounded inbox with unique identities.");
         inbox.Clear(); Check(inbox.Items.Count == 0 && inbox.Unread == 0, "Clear must remove entries and the badge.");
+        var historical = new DesktopNotice(Guid.NewGuid(), new string('x', 160), new string('y', 2400), NoticeKind.Warning, now, true);
+        var restoredInbox = new NotificationInbox([historical, historical, historical with { Id = Guid.Empty }]);
+        Check(restoredInbox.Items.Count == 1 && restoredInbox.Items[0].Title.Length == 120 && restoredInbox.Items[0].Message.Length == 2000 && restoredInbox.Unread == 0, "Restored alert history must deduplicate, bound text and preserve read state.");
+        string historyFolder = Path.Combine(Path.GetTempPath(), "Nexus-notifications-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var historyStore = new StateStore(historyFolder); var historyState = new ShellState { NotificationHistory = restoredInbox.Items.ToList() };
+            historyStore.Save(historyState); historyState.NotificationHistory.Clear();
+            Check(new StateStore(historyFolder).Load().NotificationHistory.Single().Id == historical.Id, "Alert history must survive an actual atomic state save and reload.");
+            var cleared = new StateStore(historyFolder).Load(); cleared.NotificationHistory.Clear(); historyStore.Save(cleared);
+            Check(new StateStore(historyFolder).Load().NotificationHistory.Count == 0, "Cleared alerts must stay cleared after restart.");
+        }
+        finally { Directory.Delete(historyFolder, true); }
         var builtin = new AppEntry("notes", "Notes", "nexus:notes", "", "Utility");
         var apps = LaunchpadCatalog.Build([builtin], [builtin with { Name = "Pinned duplicate", Target = "NEXUS:NOTES" }], Enumerable.Range(0, 70).Select(i => new AppEntry("app" + i, "App " + i, "/app/" + i, "", i % 2 == 0 ? "Game" : "Development")));
         Check(apps.Count == 71 && apps[0] == builtin, "Launchpad must deduplicate a pinned builtin while retaining catalogue order.");
@@ -55,7 +68,23 @@ internal static class MajorDesktopChecks
                 Check(rectangle.Width > 0 && rectangle.Height > 0 && rectangle.X >= monitor.X && rectangle.Y >= monitor.Y && rectangle.Right <= monitor.Right && rectangle.Bottom <= monitor.Bottom, "Major desktop surfaces must fit negative-origin/tiny/scaled monitors.");
         }
         var work = DesktopLayout.ManagedWorkArea(new(0, 0, 1920, 1080), false, true, 1.5);
-        Check(work.Y == 48 && work.Bottom == 1080, "Maximized windows must leave the menu bar visible without reserving a floating-dock gap.");
+        Check(work.Y == 57 && work.Bottom == 1080, "Maximized windows must leave the menu bar visible without reserving a floating-dock gap.");
+        foreach (var monitor in new[] { new ShellRect(-1920, -200, 1920, 1080), new ShellRect(0, 0, 1920, 1080), new ShellRect(0, 0, 1, 1) })
+        foreach (double scale in new[] { .5, 1, 1.5, 4, double.NaN })
+        {
+            var area = DesktopLayout.ManagedWorkArea(monitor, false, true, scale);
+            foreach (bool attached in new[] { true, false })
+            {
+                var bar = MenuBarLayout.Bounds(monitor, scale, attached);
+                Check(bar.Width > 0 && bar.Height > 0 && bar.X >= monitor.X && bar.Y >= monitor.Y && bar.Right <= monitor.Right && bar.Bottom <= Math.Max(monitor.Y + 1, area.Y), "Floating and attached bar must fit one fixed reservation.");
+            }
+        }
+        var screen = new ShellRect(-1920, -200, 1920, 1080); var usable = DesktopLayout.ManagedWorkArea(screen, false, true, 1);
+        Check(MenuBarLayout.Attached(usable with { Width = usable.Width / 2 }, usable, false, 1), "Left snap must attach the bar.");
+        Check(MenuBarLayout.Attached(usable with { X = usable.X + usable.Width / 2, Width = usable.Width / 2 }, usable, false, 1), "Right snap must attach the bar.");
+        Check(!MenuBarLayout.Attached(new(-1800, -40, 800, 600), usable, false, 1), "An ordinary window must leave the bar floating.");
+        Check(MenuBarLayout.ClientBounds(new(usable.X - 8, usable.Y - 8, usable.Width + 16, usable.Height + 16), usable, true) == usable, "Maximized borderless client must not lose its title row beyond the work area.");
+        Check(MenuBarLayout.ClientBounds(screen, usable, false) == screen, "Normal and full-screen placement must remain untouched.");
         Console.WriteLine($"PASS: {count} major desktop checks; minimized-caption recovery/ownership, bounded notifications, Launchpad paging/filtering and menu-bar geometry.");
     }
 }

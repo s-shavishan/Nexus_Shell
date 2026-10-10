@@ -14,6 +14,7 @@ internal sealed class TaskbarView : Grid
 {
     private readonly DesktopEnvironment _environment;
     private readonly Border _frame = new();
+    private readonly SolidColorBrush _transparent = new(Microsoft.UI.Colors.Transparent);
     private readonly Grid _body = new() { ColumnSpacing = 10, Padding = new Thickness(13, 7, 13, 7) };
     private readonly StackPanel _pins = new() { Orientation = Orientation.Horizontal, Spacing = 3 };
     private readonly StackPanel _windows = new() { Orientation = Orientation.Horizontal, Spacing = 3 };
@@ -112,6 +113,11 @@ internal sealed class TaskbarView : Grid
         { if (_released) return; _motion?.AttachHover(button); _dockMotion?.Play(icon, arrive ? DockMotionCue.Arrive : DockMotionCue.None); arrive = false; };
         button.Unloaded += (_, _) => _dockMotion?.Detach(icon);
         button.Click += (_, _) => { if (_environment.TryLaunch(app)) _dockMotion?.Play(icon, DockMotionCue.Launch); };
+        var menu = new MenuFlyout(); var open = new MenuFlyoutItem { Text = "Open " + app.Name }; open.Click += (_, _) => { if (_environment.TryLaunch(app)) _dockMotion?.Play(icon, DockMotionCue.Launch); }; menu.Items.Add(open);
+        var remove = new MenuFlyoutItem { Text = "Remove from dock" }; remove.Click += (_, _) =>
+        { if (_released) return; _environment.Session.State.PinnedApps.RemoveAll(pin => string.Equals(pin.Target, app.Target, StringComparison.OrdinalIgnoreCase)); _environment.SaveState(); }; menu.Items.Add(remove);
+        menu.Opened += (_, _) => { _environment.HideDockPreview(); _openContextMenus.Add(menu); _environment.Taskbar.RefreshVisibility(); };
+        menu.Closed += (_, _) => { _openContextMenus.Remove(menu); if (!_released) _environment.Taskbar.RefreshVisibility(); }; button.ContextFlyout = menu;
         ToolTipService.SetToolTip(button, "Open " + app.Name); Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, "Open " + app.Name);
         _motion?.AttachHover(button); return button;
     }
@@ -121,7 +127,7 @@ internal sealed class TaskbarView : Grid
         var pins = _environment.Session.State.PinnedApps.ToArray();
         if (!_shownPins.SequenceEqual(pins))
         {
-            foreach (var button in _pins.Children.OfType<Button>()) { _motion?.DetachHover(button); if (_pinImages.TryGetValue(button, out var icon)) _dockMotion?.Detach(icon); }
+            foreach (var button in _pins.Children.OfType<Button>()) { if (button.ContextFlyout is MenuFlyout menu) { menu.Hide(); _openContextMenus.Remove(menu); } _motion?.DetachHover(button); if (_pinImages.TryGetValue(button, out var icon)) _dockMotion?.Detach(icon); }
             _pinImages.Clear(); _pins.Children.Clear(); foreach (var pin in pins) _pins.Children.Add(PinButton(pin)); _shownPins = pins;
         }
         _windowSet.Reconcile(windows);
@@ -214,7 +220,7 @@ internal sealed class TaskbarView : Grid
             if (_dockMotion is not null && transitioned) { item.Indicator.Width = 22; item.Indicator.Opacity = 1; _dockMotion.SetIndicator(item.Indicator, presence, initialized); }
             if (item.State == state && item.Button.IsEnabled == valid && item.PreviewsEnabled == _environment.Session.State.DockPreviews) continue;
             item.State = state; item.Button.IsEnabled = valid; item.PreviewsEnabled = _environment.Session.State.DockPreviews;
-            item.Button.Background = active ? _environment.Theme.Brush("NexusSelection") : new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        item.Button.Background = active ? _environment.Theme.Brush("NexusSelection") : _transparent;
             item.Indicator.Background = _environment.Theme.Brush(active ? "NexusAccent" : "NexusMuted");
             if (active) item.Indicator.Background = _environment.Theme.Brush("NexusAccent");
             if (_dockMotion is null) { item.Indicator.Width = active ? 22 : minimized ? 5 : 10; item.Indicator.Opacity = minimized ? .45 : 1; }
@@ -249,7 +255,7 @@ internal sealed class TaskbarView : Grid
     {
         bool compact = _environment.Session.State.CompactDock;
         foreach (var button in _iconButtons.Concat(_pins.Children.OfType<Button>()).Concat(_windows.Children.OfType<Button>())) { button.Width = compact ? 40 : 48; button.Height = compact ? 44 : 52; if (button.Content is Image i) i.Width = i.Height = compact ? 30 : 36; }
-        foreach (var icon in _pinImages.Values.Concat(_items.Values.Select(i => i.Icon))) icon.Width = icon.Height = compact ? 28 : 32;
+        foreach (var icon in _pinImages.Values.Concat(_items.Values.Select(i => i.Icon))) icon.Width = icon.Height = compact ? 30 : 40;
         _separator.Visibility = _windows.Children.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
         double width = PreferredWidthDip;
         if (_reportedWidth != width) { _reportedWidth = width; PreferredWidthChanged?.Invoke(); }
@@ -270,14 +276,14 @@ internal sealed class TaskbarView : Grid
     {
         if (_released) return;
         var theme = _environment.Theme; RequestedTheme = theme.ElementTheme;
-        _frame.Background = _environment.Session.State.NativeGlass ? theme.Glass("Dock") : theme.Surface("Dock");
+        _frame.Background = theme.Material("Dock", _environment.Session.State.NativeGlass);
         bool motionEnabled = !theme.HighContrast && theme.Animations && !_environment.Session.State.ReducedEffects;
         _motion?.SetEnabled(motionEnabled); _dockMotion?.SetEnabled(motionEnabled);
         _frame.CornerRadius = new CornerRadius(_environment.Session.State.FloatingTaskbar && !theme.HighContrast ? 22 : 0);
-        _frame.BorderBrush = theme.Brush("NexusBorder"); _frame.BorderThickness = new Thickness(theme.HighContrast ? 1 : 1);
+        _frame.BorderBrush = theme.Edge; _frame.BorderThickness = new Thickness(1);
         _separator.Background = theme.Brush("NexusBorder"); _time.Foreground = theme.Brush("NexusText"); _date.Foreground = theme.Brush("NexusMuted");
         _clockButton.Background = theme.Brush("NexusSelection");
-        foreach (var button in _iconButtons) { button.Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent); button.Foreground = theme.Brush("NexusText"); }
+        foreach (var button in _iconButtons) { button.Background = _transparent; button.Foreground = theme.Brush("NexusText"); }
         foreach (var item in _items.Values) item.State = null;
         RefreshWindowStates();
         ApplyDensity(); RefreshClock();

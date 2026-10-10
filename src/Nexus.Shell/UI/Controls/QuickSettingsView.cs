@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml.Media;
 using Nexus.Runtime;
 using Nexus.Shell.Desktop;
 using Nexus.Shell.Services;
+using System.Text.Json;
 using Windows.System;
 
 namespace Nexus.Shell.UI.Controls;
@@ -15,15 +16,19 @@ namespace Nexus.Shell.UI.Controls;
 // their original service epoch. Uncertain commands are never replayed.
 internal sealed class QuickSettingsView : Grid, IDisposable
 {
-    private readonly DesktopEnvironment _environment;
+    private readonly ControlCenterEnvironment _environment;
     private readonly StackPanel _body = new() { Spacing = 12 };
     private readonly TextBlock _status;
+    private readonly InfoBar _error = new() { IsClosable = true, Severity = InfoBarSeverity.Error, Title = "Control Center needs attention" };
+    private readonly ProgressBar _progress = new() { IsIndeterminate = false, Height = 2, Opacity = 0 };
+    private readonly SurfaceSession _session = new();
     private readonly Button _scan;
     private readonly Dictionary<string, Button> _tabs = [];
     private readonly SettingsIntentBuffer _queued = new();
     private readonly Dictionary<string, (Slider Slider, Button Mute, TextBlock Label)> _mixer = [];
     private readonly List<(TextBlock Label, bool Muted)> _labels = [];
     private readonly List<Border> _cards = [];
+    private readonly List<Border> _badges = [];
     private readonly List<Button> _deviceButtons = [];
     private readonly List<(ToggleSwitch Toggle, Func<bool> Read)> _preferences = [];
     private readonly HashSet<StackPanel> _networkEditors = [];
@@ -38,32 +43,33 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     private string _section = "Sound", _signature = "";
     private bool _open, _disposed, _syncing, _busy, _readAgain;
 
-    internal QuickSettingsView(DesktopEnvironment environment, Action close)
+    internal QuickSettingsView(ControlCenterEnvironment environment, Action close)
     {
-        _environment = environment; Padding = new Thickness(18); RowSpacing = 14;
+        _environment = environment; Padding = new Thickness(22); RowSpacing = 16;
         KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden;
         RowDefinitions.Add(new() { Height = GridLength.Auto }); RowDefinitions.Add(new() { Height = GridLength.Auto });
         RowDefinitions.Add(new()); RowDefinitions.Add(new() { Height = GridLength.Auto });
         var header = new Grid { ColumnSpacing = 12 }; header.ColumnDefinitions.Add(new()); header.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
-        var heading = new StackPanel { Spacing = 4 }; var title = Label("Control Center", 24); title.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
-        heading.Children.Add(title); heading.Children.Add(Label("Your desktop. Your controls.", 12, true)); header.Children.Add(heading);
-        var dismiss = ActionButton("×", close); AutomationProperties.SetName(dismiss, "Close Control Center"); Grid.SetColumn(dismiss, 1); header.Children.Add(dismiss); Children.Add(header);
-        var nav = new Grid { ColumnSpacing = 7, RowSpacing = 7 };
+        var heading = new StackPanel { Spacing = 4 }; var title = Label("Control Center", 23); title.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
+        heading.Children.Add(title); heading.Children.Add(Label("Everything you need, close at hand.", 12, true)); header.Children.Add(heading);
+        var dismiss = ShellControls.IconButton("\uE8BB", "Close Control Center", close); Grid.SetColumn(dismiss, 1); header.Children.Add(dismiss); Children.Add(header);
+        var nav = new Grid { ColumnSpacing = 8, RowSpacing = 8 };
         for (int i = 0; i < 3; i++) nav.ColumnDefinitions.Add(new()); for (int i = 0; i < 2; i++) nav.RowDefinitions.Add(new());
         var sections = new[] { ("Sound", "\uE767"), ("Network", "\uE701"), ("Bluetooth", "\uE702"), ("Display", "\uE7F4"), ("Power", "\uE7E8"), ("Desktop", "\uE8FC") };
         for (int i = 0; i < sections.Length; i++)
         {
-            var (name, glyph) = sections[i]; var content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 9 };
-            content.Children.Add(new TextBlock { Text = glyph, FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14, VerticalAlignment = VerticalAlignment.Center }); content.Children.Add(Label(name, 12));
+            var (name, glyph) = sections[i]; var content = new StackPanel { Spacing = 8, HorizontalAlignment = HorizontalAlignment.Center };
+            var badge = ShellControls.Badge(glyph, environment.Theme, 30); _badges.Add(badge); content.Children.Add(badge); var label = Label(name, 12); label.HorizontalAlignment = HorizontalAlignment.Center; content.Children.Add(label);
             var button = ActionButton(name, () => Navigate(name)); button.Content = content; button.HorizontalAlignment = HorizontalAlignment.Stretch;
+            button.HorizontalContentAlignment = HorizontalAlignment.Center; button.Padding = new Thickness(8, 12, 8, 12); button.CornerRadius = new CornerRadius(15); button.BorderThickness = new Thickness(1);
             _tabs[name] = button; Grid.SetRow(button, i / 3); Grid.SetColumn(button, i % 3); nav.Children.Add(button);
         }
         Grid.SetRow(nav, 1); Children.Add(nav);
         var scroll = new ScrollViewer { Content = _body, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
         Grid.SetRow(scroll, 2); Children.Add(scroll);
-        var footer = new StackPanel { Spacing = 7 }; _status = Label("", 11, true); AutomationProperties.SetLiveSetting(_status, AutomationLiveSetting.Polite); footer.Children.Add(_status);
+        var footer = new StackPanel { Spacing = 8 }; footer.Children.Add(_error); footer.Children.Add(_progress); _status = Label("", 11, true); AutomationProperties.SetLiveSetting(_status, AutomationLiveSetting.Polite); footer.Children.Add(_status);
         var tools = new Grid { ColumnSpacing = 6 }; tools.ColumnDefinitions.Add(new()); tools.ColumnDefinitions.Add(new() { Width = GridLength.Auto }); tools.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
-        tools.Children.Add(ActionButton("Advanced Windows controls…", Advanced));
+        tools.Children.Add(ActionButton("More options…", Advanced));
         _scan = ActionButton("Scan", () => _ = ReadAsync(true)); Grid.SetColumn(_scan, 1); tools.Children.Add(_scan);
         var refresh = ActionButton("Refresh", () => _ = ReadAsync()); Grid.SetColumn(refresh, 2); tools.Children.Add(refresh); footer.Children.Add(tools); Grid.SetRow(footer, 3); Children.Add(footer);
         var escape = new KeyboardAccelerator { Key = VirtualKey.Escape }; escape.Invoked += (_, args) => { close(); args.Handled = true; }; KeyboardAccelerators.Add(escape);
@@ -89,10 +95,10 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     }
     private StackPanel Card(string title, string? detail = null)
     {
-        var body = new StackPanel { Spacing = 10 }; var heading = Label(title, 15); heading.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold; body.Children.Add(heading);
+        var body = new StackPanel { Spacing = 12 }; var heading = Label(title, 15); heading.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold; body.Children.Add(heading);
         if (!string.IsNullOrWhiteSpace(detail)) body.Children.Add(Label(detail, 12, true));
         var card = new Border { Child = body, Padding = new Thickness(16), CornerRadius = new CornerRadius(_environment.Theme.HighContrast ? 0 : 16), BorderThickness = new Thickness(1),
-            Background = _environment.Session.State.NativeGlass ? _environment.Theme.Glass("Card") : _environment.Theme.Brush("NexusCard"), BorderBrush = _environment.Theme.Brush("NexusBorder") };
+            Background = _environment.Theme.Material("Card", _environment.State.NativeGlass), BorderBrush = _environment.Theme.Edge };
         _cards.Add(card); _body.Children.Add(card); return body;
     }
     private void ClearBody()
@@ -104,18 +110,19 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     {
         RequestedTheme = _environment.Theme.ElementTheme;
         foreach (var (label, muted) in _labels) label.Foreground = _environment.Theme.Brush(muted ? "NexusMuted" : "NexusText");
-        foreach (var card in _cards) { card.Background = _environment.Session.State.NativeGlass ? _environment.Theme.Glass("Card") : _environment.Theme.Brush("NexusCard"); card.BorderBrush = _environment.Theme.Brush("NexusBorder"); card.CornerRadius = new CornerRadius(_environment.Theme.HighContrast ? 0 : 16); }
-        foreach (var (section, tab) in _tabs) { tab.Background = _environment.Theme.Brush(section == _section ? "NexusCard" : "NexusSidebar"); tab.BorderBrush = _environment.Theme.Brush(section == _section ? "NexusAccent" : "NexusBorder"); }
+        foreach (var badge in _badges) { badge.Background = _environment.Theme.Brush("NexusSelection"); badge.CornerRadius = new CornerRadius(_environment.Theme.HighContrast ? 0 : 9); if (badge.Child is FontIcon icon) icon.Foreground = _environment.Theme.Brush("NexusAccent"); }
+        foreach (var card in _cards) { card.Background = _environment.Theme.Material("Card", _environment.State.NativeGlass); card.BorderBrush = _environment.Theme.Edge; card.CornerRadius = new CornerRadius(_environment.Theme.HighContrast ? 0 : 16); }
+        foreach (var (section, tab) in _tabs) { tab.Background = section == _section ? _environment.Theme.Brush("NexusSelection") : _environment.Theme.Material("Card", _environment.State.NativeGlass); tab.BorderBrush = section == _section ? _environment.Theme.Brush("NexusAccent") : _environment.Theme.Edge; tab.CornerRadius = new CornerRadius(_environment.Theme.HighContrast ? 0 : 15); }
         RefreshPreferences();
     }
     internal void RefreshPreferences()
-    { _syncing = true; try { foreach (var (toggle, read) in _preferences) toggle.IsOn = read(); if (_wallpaper is not null) _wallpaper.SelectedItem = _environment.Session.State.Wallpaper; } finally { _syncing = false; } }
+    { if (_disposed) return; _syncing = true; try { foreach (var (toggle, read) in _preferences) if (toggle.IsEnabled) toggle.IsOn = read(); if (_wallpaper is { IsEnabled: true }) _wallpaper.SelectedItem = _environment.State.Wallpaper; } finally { _syncing = false; } }
     internal void Open(string? section = null)
     { if (_disposed) return; _open = true; _poll.Start(); Navigate(section ?? _section); }
     private void Navigate(string section)
     {
         if (section != "Desktop" && !SettingsRules.Sections.Contains(section)) section = "Sound";
-        _ = PumpAsync(); _section = section; _state = null; _signature = ""; ClearBody(); ApplyAppearance();
+        _ = PumpAsync(); _section = section; _session.Open(section); _state = null; _signature = ""; _error.IsOpen = false; ClearBody(); ApplyAppearance();
         _scan.Visibility = section is "Network" or "Bluetooth" ? Visibility.Visible : Visibility.Collapsed;
         if (section == "Desktop") { RenderDesktop(); _status.Text = "Preferences save automatically through Nexus Core."; }
         else { Card(section, "Reading device state…"); _ = ReadAsync(); }
@@ -142,20 +149,20 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     }
     private async Task ExecuteAsync(SettingsRequest request)
     {
-        if (_busy || _disposed) return; _busy = true; _active = request; SetBusy();
+        if (_busy || _disposed) return; long generation = _session.Capture(); _busy = true; _active = request; SetBusy();
         AutomationProperties.SetLiveSetting(_status, request.Change is not null || request.Scan ? AutomationLiveSetting.Polite : AutomationLiveSetting.Off);
         if (_open && request.Section == _section) _status.Text = request.Scan ? "Scanning devices…" : request.Change is null ? "Reading device state…" : "Applying your change…";
         try
         {
             var state = await _environment.ExecuteSettingsAsync(request);
-            if (_open && !_disposed && state.Section == _section)
-            { _state = state; Render(state); _status.Text = state.Message.Length == 0 ? "Updated " + DateTime.Now.ToString("HH:mm:ss") : state.Message; }
+            if (!_disposed && _session.Accepts(generation, state.Section))
+            { _state = state; Render(state); _error.IsOpen = false; _status.Text = state.Message.Length == 0 ? "Up to date · " + DateTime.Now.ToString("HH:mm") : state.Message; }
         }
         catch (Exception error)
         {
             _queued.Clear(); Log.Write("Control Center " + request.Section + " request failed", error);
-            if (_open && !_disposed && request.Section == _section)
-            { _state = null; _signature = ""; ClearBody(); Card(request.Section, error.Message + " Choose Refresh to read the current state."); _status.Text = "Device state needs a refresh."; }
+            if (!_disposed && _session.Accepts(generation, request.Section))
+            { _state = null; _signature = ""; ClearBody(); Card(request.Section, "The current device state could not be read. Refresh to try again."); ShowError(error.Message); _status.Text = "Device state needs a refresh."; }
         }
         finally
         {
@@ -163,7 +170,7 @@ internal sealed class QuickSettingsView : Grid, IDisposable
             if (!_disposed) { SetBusy(); if (_queued.Count != 0) _ = PumpAsync(); else if (_open && _readAgain) _ = ReadAsync(); }
         }
     }
-    private void SetBusy() { foreach (var button in _deviceButtons) button.IsEnabled = !_busy; _scan.IsEnabled = !_busy; }
+    private void SetBusy() { foreach (var button in _deviceButtons) button.IsEnabled = !_busy; _scan.IsEnabled = !_busy; _progress.IsIndeterminate = _busy && _open; _progress.Opacity = _busy && _open ? 1 : 0; }
     private SettingsChange? Pending(string kind, string device, string item = "")
     {
         return _queued.Find(_section, kind, device, item) ?? (_active?.Section == _section && _active.Change is { } active
@@ -173,7 +180,10 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     {
         if (state.Section == "Sound" && state.Sound is { } sound) { RenderSound(sound); return; }
         if (state.Section == "Display") { RenderDisplay(state); return; }
-        ClearBody();
+        // Stable snapshots retain focus, expansion and confirmation buttons.
+        string signature = state.Section + "|" + JsonSerializer.Serialize<object?>(state.Network ?? (object?)state.Bluetooth ?? state.Power) + "|" + state.Message;
+        if (_signature == signature) return;
+        _signature = signature; ClearBody();
         if (state.Network is { } network) RenderNetwork(network);
         else if (state.Bluetooth is { } bluetooth) RenderBluetooth(bluetooth);
         else if (state.Power is { } power) RenderPower(power);
@@ -293,40 +303,53 @@ internal sealed class QuickSettingsView : Grid, IDisposable
         foreach (var plan in state.Plans) plans.Children.Add(DeviceButton((plan.Active ? "✓ " : "") + plan.Name, () => Queue(new("power-plan", plan.Id), true), !plan.Active));
         if (state.Message.Length != 0) plans.Children.Add(Label(state.Message, 12, true)); plans.Children.Add(ActionButton("Lock desktop", _environment.LockScreen));
     }
-    private void Preference(StackPanel card, string name, Func<bool> read, Action<bool> write)
+    internal void ShowError(string message) { if (!_disposed && _open) { _error.Message = message; _error.IsOpen = true; _status.Text = "Review the message or refresh the current state."; } }
+    private void Preference(StackPanel card, string name, DesktopPreference preference, Func<bool> read)
     {
         var row = new Grid { ColumnSpacing = 10 }; row.ColumnDefinitions.Add(new()); row.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
         var label = Label(name, 13); label.VerticalAlignment = VerticalAlignment.Center; row.Children.Add(label);
-        var toggle = new ToggleSwitch { IsOn = read(), OnContent = "On", OffContent = "Off" }; AutomationProperties.SetName(toggle, name); Grid.SetColumn(toggle, 1); row.Children.Add(toggle);
-        toggle.Toggled += (_, _) => { if (_syncing) return; write(toggle.IsOn); _environment.SaveState(); }; _preferences.Add((toggle, read)); card.Children.Add(row);
+        var toggle = new ToggleSwitch { IsOn = read(), OnContent = "", OffContent = "", MinWidth = 46 }; AutomationProperties.SetName(toggle, name); Grid.SetColumn(toggle, 1); row.Children.Add(toggle);
+        toggle.Toggled += async (_, _) =>
+        {
+            if (_syncing || !_open || _disposed || !toggle.IsEnabled || !_preferences.Any(item => ReferenceEquals(item.Toggle, toggle))) return; long generation = _session.Capture(); toggle.IsEnabled = false;
+            try { await _environment.SetPreferenceAsync(preference, toggle.IsOn); }
+            catch (Exception error) { if (!_disposed && _session.Accepts(generation, "Desktop")) ShowError(error.Message); }
+            finally { if (!_disposed) { toggle.IsEnabled = true; RefreshPreferences(); } }
+        }; _preferences.Add((toggle, read)); card.Children.Add(row);
     }
     private void RenderDesktop()
     {
-        var state = _environment.Session.State; var appearance = Card("Appearance", "Choose the surfaces and motion that suit your display.");
+        var state = _environment.State; var appearance = Card("Appearance", "Choose the surfaces and motion that suit your display.");
         var wallpaper = _wallpaper = new ComboBox { Header = "Wallpaper palette", ItemsSource = AuraPalette.Moods, SelectedItem = state.Wallpaper, HorizontalAlignment = HorizontalAlignment.Stretch };
         AutomationProperties.SetName(wallpaper, "Wallpaper palette");
-        wallpaper.SelectionChanged += (_, _) => { if (!_syncing && ReferenceEquals(wallpaper, _wallpaper) && wallpaper.SelectedItem is string mood) { state.Wallpaper = mood; _environment.SaveState(); } }; appearance.Children.Add(wallpaper);
-        Preference(appearance, "Glass surfaces", () => state.NativeGlass, value => state.NativeGlass = value);
-        Preference(appearance, "Reduce effects", () => state.ReducedEffects, value => state.ReducedEffects = value);
+        wallpaper.SelectionChanged += async (_, _) =>
+        {
+            if (_syncing || !_open || _disposed || !wallpaper.IsEnabled || !ReferenceEquals(wallpaper, _wallpaper) || wallpaper.SelectedItem is not string mood) return;
+            long generation = _session.Capture(); wallpaper.IsEnabled = false;
+            try { await _environment.SetPreferenceAsync(DesktopPreference.Wallpaper, value: mood); }
+            catch (Exception error) { if (!_disposed && _session.Accepts(generation, "Desktop")) ShowError(error.Message); }
+            finally { if (!_disposed) { wallpaper.IsEnabled = true; RefreshPreferences(); } }
+        }; appearance.Children.Add(wallpaper);
+        Preference(appearance, "Glass surfaces", DesktopPreference.NativeGlass, () => state.NativeGlass);
+        Preference(appearance, "Reduce effects", DesktopPreference.ReducedEffects, () => state.ReducedEffects);
         var dock = Card("Dock");
-        Preference(dock, "Floating dock", () => state.FloatingTaskbar, value => state.FloatingTaskbar = value);
-        Preference(dock, "Compact dock", () => state.CompactDock, value => state.CompactDock = value);
-        Preference(dock, "Window previews", () => state.DockPreviews, value => state.DockPreviews = value);
+        Preference(dock, "Floating dock", DesktopPreference.FloatingDock, () => state.FloatingTaskbar);
+        Preference(dock, "Compact dock", DesktopPreference.CompactDock, () => state.CompactDock);
+        Preference(dock, "Window previews", DesktopPreference.WindowPreviews, () => state.DockPreviews);
         var desktop = Card("Desktop & notifications");
-        Preference(desktop, "24-hour clock", () => state.Clock24Hour, value => state.Clock24Hour = value);
-        Preference(desktop, "Desktop clock", () => state.ShowClockWidget, value => state.ShowClockWidget = value);
-        Preference(desktop, "Space widget", () => state.ShowSpaceWidget, value => state.ShowSpaceWidget = value);
-        Preference(desktop, "Quiet Nexus alerts", () => state.QuietNotifications, value => state.QuietNotifications = value);
+        Preference(desktop, "24-hour clock", DesktopPreference.Clock24Hour, () => state.Clock24Hour);
+        Preference(desktop, "Desktop clock", DesktopPreference.ClockWidget, () => state.ShowClockWidget);
+        Preference(desktop, "Space widget", DesktopPreference.SpaceWidget, () => state.ShowSpaceWidget);
+        Preference(desktop, "Quiet Nexus alerts", DesktopPreference.QuietAlerts, () => state.QuietNotifications);
         var signIn = Card("Desktop at sign-in", _environment.IsManagedDesktop
             ? "Nexus is managing this desktop session. Sign-in replacement and startup alongside Windows are separate choices."
             : "This is a preview alongside Windows. Use session mode to give the standalone Windows key to Nexus Launchpad.");
         signIn.Children.Add(ActionButton("Review startup and sign-in setup…", () => _environment.ShowSections("Personalize")));
     }
-    private void Advanced() => _environment.OpenAdvancedWindowsSettings(_section switch
-    { "Sound" => "ms-settings:sound", "Network" => "ms-settings:network-status", "Bluetooth" => "ms-settings:bluetooth", "Display" => "ms-settings:display", "Power" => "ms-settings:powersleep", _ => "ms-settings:" });
+    private void Advanced() => _environment.Advanced(_section);
     internal void Hide()
     {
-        if (!_open) return; _open = false; _poll.Stop(); _writes.Stop(); _readAgain = false;
+        if (!_open) return; _open = false; _session.Hide(); _poll.Stop(); _writes.Stop(); _readAgain = false; _progress.IsIndeterminate = false; _progress.Opacity = 0;
         foreach (var editor in _networkEditors) foreach (var password in editor.Children.OfType<PasswordBox>()) password.Password = "";
         _ = PumpAsync();
     }

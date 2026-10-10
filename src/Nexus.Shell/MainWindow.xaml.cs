@@ -71,8 +71,9 @@ public sealed partial class MainWindow : Window
                 workArea.Y + (workArea.Height - initialHeight) / 2, initialWidth, initialHeight));
             if (_appWindow.Presenter is OverlappedPresenter presenter) presenter.SetBorderAndTitleBar(false, false);
             _windowTransition = new(DesktopRoot, () => _environment.Theme.Animations && !_highContrast && !_state.ReducedEffects);
-            _chrome = new(_handle, resizable: true, stateChanged: maximized => { DesktopRoot.CornerRadius = new CornerRadius(maximized || _highContrast ? 0 : 14); DesktopRoot.BorderThickness = new Thickness(maximized ? 0 : 1); }, minimizeRequested: Minimize);
+            _chrome = new(_handle, resizable: true, stateChanged: maximized => { DesktopRoot.CornerRadius = new CornerRadius(maximized || _highContrast ? 0 : 14); DesktopRoot.BorderThickness = new Thickness(maximized ? 0 : 1); }, minimizeRequested: Minimize, closeRequested: RequestCloseSections);
             _chrome.Restored += _windowTransition.Restore;
+            _chrome.Resized += _windowTransition.Restore;
             var icon = Path.Combine(AppContext.BaseDirectory, "Assets", "Nexus.ico");
             if (File.Exists(icon)) _appWindow.SetIcon(icon);
             DisplayNameBox.Text = _state.DisplayName;
@@ -516,7 +517,7 @@ public sealed partial class MainWindow : Window
         bool animation = !simple && _isActive && _animationsEnabled;
         _motion?.SetEnabled(animation);
         _chrome.SetCorners(highContrast);
-        bool square = _state.FullScreen || NativeMethods.IsZoomed(_handle);
+        bool square = _state.FullScreen || _chrome.IsAttached;
         DesktopRoot.CornerRadius = new CornerRadius(highContrast || square ? 0 : 14);
         DesktopRoot.BorderThickness = new Thickness(square ? 0 : 1);
         
@@ -623,7 +624,8 @@ public sealed partial class MainWindow : Window
     private void NavigateMenu_Click(object sender, RoutedEventArgs args) => Navigate((string)((MenuFlyoutItem)sender).Tag);
     private void SearchApps_Click(object sender, RoutedEventArgs args) => SearchApps();
     private void Running_Click(object sender, RoutedEventArgs args) => Navigate("Running apps");
-    private void CloseSections_Click(object sender, RoutedEventArgs args) => Close();
+    private async void RequestCloseSections() { if (!_dialogOpen && !_picking) await _windowTransition.CloseAsync(Close); }
+    private void CloseSections_Click(object sender, RoutedEventArgs args) => RequestCloseSections();
     private void Controls_Click(object sender, RoutedEventArgs args)
     {
         if (_controlsOpen) ControlsFlyout.Hide();

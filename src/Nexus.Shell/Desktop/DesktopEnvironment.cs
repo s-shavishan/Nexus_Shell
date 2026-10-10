@@ -16,13 +16,13 @@ internal sealed partial class DesktopEnvironment
 {
     internal ShellSession Session { get; }
     internal ShellTheme Theme { get; } = new();
-    internal NotificationInbox Notifications { get; } = new();
+    internal NotificationInbox Notifications { get; }
     internal DesktopMenus Menus { get; }
     internal DesktopWindow Desktop { get; private set; } = null!;
     internal TaskbarWindow Taskbar { get; private set; } = null!;
     internal bool IsStopping { get; private set; }
     internal bool SectionsOpen => _sections is not null;
-    internal bool DockInteraction => _menu?.IsOpen == true || _quickSettings?.IsOpen == true || _notifications?.IsOpen == true || _switcher?.IsOpen == true || _dockPreview?.IsOpen == true || _sessionDialog;
+    internal bool DockInteraction => _menu?.IsOpen == true || _controlVisible || _notifications?.IsOpen == true || _switcher?.IsOpen == true || _dockPreview?.IsOpen == true || _sessionDialog;
     internal DesktopSessionMode Mode { get; }
     internal bool IsManagedDesktop => Mode != DesktopSessionMode.Preview;
     internal event Action? Stopped;
@@ -46,7 +46,6 @@ internal sealed partial class DesktopEnvironment
     private bool? _floating;
     private (string, bool, bool, bool, bool, string)? _appearance;
     private MenuWindow? _menu;
-    private QuickSettingsWindow? _quickSettings;
     private NotificationWindow? _notifications;
     private MenuBarWindow? _topBar;
     private DesktopIntegration? _integration;
@@ -60,7 +59,7 @@ internal sealed partial class DesktopEnvironment
 
     internal DesktopEnvironment(ShellSession session, CoreProcessSession core, DesktopSessionMode mode = DesktopSessionMode.Preview, string? hostToken = null, int? hostPid = null)
     {
-        Session = session; _core = core; Notifications.Quiet = Session.State.QuietNotifications;
+        Session = session; _core = core; Notifications = new(Session.State.NotificationHistory); Notifications.Quiet = Session.State.QuietNotifications;
         Mode = mode; Menus = new(this); _usage = new(Session.State); _usageTracking = Session.State.UsageTracking;
         if (IsManagedDesktop)
         {
@@ -90,6 +89,7 @@ internal sealed partial class DesktopEnvironment
             Taskbar = new(this);
             _topBar = new(this);
             Session.Changed += SessionChanged;
+            Notifications.Changed += NotificationHistoryChanged;
             _saveTimer.Tick += SaveTick; _timer.Tick += Tick;
             _windowRefreshTimer.Tick += (_, _) => { _windowRefreshTimer.Stop(); UpdateTaskbar(); };
             _integration = new(Desktop.Handle, command => Desktop.DispatcherQueue.TryEnqueue(() =>
@@ -110,6 +110,7 @@ internal sealed partial class DesktopEnvironment
             try { _windowEvents = new(QueueWindowEvent, includeOwnProcess: true); }
             catch (Exception ex) { Report("Window notifications unavailable; the dock will use periodic refresh", ex); }
             RefreshDesktop(); UpdateTaskbar(); _timer.Start();
+            StartControlCenterSupervision();
             _pulse?.Set();
             if (_dirty) _saveTimer.Start();
             if (Session.RecoveryMessage.Length > 0) Report(Session.RecoveryMessage);
@@ -117,6 +118,13 @@ internal sealed partial class DesktopEnvironment
         catch { Shutdown(DesktopExitCode.Stop); throw; }
     }
     internal void SaveState() => Session.NotifyChanged();
+    private int _noticeQueued;
+    private void NotificationHistoryChanged()
+    {
+        if (IsStopping || Interlocked.Exchange(ref _noticeQueued, 1) != 0) return;
+        if (!Desktop.DispatcherQueue.TryEnqueue(() =>
+        { Interlocked.Exchange(ref _noticeQueued, 0); if (IsStopping) return; Session.State.NotificationHistory = Notifications.Items.ToList(); SaveState(); })) Interlocked.Exchange(ref _noticeQueued, 0);
+    }
     private async Task ConnectStartKeyAsync()
     {
         try { _startKey = new StartKeyRouter(Desktop.Handle); await _startKey.Ready; if (!IsStopping) Log.Write("Standalone Windows key connected to Nexus Launchpad"); }
@@ -132,7 +140,6 @@ internal sealed partial class DesktopEnvironment
         Taskbar.View.Refresh(DockWindows());
         if (_compact != Session.State.CompactDock || _floating != Session.State.FloatingTaskbar)
         { _compact = Session.State.CompactDock; _floating = Session.State.FloatingTaskbar; Taskbar.Position(); }
-        _quickSettings?.RefreshPreferences();
         Desktop.Surface.RefreshContent();
         _sections?.RefreshSharedNotes();
         if (_usageTracking != Session.State.UsageTracking) { _usageTracking = Session.State.UsageTracking; ResetUsageSample(); }
@@ -147,7 +154,7 @@ internal sealed partial class DesktopEnvironment
         Taskbar?.ApplyAppearance(); _menu?.ApplyAppearance(this);
         foreach (var utility in _utilities.Values) utility.ApplyAppearance();
         _switcher?.ApplyAppearance();
-        _quickSettings?.ApplyAppearance(); _sections?.RefreshSharedAppearance();
+        _sections?.RefreshSharedAppearance();
         _notifications?.ApplyAppearance(); _topBar?.ApplyAppearance();
     }
     internal void RefreshIntegration()
@@ -307,7 +314,7 @@ internal sealed partial class DesktopEnvironment
     {
         if (IsStopping) return;
         HideDockPreview();
-        _quickSettings?.Hide();
+        HideControlCenter();
         _notifications?.Hide();
         try { _menu ??= new(this); if (_menu.IsOpen && !search) _menu.HideMenu(); else _menu.ShowMenu(this, Taskbar.BarBounds, search); }
         catch (Exception ex) { Report("Could not open Start", ex); }
@@ -315,29 +322,28 @@ internal sealed partial class DesktopEnvironment
     internal void ShowQuickSettings()
     {
         if (IsStopping) return; HideDockPreview(); _menu?.HideMenu(); _notifications?.Hide();
-        try { _quickSettings ??= new(this); if (_quickSettings.IsOpen) _quickSettings.Hide(); else _quickSettings.Show(); }
-        catch (Exception ex) { Report("Could not open Quick Settings", ex); }
+        if (_controlVisible) HideControlCenter(); else ShowControlCenter("Sound");
     }
-    internal void QuickSettingsClosed(QuickSettingsWindow window) { if (ReferenceEquals(_quickSettings, window)) _quickSettings = null; }
     internal void ShowControlCenter(string section)
     {
         if (IsStopping) return; HideDockPreview(); _menu?.HideMenu(); _notifications?.Hide();
-        try { _quickSettings ??= new(this); _quickSettings.Show(section); }
-        catch (Exception ex) { Report("Could not open Control Center", ex); }
+        _controlVisible = true; _controlSection = ControlCenterPreferences.Sections.Contains(section) ? section : "Sound"; ++_controlSequence;
+        _ = SyncControlCenterAsync();
     }
     internal Task<SettingsSnapshot> ExecuteSettingsAsync(SettingsRequest request)
         => _core.ExecuteSettingsAsync(request with { Window = Taskbar.Handle.ToInt64() }, _cancel.Token);
-    internal void PositionQuickSettings() { if (_quickSettings?.IsOpen == true) _quickSettings.Position(); }
+    internal void PositionQuickSettings() { if (_controlVisible) _ = SyncControlCenterAsync(); }
     internal void PositionDesktopPanels() { _topBar?.Position(); PositionQuickSettings(); if (_notifications?.IsOpen == true) _notifications.Position(); }
     internal void SetDesktopFullscreen(bool fullscreen) => _topBar?.SetFullscreen(fullscreen);
+    internal void SetMenuBarAttached(bool attached) { if (!DockInteraction) _topBar?.SetAttached(attached); }
     internal void ShowNotifications()
     {
-        if (IsStopping) return; HideDockPreview(); _menu?.HideMenu(); _quickSettings?.Hide();
+        if (IsStopping) return; HideDockPreview(); _menu?.HideMenu(); HideControlCenter();
         try { _notifications ??= new(this); if (_notifications.IsOpen) _notifications.Hide(); else _notifications.Show(); }
         catch (Exception error) { Report("Could not open notifications", error); }
     }
     internal void NotificationClosed(NotificationWindow window) { if (ReferenceEquals(_notifications, window)) _notifications = null; }
-    internal void HideMenu() { HideDockPreview(); _menu?.HideMenu(); _quickSettings?.Hide(); _notifications?.Hide(); }
+    internal void HideMenu() { HideDockPreview(); _menu?.HideMenu(); HideControlCenter(); _notifications?.Hide(); }
     internal void MenuClosed(MenuWindow window) { if (ReferenceEquals(_menu, window)) _menu = null; }
     internal Task<List<AppEntry>> GetCatalogAsync(bool refresh = false)
     {
@@ -486,13 +492,14 @@ internal sealed partial class DesktopEnvironment
     {
         if (IsStopping) return; IsStopping = true;
         _saveTimer.Stop(); _windowRefreshTimer.Stop(); Session.Changed -= SessionChanged;
+        Notifications.Changed -= NotificationHistoryChanged; Session.State.NotificationHistory = Notifications.Items.ToList();
         _cancel.Cancel();
         Environment.ExitCode = (int)(exitCode ?? (IsManagedDesktop ? DesktopExitCode.RestoreWindows : DesktopExitCode.Stop));
         void Cleanup(Action action) { try { action(); } catch (Exception ex) { Log.Write("Desktop shutdown cleanup failed", ex); } }
         Cleanup(() => _dockPreview?.Close()); _dockPreview = null;
         Cleanup(() => _sections?.Close()); _sections = null;
         Cleanup(() => _menu?.Close()); _menu = null;
-        Cleanup(() => _quickSettings?.Close()); _quickSettings = null;
+        Cleanup(() => _controlTimer.Stop());
         Cleanup(() => _notifications?.Close()); _notifications = null;
         Cleanup(() => _topBar?.Close()); _topBar = null;
         foreach (var utility in _utilities.Values.ToArray()) Cleanup(utility.Close); _utilities.Clear();

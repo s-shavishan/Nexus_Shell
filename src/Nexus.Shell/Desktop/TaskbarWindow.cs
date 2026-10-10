@@ -88,11 +88,18 @@ internal sealed class TaskbarWindow : Window, IDisposable
                 && rect.Left <= monitor.X && rect.Top <= monitor.Y && rect.Right >= monitor.Right && rect.Bottom >= monitor.Bottom;
             // Preview does not own Explorer's work area. Avoid covering a
             // maximized application's native title controls in that mode.
-            _environment.SetDesktopFullscreen(fullscreen || (!_environment.IsManagedDesktop && maximized));
+            bool attached = sameMonitor && !NativeMethods.IsMinimized(foreground) && NativeMethods.GetWindowRect(foreground, out var appBounds)
+                && MenuBarLayout.Attached(appBounds.Bounds, ShellLayerInterop.Monitor(Handle).Work.Bounds, maximized, ShellLayerInterop.Scale(Handle));
+            if (_applicationMonitor != monitor) { _applicationMonitor = monitor; _applicationState = default; }
+            bool overlay = foreground != _environment.Desktop.Handle && (NativeMethods.IsOwnToolWindow(foreground) || _environment.IsControlCenterWindow(foreground));
+            if (overlay) (maximized, fullscreen, attached) = _applicationState;
+            else _applicationState = (maximized, fullscreen, attached);
+            _environment.SetDesktopFullscreen(fullscreen || (!_environment.IsManagedDesktop && (maximized || attached)));
+            _environment.SetMenuBarAttached(attached);
             _environment.UpdateDockPreviewPointer(fullscreen);
             var revealArea = _environment.IsManagedDesktop ? monitor : _registration.WorkArea;
             bool pointer = NativeMethods.GetCursorPos(out var point) && DockVisibility.InRevealArea(revealArea, BarBounds, point.X, point.Y, _shown, ShellLayerInterop.Scale(Handle));
-            bool show = !_arranging && _visibility.Update(_environment.Session.State.FloatingTaskbar, maximized, fullscreen,
+            bool show = !_arranging && _visibility.Update(_environment.Session.State.FloatingTaskbar, maximized || attached, fullscreen,
                 _environment.DockInteraction || View.ContextMenuOpen, pointer, Environment.TickCount64);
             // Hide/show only on transitions. Native Show Desktop can hide this
             // tool window independently, so recover visibility when needed.
@@ -107,6 +114,8 @@ internal sealed class TaskbarWindow : Window, IDisposable
         { if (!_visibilityReported) { _visibilityReported = true; _environment.Report("Could not update dock visibility", ex, false); } }
     }
     private async void HideAnimated() => await _transition.MinimizeAsync(() => NativeWindow.Hide());
+    private (bool Maximized, bool Fullscreen, bool Attached) _applicationState;
+    private ShellRect? _applicationMonitor;
     internal void ApplyAppearance() { if (_disposed) return; View.ApplyAppearance(); _material.Apply(this, View.Frame, _environment, "Dock"); Position(); }
     public void Dispose() { if (_disposed) return; _disposed = true; _visibilityTimer.Stop(); _transition.Dispose(); View.PreferredWidthChanged -= QueuePosition; _registration.Dispose(); _chrome.Dispose(); View.Release(); }
 }

@@ -37,6 +37,9 @@
     <Compile Include="../../src/Nexus.Shell/Services/BrightnessScale.cs" Link="BrightnessScale.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/ShellSession.cs" Link="ShellSession.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DesktopLayout.cs" Link="DesktopLayout.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/MenuBarLayout.cs" Link="MenuBarLayout.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/SurfaceSession.cs" Link="SurfaceSession.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/DesktopPresentation.cs" Link="DesktopPresentation.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DesktopCatalog.cs" Link="DesktopCatalog.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/ShellLayerInterop.cs" Link="ShellLayerInterop.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/TaskbarRegistration.cs" Link="TaskbarRegistration.cs" />

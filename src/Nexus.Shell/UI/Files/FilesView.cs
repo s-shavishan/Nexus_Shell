@@ -38,8 +38,8 @@ internal sealed class FilesView : Grid
     private readonly TextBox _filter = new() { PlaceholderText = "Filter this folder", Width = 170 };
     private readonly Button _choose, _newFolder;
     private readonly Button _empty;
-    private readonly Border _placesCard = new() { CornerRadius = new CornerRadius(20), Padding = new Thickness(12), BorderThickness = new Thickness(1) };
-    private readonly Border _inspectorCard = new() { CornerRadius = new CornerRadius(20), Padding = new Thickness(20), BorderThickness = new Thickness(1) };
+    private readonly Border _placesCard = new() { CornerRadius = new CornerRadius(12), Padding = new Thickness(10), BorderThickness = new Thickness(1) };
+    private readonly Border _inspectorCard = new() { CornerRadius = new CornerRadius(14), Padding = new Thickness(16), BorderThickness = new Thickness(1) };
     private readonly TextBlock _fileTitle = new() { Text = "No selection", FontSize = 17, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _fileKind = new() { Text = "Choose a file or folder to see its information.", FontSize = 12, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _fileLocation = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis, MaxLines = 5 };
@@ -342,10 +342,10 @@ internal sealed class FilesView : Grid
     }
     internal void ApplyAppearance()
     {
-        var theme = _environment.Theme; RequestedTheme = theme.ElementTheme; Background = _environment.State.NativeGlass ? theme.Glass("Frame") : theme.Brush("NexusPanel");
+        var theme = _environment.Theme; RequestedTheme = theme.ElementTheme; Background = null;
         _status.Foreground = _modified.Foreground = theme.Brush("NexusMuted"); _list.Foreground = _tiles.Foreground = theme.Brush("NexusText");
-        _placesCard.Background = _environment.State.NativeGlass ? theme.Glass("Panel") : theme.Surface("Sidebar"); _placesCard.BorderBrush = theme.Brush("NexusBorder");
-        _inspectorCard.Background = _environment.State.NativeGlass ? theme.Glass("Card") : theme.Brush("NexusCard"); _inspectorCard.BorderBrush = theme.Brush("NexusBorder");
+        _placesCard.Background = theme.Material("Panel", _environment.State.NativeGlass); _placesCard.BorderBrush = theme.Edge; _placesCard.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 12);
+        _inspectorCard.Background = theme.Material("Card", _environment.State.NativeGlass); _inspectorCard.BorderBrush = theme.Edge; _inspectorCard.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 14);
         _fileTitle.Foreground = theme.Brush("NexusText"); _fileKind.Foreground = theme.Brush("NexusMuted");
         _fileLocation.Foreground = theme.Brush("NexusSecondary");
         RefreshPlaces();

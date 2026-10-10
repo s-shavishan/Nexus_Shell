@@ -1,9 +1,10 @@
-# Start here — Nexus 2.1.1
+# Start here — Nexus 3.1.0
 
-1. Extract the complete Source ZIP into a fresh folder, or apply exactly one matching patch from SOURCE-PATCH.md.
-2. Build on Windows with the commands in README.md, or commit/push the reviewed source and retrieve the CI build artifacts.
-3. Extract the full `Nexus-Shell-2.1.1-win-x64.zip` into a separate version folder. Close the older Nexus before launching the new one.
-4. Snapshot the VM, start `Launch-Nexus.bat` in preview, then follow `START-AND-SIGNIN-2.1.1.md` in the compiled folder (or docs/START-AND-SIGNIN-2.1.1.md in source).
-5. Test supervised takeover using `Launch-Nexus-Desktop.bat`, the current restore helper, and the existing MAJOR-2.0.0.md regressions before enabling automatic startup or shell replacement.
+1. The Source ZIP contains the complete source, not a compiled executable. Build on Windows with the README commands or use the full compiled Windows CI artifact.
+2. Keep your previous build in its own folder. Apply exactly one source patch matching 3.0.0, 2.1.1 or main 1.5.0; see SOURCE-PATCH.md.
+3. Extract `Nexus-Shell-3.1.0-win-x64.zip` into a separate build folder and snapshot the VM.
+4. Start `Launch-Nexus.bat` in preview, then `Launch-Nexus-Desktop.bat` for the managed session. Follow UI-3.1.0.md in the compiled folder (docs/UI-3.1.0.md in source).
+5. Test the new material/scene, Launchpad pins, dock contexts, notification filters and Control Center hide/reopen races. Then repeat the existing recovery and work-area checks.
+6. Sign-in replacement is separate. Use START-AND-SIGNIN-3.1.0.md and Inspect-Nexus-Startup.bat; unidentified foreign shell policy remains untouched. Keep the matching Restore helpers available.
 
-The Source and Patch ZIPs contain no executable. The reported 2.0 test pass and the portable 2.1 checks do not certify this Windows build. Wi-Fi/Bluetooth controls need real or passed-through adapters; unsupported VM brightness and absent radios should produce capability messages.
+This is a UI and reliability update on the Session Core foundation. Native Windows acceptance is required before treating it as a stable release.

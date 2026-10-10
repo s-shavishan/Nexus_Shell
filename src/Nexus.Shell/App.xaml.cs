@@ -8,6 +8,7 @@ public partial class App : Application
 {
     private Desktop.DesktopEnvironment? _environment;
     private Desktop.FilesEnvironment? _files;
+    private Desktop.ControlCenterEnvironment? _controlCenter;
     private CoreProcessSession? _core;
     private Mutex? _instance;
     private Desktop.StartupWindow? _startup;
@@ -36,6 +37,16 @@ public partial class App : Application
     protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
         var command = Environment.GetCommandLineArgs();
+        if (command.Contains("--control-center-worker"))
+        {
+            try
+            {
+                _controlCenter = new(command.Skip(1).ToArray()); _controlCenter.Stopped += () => { _controlCenter = null; Exit(); };
+                await _controlCenter.StartAsync();
+            }
+            catch (Exception error) { ReportStartupFailure("opening Control Center", error, showDialog: false); Environment.ExitCode = 1; _controlCenter?.Stop(); Exit(); }
+            return;
+        }
         if (command.Contains("--files-worker"))
         {
             try
