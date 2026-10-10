@@ -70,7 +70,7 @@ public sealed partial class MainWindow : Window
             _appWindow.MoveAndResize(new RectInt32(workArea.X + (workArea.Width - initialWidth) / 2,
                 workArea.Y + (workArea.Height - initialHeight) / 2, initialWidth, initialHeight));
             if (_appWindow.Presenter is OverlappedPresenter presenter) presenter.SetBorderAndTitleBar(false, false);
-            _windowTransition = new(DesktopRoot, () => _environment.Theme.Animations && !_highContrast && !_state.ReducedEffects);
+            _windowTransition = new(DesktopRoot, () => _environment.Theme.Animations && _state.SurfaceAnimations && !_highContrast && !_state.ReducedEffects);
             _chrome = new(_handle, resizable: true, stateChanged: maximized => { DesktopRoot.CornerRadius = new CornerRadius(maximized || _highContrast ? 0 : 14); DesktopRoot.BorderThickness = new Thickness(maximized ? 0 : 1); }, minimizeRequested: Minimize, closeRequested: RequestCloseSections);
             _chrome.Restored += _windowTransition.Restore;
             _chrome.Resized += _windowTransition.Restore;
@@ -514,7 +514,7 @@ public sealed partial class MainWindow : Window
         _renderedHighContrast = highContrast;
         _renderedPalette = _environment.Theme.Palette.Name;
         bool simple = _state.ReducedEffects || highContrast;
-        bool animation = !simple && _isActive && _animationsEnabled;
+        bool animation = !simple && _isActive && _animationsEnabled && _state.SurfaceAnimations;
         _motion?.SetEnabled(animation);
         _chrome.SetCorners(highContrast);
         bool square = _state.FullScreen || _chrome.IsAttached;

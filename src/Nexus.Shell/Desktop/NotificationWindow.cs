@@ -22,7 +22,6 @@ internal sealed class NotificationWindow : Window
     private readonly WindowChrome _chrome;
     private readonly WindowMaterial _material = new();
     private readonly SurfaceMotion _motion;
-    private readonly WindowTransition _transition;
     private readonly Button _all, _issues, _clear;
     private IReadOnlyList<DesktopNotice> _shown = [];
     private string _appearance = "";
@@ -49,12 +48,11 @@ internal sealed class NotificationWindow : Window
         WindowSwitcherPolicy.Request(() => _window.IsShownInSwitchers = false, error => Log.Write("Notification switcher fallback", error));
         if (_window.Presenter is OverlappedPresenter presenter) { presenter.SetBorderAndTitleBar(false, false); presenter.IsResizable = presenter.IsMinimizable = presenter.IsMaximizable = false; }
         ShellLayerInterop.ToolWindow(_handle); _chrome = new(_handle, closeRequested: Hide); _chrome.SetCorners(environment.Theme.HighContrast, 22);
-        _motion = new(_frame, () => environment.Theme.Animations && !environment.Theme.HighContrast && !environment.Session.State.ReducedEffects);
-        _transition = new(_frame, () => environment.Theme.Animations && !environment.Theme.HighContrast && !environment.Session.State.ReducedEffects);
+        _motion = new(_frame, () => environment.Theme.Animations && !environment.Theme.HighContrast && environment.Session.State.SurfaceAnimations && !environment.Session.State.ReducedEffects);
         environment.Notifications.Changed += QueueRefresh;
         var escape = new KeyboardAccelerator { Key = VirtualKey.Escape }; escape.Invoked += (_, e) => { Hide(); e.Handled = true; }; root.KeyboardAccelerators.Add(escape);
         Activated += (_, e) => { if (e.WindowActivationState == WindowActivationState.Deactivated) Hide(); };
-        Closed += (_, _) => { _closed = true; IsOpen = false; environment.Notifications.Changed -= QueueRefresh; _transition.Dispose(); _chrome.Dispose(); _motion.Dispose(); environment.NotificationClosed(this); };
+        Closed += (_, _) => { _closed = true; IsOpen = false; environment.Notifications.Changed -= QueueRefresh; _chrome.Dispose(); _motion.Dispose(); environment.NotificationClosed(this); };
     }
     private static Button Button(string label, Action action)
     { var button = new Button { Content = label, Padding = new Thickness(9, 6, 9, 6), Style = (Style)Application.Current.Resources["QuietButton"] }; button.Click += (_, _) => action(); return button; }
@@ -95,8 +93,8 @@ internal sealed class NotificationWindow : Window
         }
     }
     internal void Show()
-    { if (_closed) return; ApplyAppearance(); Position(); _transition.Cancel(); _frame.IsHitTestVisible = true; IsOpen = true; Refresh(); Activate(); _motion.Open(); }
-    internal async void Hide() { if (_closed || !IsOpen) return; IsOpen = false; _frame.IsHitTestVisible = false; await _transition.CloseAsync(() => { _motion.Hide(); _window.Hide(); }); }
+    { if (_closed) return; ApplyAppearance(); Position(); _frame.IsHitTestVisible = true; IsOpen = true; Refresh(); Activate(); _motion.Open(); }
+    internal void Hide() { if (_closed || !IsOpen) return; IsOpen = false; _frame.IsHitTestVisible = false; _window.Hide(); _motion.Hide(); }
     internal void Position()
     {
         var rect = DesktopLayout.PanelBounds(ShellLayerInterop.Monitor(_environment.Desktop.Handle).Monitor.Bounds, ShellLayerInterop.Scale(_handle), 400, 680);

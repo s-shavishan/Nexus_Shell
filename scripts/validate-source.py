@@ -43,6 +43,7 @@ required = [
     "Services/MenuBarLayout.cs", "Models/DesktopNotice.cs", "Desktop/ControlCenterEnvironment.cs", "Desktop/DesktopEnvironment.ControlCenter.cs",
     "Services/DesktopPolicyRequest.cs", "Services/DesktopPolicyElevation.cs", "Services/StartupStep.cs",
     "Services/SurfaceSession.cs", "Services/DesktopPresentation.cs", "UI/ShellControls.cs", "Assets/Wallpapers/MidnightGlass.svg",
+    "Services/RecentApplications.cs", "Services/GlassRecipe.cs", "Services/AppIconPolicy.cs", "UI/AppIconCache.cs",
 ]
 for relative in required:
     assert (project / relative).is_file(), f"Missing file: {relative}"
@@ -239,7 +240,7 @@ closed = code[code.index("private void Window_Closed("):]
 assert "SaveFinal(" not in closed and "DetachSnapshot(" in closed, "Closing Sections must not finalize the desktop session"
 for file in [root / "appveyor.yml", root / ".github/workflows/build-windows.yml", root / "scripts/package.ps1", root / "scripts/build.ps1"]:
     body = file.read_text()
-    assert "Nexus-Shell-3.1.0" in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
+    assert "Nexus-Shell-3.2.0" in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
 print("Independent desktop ownership, Sections lifetime and CI versions OK")
 # Desktop replacement cannot silently instantiate Explorer or common picker UI.
 environment = (project / "Desktop/DesktopEnvironment.cs").read_text()

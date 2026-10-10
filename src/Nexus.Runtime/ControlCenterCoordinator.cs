@@ -12,6 +12,8 @@ public sealed class ControlCenterCoordinator(Func<Guid, IControlCenterProcess> l
     private readonly TimeProvider _clock = clock ?? TimeProvider.System;
     private readonly RuntimeRestartBudget _budget = new(clock);
     private readonly Dictionary<Guid, Pending> _actions = [];
+    private TaskCompletionSource _changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly HashSet<int> _waiting = [];
     private IControlCenterProcess? _process;
     private Guid _toolId, _issueId;
     private string _issue = "";
@@ -40,7 +42,7 @@ public sealed class ControlCenterCoordinator(Func<Guid, IControlCenterProcess> l
             // A worker hide wins over repeated publication of the same sequence.
             if (sync.Desired.Sequence > _desired.Sequence) { _desired = sync.Desired; changed = true; }
             else if (sync.Desired.Sequence == _desired.Sequence && _desired.Monitor != monitor) { _desired = _desired with { Monitor = monitor }; changed = true; }
-            if (changed) ++_revision;
+            if (changed) NotifyChanged();
             foreach (var id in sync.Acknowledged)
                 if (_actions.Remove(id, out var command)) command.Reply.TrySetResult(Snapshot());
             MonitorCore();
@@ -49,6 +51,30 @@ public sealed class ControlCenterCoordinator(Func<Guid, IControlCenterProcess> l
         }
     }
     public PanelSnapshot Pulse(int pid) { lock (_gate) { Verify(pid); _pulse = _clock.GetTimestamp(); return Snapshot(); } }
+    // One authenticated wait per worker. Changes wake it immediately; the
+    // one-second bound also supplies the UI heartbeat without idle polling.
+    public async Task<PanelSnapshot> WaitAsync(int pid, long revision, CancellationToken cancellation)
+    {
+        Task change;
+        lock (_gate)
+        {
+            Verify(pid); cancellation.ThrowIfCancellationRequested();
+            if (revision < -1 || revision > _revision) throw new RuntimeFailure("panel-revision", "The panel revision is invalid.");
+            _pulse = _clock.GetTimestamp();
+            if (revision != _revision) return Snapshot();
+            if (!_waiting.Add(pid)) throw new RuntimeFailure("panel-busy", "This panel already has a pending state wait.");
+            change = _changed.Task;
+        }
+        try
+        {
+            try { await change.WaitAsync(TimeSpan.FromSeconds(1), cancellation).ConfigureAwait(false); }
+            catch (TimeoutException) { }
+            lock (_gate) { Verify(pid); _pulse = _clock.GetTimestamp(); return Snapshot(); }
+        }
+        finally { lock (_gate) _waiting.Remove(pid); }
+    }
+    private void NotifyChanged()
+    { ++_revision; var previous = _changed; _changed = new(TaskCreationOptions.RunContinuationsAsynchronously); previous.TrySetResult(); }
     public PanelSnapshot Ready(int pid, PanelReady ready)
     {
         lock (_gate)
@@ -58,7 +84,7 @@ public sealed class ControlCenterCoordinator(Func<Guid, IControlCenterProcess> l
             _window = ready.Window; _pulse = _clock.GetTimestamp(); return Snapshot();
         }
     }
-    public PanelSnapshot Hide(int pid, long sequence) { lock (_gate) { Verify(pid); if (_desired.Sequence == sequence) { _desired = _desired with { Visible = false }; ++_revision; } return Snapshot(); } }
+    public PanelSnapshot Hide(int pid, long sequence) { lock (_gate) { Verify(pid); if (_desired.Sequence == sequence && _desired.Visible) { _desired = _desired with { Visible = false }; NotifyChanged(); } return Snapshot(); } }
     public long DisplayWindow(int pid) { lock (_gate) { Verify(pid); return _desired.Monitor.DisplayWindow; } }
     public async Task<PanelSnapshot> ActionAsync(int pid, PanelAction command, CancellationToken cancellation)
     {
@@ -96,6 +122,7 @@ public sealed class ControlCenterCoordinator(Func<Guid, IControlCenterProcess> l
     private void StopWorker()
     {
         var process = _process; _window = 0; _retiring = true;
+        NotifyChanged();
         foreach (var command in _actions.Values) command.Reply.TrySetException(new RuntimeFailure("panel-restarted", "The panel was recovered. Its unfinished action was not replayed."));
         _actions.Clear();
         if (process is not null)

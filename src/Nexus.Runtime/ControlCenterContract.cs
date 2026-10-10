@@ -3,17 +3,17 @@ using Nexus.Shell.Services;
 
 namespace Nexus.Runtime;
 
-public enum DesktopPreference { Wallpaper, NativeGlass, ReducedEffects, FloatingDock, CompactDock, WindowPreviews, Clock24Hour, ClockWidget, SpaceWidget, QuietAlerts }
+public enum DesktopPreference { Wallpaper, NativeGlass, ReducedEffects, FloatingDock, CompactDock, WindowPreviews, Clock24Hour, ClockWidget, SpaceWidget, QuietAlerts, Animations }
 public sealed record ControlCenterPreferences(string Wallpaper, bool NativeGlass, bool ReducedEffects, bool FloatingDock, bool CompactDock,
-    bool WindowPreviews, bool Clock24Hour, bool ClockWidget, bool SpaceWidget, bool QuietAlerts)
+    bool WindowPreviews, bool Clock24Hour, bool ClockWidget, bool SpaceWidget, bool QuietAlerts, bool Animations = true)
 {
     public static ControlCenterPreferences From(ShellState state) => new(state.Wallpaper, state.NativeGlass, state.ReducedEffects, state.FloatingTaskbar,
-        state.CompactDock, state.DockPreviews, state.Clock24Hour, state.ShowClockWidget, state.ShowSpaceWidget, state.QuietNotifications);
+        state.CompactDock, state.DockPreviews, state.Clock24Hour, state.ShowClockWidget, state.ShowSpaceWidget, state.QuietNotifications, state.SurfaceAnimations);
     public void Apply(ShellState state)
     {
         state.Wallpaper = Wallpaper; state.NativeGlass = NativeGlass; state.ReducedEffects = ReducedEffects; state.FloatingTaskbar = FloatingDock;
         state.CompactDock = CompactDock; state.DockPreviews = WindowPreviews; state.Clock24Hour = Clock24Hour;
-        state.ShowClockWidget = ClockWidget; state.ShowSpaceWidget = SpaceWidget; state.QuietNotifications = QuietAlerts;
+        state.ShowClockWidget = ClockWidget; state.ShowSpaceWidget = SpaceWidget; state.QuietNotifications = QuietAlerts; state.SurfaceAnimations = Animations;
     }
     public static void Set(ShellState state, PanelAction command)
     {
@@ -32,6 +32,7 @@ public sealed record ControlCenterPreferences(string Wallpaper, bool NativeGlass
             case DesktopPreference.ClockWidget: state.ShowClockWidget = value; break;
             case DesktopPreference.SpaceWidget: state.ShowSpaceWidget = value; break;
             case DesktopPreference.QuietAlerts: state.QuietNotifications = value; break;
+            case DesktopPreference.Animations: state.SurfaceAnimations = value; break;
         }
     }
     public static void Validate(PanelAction command)
@@ -47,7 +48,7 @@ public sealed record ControlCenterPreferences(string Wallpaper, bool NativeGlass
         {
             if (!Sections.Contains(command.Value ?? "") || command.Preference is not null || command.Enabled is not null) throw new RuntimeFailure("panel-action", "This advanced settings section is unavailable.");
         }
-        else if (command.Action is "personalize" or "lock")
+        else if (command.Action is "personalize" or "lock" or "expand")
         {
             if (command.Preference is not null || command.Enabled is not null || command.Value is not null) throw new RuntimeFailure("panel-action", "This panel action has unexpected arguments.");
         }
@@ -56,7 +57,7 @@ public sealed record ControlCenterPreferences(string Wallpaper, bool NativeGlass
     public static readonly string[] Sections = ["Sound", "Network", "Bluetooth", "Display", "Power", "Desktop"];
 }
 public sealed record PanelMonitor(int X, int Y, int Width, int Height, double Scale, long DisplayWindow, bool Managed);
-public sealed record PanelDesired(long Sequence, bool Visible, string Section, PanelMonitor Monitor);
+public sealed record PanelDesired(long Sequence, bool Visible, string Section, PanelMonitor Monitor, bool Compact = false);
 public sealed record PanelAction(Guid Id, string Action, DesktopPreference? Preference = null, bool? Enabled = null, string? Value = null);
 public sealed record PanelSync(PanelDesired Desired, ControlCenterPreferences Preferences, Guid[] Acknowledged);
 public sealed record PanelStatus(int ProcessId, long Window, bool Visible, bool Recovering, bool Paused, Guid IssueId, string Issue);
@@ -64,3 +65,4 @@ public sealed record PanelSyncResult(PanelStatus Status, PanelAction[] Actions);
 public sealed record PanelSnapshot(Guid ToolId, long Revision, ControlCenterPreferences Preferences, PanelDesired Desired);
 public sealed record PanelReady(long Window);
 public sealed record PanelHidden(long Sequence);
+public sealed record PanelWait(long Revision);

@@ -53,9 +53,9 @@ public sealed record AuraPalette(string Name, string Canvas, string Panel, strin
     public static AuraPalette For(string mood) => mood switch
     {
         "Midnight" => new("Midnight", "FF0A1020", "EE151E32", "F0263148", "FF8EAFFF", "FFB3C5FB", "FFAAB9D4", "FF253A62", "FF171D3A", "FF282453"),
-        "Solstice" => new("Solstice", "FF9E482D", "F5FFF8F1", "F8FFFCF8", "FFAA461F", "FF805643", "FF665C56", "FFFFF5E9", "FFF3E5D6", "FF482C46"),
+        "Solstice" => new("Solstice", "FF9E482D", "F5FFF8F1", "F8FFFCF8", "FFAA461F", "FF805643", "FF4E433A", "FFFFF5E9", "FFF3E5D6", "FF482C46"),
         "Ember" => new("Ember", "FF170B11", "F222111C", "F22D1624", "FFBF311B", "FFFFAE9B", "FFDCC2C8", "FF48201F", "FF351A2E", "FF281020"),
-        "Opal" => new("Opal", "FF293668", "DAF0F1F8", "EAF8F8FC", "FF3163BC", "FF526E99", "FF4E5A70", "FFF0F2FB", "FFE3EAFB", "FF3F2B67"),
+        "Opal" => new("Opal", "FF293668", "DAF0F1F8", "EAF8F8FC", "FF3163BC", "FF526E99", "FF3C485B", "FFF0F2FB", "FFE3EAFB", "FF3F2B67"),
         "Aurora" or "Lagoon" => new("Lagoon", "FF101C22", "EF1B2E35", "E5233941", "FF8DDFD3", "FFAFBEF6", "FFBACDD2", "FF294751", "FF254E4B", "FF17343C"),
         "Slate" or "Graphite" => new("Graphite", "FF121820", "EF202A36", "E52B3643", "FFAACCF4", "FFC3BBE8", "FFB9C5D4", "FF2D3D50", "FF243340", "FF192A36"),
         _ => new("Pearl", "FF121722", "EF222A39", "E52B3445", "FFC7BEF7", "FF9BDED8", "FFB8C3D6", "FF343B54", "FF29494C", "FF1B2C3A")

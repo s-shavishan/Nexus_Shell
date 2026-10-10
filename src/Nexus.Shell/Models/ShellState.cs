@@ -23,6 +23,7 @@ public sealed class ShellState
     public bool FullScreen { get; set; }
     public bool FocusMode { get; set; }
     public bool ReducedEffects { get; set; }
+    public bool SurfaceAnimations { get; set; } = true;
     public bool CatalogInitialized { get; set; }
     public string Wallpaper { get; set; } = "Midnight";
     public bool NativeGlass { get; set; } = true;
@@ -59,6 +60,7 @@ public sealed class ShellState
     public List<TaskEntry> Tasks { get; set; } = [];
     public List<SavedItem> SavedItems { get; set; } = [];
     public List<AppEntry> PinnedApps { get; set; } = [];
+    public List<AppEntry> RecentApps { get; set; } = [];
     public Dictionary<string, double> UsageSeconds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public List<ActivityEntry> Activity { get; set; } = [];
     public List<Nexus.Shell.Services.DesktopNotice> NotificationHistory { get; set; } = [];
@@ -68,7 +70,7 @@ public sealed class ShellState
     {
         PersistenceRevision = PersistenceRevision, PersistenceCommitId = PersistenceCommitId,
         DisplayName = DisplayName, UsageTracking = UsageTracking, FullScreen = FullScreen,
-        FocusMode = FocusMode, ReducedEffects = ReducedEffects, CatalogInitialized = CatalogInitialized,
+        FocusMode = FocusMode, ReducedEffects = ReducedEffects, SurfaceAnimations = SurfaceAnimations, CatalogInitialized = CatalogInitialized,
         Clock24Hour = Clock24Hour, ShowClockWidget = ShowClockWidget, ShowSpaceWidget = ShowSpaceWidget,
         ShowHomeNotes = ShowHomeNotes, ShowHomeEssentials = ShowHomeEssentials, CompactDock = CompactDock, FloatingTaskbar = FloatingTaskbar, DockPreviews = DockPreviews,
         QuietNotifications = QuietNotifications,
@@ -82,7 +84,7 @@ public sealed class ShellState
         Wallpaper = Wallpaper, QuickNote = QuickNote, FocusMinutes = FocusMinutes,
         FocusDay = FocusDay, FocusCompleted = FocusCompleted, SavedItems = [.. SavedItems],
         FocusRemainingSeconds = FocusRemainingSeconds, FocusTaskId = FocusTaskId, Tasks = [.. Tasks],
-        PinnedApps = [.. PinnedApps], Activity = [.. Activity], NotificationHistory = [.. NotificationHistory],
+        PinnedApps = [.. PinnedApps], RecentApps = [.. RecentApps], Activity = [.. Activity], NotificationHistory = [.. NotificationHistory],
         UsageSeconds = new(UsageSeconds, StringComparer.OrdinalIgnoreCase)
     };
 }

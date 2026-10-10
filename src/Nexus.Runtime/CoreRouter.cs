@@ -27,6 +27,7 @@ public sealed class CoreRouter(CoreStateRepository state, FilesCoordinator files
                 return RuntimeProtocol.Success(request.Id, await settings.ExecuteAsync(settingsRequest, cancellation).ConfigureAwait(false));
             case RuntimeOperations.PanelSync: return RuntimeProtocol.Success(request.Id, PanelService().Sync(RuntimeProtocol.Payload<PanelSync>(request.Payload)));
             case RuntimeOperations.PanelPulse: return RuntimeProtocol.Success(request.Id, PanelService().Pulse(request.ProcessId));
+            case RuntimeOperations.PanelWait: return RuntimeProtocol.Success(request.Id, await PanelService().WaitAsync(request.ProcessId, RuntimeProtocol.Payload<PanelWait>(request.Payload).Revision, cancellation).ConfigureAwait(false));
             case RuntimeOperations.PanelReady: return RuntimeProtocol.Success(request.Id, PanelService().Ready(request.ProcessId, RuntimeProtocol.Payload<PanelReady>(request.Payload)));
             case RuntimeOperations.PanelHide: return RuntimeProtocol.Success(request.Id, PanelService().Hide(request.ProcessId, RuntimeProtocol.Payload<PanelHidden>(request.Payload).Sequence));
             case RuntimeOperations.PanelAction: return RuntimeProtocol.Success(request.Id, await PanelService().ActionAsync(request.ProcessId, RuntimeProtocol.Payload<PanelAction>(request.Payload), cancellation).ConfigureAwait(false));

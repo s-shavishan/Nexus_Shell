@@ -13,11 +13,12 @@ public static class RuntimeOperations
     public const string OpenFiles = "files.open", Work = "files.work", Next = "files.next", Ready = "files.ready", Complete = "files.complete", Pulse = "files.pulse";
     public const string Settings = "settings.execute";
     public const string PanelSync = "panel.sync", PanelPulse = "panel.pulse", PanelReady = "panel.ready", PanelHide = "panel.hide", PanelAction = "panel.action";
+    public const string PanelWait = "panel.wait";
     public static bool Allows(string role, string operation) => role switch
     {
         "desktop" => operation is Health or Stop or ReadState or CommitState or OpenFiles or Settings or PanelSync,
         "files" => operation is Work or Next or Ready or Complete or Pulse,
-        "controlcenter" => operation is PanelPulse or PanelReady or PanelHide or PanelAction or Settings,
+        "controlcenter" => operation is PanelPulse or PanelWait or PanelReady or PanelHide or PanelAction or Settings,
         _ => false
     };
 }
@@ -33,7 +34,7 @@ public sealed record FilesCommand(Guid OperationId, string? Folder);
 public sealed record FilesReady(Guid OperationId, long Window);
 public sealed record FilesCompletion(Guid OperationId, string[] Paths);
 public sealed record FilesResult(int ProcessId, long Window, string[] Paths);
-public sealed record AppearanceSettings(string Wallpaper, bool NativeGlass, bool ReducedEffects);
+public sealed record AppearanceSettings(string Wallpaper, bool NativeGlass, bool ReducedEffects, bool Animations = true);
 public sealed record RuntimeHealth(int CoreProcessId, long Revision, int FilesProcesses, Guid IssueId, string Issue);
 
 public sealed class RuntimeFailure(string code, string message) : Exception(message)

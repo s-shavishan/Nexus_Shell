@@ -25,7 +25,7 @@ public sealed class CoreStateRepository : IDisposable
         try
         {
             _state = store.Load(); _revision = _state.PersistenceRevision;
-            _appearance = new(_state.Wallpaper, _state.NativeGlass, _state.ReducedEffects);
+            _appearance = new(_state.Wallpaper, _state.NativeGlass, _state.ReducedEffects, _state.SurfaceAnimations);
             RecoveryMessage = store.RecoveryMessage;
             if (Directory.EnumerateFiles(Path.GetDirectoryName(store.FilePath)!, "settings.unsaved-*.json").Any())
                 RecoveryMessage += (RecoveryMessage.Length == 0 ? "" : " ") + "An unsaved-session recovery copy is available in the Nexus data folder. It has not overwritten your current settings.";
@@ -61,7 +61,7 @@ public sealed class CoreStateRepository : IDisposable
             candidate.PersistenceCommitId = commit.CommitId.ToString("N");
             _store.Save(candidate); // Flush + atomic replacement happen before acknowledgement.
             _state = candidate;
-            Volatile.Write(ref _appearance, new(candidate.Wallpaper, candidate.NativeGlass, candidate.ReducedEffects));
+            Volatile.Write(ref _appearance, new(candidate.Wallpaper, candidate.NativeGlass, candidate.ReducedEffects, candidate.SurfaceAnimations));
             Interlocked.Exchange(ref _revision, candidate.PersistenceRevision);
             return new(candidate.PersistenceRevision, commit.CommitId);
         }

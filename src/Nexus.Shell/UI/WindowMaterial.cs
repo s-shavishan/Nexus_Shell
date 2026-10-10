@@ -13,6 +13,7 @@ internal sealed class WindowMaterial
 {
     private bool _failed, _enabled;
     private bool _observedWindow, _closed;
+    private bool? _requested;
     private LiquidGlassBackdrop? _backdrop;
     internal void Apply(Window window, Border frame, DesktopEnvironment environment, string role = "Frame")
         => Apply(window, frame, environment.Theme, environment.Session.State, role);
@@ -20,7 +21,9 @@ internal sealed class WindowMaterial
     {
         if (_closed) return;
         if (!_observedWindow) { _observedWindow = true; window.Closed += (_, _) => _closed = true; }
-        bool glass = !_failed && state.NativeGlass && !state.ReducedEffects && !theme.HighContrast;
+        bool requested = state.NativeGlass && !state.ReducedEffects && !theme.HighContrast && theme.Transparency;
+        if (_requested != requested) { _requested = requested; _failed = false; }
+        bool glass = !_failed && requested;
         try
         {
             glass = glass && Microsoft.UI.Composition.SystemBackdrops.DesktopAcrylicController.IsSupported();
@@ -28,11 +31,12 @@ internal sealed class WindowMaterial
             if (glass != _enabled)
             {
                 _backdrop = glass ? new LiquidGlassBackdrop() : null;
+                _backdrop?.SetAppearance(GlassRecipe.For(theme.Palette, role), theme.Palette.IsLight);
                 if (_backdrop is { } source) source.Failed += () => frame.DispatcherQueue.TryEnqueue(() =>
                 { if (_closed || !ReferenceEquals(source, _backdrop)) return; _failed = true; _enabled = false; try { window.SystemBackdrop = null; frame.Background = theme.Material(role, false); } catch (Exception error) { Log.Write("Glass fallback arrived after window close", error); } });
                 window.SystemBackdrop = _backdrop; _enabled = glass;
             }
-            _backdrop?.SetTint(ShellTheme.Color("FF" + theme.Palette.Panel[2..]));
+            _backdrop?.SetAppearance(GlassRecipe.For(theme.Palette, role), theme.Palette.IsLight);
             frame.Background = theme.Material(role, glass);
             frame.BorderBrush = theme.Edge;
         }

@@ -44,7 +44,7 @@ internal sealed partial class DesktopEnvironment
     private bool _usageTracking;
     private bool? _compact;
     private bool? _floating;
-    private (string, bool, bool, bool, bool, string)? _appearance;
+    private (string, bool, bool, bool, bool, bool, bool, string)? _appearance;
     private MenuWindow? _menu;
     private NotificationWindow? _notifications;
     private MenuBarWindow? _topBar;
@@ -111,6 +111,9 @@ internal sealed partial class DesktopEnvironment
             catch (Exception ex) { Report("Window notifications unavailable; the dock will use periodic refresh", ex); }
             RefreshDesktop(); UpdateTaskbar(); _timer.Start();
             StartControlCenterSupervision();
+            _ = GetCatalogAsync();
+            Desktop.DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+            { if (IsStopping || _menu is not null) return; try { _menu = new(this); } catch (Exception error) { Log.Write("Launchpad preparation deferred to its next opening", error); } });
             _pulse?.Set();
             if (_dirty) _saveTimer.Start();
             if (Session.RecoveryMessage.Length > 0) Report(Session.RecoveryMessage);
@@ -134,6 +137,7 @@ internal sealed partial class DesktopEnvironment
     {
         if (IsStopping) return;
         Notifications.Quiet = Session.State.QuietNotifications;
+        if (!Session.State.RememberRecentItems) Session.State.RecentApps.Clear();
         _dirty = true; _saveTimer.Stop(); _saveTimer.Start();
         RefreshAppearance(); RefreshIntegration();
         if (!Session.State.DockPreviews) HideDockPreview();
@@ -148,7 +152,7 @@ internal sealed partial class DesktopEnvironment
     {
         if (IsStopping || Desktop is null) return;
         Theme.Apply(Session.State.Wallpaper, Session.State.ReducedEffects);
-        var appearance = (Theme.Palette.Name, Theme.HighContrast, Theme.Animations, Session.State.ReducedEffects, Session.State.NativeGlass, Session.State.DisplayName);
+        var appearance = (Theme.Palette.Name, Theme.HighContrast, Theme.Animations, Theme.Transparency, Session.State.ReducedEffects, Session.State.NativeGlass, Session.State.SurfaceAnimations, Session.State.DisplayName);
         if (_appearance == appearance) return;
         _appearance = appearance; HideDockPreview(); Desktop.Surface.ApplyAppearance();
         Taskbar?.ApplyAppearance(); _menu?.ApplyAppearance(this);
@@ -322,12 +326,17 @@ internal sealed partial class DesktopEnvironment
     internal void ShowQuickSettings()
     {
         if (IsStopping) return; HideDockPreview(); _menu?.HideMenu(); _notifications?.Hide();
-        if (_controlVisible) HideControlCenter(); else ShowControlCenter("Sound");
+        if (_controlVisible && !_controlCompact) HideControlCenter(); else ShowControlCenter(_controlSection);
     }
-    internal void ShowControlCenter(string section)
+    internal void ShowQuickControl(string section)
+    {
+        if (_controlVisible && _controlCompact && _controlSection == section) HideControlCenter();
+        else ShowControlCenter(section, compact: true);
+    }
+    internal void ShowControlCenter(string section, bool compact = false)
     {
         if (IsStopping) return; HideDockPreview(); _menu?.HideMenu(); _notifications?.Hide();
-        _controlVisible = true; _controlSection = ControlCenterPreferences.Sections.Contains(section) ? section : "Sound"; ++_controlSequence;
+        _controlVisible = true; _controlCompact = compact; _controlSection = ControlCenterPreferences.Sections.Contains(section) ? section : "Sound"; ++_controlSequence;
         _ = SyncControlCenterAsync();
     }
     internal Task<SettingsSnapshot> ExecuteSettingsAsync(SettingsRequest request)
@@ -358,7 +367,7 @@ internal sealed partial class DesktopEnvironment
     {
         if (IsStopping) return false;
         HideDockPreview();
-        try { OpenTargetChecked(app.Target); Session.State.Activity.Insert(0, new(DateTimeOffset.Now, "Opened " + app.Name)); if (Session.State.Activity.Count > 200) Session.State.Activity.RemoveRange(200, Session.State.Activity.Count - 200); SaveState(); return true; }
+        try { OpenTargetChecked(app.Target); RecentApplications.Record(Session.State, app); Session.State.Activity.Insert(0, new(DateTimeOffset.Now, "Opened " + app.Name)); if (Session.State.Activity.Count > 200) Session.State.Activity.RemoveRange(200, Session.State.Activity.Count - 200); SaveState(); return true; }
         catch (Exception ex) { Report("Could not open " + app.Name, ex); return false; }
     }
     internal void OpenTarget(string target)

@@ -271,4 +271,5 @@ if (OperatingSystem.IsWindows()) DesktopNativeChecks.Run();
 StartupChecks.Run();
 MajorDesktopChecks.Run();
 await UIReliabilityChecks.RunAsync();
+ResponsiveUiChecks.Run();
 Console.WriteLine("PASS: desktop migration, bounded profiles, launch-plan deduplication, nested snapshots, native structure layout, and atomic persistence.");

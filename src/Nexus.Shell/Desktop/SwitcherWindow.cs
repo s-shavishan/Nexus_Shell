@@ -33,7 +33,7 @@ internal sealed class SwitcherWindow : Window
         if (_native.Presenter is OverlappedPresenter presenter) { presenter.SetBorderAndTitleBar(false, false); presenter.IsResizable = presenter.IsMaximizable = presenter.IsMinimizable = false; presenter.IsAlwaysOnTop = true; }
         ShellLayerInterop.ToolWindow(handle);
         _chrome = new(handle);
-        _motion = new(_root, () => environment.Theme.Animations && !environment.Theme.HighContrast && !environment.Session.State.ReducedEffects);
+        _motion = new(_root, () => environment.Theme.Animations && !environment.Theme.HighContrast && environment.Session.State.SurfaceAnimations && !environment.Session.State.ReducedEffects);
         _root.RowDefinitions.Add(new() { Height = GridLength.Auto }); _root.RowDefinitions.Add(new() { Height = new GridLength(1, GridUnitType.Star) }); _root.RowDefinitions.Add(new() { Height = GridLength.Auto });
         _root.Children.Add(_title); Grid.SetRow(_list, 1); _root.Children.Add(_list); Grid.SetRow(_hint, 2); _root.Children.Add(_hint);
         _list.ItemTemplate = (DataTemplate)XamlReader.Load("""

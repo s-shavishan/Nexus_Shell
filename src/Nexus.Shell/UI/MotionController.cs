@@ -28,35 +28,34 @@ public sealed class MotionController : IDisposable
         var compositor = ElementCompositionPreview.GetElementVisual(root).Compositor;
         var easing = _easing = compositor.CreateCubicBezierEasingFunction(new Vector2(.2f, .8f), new Vector2(.2f, 1));
         _fade = compositor.CreateScalarKeyFrameAnimation();
-        _fade.Duration = TimeSpan.FromMilliseconds(180);
-        _fade.InsertKeyFrame(0, .68f); _fade.InsertKeyFrame(1, 1, easing);
+        _fade.Duration = TimeSpan.FromMilliseconds(110);
+        _fade.InsertKeyFrame(0, .92f); _fade.InsertKeyFrame(1, 1, easing);
         _enter = compositor.CreateVector3KeyFrameAnimation();
-        _enter.Duration = TimeSpan.FromMilliseconds(240);
-        _enter.InsertKeyFrame(0, new Vector3(0, 8, 0));
-        _enter.InsertKeyFrame(.72f, new Vector3(0, -1, 0), easing);
+        _enter.Duration = TimeSpan.FromMilliseconds(140);
+        _enter.InsertKeyFrame(0, new Vector3(0, 4, 0));
         _enter.InsertKeyFrame(1, Vector3.Zero, easing);
         _enterScale = compositor.CreateVector3KeyFrameAnimation();
-        _enterScale.Duration = TimeSpan.FromMilliseconds(240);
-        _enterScale.InsertKeyFrame(0, new Vector3(.985f));
+        _enterScale.Duration = TimeSpan.FromMilliseconds(140);
+        _enterScale.InsertKeyFrame(0, new Vector3(.995f));
         _enterScale.InsertKeyFrame(1, Vector3.One, easing);
         _stages.Add((_fade, _enter, _enterScale));
-        foreach (int delay in new[] { 33, 66 })
+        foreach (int delay in new[] { 12, 24 })
         {
             var fade = compositor.CreateScalarKeyFrameAnimation(); fade.Duration = _fade.Duration;
             fade.DelayTime = TimeSpan.FromMilliseconds(delay); fade.DelayBehavior = AnimationDelayBehavior.SetInitialValueBeforeDelay;
-            fade.InsertKeyFrame(0, .68f); fade.InsertKeyFrame(1, 1, easing);
+            fade.InsertKeyFrame(0, .92f); fade.InsertKeyFrame(1, 1, easing);
             var move = compositor.CreateVector3KeyFrameAnimation(); move.Duration = _enter.Duration;
             move.DelayTime = fade.DelayTime; move.DelayBehavior = fade.DelayBehavior;
-            move.InsertKeyFrame(0, new Vector3(0, 8, 0)); move.InsertKeyFrame(.72f, new Vector3(0, -1, 0), easing); move.InsertKeyFrame(1, Vector3.Zero, easing);
+            move.InsertKeyFrame(0, new Vector3(0, 4, 0)); move.InsertKeyFrame(1, Vector3.Zero, easing);
             var scale = compositor.CreateVector3KeyFrameAnimation(); scale.Duration = _enterScale.Duration;
             scale.DelayTime = fade.DelayTime; scale.DelayBehavior = fade.DelayBehavior;
-            scale.InsertKeyFrame(0, new Vector3(.985f)); scale.InsertKeyFrame(1, Vector3.One, easing);
+            scale.InsertKeyFrame(0, new Vector3(.995f)); scale.InsertKeyFrame(1, Vector3.One, easing);
             _stages.Add((fade, move, scale));
         }
         Vector3KeyFrameAnimation Transition(Vector3 end)
         {
             var animation = compositor.CreateVector3KeyFrameAnimation();
-            animation.Duration = TimeSpan.FromMilliseconds(160);
+            animation.Duration = TimeSpan.FromMilliseconds(110);
             animation.InsertExpressionKeyFrame(0, "this.StartingValue");
             animation.InsertKeyFrame(1, end, easing);
             return animation;

@@ -37,7 +37,7 @@ internal sealed class DesktopMenus(DesktopEnvironment environment)
     }
     internal MenuFlyout ViewMenu()
     {
-        var menu = new MenuFlyout(); menu.Items.Add(Item("Launchpad", () => environment.ShowMenu())); menu.Items.Add(Item("Search…", () => environment.ShowMenu(true))); menu.Items.Add(Item("Control Center", environment.ShowQuickSettings)); menu.Items.Add(Item("Notifications", environment.ShowNotifications));
+        var menu = new MenuFlyout(); menu.Items.Add(Item("Launchpad", () => environment.ShowMenu())); menu.Items.Add(Item("Control Center", environment.ShowQuickSettings)); menu.Items.Add(Item("Notifications", environment.ShowNotifications));
         menu.Items.Add(Item("Desktop appearance…", () => environment.ShowSections("Personalize"))); menu.Items.Add(Item("Focus desktop", () => { environment.Session.State.FocusMode = !environment.Session.State.FocusMode; environment.SaveState(); })); return menu;
     }
     internal MenuFlyout WindowMenu()

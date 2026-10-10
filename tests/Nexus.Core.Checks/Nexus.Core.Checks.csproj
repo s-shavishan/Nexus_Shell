@@ -15,6 +15,8 @@
     <Compile Include="../../src/Nexus.Shell/Services/DesktopPolicyRequest.cs" Link="DesktopPolicyRequest.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/MinimizedWindowPolicy.cs" Link="MinimizedWindowPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/LaunchpadCatalog.cs" Link="LaunchpadCatalog.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/GlassRecipe.cs" Link="GlassRecipe.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/AppIconPolicy.cs" Link="AppIconPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/NotificationInbox.cs" Link="NotificationInbox.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/CalculatorEngine.cs" Link="CalculatorEngine.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/NotesWorkspace.cs" Link="NotesWorkspace.cs" />

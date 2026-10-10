@@ -2,7 +2,7 @@ using Microsoft.UI.Xaml;
 
 namespace Nexus.Shell.UI;
 
-// Motion stays inside the fixed, opaque window frame. It never exposes the
+// Motion stays inside the fixed window frame. It never exposes the
 // default white HWND background or delays opening, hiding, focus or input.
 internal sealed class SurfaceMotion : IDisposable
 {
@@ -11,7 +11,7 @@ internal sealed class SurfaceMotion : IDisposable
     private MotionController? _motion;
     private bool _pending, _disposed;
     internal SurfaceMotion(FrameworkElement content, Func<bool> enabled)
-    { _content = content; _enabled = enabled; content.Loaded += Loaded; }
+    { _content = content is Microsoft.UI.Xaml.Controls.Border { Child: FrameworkElement child } ? child : content; _enabled = enabled; _content.Loaded += Loaded; }
     private void Loaded(object sender, RoutedEventArgs args) { if (_pending) Open(); }
     internal void Open()
     {

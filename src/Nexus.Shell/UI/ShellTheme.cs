@@ -11,17 +11,20 @@ internal sealed class ShellTheme
     public bool HighContrast { get; private set; }
     public bool Animations { get; private set; } = true;
     public bool Simple { get; private set; }
+    public bool Transparency { get; private set; } = true;
+    private Windows.UI.ViewManagement.UISettings? _settings;
     private readonly Dictionary<string, Brush> _surfaces = [];
     public ElementTheme ElementTheme => HighContrast ? ElementTheme.Default : Palette.IsLight ? ElementTheme.Light : ElementTheme.Dark;
     public bool Apply(string mood, bool simple = false)
     {
-        bool contrast = HighContrast, animations = Animations;
+        bool contrast = HighContrast, animations = Animations, transparency = Transparency;
         if (NativeMethods.TryGetHighContrast(out bool value)) contrast = value;
         if (NativeMethods.TryGetAnimationsEnabled(out bool animation)) Animations = animation;
+        try { _settings ??= new(); transparency = _settings.AdvancedEffectsEnabled; } catch { }
         var palette = AuraPalette.For(mood);
-        bool changed = palette.Name != Palette.Name || contrast != HighContrast || animations != Animations || simple != Simple || !_initialized;
+        bool changed = palette.Name != Palette.Name || contrast != HighContrast || animations != Animations || transparency != Transparency || simple != Simple || !_initialized;
         if (palette.Name != Palette.Name || !_initialized) _surfaces.Clear();
-        Palette = palette; HighContrast = contrast; Simple = simple;
+        Palette = palette; HighContrast = contrast; Simple = simple; Transparency = transparency;
         if (!changed) return false;
         var resources = Application.Current.Resources;
         foreach (var token in palette.Tokens)
@@ -47,17 +50,17 @@ internal sealed class ShellTheme
         if (HighContrast || Simple) return Brush(role == "Frame" ? "NexusPanel" : "NexusSidebar");
         string key = "glass:" + role;
         if (_surfaces.TryGetValue(key, out var cached)) return cached;
-        string color = Palette.Panel[2..];
-        string alpha = role switch { "Frame" => "28", "Dock" => "38", "MenuBar" => "34", "Card" => "26", "Input" => "48", _ => "40" };
-        var brush = Gradient(alpha + color, Palette.IsLight ? "92FFFFFF" : "78091121");
+        var recipe = GlassRecipe.For(Palette, role);
+        var brush = Gradient(recipe.Start, recipe.End);
         brush.StartPoint = new(0, 0); brush.EndPoint = new(0, 1);
-        brush.GradientStops.Insert(1, new() { Color = Color((Palette.IsLight ? "54FFFFFF" : "1EFFFFFF")), Offset = .08 });
+        brush.GradientStops.Insert(1, new() { Color = Color(recipe.Highlight), Offset = .05 });
+        brush.GradientStops.Insert(2, new() { Color = Color(recipe.Start), Offset = .10 });
         return _surfaces[key] = brush;
     }
     public Brush Material(string role, bool glass)
     {
         if (HighContrast) return Brush(role == "Frame" ? "NexusPanel" : "NexusSidebar");
-        if (glass && !Simple) return Glass(role);
+        if (glass && !Simple && Transparency) return Glass(role);
         string key = "opaque:" + role;
         if (_surfaces.TryGetValue(key, out var cached)) return cached;
         string color = role == "Card" ? Palette.Card : role == "Input" ? Palette.Tokens["NexusInput"] : Palette.Panel;

@@ -142,6 +142,8 @@ public sealed partial class MainWindow
         interfacePanel.Children.Add(Text("Feel & interaction", 21));
         interfacePanel.Children.Add(PersonalizeToggle("Native glass", () => _state.NativeGlass, v => _state.NativeGlass = v,
             "Windows acrylic", "Layered surfaces"));
+        interfacePanel.Children.Add(PersonalizeToggle("Interface animations", () => _state.SurfaceAnimations, v => _state.SurfaceAnimations = v,
+            "Short, smooth motion", "Immediate interaction; glass stays enabled"));
         interfacePanel.Children.Add(PersonalizeToggle("Reduced effects", () => _state.ReducedEffects, v => _state.ReducedEffects = v));
         interfacePanel.Children.Add(PersonalizeToggle("Floating taskbar", () => _state.FloatingTaskbar, v => _state.FloatingTaskbar = v));
         interfacePanel.Children.Add(PersonalizeToggle("Dock hover previews", () => _state.DockPreviews, v => _state.DockPreviews = v));
@@ -162,17 +164,17 @@ public sealed partial class MainWindow
         interfacePanel.Children.Add(ActionButton("Open control center", () => ControlsFlyout.ShowAt(ControlsButton)));
         var search = new StackPanel { Spacing = 14 };
         search.Children.Add(Text("Quick access", 21));
-        search.Children.Add(PersonalizeToggle("Remember recent search items", () => _state.RememberRecentItems, v =>
+        search.Children.Add(PersonalizeToggle("Remember recent apps and search items", () => _state.RememberRecentItems, v =>
         {
             _state.RememberRecentItems = v;
-            if (!v) _state.RecentCommands.Clear();
+            if (!v) { _state.RecentCommands.Clear(); _state.RecentApps.Clear(); }
         }));
-        search.Children.Add(Text("Shows your last eight app, saved-item and workspace choices. Saved only on this PC; search text isn’t kept.", 12, true));
+        search.Children.Add(Text("Keeps 12 recently opened apps in Launchpad and eight recent search choices. Saved only on this PC; search text isn’t kept.", 12, true));
         var recentStatus = Text("", 12, true);
-        _personalizationSync.Add(() => recentStatus.Text = _state.RecentCommands.Count + " recent items");
+        _personalizationSync.Add(() => recentStatus.Text = _state.RecentApps.Count + " recent apps · " + _state.RecentCommands.Count + " recent search items");
         search.Children.Add(recentStatus);
-        var clear = ActionButton("Clear recent items", () => { _state.RecentCommands.Clear(); SaveState(); RefreshPersonalizationControls(); });
-        _personalizationSync.Add(() => clear.IsEnabled = _state.RecentCommands.Count > 0);
+        var clear = ActionButton("Clear recent items", () => { _state.RecentCommands.Clear(); _state.RecentApps.Clear(); SaveState(); RefreshPersonalizationControls(); });
+        _personalizationSync.Add(() => clear.IsEnabled = _state.RecentCommands.Count > 0 || _state.RecentApps.Count > 0);
         search.Children.Add(clear);
         search.Children.Add(Text("In this window, Alt+← / → changes pages and Ctrl+K opens search. Windows owns desktop shortcuts.", 12, true));
         _personalizeSections = new Grid { ColumnSpacing = 16, RowSpacing = 16 };

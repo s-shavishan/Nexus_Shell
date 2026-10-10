@@ -7,7 +7,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $projectFile = Join-Path $projectRoot 'src\Nexus.Shell\Nexus.Shell.csproj'
-$publishDirectory = Join-Path $projectRoot 'artifacts\Nexus-Shell-3.1.0-win-x64'
+$publishDirectory = Join-Path $projectRoot 'artifacts\Nexus-Shell-3.2.0-win-x64'
 $logDirectory = Join-Path $projectRoot 'artifacts\logs'
 
 if ($env:OS -ne 'Windows_NT') { throw 'WinUI must be built on Windows. Use an included Windows cloud-build route in START-HERE.md.' }
@@ -100,8 +100,8 @@ try {
     Copy-Item (Join-Path $projectRoot 'docs\STARTUP-1.8.0.md') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'docs\MAJOR-2.0.0.md') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'docs\CONTROL-CENTER-2.1.0.md') $publishDirectory
-    Copy-Item (Join-Path $projectRoot 'docs\START-AND-SIGNIN-3.1.0.md') $publishDirectory
-    Copy-Item (Join-Path $projectRoot 'docs\UI-3.1.0.md') $publishDirectory
+    Copy-Item (Join-Path $projectRoot 'docs\START-AND-SIGNIN-3.2.0.md') $publishDirectory
+    Copy-Item (Join-Path $projectRoot 'docs\RESPONSIVENESS-3.2.0.md') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'docs\SESSION-CORE-3.0.0.md') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'docs\NEXT-DESKTOP-PACK.md') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'scripts\inspect-startup.ps1') $publishDirectory

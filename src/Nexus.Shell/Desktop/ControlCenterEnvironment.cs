@@ -21,9 +21,7 @@ internal sealed class ControlCenterEnvironment
     private readonly RuntimeClient _client;
     private readonly Guid _toolId;
     private readonly CancellationTokenSource _cancel = new();
-    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(250) };
     private QuickSettingsWindow? _window;
-    private bool _pulsing;
     private int _failures;
     private long _revision = -1, _sequence = -1;
     private long? _hidePending;
@@ -49,7 +47,7 @@ internal sealed class ControlCenterEnvironment
         Apply(await _client.CallAsync<PanelSnapshot>(RuntimeOperations.PanelPulse, new { }, TimeSpan.FromSeconds(3), _cancel.Token));
         _window = new(this);
         Apply(await _client.CallAsync<PanelSnapshot>(RuntimeOperations.PanelReady, new PanelReady(_window.Handle.ToInt64()), TimeSpan.FromSeconds(3), _cancel.Token), force: true);
-        _timer.Tick += Pulse; _timer.Start(); Log.Write("Control Center worker ready for Core " + _core.Id);
+        _ = WatchAsync(); Log.Write("Control Center worker ready for Core " + _core.Id);
     }
     private void Apply(PanelSnapshot snapshot, bool force = false)
     {
@@ -65,24 +63,29 @@ internal sealed class ControlCenterEnvironment
         if (force || _sequence != snapshot.Desired.Sequence || _window.IsOpen != snapshot.Desired.Visible)
         {
             _sequence = snapshot.Desired.Sequence;
-            if (snapshot.Desired.Visible && _hidePending != snapshot.Desired.Sequence) _window.Show(snapshot.Desired.Section); else _window.HideSurface();
+            if (snapshot.Desired.Visible && _hidePending != snapshot.Desired.Sequence) _window.Show(snapshot.Desired.Section, snapshot.Desired.Compact); else _window.HideSurface();
         }
-        _timer.Interval = TimeSpan.FromMilliseconds(snapshot.Desired.Visible ? 250 : 750);
     }
-    private async void Pulse(object? sender, object args)
+    private async Task WatchAsync()
     {
-        if (IsStopping || _pulsing) return; _pulsing = true;
-        try
+        while (!IsStopping)
         {
-            if (_core.HasExited) { Stop(); return; }
-            var snapshot = await _client.CallAsync<PanelSnapshot>(RuntimeOperations.PanelPulse, new { }, TimeSpan.FromSeconds(3), _cancel.Token);
-            if (_hidePending == snapshot.Desired.Sequence && snapshot.Desired.Visible)
-                snapshot = await _client.CallAsync<PanelSnapshot>(RuntimeOperations.PanelHide, new PanelHidden(snapshot.Desired.Sequence), TimeSpan.FromSeconds(3), _cancel.Token);
-            if (!IsStopping) { _failures = 0; Apply(snapshot); }
+            try
+            {
+                if (_core.HasExited) { Stop(); return; }
+                var snapshot = await _client.CallAsync<PanelSnapshot>(RuntimeOperations.PanelWait, new PanelWait(_revision), TimeSpan.FromSeconds(3), _cancel.Token);
+                if (_hidePending == snapshot.Desired.Sequence && snapshot.Desired.Visible)
+                    snapshot = await _client.CallAsync<PanelSnapshot>(RuntimeOperations.PanelHide, new PanelHidden(snapshot.Desired.Sequence), TimeSpan.FromSeconds(3), _cancel.Token);
+                if (!IsStopping) { _failures = 0; Apply(snapshot); }
+            }
+            catch (OperationCanceledException) when (IsStopping) { return; }
+            catch (Exception error)
+            {
+                if (IsStopping) return;
+                if (++_failures >= 3) { Log.Write("Control Center lost its Core owner", error); Stop(); return; }
+                try { await Task.Delay(500, _cancel.Token); } catch (OperationCanceledException) { return; }
+            }
         }
-        catch (OperationCanceledException) when (IsStopping) { }
-        catch (Exception error) { if (!IsStopping && ++_failures >= 3) { Log.Write("Control Center lost its Core owner", error); Stop(); } }
-        finally { _pulsing = false; }
     }
     internal async void Hide()
     {
@@ -105,9 +108,10 @@ internal sealed class ControlCenterEnvironment
     internal void LockScreen() => Action("lock");
     internal void ShowSections(string? page = null) => Action("personalize");
     internal void Advanced(string section) => Action("advanced", section);
+    internal void Expand() => Action("expand");
     internal void Stop()
     {
-        if (IsStopping) return; IsStopping = true; _timer.Stop(); _cancel.Cancel();
+        if (IsStopping) return; IsStopping = true; _cancel.Cancel();
         try { _window?.Close(); } finally { _core.Dispose(); Stopped?.Invoke(); }
     }
 }

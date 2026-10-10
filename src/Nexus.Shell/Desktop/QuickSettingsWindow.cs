@@ -22,7 +22,7 @@ internal sealed class QuickSettingsWindow : Window
     internal bool IsOpen { get; private set; }
     internal IntPtr Handle => _handle;
     internal QuickSettingsView View => _view;
-    private readonly UI.WindowTransition _transition;
+    private bool _compact;
     internal QuickSettingsWindow(ControlCenterEnvironment environment)
     {
         _environment = environment; _view = new(environment, environment.Hide);
@@ -34,25 +34,25 @@ internal sealed class QuickSettingsWindow : Window
         { presenter.SetBorderAndTitleBar(false, false); presenter.IsResizable = presenter.IsMinimizable = presenter.IsMaximizable = false; }
         ShellLayerInterop.ToolWindow(_handle);
         _chrome = new(_handle, closeRequested: environment.Hide);
-        _motion = new(_frame, () => environment.Theme.Animations && !environment.Theme.HighContrast && !environment.State.ReducedEffects);
-        _transition = new(_frame, () => environment.Theme.Animations && !environment.Theme.HighContrast && !environment.State.ReducedEffects);
+        _motion = new(_frame, () => environment.Theme.Animations && !environment.Theme.HighContrast && environment.State.SurfaceAnimations && !environment.State.ReducedEffects);
         Activated += (_, args) => { if (IsOpen && args.WindowActivationState == WindowActivationState.Deactivated) environment.Hide(); };
-        Closed += (_, _) => { _closed = true; IsOpen = false; _transition.Dispose(); _motion.Dispose(); _chrome.Dispose(); _view.Dispose(); environment.Stop(); };
+        Closed += (_, _) => { _closed = true; IsOpen = false; _motion.Dispose(); _chrome.Dispose(); _view.Dispose(); environment.Stop(); };
         ApplyAppearance();
     }
-    internal void Show(string? section = null)
+    internal void Show(string? section = null, bool compact = false)
     {
-        if (_closed) return; ApplyAppearance(); Position();
-        bool wasOpen = IsOpen; _transition.Cancel(); _frame.IsHitTestVisible = true; IsOpen = true; Activate(); _view.Open(section); if (!wasOpen) _motion.Open();
+        if (_closed) return; _compact = compact; ApplyAppearance(); Position();
+        bool wasOpen = IsOpen; _frame.IsHitTestVisible = true; IsOpen = true; _view.Open(section, compact); Activate(); if (!wasOpen) _motion.Open();
     }
     internal void Position()
     {
         if (_closed) return;
         var monitor = _environment.Snapshot.Desired.Monitor;
-        var rect = DesktopLayout.PanelBounds(new(monitor.X, monitor.Y, monitor.Width, monitor.Height), monitor.Scale, 540, 740);
+        var bounds = new ShellRect(monitor.X, monitor.Y, monitor.Width, monitor.Height);
+        var rect = _compact ? DesktopLayout.QuickControlBounds(bounds, monitor.Scale, _environment.Snapshot.Desired.Section) : DesktopLayout.PanelBounds(bounds, monitor.Scale, 540, 740);
         ShellLayerInterop.SetWindowPos(_handle, ShellLayerInterop.Topmost, rect.X, rect.Y, rect.Width, rect.Height, 0x0010);
     }
-    internal async void HideSurface() { if (_closed || !IsOpen) return; IsOpen = false; _frame.IsHitTestVisible = false; _view.Hide(); await _transition.CloseAsync(() => { _motion.Hide(); _window.Hide(); }); }
+    internal void HideSurface() { if (_closed || !IsOpen) return; IsOpen = false; _frame.IsHitTestVisible = false; _view.Hide(); _window.Hide(); _motion.Hide(); }
     internal void ApplyAppearance()
     {
         var theme = _environment.Theme;

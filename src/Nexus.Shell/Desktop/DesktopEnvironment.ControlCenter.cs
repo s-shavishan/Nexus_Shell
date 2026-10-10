@@ -10,7 +10,7 @@ internal sealed partial class DesktopEnvironment
     private readonly DispatcherTimer _controlTimer = new() { Interval = TimeSpan.FromMilliseconds(250) };
     private readonly HashSet<Guid> _controlAck = [], _controlApplied = [];
     private readonly Queue<Guid> _controlHistory = [];
-    private bool _controlVisible, _controlSyncing, _controlFailure;
+    private bool _controlVisible, _controlSyncing, _controlFailure, _controlCompact;
     private string _controlSection = "Sound";
     private long _controlSequence, _controlActivatedSequence = -1, _controlWindow, _lastControlWindow;
     private int _controlAllowedProcess;
@@ -28,7 +28,7 @@ internal sealed partial class DesktopEnvironment
         try
         {
             var monitor = ShellLayerInterop.Monitor(Taskbar.Handle).Monitor.Bounds;
-            var desired = new PanelDesired(sequence, _controlVisible, _controlSection, new(monitor.X, monitor.Y, monitor.Width, monitor.Height, ShellLayerInterop.Scale(Taskbar.Handle), Taskbar.Handle.ToInt64(), IsManagedDesktop));
+            var desired = new PanelDesired(sequence, _controlVisible, _controlSection, new(monitor.X, monitor.Y, monitor.Width, monitor.Height, ShellLayerInterop.Scale(Taskbar.Handle), Taskbar.Handle.ToInt64(), IsManagedDesktop), _controlCompact);
             var result = await _core.SyncControlCenterAsync(new(desired, ControlCenterPreferences.From(Session.State), ack), _cancel.Token);
             if (IsStopping) return; _controlFailure = false; foreach (var id in ack) _controlAck.Remove(id);
             _controlTimer.Interval = TimeSpan.FromMilliseconds(result.Status.ProcessId > 0 || _controlVisible ? 250 : 1500);
@@ -57,6 +57,7 @@ internal sealed partial class DesktopEnvironment
                             case "preference": ControlCenterPreferences.Set(Session.State, action); SaveState(); break;
                             case "personalize": HideControlCenter(); ShowSections("Personalize"); break;
                             case "lock": HideControlCenter(); LockScreen(); break;
+                            case "expand": ShowControlCenter(_controlSection); break;
                             case "advanced": HideControlCenter(); OpenAdvancedWindowsSettings(action.Value switch
                                 { "Sound" => "ms-settings:sound", "Network" => "ms-settings:network-status", "Bluetooth" => "ms-settings:bluetooth", "Display" => "ms-settings:display", "Power" => "ms-settings:powersleep", _ => "ms-settings:" }); break;
                         }
@@ -69,6 +70,10 @@ internal sealed partial class DesktopEnvironment
         }
         catch (OperationCanceledException) when (IsStopping) { }
         catch (Exception error) { if (!IsStopping && !_controlFailure) { _controlFailure = true; Report("Control Center is reconnecting to Nexus Core; the desktop remains available", error); } }
-        finally { _controlSyncing = false; }
+        finally
+        {
+            _controlSyncing = false;
+            if (!IsStopping && sequence != _controlSequence) Desktop.DispatcherQueue.TryEnqueue(() => _ = SyncControlCenterAsync());
+        }
     }
 }

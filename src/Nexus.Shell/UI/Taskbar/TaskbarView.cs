@@ -44,11 +44,11 @@ internal sealed class TaskbarView : Grid
         internal (bool Active, bool Minimized)? State;
         internal DockItem(RunningWindow window) => Window = window;
     }
-    private readonly Button _start, _search, _overview, _clockButton, _desktopButton;
+    private readonly Button _start, _overview, _clockButton, _desktopButton;
     private readonly Border _separator;
     private double _reportedWidth;
     internal event Action? PreferredWidthChanged;
-    internal double PreferredWidthDip => (_environment.Session.State.FloatingTaskbar ? 220 : 356) + (_pins.Children.Count + _windows.Children.Count) * (_environment.Session.State.CompactDock ? 44 : 52);
+    internal double PreferredWidthDip => (_environment.Session.State.FloatingTaskbar ? 168 : 304) + (_pins.Children.Count + _windows.Children.Count) * (_environment.Session.State.CompactDock ? 44 : 52);
     internal Border Frame => _frame;
     private MotionController? _motion;
     private DockMotionController? _dockMotion;
@@ -58,7 +58,6 @@ internal sealed class TaskbarView : Grid
         _body.ColumnDefinitions.Add(new() { Width = GridLength.Auto }); _body.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) }); _body.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
         var start = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
         _start = IconButton("Launchpad", "Launchpad", () => environment.ShowMenu(), true); start.Children.Add(_start);
-        _search = IconButton("Search", "Search apps", () => environment.ShowMenu(true), true); start.Children.Add(_search);
         _body.Children.Add(start);
         var middle = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, VerticalAlignment = VerticalAlignment.Center };
         _separator = new Border { Width = 1, Height = 22, VerticalAlignment = VerticalAlignment.Center };
@@ -106,6 +105,7 @@ internal sealed class TaskbarView : Grid
     private Button PinButton(AppEntry app)
     {
         var icon = NexusIcons.Image(NexusIcons.ForApp(app), 32);
+        _ = AppIconCache.ApplyAsync(icon, app);
         var host = new Grid(); host.Children.Add(icon);
         var button = new Button { Content = host, Tag = host, Style = (Style)Application.Current.Resources["DockButton"], Width = 48, Height = 52 };
         _pinImages.Add(button, icon); bool arrive = _baselineReconciled;
@@ -264,7 +264,6 @@ internal sealed class TaskbarView : Grid
     {
         _frame.CornerRadius = new CornerRadius(_environment.Session.State.FloatingTaskbar && !_environment.Theme.HighContrast ? 22 : 0);
         // Keep Launchpad reachable; Control Center lives in the menu bar.
-        _search.Visibility = widthDip < 400 ? Visibility.Collapsed : Visibility.Visible;
         _overview.Visibility = widthDip < 440 ? Visibility.Collapsed : Visibility.Visible;
         _clockButton.Visibility = widthDip < 480 || _environment.Session.State.FloatingTaskbar ? Visibility.Collapsed : Visibility.Visible;
         _desktopButton.Visibility = widthDip < 600 ? Visibility.Collapsed : Visibility.Visible;
@@ -277,7 +276,7 @@ internal sealed class TaskbarView : Grid
         if (_released) return;
         var theme = _environment.Theme; RequestedTheme = theme.ElementTheme;
         _frame.Background = theme.Material("Dock", _environment.Session.State.NativeGlass);
-        bool motionEnabled = !theme.HighContrast && theme.Animations && !_environment.Session.State.ReducedEffects;
+        bool motionEnabled = !theme.HighContrast && theme.Animations && _environment.Session.State.SurfaceAnimations && !_environment.Session.State.ReducedEffects;
         _motion?.SetEnabled(motionEnabled); _dockMotion?.SetEnabled(motionEnabled);
         _frame.CornerRadius = new CornerRadius(_environment.Session.State.FloatingTaskbar && !theme.HighContrast ? 22 : 0);
         _frame.BorderBrush = theme.Edge; _frame.BorderThickness = new Thickness(1);

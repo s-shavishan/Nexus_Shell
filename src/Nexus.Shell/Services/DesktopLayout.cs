@@ -30,6 +30,9 @@ public static class DesktopLayout
         int height = Math.Min(Math.Max(1, monitor.Height - top - gap), (int)Math.Round(heightDip * scale));
         return new(monitor.Right - width - gap, monitor.Y + top, width, height);
     }
+    public static ShellRect QuickControlBounds(ShellRect monitor, double scale, string section)
+        => PanelBounds(monitor, scale, section is "Network" or "Bluetooth" ? 440 : 410,
+            section switch { "Sound" => 490, "Display" => 430, "Power" => 480, _ => 590 });
     public static int TaskbarHeight(bool compact) => compact ? 56 : 68;
     private static double Scale(double value) => double.IsFinite(value) ? Math.Clamp(value, .5, 4) : 1;
     public static int TaskbarReservationHeight(bool compact, bool floating, double scale)

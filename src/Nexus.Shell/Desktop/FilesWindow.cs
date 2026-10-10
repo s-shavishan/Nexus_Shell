@@ -52,11 +52,11 @@ internal sealed class FilesWindow : Window
         NativeWindow.Title = request.Title + " · Nexus";
         if (request.Kind == FileSelectionKind.Browse) View.FolderChanged += title => { _title.Text = title; NativeWindow.Title = title + " · Nexus Files"; };
         if (NativeWindow.Presenter is OverlappedPresenter overlapped) overlapped.SetBorderAndTitleBar(false, false);
-        _transition = new(_surface, () => environment.Theme.Animations && !environment.Theme.HighContrast && !environment.State.ReducedEffects);
+        _transition = new(_surface, () => environment.Theme.Animations && !environment.Theme.HighContrast && environment.State.SurfaceAnimations && !environment.State.ReducedEffects);
         _chrome = new(Handle, resizable: true, stateChanged: maximized => { _surface.CornerRadius = new CornerRadius(maximized || environment.Theme.HighContrast ? 0 : 14); _surface.BorderThickness = new Thickness(maximized ? 0 : 1); }, minimizeRequested: Minimize, closeRequested: RequestClose);
         _chrome.Restored += _transition.Restore;
         _chrome.Resized += _transition.Restore;
-        _motion = new(_surface, () => environment.Theme.Animations && !environment.Theme.HighContrast && !environment.State.ReducedEffects);
+        _motion = new(_surface, () => environment.Theme.Animations && !environment.Theme.HighContrast && environment.State.SurfaceAnimations && !environment.State.ReducedEffects);
         var work = ShellLayerInterop.Monitor(Handle).Work.Bounds; double scale = ShellLayerInterop.Scale(Handle);
         int width = Math.Min(work.Width, (int)(1130 * scale)), height = Math.Min(work.Height, (int)(740 * scale));
         NativeWindow.MoveAndResize(new RectInt32(work.X + (work.Width - width) / 2, work.Y + (work.Height - height) / 2, width, height));

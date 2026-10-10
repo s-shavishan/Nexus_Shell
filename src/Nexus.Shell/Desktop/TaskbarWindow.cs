@@ -26,7 +26,7 @@ internal sealed class TaskbarWindow : Window, IDisposable
     internal TaskbarWindow(DesktopEnvironment environment)
     {
         _environment = environment; View = new(environment);
-        _transition = new(View.Frame, () => environment.Theme.Animations && !environment.Session.State.ReducedEffects, dock: true);
+        _transition = new(View.Frame, () => environment.Theme.Animations && environment.Session.State.SurfaceAnimations && !environment.Session.State.ReducedEffects, dock: true);
         var canvas = new Grid(); canvas.Children.Add(View); Content = canvas;
         Handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
         NativeWindow = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(Handle));

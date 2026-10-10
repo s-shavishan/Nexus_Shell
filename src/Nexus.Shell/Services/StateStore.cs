@@ -77,6 +77,7 @@ public sealed class StateStore
             state.DisplayName = string.IsNullOrWhiteSpace(state.DisplayName) ? "Shan" : state.DisplayName.Trim();
             state.DisplayName = state.DisplayName[..Math.Min(state.DisplayName.Length, 40)];
             state.PinnedApps ??= [];
+            state.RecentApps = state.RememberRecentItems ? RecentApplications.Normalize(state.RecentApps) : [];
             state.Activity ??= [];
             state.NotificationHistory = NotificationHistory.Normalize(state.NotificationHistory);
             state.Wallpaper = AuraPalette.NormalizeMood(state.Wallpaper);

@@ -33,9 +33,10 @@ internal sealed class MenuBarView : Grid, IDisposable
         var right = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
         Button Icon(string glyph, string name, Action action)
         { var button = Basic(new FontIcon { Glyph = glyph, FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14 }, name); button.Width = 31; button.Click += (_, _) => action(); right.Children.Add(button); return button; }
-        Icon("\uE701", "Network connections", () => environment.OpenTarget("ms-settings:network-status"));
-        Icon("\uE767", "Sound and Control Center", environment.ShowQuickSettings);
-        Icon("\uE721", "Search apps", () => environment.ShowMenu(true));
+        Icon("\uE701", "Network controls", () => environment.ShowQuickControl("Network"));
+        Icon("\uE767", "Sound controls", () => environment.ShowQuickControl("Sound"));
+        var bluetooth = Icon("\uE702", "Bluetooth controls", () => environment.ShowQuickControl("Bluetooth"));
+        var display = Icon("\uE7F4", "Display controls", () => environment.ShowQuickControl("Display"));
         var controls = _controls;
         for (int i = 0; i < 2; i++)
         { controls.Children.Add(new Border { Height = 2, Background = new SolidColorBrush(Microsoft.UI.Colors.White), VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, i * 8 + 4, 0, 0), CornerRadius = new CornerRadius(1) }); controls.Children.Add(new Ellipse { Width = 5, Height = 5, Fill = new SolidColorBrush(Microsoft.UI.Colors.White), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(i == 0 ? 3 : 10, i * 8 + 2.5, 0, 0) }); }
@@ -50,6 +51,7 @@ internal sealed class MenuBarView : Grid, IDisposable
             int shown = ActualWidth < 480 ? 1 : ActualWidth < 820 ? 2 : int.MaxValue;
             foreach (var (button, i) in left.Children.OfType<Button>().Select((button, i) => (button, i))) button.Visibility = i < shown ? Visibility.Visible : Visibility.Collapsed;
             foreach (var button in right.Children.OfType<Button>().Take(2)) button.Visibility = ActualWidth < 650 ? Visibility.Collapsed : Visibility.Visible;
+            bluetooth.Visibility = display.Visibility = ActualWidth < 900 ? Visibility.Collapsed : Visibility.Visible;
             Refresh();
         };
     }

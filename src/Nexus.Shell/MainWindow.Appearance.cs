@@ -10,6 +10,7 @@ public sealed partial class MainWindow
 {
     private UI.LiquidGlassBackdrop? _auraGlass;
     private bool _glassUnavailable;
+    private bool? _glassRequested;
     private static Windows.UI.Color AuraColorValue(string hex) => ShellTheme.Color(hex);
     private static LinearGradientBrush AuraGradient(string first, string last) => ShellTheme.Gradient(first, last);
     private void ApplyAuraPalette()
@@ -28,7 +29,9 @@ public sealed partial class MainWindow
     }
     private void ConfigureAuraGlass(AuraPalette palette)
     {
-        if (!_state.NativeGlass || _state.ReducedEffects || _highContrast || _glassUnavailable)
+        bool requested = _state.NativeGlass && !_state.ReducedEffects && !_highContrast && _environment.Theme.Transparency;
+        if (_glassRequested != requested) { _glassRequested = requested; _glassUnavailable = false; }
+        if (!requested || _glassUnavailable)
         { if (_auraGlass is not null) SystemBackdrop = null; _auraGlass = null; return; }
         try
         {
@@ -36,11 +39,12 @@ public sealed partial class MainWindow
             if (_auraGlass is null)
             {
                 var source = _auraGlass = new UI.LiquidGlassBackdrop();
+                source.SetAppearance(GlassRecipe.For(palette), palette.IsLight);
                 source.Failed += () => DesktopRoot.DispatcherQueue.TryEnqueue(() =>
                 { if (!ReferenceEquals(source, _auraGlass)) return; _glassUnavailable = true; _auraGlass = null; try { SystemBackdrop = null; if (DesktopRoot.IsLoaded) ApplyAuraSurfaces(true); } catch (Exception error) { Log.Write("Sections glass fallback arrived after close", error); } });
                 SystemBackdrop = _auraGlass;
             }
-            _auraGlass.SetTint(AuraColorValue("FF" + palette.Panel[2..]));
+            _auraGlass.SetAppearance(GlassRecipe.For(palette), palette.IsLight);
         }
         catch (Exception error)
         { _auraGlass = null; _glassUnavailable = true; try { SystemBackdrop = null; } catch (Exception cleanup) { Log.Write("Sections glass cleanup failed", cleanup); } Log.Write("Sections glass unavailable; using solid surfaces", error); }
@@ -56,7 +60,9 @@ public sealed partial class MainWindow
         WindowChrome.Background = WindowFooter.Background = glass ? theme.Glass("Frame") : Resource("NexusPanel");
         HeroCard.Background = _highContrast ? Resource("NexusCard") : simple ? _solidCard : theme.Surface("Hero");
         ApplyOverviewAppearance(); UpdateNavigation();
-        GlassStatus.Text = _glassUnavailable ? "Solid fallback · native glass is unavailable on this system."
+        GlassStatus.Text = !_environment.Theme.Transparency ? "Windows transparency is off. Nexus uses solid surfaces."
+            : _state.ReducedEffects ? "Reduced effects is using solid surfaces."
+            : _glassUnavailable ? "Solid fallback · native glass is unavailable on this system."
             : _state.NativeGlass ? "Liquid glass follows Windows transparency and accessibility settings." : "Enable liquid glass for Nexus windows and desktop controls.";
     }
     private void UpdateNavigation()

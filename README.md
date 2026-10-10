@@ -1,18 +1,17 @@
-# Nexus Shell 3.1.0 — Midnight Glass desktop
+# Nexus Shell 3.2.0 — Responsive desktop controls
 
-Nexus is a native C# / WinUI desktop environment on Windows. This update redesigns the actual desktop surfaces and strengthens their lifecycle behavior. It builds on 3.0.0's supervised Control Center, coordinated motion and durable Nexus notification history.
+Nexus is a native C# / WinUI desktop environment on Windows. This update continues from 3.1.0 with direct menu controls, faster panel interaction, revised glass rendering and useful Launchpad features. Its supervised Control Center, coordinated motion and durable notification history remain part of the Session Core foundation.
 
-## Changes in 3.1.0
+## Changes in 3.2.0
 
-- **Glass hierarchy:** translucent vertical surfaces, a restrained highlight and a fine gradient edge replace uniform fills. Disabled glass, reduced effects, high contrast and backdrop failure use readable solid surfaces. The Midnight landscape is a small, static native SVG with a cached PNG/solid fallback.
-- **Menu bar and dock:** cleaner type/spacing, a Nexus menu icon, larger 40 DIP dock app icons, pin context actions and the existing floating/attached geometry. Compact menu bars now respect 12-hour time. Paint is reused instead of allocating a transparent brush for every window state change.
-- **Launchpad:** a stronger heading, integrated search with visible keyboard focus, larger icons, a Pinned filter, direct pin/unpin actions, bounded page indicators and a useful empty state. Pins use the desktop's existing state writer.
-- **Control Center:** six distinct navigation tiles, clearer device cards, restrained preference switches, inline failure feedback and activity indication. The progress slot stays fixed and its animation stops when idle. Unchanged network/Bluetooth/power snapshots keep focus and confirmations intact.
-- **Notifications:** date groups, All / Warnings & errors filters, an empty state, clearer dismissal controls and saved history. Duplicate paint requests are coalesced and unchanged content is retained.
-- **Files and calendar:** consistent traffic-light colors, a separated title strip, lighter sidebar/inspector frames and removal of a redundant full-window paint layer. The desktop date widget is now a keyboard-accessible button.
-- **Stability:** responses and preference errors belong to a specific panel opening. Old results cannot replace a newer opening's device state or error. No-op alert dismissal/clear operations do not schedule unnecessary saves. Existing authentication, device epochs and no-replay rules remain in place.
+- **Direct menu controls:** Network, Sound, Bluetooth and Display open compact Nexus panels beneath the menu bar. All controls expands the same supervised panel into the full Control Center.
+- **One Launchpad:** duplicate app-search buttons and the separate search layout are removed. Launchpad keeps its embedded search, Pinned filter and paging. Legacy app-search dispatches focus its search field. The standalone Windows key opens Launchpad in the managed desktop; native Windows combinations still pass through.
+- **Responsiveness:** transient panels dismiss immediately; motion stays inside their painted frame. Native content-window minimize commands run immediately. Launchpad warms after desktop startup, reuses unchanged tiles and shared vector sources, and briefly coalesces typed filtering.
+- **Control Center updates:** an authenticated, cancellable revision wait wakes the worker when its state changes. Its bounded idle reply keeps supervision alive. Device polling remains limited to an open panel.
+- **Glass recovery:** the acrylic target initializes the Windows system dispatcher, gets its palette before attachment, checks attachment success and uses a fully opaque matching fallback. Thin acrylic and restrained highlights replace the broad gray gradient. Windows transparency and accessibility policy remain respected.
+- **Desktop features:** a bounded, persistent Recent apps category, installed-app refresh, asynchronous Windows icons, and an independent Interface animations switch. Turning animations off keeps Nexus glass enabled. Recent history follows the existing privacy preference.
 
-See the [UI preview](docs/UI-3.1.0-preview.png) and [UI changes, validation and VM guide](docs/UI-3.1.0.md). The preview is a design projection using the repository's actual icons and wallpaper; it is not a Windows screenshot. Native Windows compilation, rendering and sustained resource measurements remain acceptance gates.
+See [changes and Windows VM acceptance](docs/RESPONSIVENESS-3.2.0.md). The older [3.1 design projection](docs/UI-3.1.0-preview.png) remains a design reference with example content. Native Windows rendering and sustained resource/timing measurements must be verified on the VM.
 
 ## Integrated controls
 
@@ -42,7 +41,7 @@ dotnet run --project tests/Nexus.Runtime.Checks/Nexus.Runtime.Checks.csproj -c R
 .\scripts\package.ps1
 ```
 
-CI publishes `Nexus-Shell-3.1.0-win-x64.zip` and the smaller update ZIP. Keep the complete published folder together, including Nexus.Shell, DesktopHost, Core, Nexus.Runtime and compiled UI resources. See [source patch routes](SOURCE-PATCH.md) and [start here](START-HERE.md).
+CI publishes `Nexus-Shell-3.2.0-win-x64.zip` and the smaller update ZIP. Keep the complete published folder together, including Nexus.Shell, DesktopHost, Core, Nexus.Runtime and compiled UI resources. See [source patch routes](SOURCE-PATCH.md) and [start here](START-HERE.md).
 
 ## Next milestones
 

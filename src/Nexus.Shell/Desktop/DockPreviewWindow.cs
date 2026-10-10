@@ -117,7 +117,7 @@ internal sealed class DockPreviewWindow : Window
     }
     private void Enter()
     {
-        _motion?.SetEnabled(_environment.Theme.Animations && !_environment.Theme.HighContrast && !_environment.Session.State.ReducedEffects);
+        _motion?.SetEnabled(_environment.Theme.Animations && !_environment.Theme.HighContrast && _environment.Session.State.SurfaceAnimations && !_environment.Session.State.ReducedEffects);
         // Native thumbnail coordinates stay fixed; animate the surrounding UI.
         _motion?.Enter(_header); _motion?.Enter(_actions); if (_thumbnail is null) _motion?.Enter(_fallback);
     }
@@ -184,6 +184,6 @@ internal sealed class DockPreviewWindow : Window
         _viewport.Background = theme.Brush("NexusInput"); _title.Foreground = theme.Brush("NexusText"); _detail.Foreground = _status.Foreground = theme.Brush("NexusMuted");
         foreach (var button in new[] { _restore, _minimize, _maximize, _close }) { button.Background = theme.Brush("NexusCard"); button.Foreground = theme.Brush("NexusText"); }
         _chrome.SetCorners(theme.HighContrast, 18);
-        _motion?.SetEnabled(theme.Animations && !theme.HighContrast && !_environment.Session.State.ReducedEffects);
+        _motion?.SetEnabled(theme.Animations && !theme.HighContrast && _environment.Session.State.SurfaceAnimations && !_environment.Session.State.ReducedEffects);
     }
 }

@@ -57,8 +57,8 @@ internal sealed class FilesEnvironment
     }
     private void Apply(AppearanceSettings settings)
     {
-        bool changed = State.Wallpaper != settings.Wallpaper || State.NativeGlass != settings.NativeGlass || State.ReducedEffects != settings.ReducedEffects;
-        State.Wallpaper = settings.Wallpaper; State.NativeGlass = settings.NativeGlass; State.ReducedEffects = settings.ReducedEffects;
+        bool changed = State.Wallpaper != settings.Wallpaper || State.NativeGlass != settings.NativeGlass || State.ReducedEffects != settings.ReducedEffects || State.SurfaceAnimations != settings.Animations;
+        State.Wallpaper = settings.Wallpaper; State.NativeGlass = settings.NativeGlass; State.ReducedEffects = settings.ReducedEffects; State.SurfaceAnimations = settings.Animations;
         changed |= Theme.Apply(settings.Wallpaper, settings.ReducedEffects);
         if (changed) _window?.ApplyAppearance();
     }

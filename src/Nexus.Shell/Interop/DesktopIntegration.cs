@@ -125,12 +125,12 @@ internal sealed class DesktopIntegration : IDisposable
         try
         {
             AppendMenu(menu, 0, new UIntPtr(1), "Open Nexus");
-            AppendMenu(menu, 0, new UIntPtr(2), "Search your space");
+            AppendMenu(menu, 0, new UIntPtr(2), "Launchpad");
             if (!GetCursorPos(out var point)) return;
             SetForegroundWindow(_window);
             uint chosen = TrackPopupMenuEx(menu, 0x0100 | 0x0002, point.X, point.Y, _window, IntPtr.Zero);
             PostMessage(_window, 0, UIntPtr.Zero, IntPtr.Zero);
-            if (chosen is 1 or 2) _dispatch(chosen == 1 ? "show" : "search");
+            if (chosen is 1 or 2) _dispatch(chosen == 1 ? "show" : "start");
         }
         finally { DestroyMenu(menu); }
     }

@@ -52,7 +52,7 @@ internal sealed class MenuBarWindow : Window
         _frame.CornerRadius = new CornerRadius(_attached || _environment.Theme.HighContrast ? 0 : 10);
         _frame.BorderThickness = _attached ? new Thickness(0, 0, 0, 1) : new Thickness(1);
         int generation = ++_generation;
-        bool animate = before is not null && oldScale == scale && _frame.IsLoaded && _visible && _environment.Theme.Animations && !_environment.Theme.HighContrast && !_environment.Session.State.ReducedEffects;
+        bool animate = before is not null && oldScale == scale && _frame.IsLoaded && _visible && _environment.Theme.Animations && !_environment.Theme.HighContrast && _environment.Session.State.SurfaceAnimations && !_environment.Session.State.ReducedEffects;
         if (animate) { _chrome.SetClip(new(0, 0, monitor.Width, height), 0); _ = MoveAsync(before!.Value, local, scale, generation); }
         else { ResetMotion(); Clip(local); }
     }
