@@ -76,7 +76,7 @@ internal static class Program
         if (result.Errors.Count > 0)
         {
             string text = result.WindowsDesktopRequested ? "Windows desktop recovery was requested for this session." : "Windows desktop could not be started. Press Ctrl+Alt+Delete, open Task Manager, then run explorer.exe.";
-            if (!result.SignInRestored) text += "\n\nYour saved sign-in setting could not be restored. This does not prevent the current Windows desktop from opening. The previous setting and recovery record are retained.";
+            if (!result.SignInRestored) text += "\n\nYour saved sign-in setting could not be restored. This does not prevent the current Windows desktop from opening. The previous setting and recovery record are retained. Run Restore-Nexus-SignIn.bat from the full Nexus folder to request permission for the same account.";
             MessageBox(IntPtr.Zero, text + "\n\n" + string.Join("\n", result.Errors.Select(e => e.Message)), "Nexus recovery", 0x30);
         }
         else if (notify) MessageBox(IntPtr.Zero, "Nexus could not keep its desktop running. Windows desktop recovery is complete for this session.\n\nSee desktop-host.log in the Nexus data folder.", "Nexus desktop recovery", 0x30);
@@ -105,6 +105,32 @@ internal static class Program
         DesktopSurfaceLease? lease = null; MonitorInfo? original = null; Process? active = null; WindowsDesktopSurfaces? surfaces = null;
         try
         {
+            if (args.Contains("--policy-action"))
+            {
+                try
+                {
+                    var request = DesktopPolicyRequest.Parse(args);
+                    request.VerifyUser(System.Security.Principal.WindowsIdentity.GetCurrent().User?.Value ?? "");
+                    var registration = new DesktopShellRegistration(new WindowsDesktopSettings(), DesktopShellRegistration.DefaultBackupPath);
+                    if (request.Enable)
+                    {
+                        foreach (string name in new[] { "Nexus.Shell.exe", "Nexus.Core.exe", "Nexus.Runtime.dll" })
+                            if (!File.Exists(Path.Combine(AppContext.BaseDirectory, name))) throw new FileNotFoundException("The full Nexus folder is required.", name);
+                        registration.Enable(Path.Combine(AppContext.BaseDirectory, "Nexus.DesktopHost.exe"), WindowsDesktopSettings.Capabilities());
+                    }
+                    else registration.Restore();
+                    Log("Desktop policy " + (request.Enable ? "enabled" : "restored") + " for the verified current account");
+                    return 0;
+                }
+                catch (Exception error)
+                {
+                    // A rejected account or action must never fall through to
+                    // this process's normal desktop-recovery path.
+                    Log("Desktop policy helper failed: " + error);
+                    MessageBox(IntPtr.Zero, error.Message + "\n\nThe saved desktop recovery record is retained.", "Nexus desktop policy", 0x10);
+                    return 1;
+                }
+            }
             if (args.Contains("--restore-windows") || args.Contains("--restore-session"))
             { WaitForPreview(args); return RestoreWindows(!sessionOnly, null, null, false); }
             string shell = Path.Combine(AppContext.BaseDirectory, "Nexus.Shell.exe");

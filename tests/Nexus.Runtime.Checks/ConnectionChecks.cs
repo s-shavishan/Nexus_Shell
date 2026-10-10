@@ -85,7 +85,17 @@ internal static class ConnectionChecks
             try { await RuntimeProtocol.ReadAsync<RuntimeRequest>(new MemoryStream([10, 0, 0, 0, 1]), CancellationToken.None); }
             catch (EndOfStreamException) { truncated = true; }
             if (!truncated) throw new Exception("Truncated frame was accepted.");
-            Console.WriteLine("PASS: production stream connection, framed state commit, role rejection, disconnect cancellation, and invalid/truncated frame rejection (OS transport replaced).");
+            int reports = 0, dispatches = 0;
+            using (var empty = new MemoryStream())
+                await RuntimeConnection.ServeAsync(empty,_=>true,(_,_)=>{dispatches++;throw new Exception("Empty request dispatched.");},CancellationToken.None,_=>reports++);
+            if (reports != 0 || dispatches != 0) throw new Exception("An empty probe must close quietly without dispatch.");
+            using (var partial = new MemoryStream())
+            {
+                partial.Write([10,0]); partial.Position = 0;
+                await RuntimeConnection.ServeAsync(partial,_=>true,(_,_)=>{dispatches++;throw new Exception("Partial request dispatched.");},CancellationToken.None,_=>reports++);
+            }
+            if (reports != 1 || dispatches != 0) throw new Exception("A partial frame must be reported without dispatch.");
+            Console.WriteLine("PASS: production stream connection, framed state commit, role rejection, disconnect cancellation, empty-probe handling, and invalid/truncated frame rejection (OS transport replaced).");
         }
         finally { Directory.Delete(folder, true); }
     }

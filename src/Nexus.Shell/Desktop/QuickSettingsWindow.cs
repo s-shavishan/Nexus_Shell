@@ -26,7 +26,7 @@ internal sealed class QuickSettingsWindow : Window
         _frame = new Border { Child = _view, CornerRadius = new CornerRadius(16), BorderThickness = new Thickness(1) }; Content = _frame;
         _handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
         _window = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(_handle));
-        _window.Title = "Nexus Quick Settings"; _window.IsShownInSwitchers = false;
+        _window.Title = "Nexus Quick Settings"; WindowSwitcherPolicy.Request(() => _window.IsShownInSwitchers = false, error => Log.Write("Switcher API unavailable; using native tool-window styling", error));
         if (_window.Presenter is OverlappedPresenter presenter)
         { presenter.SetBorderAndTitleBar(false, false); presenter.IsResizable = presenter.IsMinimizable = presenter.IsMaximizable = false; }
         ShellLayerInterop.ToolWindow(_handle);

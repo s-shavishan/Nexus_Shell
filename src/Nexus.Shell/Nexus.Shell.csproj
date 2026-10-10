@@ -20,7 +20,7 @@
     <PublishTrimmed>false</PublishTrimmed>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>1.7.0</Version>
+    <Version>1.8.0</Version>
     <Product>White Dreams Nexus Shell</Product>
     <Description>Nexus desktop shell, native file browsing and Windows-backed system controls.</Description>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>

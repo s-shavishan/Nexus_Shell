@@ -1,3 +1,12 @@
+# 1.8.0 — Supervised startup and Windows 10 sign-in recovery
+
+- Show a Nexus readiness surface driven by actual Core, workspace, desktop, and dock completion, with cancellation back to Windows.
+- Add supervised automatic desktop launch after Windows sign-in, preserving the legacy preview route and refusing conflicting or unrecognized startup configuration.
+- Tolerate the observed E_NOTIMPL from optional switcher requests and retain native tool-window styling for desktop surfaces.
+- Add explicit same-account elevation for protected shell policy changes and an independent sign-in restoration helper.
+- Stop logging empty Core readiness-probe disconnects as failures; partial requests remain rejected and reported.
+- Add startup-policy regression checks and record user-reported 1.7 VM acceptance alongside remaining 1.8 native gates.
+
 # 1.7.0 — Core and isolated Files foundation
 
 - Add a per-session Core process with an exclusive profile writer, durable revisioned commits, and lost-acknowledgement reconciliation.

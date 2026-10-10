@@ -13,12 +13,13 @@ public sealed partial class MainWindow
         panel.Children.Add(Text("Your Nexus desktop", 21));
         var capabilities = WindowsDesktopSettings.Capabilities();
         string host = Path.Combine(AppContext.BaseDirectory, "Nexus.DesktopHost.exe");
-        bool configured = false;
+        bool configured = false, shellOwned = false;
         string status = _environment.Mode == DesktopSessionMode.NexusSession ? "Nexus owns the desktop for this session. Windows returns when you exit."
             : _environment.Mode == DesktopSessionMode.DesktopShell ? "Nexus is your desktop at sign-in." : "You’re previewing Nexus alongside the Windows desktop.";
         try
         {
-            configured = new DesktopShellRegistration(new WindowsDesktopSettings(), DesktopShellRegistration.DefaultBackupPath).Uses(host);
+            var registration = new DesktopShellRegistration(new WindowsDesktopSettings(), DesktopShellRegistration.DefaultBackupPath);
+            configured = registration.Uses(host); shellOwned = registration.OwnsCurrentSetting;
             status += configured ? " This version is selected for your next sign-in." : " This version is not selected for sign-in.";
         }
         catch (Exception ex) { Log.Write("Desktop sign-in setting could not be read.", ex); status += " Sign-in policy is unavailable for this account. Session mode can still return to Windows when you exit."; }
@@ -30,13 +31,20 @@ public sealed partial class MainWindow
             session.IsEnabled = File.Exists(host); panel.Children.Add(session);
             panel.Children.Add(Text("Use the Nexus desktop and taskbar for this session. Exit Nexus to return to Windows. Your sign-in settings stay as they are.", 12, true));
         }
-        var enable = AsyncButton(configured ? "Use this version at sign-in" : "Use Nexus at sign-in…", EnableDesktopModeAsync);
+        bool startupHere = false;
+        try { startupHere = StartupRegistration.IsDesktopEnabled() && StartupRegistration.UsesCurrentVersion(); }
+        catch (Exception error) { Log.Write("Desktop startup status unavailable", error); }
+        var startup = AsyncButton(startupHere ? "Disable desktop startup after sign-in…" : "Start Nexus desktop after Windows sign-in…", ChangeDesktopStartupAsync);
+        startup.IsEnabled = File.Exists(host) && !shellOwned; panel.Children.Add(startup);
+        if (shellOwned) panel.Children.Add(Text("Restore the existing Nexus sign-in shell below before enabling startup alongside Windows.", 12, true));
+        panel.Children.Add(Text("Start the supervised Nexus desktop after Windows signs you in. Windows remains available for recovery. Startup timing is controlled by Windows.", 12, true));
+        var enable = AsyncButton(configured ? "Use this version as the sign-in shell" : "Replace the Windows desktop at sign-in…", EnableDesktopModeAsync);
         enable.IsEnabled = capabilities.SupportsCustomInterface && File.Exists(host);
         panel.Children.Add(enable);
         if (!capabilities.SupportsCustomInterface) panel.Children.Add(Text("Requires a supported Windows Pro, Enterprise or Education build.", 12, true));
         else if (!File.Exists(host)) panel.Children.Add(Text("Build or extract the complete release folder, including Nexus.DesktopHost.exe, first.", 12, true));
         panel.Children.Add(AsyncButton("Restore Windows desktop at sign-in…", RestoreDesktopModeAsync));
-        panel.Children.Add(Text("Changing sign-in applies after sign-out and requires permission to write Windows desktop policy. Keep the full Nexus folder in its selected location. Your previous setting is saved for recovery.", 12, true));
+        panel.Children.Add(Text("Shell replacement is a separate option on supported editions. Windows may request administrator permission for policy changes. Keep the full folder in its selected location; the previous setting is saved for recovery.", 12, true));
         if (_environment.IsManagedDesktop) panel.Children.Add(ActionButton(_environment.Mode == DesktopSessionMode.NexusSession ? "Return to Windows" : "Desktop session controls…", _environment.RequestExit));
         return panel;
     }
@@ -45,6 +53,43 @@ public sealed partial class MainWindow
         foreach (var name in new[] { "Nexus.DesktopHost.exe", "Nexus.DesktopHost.dll", "Nexus.DesktopHost.deps.json", "Nexus.DesktopHost.runtimeconfig.json", "Nexus.Core.exe", "Nexus.Core.dll", "Nexus.Core.deps.json", "Nexus.Core.runtimeconfig.json", "Nexus.Runtime.dll" })
             if (!File.Exists(Path.Combine(AppContext.BaseDirectory, name))) throw new FileNotFoundException("The published desktop host is incomplete.", name);
         return Path.Combine(AppContext.BaseDirectory, "Nexus.DesktopHost.exe");
+    }
+    private async Task ChangeDesktopStartupAsync()
+    {
+        if (_dialogOpen || !_ready) return; _dialogOpen = true;
+        try
+        {
+            bool enable = !(StartupRegistration.IsDesktopEnabled() && StartupRegistration.UsesCurrentVersion());
+            if (enable) CheckDesktopHost();
+            var dialog = new ContentDialog { XamlRoot = DesktopRoot.XamlRoot, RequestedTheme = DesktopRoot.RequestedTheme,
+                Title = enable ? "Start Nexus after Windows sign-in?" : "Disable Nexus desktop startup?",
+                Content = enable ? "Windows will sign you in normally, then Nexus will start its supervised desktop. Exit Nexus to return to Windows. Keep this complete folder in place:\n\n" + AppContext.BaseDirectory
+                    : "Nexus will stop starting automatically. This session stays open, and your Windows desktop sign-in setting stays as it is.",
+                PrimaryButtonText = enable ? "Enable desktop startup" : "Disable startup", CloseButtonText = "Cancel", DefaultButton = ContentDialogButton.Close };
+            PolishDialog(dialog);
+            if (await dialog.ShowAsync() != ContentDialogResult.Primary || !_ready) return;
+            StartupRegistration.SetDesktopEnabled(enable); RefreshStartupRepair();
+            _syncingPersonalization = true;
+            try { StartupSwitch.IsOn = StartupRegistration.IsEnabled(); }
+            finally { _syncingPersonalization = false; }
+            ShowStatus(enable ? "Nexus desktop will start after Windows signs you in." : "Nexus automatic startup is disabled.");
+            Navigate("Personalize", false);
+        }
+        finally { _dialogOpen = false; }
+    }
+    private static async Task<bool?> ApplyDesktopPolicyAsync(bool enable)
+    {
+        try
+        {
+            var registration = new DesktopShellRegistration(new WindowsDesktopSettings(), DesktopShellRegistration.DefaultBackupPath);
+            if (!enable) return registration.Restore();
+            registration.Enable(CheckDesktopHost(), WindowsDesktopSettings.Capabilities()); return true;
+        }
+        catch (Exception error) when (error is UnauthorizedAccessException or System.Security.SecurityException)
+        {
+            Log.Write("Desktop policy requires Windows permission", error);
+            return await DesktopPolicyElevation.ApplyAsync(enable) ? true : (bool?)null;
+        }
     }
     private async Task StartNexusSessionAsync()
     {
@@ -75,7 +120,7 @@ public sealed partial class MainWindow
                 PrimaryButtonText = "Use Nexus at sign-in", CloseButtonText = "Cancel", DefaultButton = ContentDialogButton.Close };
             PolishDialog(dialog);
             if (await dialog.ShowAsync() != ContentDialogResult.Primary || !_ready) return;
-            new DesktopShellRegistration(new WindowsDesktopSettings(), DesktopShellRegistration.DefaultBackupPath).Enable(host, WindowsDesktopSettings.Capabilities());
+            if (await ApplyDesktopPolicyAsync(true) is not true) { ShowStatus("The Windows permission request was cancelled. Desktop policy was not changed by the helper."); return; }
             RefreshStartupRepair();
             ShowStatus("Nexus is selected for your next sign-in. Save your work, then sign out when you’re ready.");
             Navigate("Personalize", false);
@@ -97,9 +142,9 @@ public sealed partial class MainWindow
                 PrimaryButtonText = "Restore sign-in setting", CloseButtonText = "Cancel", DefaultButton = ContentDialogButton.Close };
             PolishDialog(dialog);
             if (await dialog.ShowAsync() != ContentDialogResult.Primary || !_ready) return;
-            bool restored = new DesktopShellRegistration(new WindowsDesktopSettings(), DesktopShellRegistration.DefaultBackupPath).Restore();
+            bool? restored = await ApplyDesktopPolicyAsync(false);
             RefreshStartupRepair();
-            ShowStatus(restored ? "Your previous desktop sign-in setting is restored." : "No saved Nexus desktop setup was found. No sign-in setting changed.");
+            ShowStatus(restored switch { true => "Your previous desktop sign-in setting is restored.", false => "No saved Nexus desktop setup was found. No sign-in setting changed.", null => "The Windows permission request was cancelled. The saved recovery record is retained." });
             Navigate("Personalize", false);
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException)

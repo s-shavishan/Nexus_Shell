@@ -47,7 +47,7 @@ internal sealed class DockPreviewWindow : Window
         _environment = environment; _frame = new Border { Child = _root }; Content = _frame;
         _handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
         _native = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(_handle));
-        _native.Title = "Nexus window preview"; _native.IsShownInSwitchers = false;
+        _native.Title = "Nexus window preview"; WindowSwitcherPolicy.Request(() => _native.IsShownInSwitchers = false, error => Log.Write("Switcher API unavailable; using native tool-window styling", error));
         if (_native.Presenter is OverlappedPresenter presenter)
         { presenter.SetBorderAndTitleBar(false, false); presenter.IsResizable = presenter.IsMaximizable = presenter.IsMinimizable = false; presenter.IsAlwaysOnTop = true; }
         ShellLayerInterop.ToolWindow(_handle, noActivate: true); _chrome = new(_handle);

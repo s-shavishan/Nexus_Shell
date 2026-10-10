@@ -16,10 +16,12 @@ internal sealed class CoreProcessSession : IAsyncDisposable
     private RevisionedStateWriter? _writer;
     private int _healthFailures, _saveFailures;
     private bool _disposed;
-    internal async Task<StateReadResult> InitializeAsync()
+    internal async Task<StateReadResult> InitializeAsync(Action<StartupStep>? progress = null)
     {
         var client = await ClientAsync().ConfigureAwait(false);
+        progress?.Invoke(StartupStep.Core);
         var loaded = await client.CallAsync<StateReadResult>(RuntimeOperations.ReadState, new { }, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+        progress?.Invoke(StartupStep.Workspace);
         _writer = new(loaded.State.PersistenceRevision, ReadStateAsync, CommitAsync); return loaded;
     }
     private async Task<RuntimeClient> ClientAsync()

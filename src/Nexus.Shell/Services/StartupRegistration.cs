@@ -1,34 +1,21 @@
-using Microsoft.Win32;
-
 namespace Nexus.Shell.Services;
 
 public static class StartupRegistration
 {
-    private const string Name = "WhiteDreamsNexusShell";
-    private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    public static bool IsEnabled()
+    private static NexusStartupPolicy Policy()
     {
-        using var key = Registry.CurrentUser.OpenSubKey(RunKey);
-        return key?.GetValue(Name) is string;
+        var settings = new WindowsDesktopSettings();
+        return new(settings, () => new DesktopShellRegistration(settings, DesktopShellRegistration.DefaultBackupPath).OwnsCurrentSetting);
     }
+    private static string Shell => Path.Combine(AppContext.BaseDirectory, "Nexus.Shell.exe");
+    private static string Host => Path.Combine(AppContext.BaseDirectory, "Nexus.DesktopHost.exe");
+    public static bool IsEnabled() => Policy().Mode != NexusStartupMode.Disabled;
+    public static bool IsDesktopEnabled() => Policy().Mode == NexusStartupMode.Desktop;
+    public static void SetDesktopEnabled(bool enabled) => Policy().Set(enabled ? NexusStartupMode.Desktop : NexusStartupMode.Disabled, Shell, Host);
     public static void SetEnabled(bool enabled)
     {
-        using var key = Registry.CurrentUser.CreateSubKey(RunKey);
-        if (enabled)
-        {
-            if (new DesktopShellRegistration(new WindowsDesktopSettings(), DesktopShellRegistration.DefaultBackupPath).OwnsCurrentSetting)
-                throw new InvalidOperationException("Nexus is already selected as the desktop. Change the sign-in version in Personalize.");
-            string path = Environment.ProcessPath ?? throw new InvalidOperationException("The running executable path is unavailable.");
-            key.SetValue(Name, '"' + path + '"');
-        }
-        else key.DeleteValue(Name, throwOnMissingValue: false);
+        var policy = Policy();
+        policy.Set(!enabled ? NexusStartupMode.Disabled : policy.Mode == NexusStartupMode.Desktop ? NexusStartupMode.Desktop : NexusStartupMode.Preview, Shell, Host);
     }
-    public static bool UsesCurrentVersion()
-    {
-        using var key = Registry.CurrentUser.OpenSubKey(RunKey);
-        string? value = key?.GetValue(Name) as string;
-        string? current = Environment.ProcessPath;
-        if (value is null || current is null) return false;
-        return value.Trim().Trim('"').Equals(current, StringComparison.OrdinalIgnoreCase);
-    }
+    public static bool UsesCurrentVersion() => Policy().Uses(Shell, Host);
 }

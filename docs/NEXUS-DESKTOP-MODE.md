@@ -1,6 +1,6 @@
-# Nexus desktop sessions — 1.7.0
+# Nexus desktop sessions — 1.8.0
 
-Core now starts with each Nexus desktop and owns settings plus isolated Files workers. Keep the complete build folder together and finish [the foundation acceptance checks](FOUNDATION-1.7.0.md). Only one session can own a user's settings profile at a time. Boot and authentication still use Windows.
+Core now starts with each Nexus desktop and owns settings plus isolated Files workers. Keep the complete build folder together and finish [the foundation acceptance checks](STARTUP-1.8.0.md). Only one session can own a user's settings profile at a time. Boot and authentication still use Windows.
 
 ## Use Nexus now and restore Windows on exit
 
@@ -22,11 +22,15 @@ Run **Restore-Windows-Desktop.bat** to stop matching Nexus processes and restore
 
 From a blank desktop: **Ctrl+Alt+Delete → Task Manager → Run new task → explorer.exe**. Then run the recovery BAT from your complete Nexus folder. Starting Explorer alone does not repair an earlier persistent sign-in setting.
 
+## Supervised startup after Windows sign-in
+
+Personalize → Start Nexus desktop after Windows sign-in uses the current user's Run entry to launch Nexus.DesktopHost with --nexus-session. It keeps Windows as the sign-in shell and uses the same reversible session takeover. Windows controls startup timing; immediate launch is not guaranteed. Disable this option from Personalize or the shipped disable-startup script. An already owned Nexus shell policy must be restored first.
+
 ## Persistent desktop at sign-in
 
 **Use Nexus at sign-in** is separate from temporary session mode. It uses per-user Windows Custom User Interface policy on supported Pro, Enterprise, Education and IoT Enterprise builds. The existing eligibility checks and numeric registry backup format are preserved. Windows Home is not supported for this policy route.
 
-The previous Shell value/type and Nexus Run entry are saved before policy writes. A foreign desktop setting is never overwritten. Changing or restoring a protected policy still requires Windows permission; session mode does not bypass that restriction.
+The previous Shell value/type and Nexus Run entry are saved before policy writes. A foreign desktop setting is never overwritten. Changing or restoring a protected policy still requires Windows permission. The explicit action can request UAC through a narrow helper that verifies the original account SID before registry access. A different administrator account is rejected rather than modifying its HKCU. Restore-Nexus-SignIn.bat exposes the same restore action independently. Machine-enforced policy may still deny the operation.
 
 In a persistent Nexus session, **Start → Session…** offers restart, return to Windows or sign out. Return to Windows attempts sign-in restoration and GUI restoration independently. If `Policies\System` access is denied, Windows desktop recovery proceeds for the current session and the sign-in backup is retained. Future sign-in can remain configured for Nexus until the policy is successfully restored.
 

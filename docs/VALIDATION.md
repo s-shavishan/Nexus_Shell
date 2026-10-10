@@ -1,4 +1,8 @@
-# Current validation — 1.7.0
+# Current validation — 1.8.0
+
+Read [startup source evidence](STARTUP-CHECKS-1.8.0.md), [VM evidence for 1.7](VM-EVIDENCE-2026-10-10.md), and [the 1.8 acceptance sequence](STARTUP-1.8.0.md). The new 1.8 paths are source-tested; Windows runtime acceptance remains pending. Earlier sections are historical evidence.
+
+# 1.7.0 source validation
 
 Read [foundation validation evidence](FOUNDATION-CHECKS-1.7.0.md) and [the native acceptance gates](FOUNDATION-1.7.0.md). Portable runtime checks, existing core checks, C# API checks, source validation, and PowerShell update fixtures pass. Native Windows build and execution remain pending.
 

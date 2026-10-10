@@ -10,6 +10,9 @@ public partial class App : Application
     private Desktop.FilesEnvironment? _files;
     private CoreProcessSession? _core;
     private Mutex? _instance;
+    private Desktop.StartupWindow? _startup;
+    private bool _startupCancelled;
+    private DesktopSessionMode _launchMode;
     public App()
     {
         UnhandledException += (_, args) => Log.Write("Unhandled UI exception; native message: " + args.Message, args.Exception);
@@ -67,12 +70,15 @@ public partial class App : Application
         string stage = "starting Nexus Core";
         try
         {
+            _launchMode = command.Contains("--nexus-session") ? DesktopSessionMode.NexusSession
+                : command.Contains("--desktop-shell") ? DesktopSessionMode.DesktopShell : DesktopSessionMode.Preview;
+            _startup = new(); _startup.Cancelled += CancelStartup;
             _core = new();
-            var loaded = await _core.InitializeAsync();
+            var loaded = await _core.InitializeAsync(_startup.Report);
+            if (_startupCancelled) return;
             var session = new ShellSession(initialState: loaded.State, persist: _core.SaveAsync, recoveryMessage: loaded.RecoveryMessage);
             stage = "constructing the desktop environment";
-            var mode = command.Contains("--nexus-session") ? DesktopSessionMode.NexusSession
-                : command.Contains("--desktop-shell") ? DesktopSessionMode.DesktopShell : DesktopSessionMode.Preview;
+            var mode = _launchMode;
             int tokenIndex = Array.IndexOf(command, "--host-token");
             string? token = tokenIndex >= 0 && tokenIndex + 1 < command.Length ? command[tokenIndex + 1] : null;
             int pidIndex = Array.IndexOf(command, "--host-pid");
@@ -84,12 +90,17 @@ public partial class App : Application
                 _instance?.Dispose(); _instance = null; _core = null;
                 Log.Write("Nexus desktop closed"); Exit();
             };
-            _environment.Start();
+            _environment.Start(_startup.Report);
+            _startup.Complete(); _startup = null;
             Log.Write("Desktop and taskbar started; Sections opens on demand");
         }
         catch (Exception ex)
         {
-            ReportStartupFailure(stage, ex);
+            if (_startupCancelled) return;
+            _startup?.Complete(); _startup = null;
+            // The managed host owns retries and its independent recovery
+            // dialog. A blocking child dialog would stall that recovery.
+            ReportStartupFailure(stage, ex, showDialog: _launchMode == DesktopSessionMode.Preview);
             if (_core is not null) { await _core.DisposeAsync(); _core = null; }
             _instance?.Dispose();
             _instance = null;
@@ -98,9 +109,18 @@ public partial class App : Application
         }
     }
 
-    private static void ReportStartupFailure(string stage, Exception error)
+    private async void CancelStartup()
+    {
+        if (_startupCancelled) return; _startupCancelled = true;
+        Environment.ExitCode = (int)(_launchMode == DesktopSessionMode.Preview ? DesktopExitCode.Stop : DesktopExitCode.RestoreWindows);
+        try { if (_core is not null) await _core.DisposeAsync(); }
+        catch (Exception error) { Log.Write("Startup cancellation cleanup failed", error); }
+        _core = null; _startup?.Complete(); _startup = null; _instance?.Dispose(); _instance = null; Exit();
+    }
+    private static void ReportStartupFailure(string stage, Exception error, bool showDialog = true)
     {
         Log.Write("Startup failed while " + stage, error);
+        if (!showDialog) return;
         // A native dialog remains usable when WinUI's XAML cannot be loaded.
         try
         {

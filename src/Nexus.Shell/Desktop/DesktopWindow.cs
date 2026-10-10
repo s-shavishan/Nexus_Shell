@@ -22,7 +22,7 @@ internal sealed class DesktopWindow : Window, IDisposable
         Surface = new(environment); Content = Surface;
         Handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
         NativeWindow = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(Handle));
-        NativeWindow.Title = NativeWindowTitle; NativeWindow.IsShownInSwitchers = false;
+        NativeWindow.Title = NativeWindowTitle; WindowSwitcherPolicy.Request(() => NativeWindow.IsShownInSwitchers = false, error => Log.Write("Switcher API unavailable; using native tool-window styling", error));
         if (NativeWindow.Presenter is OverlappedPresenter presenter)
         { presenter.SetBorderAndTitleBar(false, false); presenter.IsResizable = presenter.IsMinimizable = presenter.IsMaximizable = false; }
         ShellLayerInterop.ToolWindow(Handle);

@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Markup;
 using Microsoft.UI.Xaml.Input;
 using Nexus.Shell.Interop;
+using Nexus.Shell.Services;
 using Nexus.Shell.Models;
 using Windows.Graphics;
 using Windows.System;
@@ -28,7 +29,7 @@ internal sealed class SwitcherWindow : Window
     {
         _environment = environment; _frame = new Border { Child = _root, CornerRadius = new CornerRadius(18) }; Content = _frame;
         IntPtr handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
-        _native = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(handle)); _native.Title = "Nexus window switcher"; _native.IsShownInSwitchers = false;
+        _native = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(handle)); _native.Title = "Nexus window switcher"; WindowSwitcherPolicy.Request(() => _native.IsShownInSwitchers = false, error => Log.Write("Switcher API unavailable; using native tool-window styling", error));
         if (_native.Presenter is OverlappedPresenter presenter) { presenter.SetBorderAndTitleBar(false, false); presenter.IsResizable = presenter.IsMaximizable = presenter.IsMinimizable = false; presenter.IsAlwaysOnTop = true; }
         ShellLayerInterop.ToolWindow(handle);
         _chrome = new(handle);

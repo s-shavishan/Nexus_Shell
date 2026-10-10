@@ -58,7 +58,11 @@ public static class RuntimeConnection
             using (var headerDeadline = CancellationTokenSource.CreateLinkedTokenSource(serverCancellation))
             {
                 headerDeadline.CancelAfter(TimeSpan.FromSeconds(3));
-                request = await RuntimeProtocol.ReadAsync<RuntimeRequest>(stream, headerDeadline.Token).ConfigureAwait(false);
+                var received = await RuntimeProtocol.ReadRequestAsync(stream, headerDeadline.Token).ConfigureAwait(false);
+                // Readiness probes can disconnect before sending a frame.
+                // Partial frames still fail and are reported below.
+                if (received is null) return;
+                request = received;
             }
             id = request.Id; RuntimeProtocol.Validate(request);
             if (!authorize(request)) throw new RuntimeFailure("forbidden", "This client does not belong to this Nexus session.");

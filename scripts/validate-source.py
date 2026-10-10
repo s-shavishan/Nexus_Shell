@@ -36,6 +36,8 @@ required = [
     "UI/Controls/NotesView.cs", "UI/Controls/CalculatorView.cs", "Services/NotesWorkspace.cs",
     "Services/CalculatorEngine.cs", "Services/FilePresentation.cs",
     "Services/CoreProcessSession.cs", "Desktop/FilesEnvironment.cs",
+    "Desktop/StartupWindow.cs", "Services/NexusStartupPolicy.cs", "Services/WindowSwitcherPolicy.cs",
+    "Services/DesktopPolicyRequest.cs", "Services/DesktopPolicyElevation.cs", "Services/StartupStep.cs",
 ]
 for relative in required:
     assert (project / relative).is_file(), f"Missing file: {relative}"
@@ -227,7 +229,7 @@ closed = code[code.index("private void Window_Closed("):]
 assert "SaveFinal(" not in closed and "DetachSnapshot(" in closed, "Closing Sections must not finalize the desktop session"
 for file in [root / "appveyor.yml", root / ".github/workflows/build-windows.yml", root / "scripts/package.ps1", root / "scripts/build.ps1"]:
     body = file.read_text()
-    assert "Nexus-Shell-1.7.0" in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
+    assert "Nexus-Shell-1.8.0" in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
 print("Independent desktop ownership, Sections lifetime and CI versions OK")
 # Desktop replacement cannot silently instantiate Explorer or common picker UI.
 environment = (project / "Desktop/DesktopEnvironment.cs").read_text()
@@ -248,6 +250,8 @@ assert "--host-token" in host and "EventWaitHandle" in host and "entireProcessTr
 assert "budget.IsUnresponsive" in host and "DesktopExitCode.RestoreWindows" in host
 build = (root / "scripts/build.ps1").read_text()
 assert "Nexus.DesktopHost.csproj" in build and "Restore-Windows-Desktop.bat" in build and "host runtime differs" in build
+for relative in re.findall(r"Copy-Item \(Join-Path \$projectRoot '([^']+)'\)", build):
+    assert (root / relative.replace('\\', '/')).is_file(), f"Published source is missing: {relative}"
 for relative in ["scripts/package-update.ps1", "scripts/apply-update.ps1"]:
     assert "Nexus.DesktopHost.*" in (root / relative).read_text(), f"Host must remain app-owned payload: {relative}"
 assert "FolderBrowserDialog" not in (root / "scripts/apply-update.ps1").read_text()

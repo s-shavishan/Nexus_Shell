@@ -25,7 +25,7 @@ internal sealed class MenuWindow : Window
         _view = new(environment); _frame = new Border { Child = _view, CornerRadius = new CornerRadius(16), BorderThickness = new Thickness(1) }; Content = _frame;
         _handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
         NativeWindow = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(_handle));
-        NativeWindow.Title = "Nexus Start"; NativeWindow.IsShownInSwitchers = false;
+        NativeWindow.Title = "Nexus Start"; WindowSwitcherPolicy.Request(() => NativeWindow.IsShownInSwitchers = false, error => Log.Write("Switcher API unavailable; using native tool-window styling", error));
         if (NativeWindow.Presenter is OverlappedPresenter presenter)
         { presenter.SetBorderAndTitleBar(false, false); presenter.IsResizable = presenter.IsMinimizable = presenter.IsMaximizable = false; }
         ShellLayerInterop.ToolWindow(_handle);

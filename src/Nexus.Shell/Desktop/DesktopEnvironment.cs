@@ -71,7 +71,7 @@ internal sealed partial class DesktopEnvironment
             _pulse = EventWaitHandle.OpenExisting(@"Local\WhiteDreams.Nexus.Pulse." + hostToken);
         }
     }
-    internal void Start()
+    internal void Start(Action<StartupStep>? progress = null)
     {
         try
         {
@@ -82,7 +82,8 @@ internal sealed partial class DesktopEnvironment
             for (int i = 0; i < Session.State.PinnedApps.Count; i++)
                 if (IsExplorer(Session.State.PinnedApps[i].Target)) { Session.State.PinnedApps[i] = Session.State.PinnedApps[i] with { Target = "nexus:files" }; _dirty = true; }
             Theme.Apply(Session.State.Wallpaper, Session.State.ReducedEffects);
-            Desktop = new(this); Taskbar = new(this);
+            Desktop = new(this); progress?.Invoke(StartupStep.Desktop);
+            Taskbar = new(this);
             Session.Changed += SessionChanged;
             _saveTimer.Tick += SaveTick; _timer.Tick += Tick;
             _windowRefreshTimer.Tick += (_, _) => { _windowRefreshTimer.Stop(); UpdateTaskbar(); };
@@ -94,6 +95,7 @@ internal sealed partial class DesktopEnvironment
                 else if (command == "tray-lost") Report("The Windows notification icon is unavailable. The Nexus taskbar is still running.");
             }));
             RefreshIntegration(); Desktop.ShowSurface(); Taskbar.ShowBar();
+            progress?.Invoke(StartupStep.Dock);
             // Native Windows shortcuts are never intercepted. Events observe
             // app lifecycle only; the five-second tick is a recovery fallback.
             try { _windowEvents = new(QueueWindowEvent, includeOwnProcess: true); }

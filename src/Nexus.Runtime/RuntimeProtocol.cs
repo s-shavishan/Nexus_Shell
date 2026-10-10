@@ -60,9 +60,20 @@ public static class RuntimeProtocol
         await stream.WriteAsync(bytes, cancellation).ConfigureAwait(false);
         await stream.FlushAsync(cancellation).ConfigureAwait(false);
     }
-    public static async Task<T> ReadAsync<T>(Stream stream, CancellationToken cancellation)
+    public static async Task<T> ReadAsync<T>(Stream stream, CancellationToken cancellation) where T : class
     {
-        byte[] prefix = new byte[4]; await stream.ReadExactlyAsync(prefix, cancellation).ConfigureAwait(false);
+        return await ReadFrameAsync<T>(stream, false, cancellation).ConfigureAwait(false)
+            ?? throw new EndOfStreamException("The connection closed before sending a message.");
+    }
+    public static Task<RuntimeRequest?> ReadRequestAsync(Stream stream, CancellationToken cancellation)
+        => ReadFrameAsync<RuntimeRequest>(stream, true, cancellation);
+    private static async Task<T?> ReadFrameAsync<T>(Stream stream, bool allowEmpty, CancellationToken cancellation) where T : class
+    {
+        byte[] prefix = new byte[4];
+        int first = await stream.ReadAsync(prefix.AsMemory(0, 1), cancellation).ConfigureAwait(false);
+        if (first == 0 && allowEmpty) return null;
+        if (first == 0) throw new EndOfStreamException("The connection closed before sending a message.");
+        await stream.ReadExactlyAsync(prefix.AsMemory(1), cancellation).ConfigureAwait(false);
         int length = BinaryPrimitives.ReadInt32LittleEndian(prefix);
         if (length is <= 0 or > MaximumFrameBytes) throw new InvalidDataException("The local message has an invalid size.");
         byte[] bytes = new byte[length]; await stream.ReadExactlyAsync(bytes, cancellation).ConfigureAwait(false);

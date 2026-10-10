@@ -27,7 +27,7 @@ internal sealed class TaskbarWindow : Window, IDisposable
         var canvas = new Grid(); canvas.Children.Add(View); Content = canvas;
         Handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
         NativeWindow = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(Handle));
-        NativeWindow.Title = "Nexus Taskbar"; NativeWindow.IsShownInSwitchers = false;
+        NativeWindow.Title = "Nexus Taskbar"; WindowSwitcherPolicy.Request(() => NativeWindow.IsShownInSwitchers = false, error => Log.Write("Switcher API unavailable; using native tool-window styling", error));
         if (NativeWindow.Presenter is OverlappedPresenter presenter)
         { presenter.SetBorderAndTitleBar(false, false); presenter.IsResizable = presenter.IsMinimizable = presenter.IsMaximizable = false; }
         ShellLayerInterop.ToolWindow(Handle, noActivate: true);
