@@ -370,7 +370,7 @@ public sealed partial class MainWindow
         try
         {
             var additions = new List<SavedItem>();
-            var paths = await _environment.PickAsync(new(folder ? FileSelectionKind.Folder : FileSelectionKind.OpenFiles, folder ? "Choose a folder" : "Choose files"));
+            var paths = await _environment.PickAsync(new(folder ? FileSelectionKind.Folder : FileSelectionKind.OpenFiles, folder ? "Choose a folder" : "Choose files"), _discoveryCancellation.Token);
             foreach (var path in paths)
                 additions.Add(new(Guid.NewGuid().ToString("N"), Path.GetFileName(path), path, folder ? "Folder" : "File", SpaceId: spaceId));
             if (_ready) AddExploreBatch(additions);
@@ -543,7 +543,7 @@ public sealed partial class MainWindow
         try
         {
             string json = ExploreWorkspace.Export(_state);
-            var paths = await _environment.PickAsync(new(FileSelectionKind.SaveFile, "Export space", [".json"], "Nexus-Space-" + string.Concat(ActiveExploreSpace.Name.Split(Path.GetInvalidFileNameChars()))));
+            var paths = await _environment.PickAsync(new(FileSelectionKind.SaveFile, "Export space", [".json"], "Nexus-Space-" + string.Concat(ActiveExploreSpace.Name.Split(Path.GetInvalidFileNameChars()))), _discoveryCancellation.Token);
             if (!_ready || paths.Count == 0) return;
             await File.WriteAllTextAsync(paths[0], json);
             ShowStatus("Space exported with notes, links and shortcuts. Original files stay on this PC.");
@@ -556,7 +556,7 @@ public sealed partial class MainWindow
         _picking = true;
         try
         {
-            var paths = await _environment.PickAsync(new(FileSelectionKind.OpenFile, "Import space", [".json"]));
+            var paths = await _environment.PickAsync(new(FileSelectionKind.OpenFile, "Import space", [".json"]), _discoveryCancellation.Token);
             if (!_ready || paths.Count == 0) return;
             if (new FileInfo(paths[0]).Length > ExploreWorkspace.ImportByteLimit) throw new InvalidDataException("Space files must be smaller than 2 MB.");
             var data = ExploreWorkspace.ReadImport(await File.ReadAllTextAsync(paths[0]));

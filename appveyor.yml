@@ -8,6 +8,7 @@ build_script:
         throw 'Remove src/Nexus.Shell/Interop/ShellKeyboardHook.cs from the repository. This shortcut hook was retired; Windows owns native desktop shortcuts.'
       }
   - ps: dotnet run --project .\tests\Nexus.Core.Checks\Nexus.Core.Checks.csproj --configuration Release
+  - ps: dotnet run --project .\tests\Nexus.Runtime.Checks\Nexus.Runtime.Checks.csproj --configuration Release
   - ps: .\scripts\test-update.ps1
   - ps: .\scripts\build.ps1 -UseMSBuild
   - ps: .\scripts\package.ps1
@@ -16,9 +17,9 @@ test: off
 deploy: off
 
 artifacts:
-  - path: artifacts\Nexus-Shell-1.6.0-win-x64.zip
-  - path: artifacts\Nexus-Shell-1.6.0-win-x64.zip.sha256
-  - path: artifacts\Nexus-Shell-1.6.0-Update-win-x64.zip
-  - path: artifacts\Nexus-Shell-1.6.0-Update-win-x64.zip.sha256
+  - path: artifacts\Nexus-Shell-1.7.0-win-x64.zip
+  - path: artifacts\Nexus-Shell-1.7.0-win-x64.zip.sha256
+  - path: artifacts\Nexus-Shell-1.7.0-Update-win-x64.zip
+  - path: artifacts\Nexus-Shell-1.7.0-Update-win-x64.zip.sha256
   - path: artifacts\logs\resources-check.json
   - path: artifacts\logs\app-resources.xml

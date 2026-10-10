@@ -1,8 +1,9 @@
-# Start here — Nexus 1.5.0
+# Start here — Nexus 1.7.0 foundation
 
-1. Apply the matching source patch in SOURCE-PATCH.md, or use the complete Source ZIP.
-2. Commit/push and wait for the Windows CI checks. Extract the full `Nexus-Shell-1.5.0-win-x64.zip` into a separate folder.
-3. Exit the old Nexus before launching the new folder. Use Launch-Nexus-Desktop.bat or the temporary session option in Personalize.
-4. Choose Balanced in Quick Settings to try dock state motion and native window previews. Fast uses window cards without live previews or custom motion. Hover an open app, then move into its preview to use the window controls.
-5. Choose Sections → Personalize → Ember for sunset-and-rose styling. Existing mood preferences are preserved.
-6. Complete docs/MOTION-DOCK-1.5.0.md, dock/recovery checks and VirtualBox comparison. Native build and runtime acceptance remain pending.
+1. Use the complete Source ZIP or apply the matching patch from SOURCE-PATCH.md. These are source deliveries, not executable Windows releases.
+2. Review and push the source through your usual GitHub workflow. Run **Build Nexus for Windows** in GitHub Actions, or use the checked-in AppVeyor configuration. Both build routes run the portable and native runtime checks before packaging.
+3. On a Windows development machine, run the commands in README.md. Extract the resulting full `Nexus-Shell-1.7.0-win-x64.zip` into a separate folder and keep all three executables plus their supporting files together.
+4. Exit the old Nexus. Start `Nexus.Shell.exe` as a preview alongside Windows before trying `Launch-Nexus-Desktop.bat` for a temporary desktop session.
+5. Complete docs/FOUNDATION-1.7.0.md, then the Midnight Glass and existing desktop recovery acceptance checks. Windows launch, pipe security, process cleanup, dock interaction, and sustained performance are still pending.
+
+This milestone adds Core, isolated Files, durable settings, and bounded recovery. Boot branding, custom sign-in, Windows service reductions, and durable file-operation jobs come later.

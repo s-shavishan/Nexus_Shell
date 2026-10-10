@@ -1,35 +1,42 @@
-# Nexus Shell 1.6.0 — Midnight Glass
+# Nexus Shell 1.7.0 — Runtime foundation
 
-A native C# / WinUI desktop surface for Windows, with an independent desktop, dock, launcher, file browser, Control Center and workspace window.
-
-This update follows the Midnight Glass reference: a night-mountain wallpaper, compact desktop menus, centered Spotlight launcher, colorful dock artwork, three-pane Files, floating Notes and Calculator, and a date/task card with your actual Study tasks.
+A native C# / WinUI desktop environment for Windows. This source update introduces an ordinary user-session Core process and isolates Files from the desktop UI process.
 
 ## What changed
 
-- **Files:** switch between grid and list, sort by name/date/size/type, navigate back and forward, filter the current folder, preview raster images, and inspect file metadata. Pickers still support single/multiple selection, folders and save destinations.
-- **Notes:** a floating editor with search, pinning and deletion confirmation. Board notes are shared with Explore; Quick note is shared with Study. Existing notes are preserved.
-- **Calculator:** decimal arithmetic, percent, sign, backspace, chained operations and repeated equals. Invalid calculations show a recoverable error.
-- **Control Center:** connection status, real audio and brightness controls, visual profiles, dock preferences and a Focus desktop action that hides desktop icons and the date/task card.
-- **Window reliability:** Files and Sections use native minimize. Own content-window notifications update the dock; utility windows participate in previews, overview, Show desktop and shutdown. Fullscreen takes priority over stale dock interaction holds.
-- **Themes:** canonicalize saved Graphite/Lagoon/Pearl aliases without resetting content. Each floating window owns its material and fallback.
+- **Core:** owns durable settings writes and launches/supervises Files. It starts with the desktop; it is not a machine-wide Windows service.
+- **Files:** the browser and each picker run in separate `Nexus.Shell.exe --files-worker` processes. They do not create a desktop, register a taskbar, or write settings.
+- **Picker lifetime:** closing the calling Sections window or the desktop cancels its outstanding picker. A tool failure completes the request with an error instead of leaving the desktop waiting indefinitely.
+- **Persistence:** revision checks reject stale commits. Lost acknowledgements are reconciled using the original commit ID before newer snapshots are submitted. Core acknowledges only after an atomic, flushed save.
+- **Recovery:** startup deadlines, UI heartbeats, an eight-process Files bound, bounded Core restarts, and Windows cleanup jobs manage component lifetime. External applications opened from Files are intended to outlive the Files cleanup job; a Windows test checks this behavior.
+- **Shutdown:** ordered final saves use a deadline. If they cannot be confirmed, Nexus attempts a separate unsaved-session recovery copy and reports its location.
+- **Delivery:** full packages and small updates include Core and the shared protocol assembly. Resource measurements include all Nexus components from the selected installation/session.
 
-Select **Sections → Personalize → Midnight Glass** if an existing saved theme is active. New installations use Midnight Glass by default. App icons are original Nexus vectors; Windows system dialogs and external application windows retain their own appearance.
+The Midnight Glass desktop, Files controls, Notes, Calculator, and existing Windows recovery controls remain available. Notes, Calculator, Sections, desktop, and dock still share the main UI process; further isolation is future work.
 
-## Build on Windows
+## Build and validate on Windows
 
-Requires the existing .NET 8 SDK and Windows app build tools. Dependency versions are pinned in the project and lock file.
+Use the existing .NET 8 SDK and Windows app build tools:
 
 ```powershell
 python scripts/validate-source.py
 dotnet run --project tests/Nexus.Core.Checks/Nexus.Core.Checks.csproj -c Release
+dotnet run --project tests/Nexus.Runtime.Checks/Nexus.Runtime.Checks.csproj -c Release
+.\scripts\test-update.ps1
 .\scripts\build.ps1 -UseMSBuild
 .\scripts\package.ps1
 ```
 
-GitHub Actions and AppVeyor package `Nexus-Shell-1.6.0-win-x64.zip` and the smaller `Nexus-Shell-1.6.0-Update-win-x64.zip`. Follow [portable startup](docs/RUN-PORTABLE.md) and [desktop session setup](docs/NEXUS-DESKTOP-MODE.md).
+Keep the complete published folder together. It must contain `Nexus.Shell.exe`, `Nexus.DesktopHost.exe`, `Nexus.Core.exe`, `Nexus.Runtime.dll`, their supporting files, and compiled UI resources.
 
-## Validation
+GitHub Actions and AppVeyor include the new runtime checks and package `Nexus-Shell-1.7.0-win-x64.zip` plus the smaller update ZIP.
 
-The portable core checks pass, including the new arithmetic, notes, file sorting/history, fullscreen and theme migration regressions. C# type checking against the pinned WinUI and Windows SDK assemblies passes with temporary XAML field declarations. Source/XML/resource/runtime-template checks pass.
+## Validation status
 
-Native Windows XAML compilation, PRI/XBF packaging, actual material rendering and Windows desktop acceptance are still required. See [validation details](docs/VALIDATION.md) and [the acceptance checklist](docs/MIDNIGHT-GLASS-1.6.0.md). The supplied concept is a design reference; pixel-level equivalence has not been measured on Windows.
+Portable state, recovery, and stream-connection checks pass, as do the existing desktop core checks. C# type checking against the pinned Windows/WinUI APIs passes using temporary XAML field declarations. PowerShell parsing and update fixtures pass under PowerShell 7 on Linux.
+
+These checks do not establish Windows launch or desktop stability. Native XAML compilation, package launch, named-pipe identity checks, cleanup jobs, dock behavior, and Windows lifecycle acceptance are still required. See [the foundation release gates](docs/FOUNDATION-1.7.0.md) and [validation evidence](docs/FOUNDATION-CHECKS-1.7.0.md).
+
+Only one Core writer may own a user's settings profile at a time, including across Windows sessions. A second session refuses to overwrite that profile.
+
+Boot branding, credential-provider integration, Windows service reductions, and durable file-operation jobs are later milestones. This update makes no new changes to those Windows configurations.

@@ -2,19 +2,22 @@ using Nexus.Shell.Models;
 
 namespace Nexus.Shell.Services;
 
-// One live state and one ordered writer for all native shell windows.
+// One UI state, with ordered persistence through Core in the application.
+// The local writer remains available for portable, UI-independent checks.
 public sealed class ShellSession
 {
     public StateStore Store { get; }
     public ShellState State { get; }
+    public string RecoveryMessage { get; }
     public event Action? Changed;
     private readonly object _queueLock = new();
     private Task _writes = Task.CompletedTask;
     private Func<ShellState>? _snapshot;
     private bool _finalized;
+    private readonly Func<ShellState, Task>? _persist;
 
-    public ShellSession(StateStore? store = null)
-    { Store = store ?? new StateStore(); State = Store.Load(); }
+    public ShellSession(StateStore? store = null, ShellState? initialState = null, Func<ShellState, Task>? persist = null, string? recoveryMessage = null)
+    { Store = store ?? new StateStore(); State = initialState ?? Store.Load(); _persist = persist; RecoveryMessage = recoveryMessage ?? Store.RecoveryMessage; }
     public void AttachSnapshot(Func<ShellState> snapshot) => _snapshot = snapshot;
     public void DetachSnapshot(Func<ShellState> snapshot)
     { if (_snapshot == snapshot) _snapshot = null; }
@@ -27,15 +30,19 @@ public sealed class ShellSession
         lock (_queueLock)
         {
             if (_finalized) return Task.CompletedTask;
-            return _writes = _writes.ContinueWith(_ => Store.Save(snapshot), CancellationToken.None,
-                TaskContinuationOptions.None, TaskScheduler.Default);
+            return _writes = _writes.ContinueWith(previous => { _ = previous.Exception; return _persist is null ? Task.Run(() => Store.Save(snapshot)) : _persist(snapshot); }, CancellationToken.None,
+                TaskContinuationOptions.None, TaskScheduler.Default).Unwrap();
         }
     }
-    public void SaveFinal()
+    public Task SaveFinalAsync()
     {
         var snapshot = Capture();
-        lock (_queueLock) { if (_finalized) return; _finalized = true; }
-        // StateStore prevents older queued writes from replacing this snapshot.
-        Store.SaveFinal(snapshot);
+        lock (_queueLock)
+        {
+            if (_finalized) return _writes; _finalized = true;
+            return _writes = _writes.ContinueWith(previous => { _ = previous.Exception; return _persist is null ? Task.Run(() => Store.SaveFinal(snapshot)) : _persist(snapshot); }, CancellationToken.None,
+                TaskContinuationOptions.None, TaskScheduler.Default).Unwrap();
+        }
     }
+    public void SaveFinal() => SaveFinalAsync().GetAwaiter().GetResult();
 }

@@ -42,7 +42,7 @@ public sealed partial class MainWindow
     }
     private static string CheckDesktopHost()
     {
-        foreach (var name in new[] { "Nexus.DesktopHost.exe", "Nexus.DesktopHost.dll", "Nexus.DesktopHost.deps.json", "Nexus.DesktopHost.runtimeconfig.json" })
+        foreach (var name in new[] { "Nexus.DesktopHost.exe", "Nexus.DesktopHost.dll", "Nexus.DesktopHost.deps.json", "Nexus.DesktopHost.runtimeconfig.json", "Nexus.Core.exe", "Nexus.Core.dll", "Nexus.Core.deps.json", "Nexus.Core.runtimeconfig.json", "Nexus.Runtime.dll" })
             if (!File.Exists(Path.Combine(AppContext.BaseDirectory, name))) throw new FileNotFoundException("The published desktop host is incomplete.", name);
         return Path.Combine(AppContext.BaseDirectory, "Nexus.DesktopHost.exe");
     }

@@ -24,6 +24,7 @@ try {
     Set-Content (Join-Path $pub 'Nexus.Shell.exe') 'new app' -Encoding ASCII
     Set-Content (Join-Path $pub 'Nexus.Shell.dll') 'new app assembly' -Encoding ASCII
     foreach ($name in @('Nexus.DesktopHost.exe', 'Nexus.DesktopHost.dll', 'Nexus.DesktopHost.deps.json', 'Nexus.DesktopHost.runtimeconfig.json')) { Set-Content (Join-Path $pub $name) 'new host' -Encoding ASCII }
+    foreach ($name in @('Nexus.Core.exe', 'Nexus.Core.dll', 'Nexus.Core.deps.json', 'Nexus.Core.runtimeconfig.json', 'Nexus.Runtime.dll')) { Set-Content (Join-Path $pub $name) 'new core' -Encoding ASCII }
     foreach ($name in @('Launch-Nexus-Desktop.bat', 'Restore-Windows-Desktop.bat', 'restore-windows-desktop.ps1')) { Set-Content (Join-Path $pub $name) 'new launch/recovery helper' -Encoding ASCII }
     Set-Content (Join-Path $pub 'resources.pri') 'app index' -Encoding ASCII
     Set-Content (Join-Path $pub 'MainWindow.xbf') 'compiled UI' -Encoding ASCII
@@ -49,6 +50,9 @@ try {
     Assert-Check ((Get-Content (Join-Path $target 'resources.pri') -Raw).Trim() -eq 'app index') 'The new app resource index is required.'
     Assert-Check (Test-Path (Join-Path $target 'MainWindow.xbf')) 'Loose compiled UI was omitted.'
     Assert-Check ((Get-Content (Join-Path $target 'Nexus.DesktopHost.dll') -Raw).Trim() -eq 'new host') 'The new desktop host must be shipped as app payload.'
+    foreach ($name in @('Nexus.Core.exe', 'Nexus.Core.dll', 'Nexus.Core.deps.json', 'Nexus.Core.runtimeconfig.json', 'Nexus.Runtime.dll')) {
+        Assert-Check ((Get-Content (Join-Path $target $name) -Raw).Trim() -eq 'new core') 'Core and its protocol assembly must come from the new payload.'
+    }
     foreach ($name in @('Launch-Nexus-Desktop.bat', 'Restore-Windows-Desktop.bat', 'restore-windows-desktop.ps1')) {
         Assert-Check ((Get-Content (Join-Path $target $name) -Raw).Trim() -eq 'new launch/recovery helper') 'Launch and recovery helpers must be refreshed in the new folder.'
     }

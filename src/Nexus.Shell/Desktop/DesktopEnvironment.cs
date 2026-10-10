@@ -6,6 +6,7 @@ using Nexus.Shell.Services;
 using Nexus.Shell.UI;
 using Nexus.Shell.UI.Menus;
 using System.Diagnostics;
+using Nexus.Runtime;
 
 namespace Nexus.Shell.Desktop;
 
@@ -13,22 +14,23 @@ namespace Nexus.Shell.Desktop;
 // its own HWND; Sections is created only after an explicit open action.
 internal sealed partial class DesktopEnvironment
 {
-    internal ShellSession Session { get; } = new();
+    internal ShellSession Session { get; }
     internal ShellTheme Theme { get; } = new();
     internal DesktopMenus Menus { get; }
     internal DesktopWindow Desktop { get; private set; } = null!;
     internal TaskbarWindow Taskbar { get; private set; } = null!;
     internal bool IsStopping { get; private set; }
     internal bool SectionsOpen => _sections is not null;
-    internal bool FilesOpen => _files is not null;
     internal bool DockInteraction => _menu?.IsOpen == true || _quickSettings?.IsOpen == true || _switcher?.IsOpen == true || _dockPreview?.IsOpen == true || _sessionDialog;
     internal DesktopSessionMode Mode { get; }
     internal bool IsManagedDesktop => Mode != DesktopSessionMode.Preview;
     internal event Action? Stopped;
     private MainWindow? _sections;
-    private FilesWindow? _files;
     private SwitcherWindow? _switcher;
-    private readonly HashSet<FilesWindow> _pickers = [];
+    private readonly CoreProcessSession _core;
+    private bool _checkingCore, _coreFailureReported;
+    private Guid _coreIssueId;
+    private int _saveFailures;
     private readonly NexusDesktopToggle _desktopToggle = new();
     private WindowEventObserver? _windowEvents;
     private readonly DispatcherTimer _windowRefreshTimer = new() { Interval = TimeSpan.FromMilliseconds(50) };
@@ -52,8 +54,9 @@ internal sealed partial class DesktopEnvironment
     private IReadOnlyList<RunningWindow> _windows = [];
     private bool _refreshing, _saving, _dirty;
 
-    internal DesktopEnvironment(DesktopSessionMode mode = DesktopSessionMode.Preview, string? hostToken = null, int? hostPid = null)
+    internal DesktopEnvironment(ShellSession session, CoreProcessSession core, DesktopSessionMode mode = DesktopSessionMode.Preview, string? hostToken = null, int? hostPid = null)
     {
+        Session = session; _core = core;
         Mode = mode; Menus = new(this); _usage = new(Session.State); _usageTracking = Session.State.UsageTracking;
         if (IsManagedDesktop)
         {
@@ -98,7 +101,7 @@ internal sealed partial class DesktopEnvironment
             RefreshDesktop(); UpdateTaskbar(); _timer.Start();
             _pulse?.Set();
             if (_dirty) _saveTimer.Start();
-            if (Session.Store.RecoveryMessage.Length > 0) Report(Session.Store.RecoveryMessage);
+            if (Session.RecoveryMessage.Length > 0) Report(Session.RecoveryMessage);
         }
         catch { Shutdown(DesktopExitCode.Stop); throw; }
     }
@@ -125,7 +128,6 @@ internal sealed partial class DesktopEnvironment
         if (_appearance == appearance) return;
         _appearance = appearance; HideDockPreview(); Desktop.Surface.ApplyAppearance();
         Taskbar?.ApplyAppearance(); _menu?.ApplyAppearance(this);
-        _files?.ApplyAppearance(); foreach (var picker in _pickers) picker.ApplyAppearance();
         foreach (var utility in _utilities.Values) utility.ApplyAppearance();
         _switcher?.ApplyAppearance();
         _quickSettings?.ApplyAppearance(); _sections?.RefreshSharedAppearance();
@@ -142,13 +144,22 @@ internal sealed partial class DesktopEnvironment
     {
         _saveTimer.Stop(); if (IsStopping || !_dirty || _saving) return;
         _saving = true; _dirty = false;
-        try { await Session.SaveAsync(); }
-        catch (Exception ex) { _dirty = true; Report("Could not save your desktop settings", ex); }
+        try { await Session.SaveAsync(); _saveFailures = 0; _saveTimer.Interval = TimeSpan.FromSeconds(2); }
+        catch (Exception ex)
+        {
+            _dirty = true;
+            if (_saveFailures == 0) Report("Your latest settings are still in the desktop. Nexus will retry saving them", ex);
+            _saveFailures = Math.Min(6, _saveFailures + 1);
+            _saveTimer.Interval = TimeSpan.FromSeconds(Math.Min(30, 2 << _saveFailures));
+        }
         finally { _saving = false; if (!IsStopping && _dirty) _saveTimer.Start(); }
     }
     internal void ResetUsageSample() { _usage.ResetSample(); _usageTicks = 0; }
     private void Tick(object? sender, object args)
     {
+        // Keep host supervision alive while an asynchronous final save or
+        // recovery dialog is in progress. Stop this timer only at final cleanup.
+        _pulse?.Set();
         if (IsStopping) return;
         if (_host?.HasExited == true)
         {
@@ -163,7 +174,7 @@ internal sealed partial class DesktopEnvironment
             catch (Exception ex) { Log.Write("Could not start independent recovery; use Restore-Windows-Desktop.bat.", ex); }
             Shutdown(DesktopExitCode.RestoreWindows); return;
         }
-        _pulse?.Set();
+        CheckCore();
         RefreshAppearance(); Taskbar.View.RefreshClock(); UpdateTaskbar();
         if (!Session.State.UsageTracking) return;
         try
@@ -172,6 +183,21 @@ internal sealed partial class DesktopEnvironment
             if (++_usageTicks >= 12) { _usageTicks = 0; if (_dirty && !_saveTimer.IsEnabled) _saveTimer.Start(); }
         }
         catch (Exception ex) { Report("Usage sample skipped", ex, false); }
+    }
+    private async void CheckCore()
+    {
+        if (IsStopping || _checkingCore) return; _checkingCore = true;
+        try
+        {
+            var health = await _core.HealthAsync();
+            if (IsStopping) return;
+            _coreFailureReported = false;
+            if (health.IssueId != Guid.Empty && health.IssueId != _coreIssueId)
+            { _coreIssueId = health.IssueId; Report(health.Issue); }
+        }
+        catch (Exception ex)
+        { if (!IsStopping && !_coreFailureReported) { _coreFailureReported = true; Report("Nexus Core is unavailable. The desktop remains open while recovery is attempted", ex); } }
+        finally { _checkingCore = false; }
     }
     internal async void UpdateTaskbar()
     {
@@ -214,8 +240,6 @@ internal sealed partial class DesktopEnvironment
     {
         var windows = _windows.ToList();
         if (_sections is not null) windows.Add(new(WinRT.Interop.WindowNative.GetWindowHandle(_sections), "Sections", "nexus", Environment.ProcessId));
-        if (_files is not null) windows.Add(new(_files.Handle, "Files", "nexus", Environment.ProcessId));
-        foreach (var picker in _pickers) windows.Add(new(picker.Handle, picker.NativeWindow.Title, "nexus", Environment.ProcessId));
         windows.AddRange(UtilityWindows());
         return windows;
     }
@@ -224,8 +248,6 @@ internal sealed partial class DesktopEnvironment
         HideDockPreview();
         if (IsStopping || !NativeMethods.OwnsWindow(window)) { UpdateTaskbar(); return; }
         if (_sections is not null && window.Handle == WinRT.Interop.WindowNative.GetWindowHandle(_sections)) _sections.ToggleFromDock();
-        else if (_files is not null && window.Handle == _files.Handle) _files.ToggleFromDock();
-        else if (_pickers.FirstOrDefault(p => p.Handle == window.Handle) is { } picker) picker.ToggleFromDock();
         else if (UtilityFor(window) is { } utility) utility.Toggle();
         else if (!NativeMethods.ToggleDockWindow(window)) Report("Windows could not switch this app. Try the window overview.");
         Taskbar.View.RefreshWindowStates(); UpdateTaskbar();
@@ -235,8 +257,6 @@ internal sealed partial class DesktopEnvironment
         HideDockPreview();
         if (IsStopping || !NativeMethods.OwnsWindow(window)) { UpdateTaskbar(); return; }
         if (_sections is not null && window.Handle == WinRT.Interop.WindowNative.GetWindowHandle(_sections)) _sections.OpenSection(null);
-        else if (_files is not null && window.Handle == _files.Handle) _files.ReturnToWindow();
-        else if (_pickers.FirstOrDefault(p => p.Handle == window.Handle) is { } picker) picker.ReturnToWindow();
         else if (UtilityFor(window) is { } utility) utility.Restore();
         else if (!NativeMethods.Activate(window)) Report("Windows could not switch this app. Try the window overview.");
         UpdateTaskbar();
@@ -246,8 +266,6 @@ internal sealed partial class DesktopEnvironment
         HideDockPreview();
         if (IsStopping || !NativeMethods.OwnsWindow(window)) { UpdateTaskbar(); return; }
         if (_sections is not null && window.Handle == WinRT.Interop.WindowNative.GetWindowHandle(_sections)) _sections.MinimizeFromDock();
-        else if (_files is not null && window.Handle == _files.Handle) _files.MinimizeFromDock();
-        else if (_pickers.FirstOrDefault(p => p.Handle == window.Handle) is { } picker) picker.MinimizeFromDock();
         else if (UtilityFor(window) is { } utility) utility.Minimize();
         else if (!NativeMethods.Minimize(window)) Report("Windows could not minimize this app.");
         UpdateTaskbar();
@@ -336,32 +354,34 @@ internal sealed partial class DesktopEnvironment
         else if (File.Exists(target)) start.WorkingDirectory = Path.GetDirectoryName(target)!;
         Process.Start(start);
     }
-    internal void ShowFiles(string? folder = null)
+    internal async void ShowFiles(string? folder = null)
     {
-        if (IsStopping) return; HideMenu(); folder ??= Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        if (_files is null)
+        if (IsStopping) return; HideMenu();
+        try
         {
-            var window = new FilesWindow(this, new(FileSelectionKind.Browse), folder); _files = window;
-            window.Closed += (_, _) => { if (ReferenceEquals(_files, window)) _files = null; if (!IsStopping) UpdateTaskbar(); };
+            var opened = await _core.OpenFilesAsync(new(new(FileSelectionKind.Browse), folder), _cancel.Token);
+            if (IsStopping) return;
+            var window = new RunningWindow(new IntPtr(opened.Window), "Files", "Nexus.Shell", opened.ProcessId);
+            if (NativeMethods.OwnsWindow(window)) NativeMethods.Activate(window);
+            UpdateTaskbar();
         }
-        else _files.ShowFolder(folder);
-        UpdateTaskbar();
+        catch (OperationCanceledException) when (IsStopping) { }
+        catch (Exception ex) { if (!IsStopping) Report("Could not open Files; the desktop is still available", ex); }
     }
-    internal void ReturnToFiles() { if (_files is null) ShowFiles(); else _files.ReturnToWindow(); }
-    internal async Task<IReadOnlyList<string>> PickAsync(FileSelectionRequest request)
+    internal void ReturnToFiles() => ShowFiles();
+    internal async Task<IReadOnlyList<string>> PickAsync(FileSelectionRequest request, CancellationToken cancellation = default)
     {
         if (IsStopping) return [];
-        var window = new FilesWindow(this, request, Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments));
-        _pickers.Add(window); UpdateTaskbar();
-        try { return await window.Selection; }
-        finally { _pickers.Remove(window); UpdateTaskbar(); }
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellation, _cancel.Token);
+        try { var selected = await _core.OpenFilesAsync(new(request), linked.Token); return selected.Paths; }
+        catch (OperationCanceledException) when (linked.IsCancellationRequested) { return []; }
+        catch (Exception ex) { if (!IsStopping) Report("The file picker could not finish. You can open it again", ex); return []; }
+        finally { if (!IsStopping) UpdateTaskbar(); }
     }
     private List<RunningWindow> AppWindows()
     {
         var windows = NativeMethods.RunningWindows(Desktop.Handle).ToList();
         if (_sections is not null) windows.Add(new(WinRT.Interop.WindowNative.GetWindowHandle(_sections), "Sections", "nexus", Environment.ProcessId));
-        if (_files is not null) windows.Add(new(_files.Handle, "Files", "nexus", Environment.ProcessId));
-        foreach (var picker in _pickers) windows.Add(new(picker.Handle, picker.NativeWindow.Title, "nexus", Environment.ProcessId));
         windows.AddRange(UtilityWindows());
         return windows;
     }
@@ -412,10 +432,10 @@ internal sealed partial class DesktopEnvironment
         catch (Exception ex) { Report("Could not open session controls", ex); }
         finally { _sessionDialog = false; }
     }
-    internal void Shutdown(DesktopExitCode? exitCode = null)
+    internal async void Shutdown(DesktopExitCode? exitCode = null)
     {
         if (IsStopping) return; IsStopping = true;
-        _timer.Stop(); _saveTimer.Stop(); _windowRefreshTimer.Stop(); Session.Changed -= SessionChanged;
+        _saveTimer.Stop(); _windowRefreshTimer.Stop(); Session.Changed -= SessionChanged;
         _cancel.Cancel();
         Environment.ExitCode = (int)(exitCode ?? (IsManagedDesktop ? DesktopExitCode.RestoreWindows : DesktopExitCode.Stop));
         void Cleanup(Action action) { try { action(); } catch (Exception ex) { Log.Write("Desktop shutdown cleanup failed", ex); } }
@@ -423,17 +443,30 @@ internal sealed partial class DesktopEnvironment
         Cleanup(() => _sections?.Close()); _sections = null;
         Cleanup(() => _menu?.Close()); _menu = null;
         Cleanup(() => _quickSettings?.Close()); _quickSettings = null;
-        Cleanup(() => _files?.Close()); _files = null;
         foreach (var utility in _utilities.Values.ToArray()) Cleanup(utility.Close); _utilities.Clear();
         Cleanup(() => _switcher?.Close()); _switcher = null;
-        foreach (var picker in _pickers.ToArray()) Cleanup(picker.Close); _pickers.Clear();
         Cleanup(() => _windowEvents?.Dispose()); _windowEvents = null;
+        Cleanup(() => _integration?.Dispose()); _integration = null;
+        // Keep the desktop alive until the bounded final save completes.
+        try { await Session.SaveFinalAsync().WaitAsync(TimeSpan.FromSeconds(8)); }
+        catch (Exception ex)
+        {
+            Log.Write("Final Core save failed; preserving an unsaved-session copy", ex);
+            try
+            {
+                var snapshot = Session.Capture();
+                string recovery = await Task.Run(() => Session.Store.SaveRecoverySnapshot(snapshot));
+                NativeMethods.ShowStartupError("Nexus could not confirm the final settings save. Your current edits were preserved in:\n\n" + recovery);
+            }
+            catch (Exception recovery) { Log.Write("Could not preserve the unsaved-session copy", recovery); NativeMethods.ShowStartupError("Nexus could not save the latest settings or create a recovery copy. See nexus.log in the Nexus data folder."); }
+        }
+        try { await _core.DisposeAsync(); } catch (Exception ex) { Log.Write("Core shutdown failed", ex); }
+        _timer.Stop();
         Cleanup(() => _pulse?.Dispose()); _pulse = null;
         Cleanup(() => _host?.Dispose()); _host = null;
-        Cleanup(() => _integration?.Dispose()); _integration = null;
-        // Release the working-area reservation before destroying any native window.
+        // Release the working-area reservation before destroying the desktop.
         Cleanup(() => Taskbar?.Dispose()); Cleanup(() => Taskbar?.Close());
         Cleanup(() => Desktop?.Dispose()); Cleanup(() => Desktop?.Close());
-        Cleanup(Session.SaveFinal); _cancel.Dispose(); Stopped?.Invoke();
+        _cancel.Dispose(); Stopped?.Invoke();
     }
 }

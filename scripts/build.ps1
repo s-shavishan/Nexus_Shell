@@ -7,7 +7,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $projectFile = Join-Path $projectRoot 'src\Nexus.Shell\Nexus.Shell.csproj'
-$publishDirectory = Join-Path $projectRoot 'artifacts\Nexus-Shell-1.6.0-win-x64'
+$publishDirectory = Join-Path $projectRoot 'artifacts\Nexus-Shell-1.7.0-win-x64'
 $logDirectory = Join-Path $projectRoot 'artifacts\logs'
 
 if ($env:OS -ne 'Windows_NT') { throw 'WinUI must be built on Windows. Use an included Windows cloud-build route in START-HERE.md.' }
@@ -58,6 +58,24 @@ try {
     foreach ($name in @('Nexus.DesktopHost.exe', 'Nexus.DesktopHost.dll', 'Nexus.DesktopHost.deps.json', 'Nexus.DesktopHost.runtimeconfig.json')) {
         if (-not (Test-Path (Join-Path $publishDirectory $name))) { throw "Desktop host publish is incomplete: $name" }
     }
+    $coreProject = Join-Path $projectRoot 'src\Nexus.Core\Nexus.Core.csproj'
+    $coreOutput = Join-Path $projectRoot 'artifacts\core-host'
+    if (Test-Path $coreOutput) { Remove-Item $coreOutput -Recurse -Force }
+    & dotnet publish $coreProject --configuration $Configuration --runtime win-x64 --self-contained true --output $coreOutput '/p:Platform=x64' 2>&1 | Tee-Object -FilePath (Join-Path $logDirectory 'core-host-build.txt')
+    if ($LASTEXITCODE -ne 0) { throw 'Nexus Core could not be published.' }
+    foreach ($coreFile in Get-ChildItem $coreOutput -Recurse -File) {
+        $relative = $coreFile.FullName.Substring($coreOutput.Length + 1)
+        $destination = Join-Path $publishDirectory $relative
+        if ($relative -like 'Nexus.Core.*') {
+            New-Item (Split-Path $destination -Parent) -ItemType Directory -Force | Out-Null
+            Copy-Item $coreFile.FullName $destination -Force
+        } elseif (-not (Test-Path $destination) -or (Get-FileHash $destination -Algorithm SHA256).Hash -ne (Get-FileHash $coreFile.FullName -Algorithm SHA256).Hash) {
+            throw "Core runtime differs from the shell runtime: $relative. Publish both with the same .NET SDK and configuration."
+        }
+    }
+    foreach ($name in @('Nexus.Core.exe', 'Nexus.Core.dll', 'Nexus.Core.deps.json', 'Nexus.Core.runtimeconfig.json', 'Nexus.Runtime.dll')) {
+        if (-not (Test-Path (Join-Path $publishDirectory $name))) { throw "Core publish is incomplete: $name" }
+    }
     $exe = Join-Path $publishDirectory 'Nexus.Shell.exe'
     if (-not (Test-Path $exe)) { throw 'Build returned success without Nexus.Shell.exe.' }
     if (-not (Get-ChildItem $publishDirectory -Recurse -Filter 'Microsoft.UI.Xaml.dll')) { throw 'The native WinUI runtime is missing from the publish directory.' }
@@ -78,6 +96,7 @@ try {
     Copy-Item (Join-Path $projectRoot 'docs\UPDATING.md') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'docs\NEXUS-DESKTOP-MODE.md') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'docs\TEST-DESKTOP-MODE.md') $publishDirectory
+    Copy-Item (Join-Path $projectRoot 'docs\FOUNDATION-1.7.0.md') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'scripts\restore-windows-desktop.ps1') $publishDirectory
     Set-Content (Join-Path $publishDirectory 'Launch-Nexus.bat') "@echo off`r`nstart `"`" `"%~dp0Nexus.Shell.exe`"" -Encoding ASCII
     Set-Content (Join-Path $publishDirectory 'Launch-Nexus-Desktop.bat') "@echo off`r`nstart `"`" `"%~dp0Nexus.DesktopHost.exe`" --nexus-session" -Encoding ASCII

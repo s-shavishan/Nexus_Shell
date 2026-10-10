@@ -1,4 +1,10 @@
-# Desktop session updates — 1.4.2
+# Desktop session updates — 1.7.0
+
+After the Windows build and acceptance checks pass, use `Nexus-Shell-1.7.0-win-x64.zip` for a complete installation or `Nexus-Shell-1.7.0-Update-win-x64.zip` for a validated smaller update. The update carries Core and Nexus.Runtime as new application payload; they are never borrowed from the older folder. Runtime hashes must match or the updater requires the full ZIP. Exit the old desktop before launching the new folder.
+
+Source ZIPs and source patches require compilation. See SOURCE-PATCH.md and [foundation acceptance](FOUNDATION-1.7.0.md). Earlier release instructions below are historical.
+
+## Historical 1.4.2 notes
 
 Full and compatible-runtime update packages include the host, launch/recovery helpers, Quick Settings code and all six cached wallpaper assets. The resource report fingerprints the wallpapers; both portable and update packaging verify their bytes. Runtime reuse remains governed by matching hashes. The updater creates a separate version folder and preserves the old folder/settings.
 

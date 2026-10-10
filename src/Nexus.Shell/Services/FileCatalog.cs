@@ -1,7 +1,5 @@
 namespace Nexus.Shell.Services;
 
-public enum FileSelectionKind { Browse, OpenFile, OpenFiles, Folder, SaveFile }
-public sealed record FileSelectionRequest(FileSelectionKind Kind, string Title = "My files", string[]? Extensions = null, string SuggestedName = "");
 public sealed record FileEntry(string Name, string Path, bool IsFolder, string Detail)
 {
     public long Bytes { get; init; }

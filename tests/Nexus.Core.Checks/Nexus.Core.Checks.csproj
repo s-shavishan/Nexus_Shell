@@ -7,6 +7,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../src/Nexus.Runtime/Nexus.Runtime.csproj" />
     <Compile Include="../../src/Nexus.Shell/Services/CalculatorEngine.cs" Link="CalculatorEngine.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/NotesWorkspace.cs" Link="NotesWorkspace.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/FilePresentation.cs" Link="FilePresentation.cs" />
@@ -35,17 +36,8 @@
     <Compile Include="../../src/Nexus.Shell/Services/PcMetrics.cs" Link="PcMetrics.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/WindowLayouts.cs" Link="WindowLayouts.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/NativeMethods.cs" Link="NativeMethods.cs" />
-    <Compile Include="../../src/Nexus.Shell/Models/ShellState.cs" Link="ShellState.cs" />
-    <Compile Include="../../src/Nexus.Shell/Services/AuraPalette.cs" Link="AuraPalette.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/FocusSession.cs" Link="FocusSession.cs" />
-    <Compile Include="../../src/Nexus.Shell/Services/CommandSearch.cs" Link="CommandSearch.cs" />
-    <Compile Include="../../src/Nexus.Shell/Services/ExploreWorkspace.cs" Link="ExploreWorkspace.cs" />
-    <Compile Include="../../src/Nexus.Shell/Services/WorkspaceState.cs" Link="WorkspaceState.cs" />
-    <Compile Include="../../src/Nexus.Shell/Services/DesktopWorkspace.cs" Link="DesktopWorkspace.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/DesktopIntegration.cs" Link="DesktopIntegration.cs" />
-    <Compile Include="../../src/Nexus.Shell/Services/Log.cs" Link="Log.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/NavigationTrail.cs" Link="NavigationTrail.cs" />
-    <Compile Include="../../src/Nexus.Shell/Services/ShellExperience.cs" Link="ShellExperience.cs" />
-    <Compile Include="../../src/Nexus.Shell/Services/StateStore.cs" Link="StateStore.cs" />
   </ItemGroup>
 </Project>

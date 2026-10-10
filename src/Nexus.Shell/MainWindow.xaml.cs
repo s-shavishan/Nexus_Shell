@@ -17,7 +17,6 @@ namespace Nexus.Shell;
 public sealed partial class MainWindow : Window
 {
     internal const string NativeWindowTitle = "Nexus Sections";
-    private readonly StateStore _store;
     private readonly Desktop.DesktopEnvironment _environment;
     private readonly ShellState _state;
     private readonly CancellationTokenSource _discoveryCancellation = new();
@@ -47,7 +46,7 @@ public sealed partial class MainWindow : Window
             Log.Write("Loading MainWindow.xaml");
             InitializeComponent();
             Log.Write("MainWindow.xaml loaded; configuring window");
-            _environment = environment; _store = environment.Session.Store; _state = environment.Session.State;
+            _environment = environment; _state = environment.Session.State;
             Log.Write("Reading desktop accessibility settings");
             RefreshSystemAppearance();
             Log.Write($"Desktop settings ready; high contrast: {_highContrast}; animations: {_animationsEnabled}");
@@ -117,7 +116,7 @@ public sealed partial class MainWindow : Window
             
             if (_dirty) SaveState();
             
-            if (_store.RecoveryMessage.Length > 0) ShowStatus(_store.RecoveryMessage, true);
+            if (_environment.Session.RecoveryMessage.Length > 0) ShowStatus(_environment.Session.RecoveryMessage, true);
             _environment.Session.AttachSnapshot(CaptureWorkspaceSnapshot);
             // Sections does not own desktop, taskbar, tray or session lifetime.
         }
@@ -392,7 +391,7 @@ public sealed partial class MainWindow : Window
         string category = _page == "Gaming" ? "Game" : "App";
         try
         {
-            var paths = await _environment.PickAsync(new(FileSelectionKind.OpenFile, "Choose an app", [".exe", ".lnk"]));
+            var paths = await _environment.PickAsync(new(FileSelectionKind.OpenFile, "Choose an app", [".exe", ".lnk"]), _discoveryCancellation.Token);
             if (!_ready || paths.Count == 0) return;
             var app = AppCatalog.FromFile(paths[0], category);
             if (!Pin(app)) return;

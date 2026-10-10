@@ -14,7 +14,7 @@ namespace Nexus.Shell.UI.Files;
 
 internal sealed class FilesView : Grid
 {
-    private readonly DesktopEnvironment _environment;
+    private readonly FilesEnvironment _environment;
     private readonly FileSelectionRequest _request;
     private readonly Action<IReadOnlyList<string>> _complete;
     private readonly TextBox _address = new() { PlaceholderText = "Folder path", MinWidth = 100 };
@@ -51,7 +51,7 @@ internal sealed class FilesView : Grid
     private string _folder = "";
     private bool _closed, _recycle, _dialog;
     private CancellationTokenSource? _navigation;
-    internal FilesView(DesktopEnvironment environment, FileSelectionRequest request, Action<IReadOnlyList<string>> complete)
+    internal FilesView(FilesEnvironment environment, FileSelectionRequest request, Action<IReadOnlyList<string>> complete)
     {
         _environment = environment; _request = request; _complete = complete; Padding = new Thickness(12); RowSpacing = 10;
         _showGrid = request.Kind == FileSelectionKind.Browse;
@@ -299,6 +299,7 @@ internal sealed class FilesView : Grid
         if (!await ConfirmAsync("Empty Recycle Bin?", "All deleted items for this user will be permanently removed from the Recycle Bin.", "Empty bin") || _closed) return;
         await Task.Run(() => RecycleBinService.EmptyConfirmed(IntPtr.Zero)); await NavigateAsync("nexus:recycle");
     }
+    internal void ShowMessage(string message) { if (!_closed) _status.Text = message; }
     private ContentDialog Dialog(string title, object content, string primary) => new() { XamlRoot = XamlRoot, RequestedTheme = RequestedTheme, Title = title, Content = content,
         PrimaryButtonText = primary, CloseButtonText = "Cancel", DefaultButton = ContentDialogButton.Close };
     private async Task<bool> ConfirmAsync(string title, string content, string primary)

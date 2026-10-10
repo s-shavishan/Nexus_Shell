@@ -12,6 +12,9 @@ if (-not (Test-Path (Join-Path $root 'Nexus.Shell.dll') -PathType Leaf)) { throw
 foreach ($name in @('Nexus.DesktopHost.exe', 'Nexus.DesktopHost.dll', 'Nexus.DesktopHost.deps.json', 'Nexus.DesktopHost.runtimeconfig.json', 'Launch-Nexus-Desktop.bat', 'Restore-Windows-Desktop.bat', 'restore-windows-desktop.ps1')) {
     if (-not (Test-Path (Join-Path $root $name) -PathType Leaf)) { throw "The published desktop host is missing $name." }
 }
+foreach ($name in @('Nexus.Core.exe', 'Nexus.Core.dll', 'Nexus.Core.deps.json', 'Nexus.Core.runtimeconfig.json', 'Nexus.Runtime.dll')) {
+    if (-not (Test-Path (Join-Path $root $name) -PathType Leaf)) { throw "The published Core is missing $name." }
+}
 $report = Get-Content (Join-Path $root 'Nexus.resources.json') -Raw | ConvertFrom-Json
 if ($report.FormatVersion -ne 1 -or $report.AppVersion -ne $AppVersion -or @($report.ResourceFiles).Count -eq 0) { throw 'Run the compiled-resource check before creating an update.' }
 $payload = @(); $runtime = @()
@@ -21,7 +24,7 @@ foreach ($file in $all) {
     $record = [ordered]@{ File = $relative; Length = $file.Length; SHA256 = (Get-FileHash $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant() }
     # Ship app binaries, loose compiled XAML and app assets. All other files
     # must already exist with these exact bytes in the user's full base folder.
-    $owned = $relative -like 'Nexus.Shell.*' -or $relative -like 'Nexus.DesktopHost.*' -or $relative -eq 'Nexus.resources.json' -or
+    $owned = $relative -like 'Nexus.Shell.*' -or $relative -like 'Nexus.DesktopHost.*' -or $relative -like 'Nexus.Core.*' -or $relative -like 'Nexus.Runtime.*' -or $relative -eq 'Nexus.resources.json' -or
         $relative -eq 'resources.pri' -or $relative -like 'Assets/*' -or
         $file.Extension -eq '.xbf' -or $file.Extension -in @('.md', '.ps1', '.bat')
     if ($owned) { $payload += $record } else { $runtime += $record }

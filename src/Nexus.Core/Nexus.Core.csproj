@@ -12,10 +12,5 @@
     <PublishTrimmed>false</PublishTrimmed>
     <ApplicationIcon>../Nexus.Shell/Assets/Nexus.ico</ApplicationIcon>
   </PropertyGroup>
-  <ItemGroup>
-    <Compile Include="../Nexus.Shell/Services/DesktopShellPolicy.cs" Link="DesktopShellPolicy.cs" />
-    <Compile Include="../Nexus.Shell/Services/DesktopShellRegistration.cs" Link="DesktopShellRegistration.cs" />
-    <Compile Include="../Nexus.Shell/Services/DesktopSessionRecovery.cs" Link="DesktopSessionRecovery.cs" />
-    <Compile Include="../Nexus.Shell/Services/DesktopSessionRecord.cs" Link="DesktopSessionRecord.cs" />
-  </ItemGroup>
+  <ItemGroup><ProjectReference Include="../Nexus.Runtime/Nexus.Runtime.csproj" /></ItemGroup>
 </Project>

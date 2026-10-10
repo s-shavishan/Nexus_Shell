@@ -1,3 +1,9 @@
+# Current validation — 1.7.0
+
+Read [foundation validation evidence](FOUNDATION-CHECKS-1.7.0.md) and [the native acceptance gates](FOUNDATION-1.7.0.md). Portable runtime checks, existing core checks, C# API checks, source validation, and PowerShell update fixtures pass. Native Windows build and execution remain pending.
+
+The following section records the previous 1.6.0 source snapshot; it is historical evidence.
+
 # 1.6.0 validation
 
 Baseline: `0184d98d5a36b433995fbf8d1b9e6e982f434ac2` from `s-shavishan/Nexus_Shell` main.

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Platforms>AnyCPU;x64</Platforms>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <Version>1.7.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../Nexus.Shell/Models/ShellState.cs" Link="Models/ShellState.cs" />
+    <Compile Include="../Nexus.Shell/Services/StateStore.cs" Link="State/StateStore.cs" />
+    <Compile Include="../Nexus.Shell/Services/AuraPalette.cs" Link="State/AuraPalette.cs" />
+    <Compile Include="../Nexus.Shell/Services/WorkspaceState.cs" Link="State/WorkspaceState.cs" />
+    <Compile Include="../Nexus.Shell/Services/ExploreWorkspace.cs" Link="State/ExploreWorkspace.cs" />
+    <Compile Include="../Nexus.Shell/Services/DesktopWorkspace.cs" Link="State/DesktopWorkspace.cs" />
+    <Compile Include="../Nexus.Shell/Services/ShellExperience.cs" Link="State/ShellExperience.cs" />
+    <Compile Include="../Nexus.Shell/Services/CommandSearch.cs" Link="State/CommandSearch.cs" />
+    <Compile Include="../Nexus.Shell/Services/Log.cs" Link="State/Log.cs" />
+  </ItemGroup>
+</Project>

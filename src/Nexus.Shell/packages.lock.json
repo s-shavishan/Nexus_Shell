@@ -64,6 +64,10 @@
         "dependencies": {
           "Microsoft.WindowsAppSDK.Base": "1.8.251216001"
         }
+      },
+      "Nexus.Runtime": {
+        "type": "Project",
+        "version": "1.7.0"
       }
     },
     "net8.0-windows10.0.19041/win-x64": {

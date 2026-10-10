@@ -83,7 +83,7 @@ if ($null -eq $folder -and $null -ne $backup -and $backup.Format -eq 1) {
     if ([IO.Path]::IsPathRooted($savedHost) -and [IO.Path]::GetFileName($savedHost) -ieq 'Nexus.DesktopHost.exe') { $folder = [IO.Path]::GetDirectoryName($savedHost) }
 }
 if ($null -ne $folder) {
-    foreach ($name in @('Nexus.DesktopHost', 'Nexus.Shell')) {
+    foreach ($name in @('Nexus.DesktopHost', 'Nexus.Shell', 'Nexus.Core')) {
         $expectedPath = Join-Path $folder ($name + '.exe')
         foreach ($process in Get-Process -Name $name -ErrorAction SilentlyContinue) {
             try {

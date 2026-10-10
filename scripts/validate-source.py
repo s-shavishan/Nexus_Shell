@@ -35,6 +35,7 @@ required = [
     "Desktop/UtilityWindow.cs", "Desktop/DesktopEnvironment.Utilities.cs", "UI/WindowMaterial.cs",
     "UI/Controls/NotesView.cs", "UI/Controls/CalculatorView.cs", "Services/NotesWorkspace.cs",
     "Services/CalculatorEngine.cs", "Services/FilePresentation.cs",
+    "Services/CoreProcessSession.cs", "Desktop/FilesEnvironment.cs",
 ]
 for relative in required:
     assert (project / relative).is_file(), f"Missing file: {relative}"
@@ -226,7 +227,7 @@ closed = code[code.index("private void Window_Closed("):]
 assert "SaveFinal(" not in closed and "DetachSnapshot(" in closed, "Closing Sections must not finalize the desktop session"
 for file in [root / "appveyor.yml", root / ".github/workflows/build-windows.yml", root / "scripts/package.ps1", root / "scripts/build.ps1"]:
     body = file.read_text()
-    assert "Nexus-Shell-1.6.0" in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
+    assert "Nexus-Shell-1.7.0" in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
 print("Independent desktop ownership, Sections lifetime and CI versions OK")
 # Desktop replacement cannot silently instantiate Explorer or common picker UI.
 environment = (project / "Desktop/DesktopEnvironment.cs").read_text()
@@ -282,11 +283,21 @@ for relative in ["Desktop/FilesWindow.cs", "Desktop/MenuWindow.cs", "Desktop/Qui
 assert "includeOwnProcess: true" in environment, "Own content-window minimize events must be observed"
 assert "UtilityWindows()" in environment and "_utilities.Values.ToArray()" in environment, "Utility windows must participate in the dock and shutdown"
 print("Native utility lifetime, material fallback and own-window minimize wiring OK")
+for relative in ["src/Nexus.Runtime/Nexus.Runtime.csproj", "src/Nexus.Core/Nexus.Core.csproj", "tests/Nexus.Runtime.Checks/Nexus.Runtime.Checks.csproj"]:
+    ET.parse(root / relative)
+assert "ProjectReference" in (project / "Nexus.Shell.csproj").read_text()
+assert "new FilesWindow(" not in environment and "CoreProcessSession" in environment
+assert "DesktopEnvironment" not in (project / "Desktop/FilesEnvironment.cs").read_text()
+assert "Nexus.Core.csproj" in build and "Core runtime differs" in build
+for relative in ["scripts/package-update.ps1", "scripts/apply-update.ps1"]:
+    body = (root / relative).read_text()
+    assert "Nexus.Core.*" in body and "Nexus.Runtime.*" in body, f"Core/protocol must be app-owned update files: {relative}"
+print("Isolated Files ownership, shared runtime projects, Core publish and update ownership OK")
 if options.syntax:
     from tree_sitter import Language, Parser
     import tree_sitter_c_sharp
     syntax_parser = Parser(Language(tree_sitter_c_sharp.language()))
-    for source in sorted([*project.rglob("*.cs"), *(root / "src/Nexus.DesktopHost").rglob("*.cs"), *(root / "tests").rglob("*.cs")]):
+    for source in sorted([*(root / "src").rglob("*.cs"), *(root / "tests").rglob("*.cs")]):
         tree = syntax_parser.parse(source.read_bytes())
         assert not tree.root_node.has_error, f"C# syntax error: {source}"
     print("C# syntax OK (tree-sitter; API/type resolution NOT checked)")

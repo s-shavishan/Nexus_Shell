@@ -16,6 +16,8 @@ public sealed record WorkspaceLaunchItem(string Title, string Target, string Kin
 
 public sealed class ShellState
 {
+    public long PersistenceRevision { get; set; }
+    public string PersistenceCommitId { get; set; } = "";
     public string DisplayName { get; set; } = "Shan";
     public bool UsageTracking { get; set; }
     public bool FullScreen { get; set; }
@@ -62,6 +64,7 @@ public sealed class ShellState
     // Snapshot on the UI thread before handing persistence to a worker thread.
     public ShellState Snapshot() => new()
     {
+        PersistenceRevision = PersistenceRevision, PersistenceCommitId = PersistenceCommitId,
         DisplayName = DisplayName, UsageTracking = UsageTracking, FullScreen = FullScreen,
         FocusMode = FocusMode, ReducedEffects = ReducedEffects, CatalogInitialized = CatalogInitialized,
         Clock24Hour = Clock24Hour, ShowClockWidget = ShowClockWidget, ShowSpaceWidget = ShowSpaceWidget,

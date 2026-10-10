@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Nexus.Shell.Desktop;
 using Nexus.Shell.Services;
+using Nexus.Shell.Models;
 
 namespace Nexus.Shell.UI;
 
@@ -12,9 +13,10 @@ internal sealed class WindowMaterial
 {
     private bool _failed, _enabled;
     internal void Apply(Window window, Border frame, DesktopEnvironment environment)
+        => Apply(window, frame, environment.Theme, environment.Session.State);
+    internal void Apply(Window window, Border frame, ShellTheme theme, ShellState state)
     {
-        var theme = environment.Theme;
-        bool glass = !_failed && environment.Session.State.NativeGlass && !environment.Session.State.ReducedEffects && !theme.HighContrast;
+        bool glass = !_failed && state.NativeGlass && !state.ReducedEffects && !theme.HighContrast;
         try
         {
             if (glass != _enabled)

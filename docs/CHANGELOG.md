@@ -1,3 +1,11 @@
+# 1.7.0 — Core and isolated Files foundation
+
+- Add a per-session Core process with an exclusive profile writer, durable revisioned commits, and lost-acknowledgement reconciliation.
+- Run the Files browser and each picker in separate UI processes, with role-restricted IPC, peer checks, caller cancellation, readiness deadlines, and UI heartbeats.
+- Bound worker count and Core restarts; own Files workers through a Windows cleanup job while allowing external apps to survive.
+- Keep final saves ordered and asynchronous, preserve a separate recovery copy when shutdown cannot confirm a commit, and include Core in packaging, updates, diagnostics, and resource measurements.
+- Add portable runtime checks and full Windows IPC/job checks to CI. Native build, launch, and lifecycle acceptance remain pending; boot, sign-in, and Windows service configuration are later milestones.
+
 # 1.6.0 — Midnight Glass and native utilities
 
 - Rework the desktop menus, centered launcher, dock artwork/clock placement and upper-right Control Center around the Midnight Glass reference; bundle the matching night landscape.

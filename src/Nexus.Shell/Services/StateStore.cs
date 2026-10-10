@@ -7,7 +7,7 @@ namespace Nexus.Shell.Services;
 public sealed class StateStore
 {
     public static string DirectoryPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WhiteDreams", "NexusShell");
-    private const int MaximumBytes = 2 * 1024 * 1024;
+    public const int MaximumBytes = 2 * 1024 * 1024;
     private readonly string _directoryPath;
     public StateStore(string? directoryPath = null) => _directoryPath = directoryPath ?? DirectoryPath;
     public string FilePath => Path.Combine(_directoryPath, "settings.json");
@@ -70,8 +70,10 @@ public sealed class StateStore
             throw new InvalidDataException("Settings must contain a workspace object.");
         return JsonSerializer.Deserialize<ShellState>(json, _json) ?? throw new InvalidDataException("Settings are empty.");
     }
-    private static ShellState NormalizeState(ShellState state)
+    public static ShellState NormalizeState(ShellState state)
     {
+            state.PersistenceRevision = Math.Max(0, state.PersistenceRevision);
+            state.PersistenceCommitId = Guid.TryParseExact(state.PersistenceCommitId, "N", out _) ? state.PersistenceCommitId : "";
             state.DisplayName = string.IsNullOrWhiteSpace(state.DisplayName) ? "Shan" : state.DisplayName.Trim();
             state.DisplayName = state.DisplayName[..Math.Min(state.DisplayName.Length, 40)];
             state.PinnedApps ??= [];
@@ -106,9 +108,18 @@ public sealed class StateStore
         {
             if (_finalized) return;
             // Older queued saves cannot overwrite the final UI-thread snapshot.
-            _finalized = true;
             WriteAtomic(state);
+            _finalized = true;
         }
+    }
+    public string SaveRecoverySnapshot(ShellState state)
+    {
+        byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(state, _json);
+        if (bytes.Length > MaximumBytes) throw new InvalidDataException("The recovery copy exceeds the settings limit.");
+        Directory.CreateDirectory(_directoryPath);
+        string path = Path.Combine(_directoryPath, "settings.unsaved-" + DateTimeOffset.UtcNow.ToString("yyyyMMddTHHmmss") + "-" + Guid.NewGuid().ToString("N") + ".json");
+        using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+        stream.Write(bytes); stream.Flush(flushToDisk: true); return path;
     }
     private void WriteAtomic(ShellState state)
     {

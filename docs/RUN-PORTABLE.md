@@ -1,6 +1,6 @@
-# Run Nexus Shell 1.4.2
+# Run Nexus Shell 1.7.0
 
-Extract the full runnable Windows ZIP into a new folder. Keep both executables, their dependencies, PRI/XBF resources, Assets and helper files together.
+Extract the full runnable Windows ZIP into a new folder. Keep Nexus.Shell.exe, Nexus.Core.exe, Nexus.DesktopHost.exe, Nexus.Runtime.dll, their dependencies, PRI/XBF resources, Assets and helper files together. Core starts with the desktop and Files windows use isolated worker processes.
 
 - **Launch-Nexus-Desktop.bat:** temporary Nexus desktop/taskbar. Windows taskbars are hidden when Nexus is ready; the Nexus desktop covers the active Windows desktop on the primary display. **Exit Nexus** restores Windows; no sign-in policy is changed.
 - **Nexus.Shell.exe / Launch-Nexus.bat:** preview alongside Windows. Sections → Personalize → Use Nexus for this session switches to the temporary session.
@@ -12,4 +12,4 @@ Persistent Use Nexus at sign-in is optional, requires a supported edition/build 
 
 From a blank desktop, Ctrl+Alt+Delete → Task Manager → Run new task → explorer.exe. Then run the recovery BAT. Data and recovery records remain under %LOCALAPPDATA%\WhiteDreams\NexusShell.
 
-Updates create a new version folder. Exit the old Nexus instance before launching the new one. Source ZIPs require a Windows build; they are not executable updates. Complete TEST-DESKTOP-MODE.md on the VM.
+Updates create a new version folder. Exit the old Nexus instance before launching the new one. Source ZIPs require a Windows build; they are not executable updates. Complete FOUNDATION-1.7.0.md and TEST-DESKTOP-MODE.md on the VM before using this build as a daily desktop.
