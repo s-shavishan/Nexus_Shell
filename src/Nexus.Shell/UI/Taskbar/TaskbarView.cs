@@ -47,9 +47,8 @@ internal sealed class TaskbarView : Grid
     private readonly Border _separator;
     private double _reportedWidth;
     internal event Action? PreferredWidthChanged;
-    internal double PreferredWidthDip => (_environment.Session.State.FloatingTaskbar ? 280 : 416) + (_pins.Children.Count + _windows.Children.Count) * (_environment.Session.State.CompactDock ? 44 : 52);
-    private AcrylicBrush? _dockGlass;
-    private bool _glassFailed;
+    internal double PreferredWidthDip => (_environment.Session.State.FloatingTaskbar ? 220 : 356) + (_pins.Children.Count + _windows.Children.Count) * (_environment.Session.State.CompactDock ? 44 : 52);
+    internal Border Frame => _frame;
     private MotionController? _motion;
     private DockMotionController? _dockMotion;
     internal TaskbarView(DesktopEnvironment environment)
@@ -57,7 +56,7 @@ internal sealed class TaskbarView : Grid
         _environment = environment; _frame.Child = _body; Children.Add(_frame);
         _body.ColumnDefinitions.Add(new() { Width = GridLength.Auto }); _body.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) }); _body.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
         var start = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
-        _start = IconButton("Nexus", "Start", () => environment.ShowMenu(), true); start.Children.Add(_start);
+        _start = IconButton("Launchpad", "Launchpad", () => environment.ShowMenu(), true); start.Children.Add(_start);
         _search = IconButton("Search", "Search apps", () => environment.ShowMenu(true), true); start.Children.Add(_search);
         _body.Children.Add(start);
         var middle = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, VerticalAlignment = VerticalAlignment.Center };
@@ -69,10 +68,9 @@ internal sealed class TaskbarView : Grid
         Grid.SetColumn(scroll, 1); _body.Children.Add(scroll);
         var status = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
         _overview = IconButton("Windows", "Switch windows", environment.ShowWindowOverview, true); status.Children.Add(_overview);
-        status.Children.Add(IconButton("Settings", "Quick settings", environment.ShowQuickSettings, true));
         var clock = new StackPanel { Spacing = 2 }; clock.Children.Add(_time); clock.Children.Add(_date);
         _clockButton = new Button { Content = clock, Style = (Style)Application.Current.Resources["QuietButton"], Padding = new Thickness(10, 5, 10, 5), CornerRadius = new CornerRadius(12) };
-        _clockButton.Click += (_, _) => environment.ShowMenu(); ToolTipService.SetToolTip(_clockButton, "Your clock · open Start"); status.Children.Add(_clockButton);
+        _clockButton.Click += (_, _) => environment.ShowNotifications(); ToolTipService.SetToolTip(_clockButton, "Date and notifications"); status.Children.Add(_clockButton);
         _desktopButton = new Button { Width = 24, Height = 40, Content = new FontIcon { FontFamily = new FontFamily("Segoe MDL2 Assets"), Glyph = "\uE740", FontSize = 13 }, Style = (Style)Application.Current.Resources["QuietButton"], Padding = new Thickness(0) };
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_desktopButton, "Show Nexus desktop"); ToolTipService.SetToolTip(_desktopButton, "Show Nexus desktop");
         _desktopButton.Click += (_, _) => environment.ShowDesktop(); status.Children.Add(_desktopButton);
@@ -216,7 +214,7 @@ internal sealed class TaskbarView : Grid
             if (_dockMotion is not null && transitioned) { item.Indicator.Width = 22; item.Indicator.Opacity = 1; _dockMotion.SetIndicator(item.Indicator, presence, initialized); }
             if (item.State == state && item.Button.IsEnabled == valid && item.PreviewsEnabled == _environment.Session.State.DockPreviews) continue;
             item.State = state; item.Button.IsEnabled = valid; item.PreviewsEnabled = _environment.Session.State.DockPreviews;
-            item.Button.Background = active ? _environment.Theme.Brush("NexusSelection") : _environment.Theme.Brush(minimized ? "NexusInput" : "NexusSidebar");
+            item.Button.Background = active ? _environment.Theme.Brush("NexusSelection") : new SolidColorBrush(Microsoft.UI.Colors.Transparent);
             item.Indicator.Background = _environment.Theme.Brush(active ? "NexusAccent" : "NexusMuted");
             if (active) item.Indicator.Background = _environment.Theme.Brush("NexusAccent");
             if (_dockMotion is null) { item.Indicator.Width = active ? 22 : minimized ? 5 : 10; item.Indicator.Opacity = minimized ? .45 : 1; }
@@ -259,7 +257,7 @@ internal sealed class TaskbarView : Grid
     internal void SetAvailableWidth(double widthDip)
     {
         _frame.CornerRadius = new CornerRadius(_environment.Session.State.FloatingTaskbar && !_environment.Theme.HighContrast ? 22 : 0);
-        // Keep Start and Quick Settings reachable on small/scaled displays.
+        // Keep Launchpad reachable; Control Center lives in the menu bar.
         _search.Visibility = widthDip < 400 ? Visibility.Collapsed : Visibility.Visible;
         _overview.Visibility = widthDip < 440 ? Visibility.Collapsed : Visibility.Visible;
         _clockButton.Visibility = widthDip < 480 || _environment.Session.State.FloatingTaskbar ? Visibility.Collapsed : Visibility.Visible;
@@ -268,34 +266,14 @@ internal sealed class TaskbarView : Grid
     }
     internal void RefreshClock()
     { var now = DateTime.Now; _time.Text = now.ToString(_environment.Session.State.Clock24Hour ? "HH:mm" : "h:mm tt"); _date.Text = now.ToString("ddd, d MMM"); }
-    internal void Reveal() => _motion?.Enter(_body);
     internal void ApplyAppearance()
     {
         if (_released) return;
         var theme = _environment.Theme; RequestedTheme = theme.ElementTheme;
-        _frame.Background = theme.Surface("Dock");
-        // Native material where supported, with a stable gradient fallback on older
-        // Windows builds, when effects are disabled, or in high contrast.
-        if (_environment.Session.State.NativeGlass && !_environment.Session.State.ReducedEffects && !theme.HighContrast && !_glassFailed)
-        {
-            try
-            {
-                _dockGlass ??= new AcrylicBrush();
-                _dockGlass.TintColor = _dockGlass.FallbackColor = ShellTheme.Color("FF" + theme.Palette.Panel[2..]);
-                _dockGlass.TintOpacity = .68;
-                _dockGlass.TintLuminosityOpacity = .47;
-                _dockGlass.AlwaysUseFallback = false;
-                _frame.Background = _dockGlass;
-            }
-            catch (Exception ex)
-            {
-                _glassFailed = true; _dockGlass = null;
-                Log.Write("Dock glass unavailable; keeping the gradient fallback", ex);
-            }
-        }
+        _frame.Background = _environment.Session.State.NativeGlass ? theme.Glass("Dock") : theme.Surface("Dock");
         bool motionEnabled = !theme.HighContrast && theme.Animations && !_environment.Session.State.ReducedEffects;
         _motion?.SetEnabled(motionEnabled); _dockMotion?.SetEnabled(motionEnabled);
-        _frame.CornerRadius = new CornerRadius(_environment.Session.State.FloatingTaskbar && !theme.HighContrast ? 24 : 0);
+        _frame.CornerRadius = new CornerRadius(_environment.Session.State.FloatingTaskbar && !theme.HighContrast ? 22 : 0);
         _frame.BorderBrush = theme.Brush("NexusBorder"); _frame.BorderThickness = new Thickness(theme.HighContrast ? 1 : 1);
         _separator.Background = theme.Brush("NexusBorder"); _time.Foreground = theme.Brush("NexusText"); _date.Foreground = theme.Brush("NexusMuted");
         _clockButton.Background = theme.Brush("NexusSelection");

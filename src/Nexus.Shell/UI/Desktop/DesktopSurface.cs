@@ -16,23 +16,20 @@ internal sealed class DesktopSurface : Grid
     private readonly DesktopEnvironment _environment;
     private readonly Image _wallpaper = new() { Stretch = Stretch.UniformToFill, IsHitTestVisible = false };
     private readonly GridView _icons;
-    private readonly Border _menuBar = new() { Height = 32, VerticalAlignment = VerticalAlignment.Top, BorderThickness = new Thickness(0, 0, 0, 1) };
     private readonly Border _calendar = new() { Width = 322, Padding = new Thickness(16), CornerRadius = new CornerRadius(21), BorderThickness = new Thickness(1), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(20, 20, 20, 106) };
     private readonly TextBlock _weekday = new() { FontSize = 14, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
     private readonly TextBlock _day = new() { FontSize = 42 };
     private readonly TextBlock _month = new() { FontSize = 12 };
     private readonly StackPanel _tasks = new() { Spacing = 10 };
     private (string Palette, bool Contrast, bool Focus, bool Visible, string Tasks)? _calendarContent;
-    private readonly TextBlock _menuClock = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
     private readonly DispatcherTimer _clockTimer = new() { Interval = TimeSpan.FromSeconds(30) };
     private readonly InfoBar _status = new() { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(20), MaxWidth = 540 };
     private string? _wallpaperName;
     private bool _refreshing;
     internal DesktopSurface(DesktopEnvironment environment)
     {
-        _environment = environment;
+        _environment = environment; KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden;
         Children.Add(_wallpaper);
-        BuildMenuBar();
         BuildCalendar();
         _icons = new GridView { Margin = new Thickness(20, 48, 20, 100), SelectionMode = ListViewSelectionMode.Single,
             IsItemClickEnabled = false, Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
@@ -62,7 +59,7 @@ internal sealed class DesktopSurface : Grid
             _icons.SelectedItem = null;
             environment.Menus.DesktopMenu().ShowAt(this, new FlyoutShowOptions { Position = args.GetPosition(this) }); args.Handled = true;
         };
-        Children.Add(_icons); Children.Add(_calendar); Children.Add(_menuBar); Children.Add(_status);
+        Children.Add(_icons); Children.Add(_calendar);  Children.Add(_status);
         _clockTimer.Tick += (_, _) => RefreshClock();
         Loaded += (_, _) => { RefreshClock(); _clockTimer.Start(); };
         Unloaded += (_, _) => _clockTimer.Stop();
@@ -73,44 +70,7 @@ internal sealed class DesktopSurface : Grid
     }
     private void RefreshClock()
     {
-        _menuClock.Text = DateTime.Now.ToString(_environment.Session.State.Clock24Hour ? "ddd, d MMM  HH:mm" : "ddd, d MMM  h:mm tt");
         _weekday.Text = DateTime.Now.ToString("dddd"); _day.Text = DateTime.Now.ToString("d"); _month.Text = DateTime.Now.ToString("MMM yyyy");
-    }
-    private void BuildMenuBar()
-    {
-        var menu = new Grid { Padding = new Thickness(19, 0, 21, 0) };
-        menu.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) });
-        menu.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
-        var left = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 3, VerticalAlignment = VerticalAlignment.Center };
-        void Add(string label, string accessible, Action action, bool bold = false)
-        {
-            var button = new Button { Content = label, Style = (Style)Application.Current.Resources["QuietButton"],
-                FontWeight = bold ? Microsoft.UI.Text.FontWeights.SemiBold : Microsoft.UI.Text.FontWeights.Normal,
-                FontSize = 12, CornerRadius = new CornerRadius(9), Padding = new Thickness(11, 5, 11, 5), MinHeight = 28 };
-            button.Click += (_, _) => action();
-            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, accessible);
-            left.Children.Add(button);
-        }
-        void Menu(string label, MenuFlyout flyout)
-        {
-            var button = new Button { Content = label, Flyout = flyout, FontSize = 12, Padding = new Thickness(9, 3, 9, 3), MinHeight = 26, CornerRadius = new CornerRadius(6), Style = (Style)Application.Current.Resources["QuietButton"] };
-            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, label + " menu"); left.Children.Add(button);
-        }
-        Menu("◈", _environment.Menus.NexusMenu());
-        Add("Desktop", "Show Nexus desktop", _environment.ShowDesktop, true);
-        Menu("File", _environment.Menus.FileMenu());
-        Menu("View", _environment.Menus.ViewMenu());
-        Menu("Window", _environment.Menus.WindowMenu());
-        Add("Help", "Open Nexus settings and help", () => _environment.ShowSections("Personalize"));
-        menu.Children.Add(left);
-        var right = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 14, VerticalAlignment = VerticalAlignment.Center };
-        var settings = new Button { Content = new FontIcon { Glyph = "\uE713", FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 15 },
-            Width = 30, Height = 29, Style = (Style)Application.Current.Resources["QuietButton"], Padding = new Thickness(0) };
-        settings.Click += (_, _) => _environment.ShowQuickSettings();
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(settings, "Nexus Control Center");
-        right.Children.Add(settings); right.Children.Add(_menuClock);
-        Grid.SetColumn(right, 1); menu.Children.Add(right);
-        _menuBar.Child = menu;
     }
     private void BuildCalendar()
     {
@@ -163,8 +123,6 @@ internal sealed class DesktopSurface : Grid
     internal void ApplyAppearance()
     {
         var theme = _environment.Theme; RequestedTheme = theme.ElementTheme;
-        _menuBar.Background = theme.Surface("Dock"); _menuBar.BorderBrush = theme.Brush("NexusBorder");
-        _menuClock.Foreground = theme.Brush("NexusText");
         _calendar.Background = theme.Surface("Sidebar"); _calendar.BorderBrush = theme.Brush("NexusBorder"); _weekday.Foreground = theme.Brush("NexusAccent"); _day.Foreground = theme.Brush("NexusText"); _month.Foreground = theme.Brush("NexusMuted");
         _wallpaper.Visibility = theme.HighContrast || _environment.Session.State.ReducedEffects ? Visibility.Collapsed : Visibility.Visible;
         Background = theme.Surface("Canvas");

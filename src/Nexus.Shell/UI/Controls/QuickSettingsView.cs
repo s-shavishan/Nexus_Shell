@@ -16,11 +16,7 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     private readonly Slider _brightness = new() { Minimum = 0, Maximum = 100, StepFrequency = 1, IsEnabled = false };
     private readonly Button _mute = new() { Content = "Mute", IsEnabled = false };
     private readonly Button _focus;
-    private readonly TextBlock _audioMessage, _displayMessage, _profileMessage, _power, _network;
-    private readonly ComboBox _profile = new() { HorizontalAlignment = HorizontalAlignment.Stretch };
-    private readonly ToggleSwitch _compact = new() { Header = "Compact taskbar", OnContent = "On", OffContent = "Off" };
-    private readonly ToggleSwitch _floating = new() { Header = "Floating taskbar", OnContent = "Floating", OffContent = "Edge to edge" };
-    private readonly ToggleSwitch _previews = new() { Header = "Dock hover previews", OnContent = "On", OffContent = "Off" };
+    private readonly TextBlock _audioMessage, _displayMessage, _power, _network;
     private readonly List<(TextBlock Label, bool Muted)> _labels = [];
     private readonly List<Border> _cards = [];
     private readonly DispatcherTimer _poll = new() { Interval = TimeSpan.FromSeconds(5) };
@@ -50,45 +46,24 @@ internal sealed class QuickSettingsView : Grid, IDisposable
         var title = Label("Control Center", 16); title.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
         header.Children.Add(title);
         var dismiss = Button("Close", close, true); Grid.SetColumn(dismiss, 1); header.Children.Add(dismiss); body.Children.Add(header);
-        var connectivity = new Grid { ColumnSpacing = 10 }; connectivity.ColumnDefinitions.Add(new()); connectivity.ColumnDefinitions.Add(new());
-        var network = new StackPanel { Spacing = 6 }; network.Children.Add(Label("Connection", 14)); _network = Label("Reading network link…", 11, true); network.Children.Add(_network); network.Children.Add(Button("Network settings", () => environment.OpenTarget("ms-settings:network"), true)); connectivity.Children.Add(Card(network));
-        var focus = new StackPanel { Spacing = 6 }; focus.Children.Add(Label("☾  Focus desktop", 14)); focus.Children.Add(Label("A clear space to work", 11, true));
-        _focus = Button("Hide desktop icons", () => { environment.Session.State.FocusMode = !environment.Session.State.FocusMode; environment.SaveState(); RefreshPreferences(); }); focus.Children.Add(_focus); var focusCard = Card(focus); Grid.SetColumn(focusCard, 1); connectivity.Children.Add(focusCard); body.Children.Add(connectivity);
-
-        var audio = new StackPanel { Spacing = 8 };
-        audio.Children.Add(Label("Sound", 15));
-        _audioMessage = Label(_audioState.Message, 12, true); audio.Children.Add(_audioMessage);
-        AutomationProperties.SetName(_volume, "Output volume"); audio.Children.Add(_volume);
-        _mute.Style = (Style)Application.Current.Resources["AuraSurfaceButton"]; audio.Children.Add(_mute);
-        body.Children.Add(Card(audio));
-
-        var display = new StackPanel { Spacing = 8 }; display.Children.Add(Label("Brightness", 15));
-        _displayMessage = Label(_displayState.Message, 12, true); display.Children.Add(_displayMessage);
-        AutomationProperties.SetName(_brightness, "Display brightness"); display.Children.Add(_brightness); body.Children.Add(Card(display));
-
-        var visuals = new StackPanel { Spacing = 8 }; visuals.Children.Add(Label("Appearance", 15));
-        foreach (string name in new[] { "Fast", "Balanced", "Full" }) _profile.Items.Add(name);
-        AutomationProperties.SetName(_profile, "Desktop visual quality"); visuals.Children.Add(_profile);
-        _profileMessage = Label("", 11, true); visuals.Children.Add(_profileMessage);
-        var advanced = new StackPanel { Spacing = 8 }; advanced.Children.Add(_floating); advanced.Children.Add(_compact); advanced.Children.Add(_previews);
-        visuals.Children.Add(new Expander { Header = "Dock preferences", Content = advanced, HorizontalAlignment = HorizontalAlignment.Stretch });
-        visuals.Children.Add(Button("Choose desktop mood", () => environment.ShowSections("Personalize"))); body.Children.Add(Card(visuals));
-
-        var status = new StackPanel { Spacing = 4 };
-        _power = Label("Reading power status…", 11, true);
-        status.Children.Add(_power); body.Children.Add(status);
-        var actions = new Grid { ColumnSpacing = 8, RowSpacing = 8 };
-        actions.ColumnDefinitions.Add(new()); actions.ColumnDefinitions.Add(new()); actions.RowDefinitions.Add(new()); actions.RowDefinitions.Add(new());
+        var connections = new Grid { ColumnSpacing = 9, RowSpacing = 9 };
+        connections.ColumnDefinitions.Add(new()); connections.ColumnDefinitions.Add(new()); connections.RowDefinitions.Add(new()); connections.RowDefinitions.Add(new());
+        var network = new StackPanel { Spacing = 7 }; network.Children.Add(Label("Wi-Fi & network", 14)); _network = Label("Reading connection…", 11, true); network.Children.Add(_network); network.Children.Add(Button("Connections…", () => environment.OpenTarget("ms-settings:network-status"), true)); connections.Children.Add(Card(network));
+        var bluetooth = new StackPanel { Spacing = 7 }; bluetooth.Children.Add(Label("Bluetooth", 14)); bluetooth.Children.Add(Label("Pair and manage devices", 11, true)); bluetooth.Children.Add(Button("Devices…", () => environment.OpenTarget("ms-settings:bluetooth"), true)); var btCard = Card(bluetooth); Grid.SetColumn(btCard, 1); connections.Children.Add(btCard);
+        var focus = new StackPanel { Spacing = 7 }; focus.Children.Add(Label("Do Not Disturb", 14)); focus.Children.Add(Label("Quiet Nexus alerts", 11, true));
+        _focus = Button("Off", () => { environment.Notifications.Quiet = !environment.Notifications.Quiet; RefreshPreferences(); }); focus.Children.Add(_focus); var focusCard = Card(focus); Grid.SetRow(focusCard, 1); connections.Children.Add(focusCard);
+        var screen = new StackPanel { Spacing = 7 }; screen.Children.Add(Label("Display", 14)); screen.Children.Add(Button("Project screen…", () => environment.OpenTarget("DisplaySwitch.exe"), true)); screen.Children.Add(Button("Night light…", () => environment.OpenTarget("ms-settings:nightlight"), true)); var screenCard = Card(screen); Grid.SetRow(screenCard, 1); Grid.SetColumn(screenCard, 1); connections.Children.Add(screenCard); body.Children.Add(connections);
+        var audio = new StackPanel { Spacing = 8 }; audio.Children.Add(Label("Sound", 15)); _audioMessage = Label(_audioState.Message, 12, true); audio.Children.Add(_audioMessage);
+        AutomationProperties.SetName(_volume, "Output volume"); audio.Children.Add(_volume); var soundActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 }; soundActions.Children.Add(_mute); soundActions.Children.Add(Button("Output devices…", () => environment.OpenTarget("ms-settings:sound"), true)); audio.Children.Add(soundActions); body.Children.Add(Card(audio));
+        var display = new StackPanel { Spacing = 8 }; display.Children.Add(Label("Brightness", 15)); _displayMessage = Label(_displayState.Message, 12, true); display.Children.Add(_displayMessage);
+        AutomationProperties.SetName(_brightness, "Display brightness"); display.Children.Add(_brightness); display.Children.Add(Button("Display settings…", () => environment.OpenTarget("ms-settings:display"), true)); body.Children.Add(Card(display));
+        _power = Label("Reading power status…", 11, true); body.Children.Add(_power);
+        var actions = new Grid { ColumnSpacing = 8, RowSpacing = 8 }; actions.ColumnDefinitions.Add(new()); actions.ColumnDefinitions.Add(new()); actions.RowDefinitions.Add(new()); actions.RowDefinitions.Add(new());
         void AddAction(string name, Action action, int row, int column)
         { var button = Button(name, action); button.HorizontalAlignment = HorizontalAlignment.Stretch; Grid.SetRow(button, row); Grid.SetColumn(button, column); actions.Children.Add(button); }
-        AddAction("Notes", () => environment.ShowUtility("Notes"), 0, 0);
-        AddAction("Calculator", () => environment.ShowUtility("Calculator"), 0, 1);
-        AddAction("Task Manager", () => environment.OpenTarget("taskmgr.exe"), 1, 0);
-        AddAction("More controls", () => environment.ShowSections("PC controls"), 1, 1);
-        body.Children.Add(actions);
-        var footer = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        footer.Children.Add(Button("Refresh", Refresh));
-        footer.Children.Add(Button(environment.IsManagedDesktop ? "Return to Windows" : "Exit Nexus", environment.RequestExit)); body.Children.Add(footer);
+        AddAction("Lock screen", environment.LockScreen, 0, 0); AddAction("Task Manager", () => environment.OpenTarget("taskmgr.exe"), 0, 1);
+        AddAction("Windows Settings", () => environment.OpenTarget("ms-settings:"), 1, 0); AddAction("Control Panel", () => environment.OpenTarget("control.exe"), 1, 1); body.Children.Add(actions);
+        body.Children.Add(Button("Nexus appearance & dock…", () => environment.ShowSections("Personalize"), true));
         Children.Add(new ScrollViewer { Content = body, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
 
         _volume.ValueChanged += (_, args) =>
@@ -106,14 +81,6 @@ internal sealed class QuickSettingsView : Grid, IDisposable
             if (_syncing || !_open || !_displayState.Available) return;
             _queuedDisplayDevice = _displayState.DeviceId; _queuedBrightness = args.NewValue; ShowDisplay(); ScheduleWrites();
         };
-        _profile.SelectionChanged += (_, _) =>
-        {
-            if (_syncing || _profile.SelectedIndex < 0) return;
-            DesktopVisuals.Apply(environment.Session.State, (DesktopVisualProfile)_profile.SelectedIndex); environment.SaveState(); RefreshPreferences();
-        };
-        _compact.Toggled += (_, _) => { if (!_syncing) { environment.Session.State.CompactDock = _compact.IsOn; environment.SaveState(); } };
-        _floating.Toggled += (_, _) => { if (!_syncing) { environment.Session.State.FloatingTaskbar = _floating.IsOn; environment.SaveState(); } };
-        _previews.Toggled += (_, _) => { if (!_syncing) { environment.Session.State.DockPreviews = _previews.IsOn; environment.SaveState(); } };
         KeyDown += (_, args) => { if (args.Key == VirtualKey.Escape) { close(); args.Handled = true; } };
         _writes.Tick += (_, _) => { _writes.Stop(); _ = UpdateAudioAsync(false); _ = UpdateDisplayAsync(false); };
         _poll.Tick += (_, _) => { _ = UpdateAudioAsync(true); if (_displayTask is not null) _ = UpdateDisplayAsync(false); _ = UpdateStatusAsync(); };
@@ -132,28 +99,11 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     {
         RequestedTheme = _environment.Theme.ElementTheme;
         foreach (var (label, muted) in _labels) label.Foreground = _environment.Theme.Brush(muted ? "NexusMuted" : "NexusText");
-        foreach (var card in _cards) { card.Background = _environment.Theme.Brush("NexusCard"); card.BorderBrush = _environment.Theme.Brush("NexusBorder"); }
+        foreach (var card in _cards) { card.Background = _environment.Session.State.NativeGlass ? _environment.Theme.Glass("Card") : _environment.Theme.Brush("NexusCard"); card.BorderBrush = _environment.Theme.Brush("NexusBorder"); }
         RefreshPreferences();
     }
     internal void RefreshPreferences()
-    {
-        _syncing = true;
-        try
-        {
-            var profile = DesktopVisuals.Read(_environment.Session.State);
-            _profile.SelectedIndex = (int)profile; _compact.IsOn = _environment.Session.State.CompactDock; _floating.IsOn = _environment.Session.State.FloatingTaskbar; _previews.IsOn = _environment.Session.State.DockPreviews;
-            _focus.Content = _environment.Session.State.FocusMode ? "Show desktop icons" : "Hide desktop icons";
-            _profileMessage.Text = profile switch
-            {
-                DesktopVisualProfile.Fast => "Best for VMs · simple background and window cards, no glass or motion.",
-                DesktopVisualProfile.Balanced => "Cached wallpaper, dock motion and live previews, with glass turned off.",
-                _ => "Cached wallpaper, motion and glass where available."
-            };
-            if (profile != DesktopVisualProfile.Fast && !_environment.Theme.Animations)
-                _profileMessage.Text += " Animations are turned off in your Windows accessibility settings.";
-        }
-        finally { _syncing = false; }
-    }
+    { _focus.Content = _environment.Notifications.Quiet ? "On · turn off" : "Off · turn on"; }
     internal void Open()
     {
         if (_disposed) return; _open = true; RefreshPreferences(); _poll.Start();

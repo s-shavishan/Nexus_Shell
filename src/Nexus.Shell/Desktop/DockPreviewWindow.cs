@@ -69,6 +69,7 @@ internal sealed class DockPreviewWindow : Window
         var buttons = new[] { _restore, _minimize, _maximize, _close };
         for (int i = 0; i < buttons.Length; i++) { _actions.ColumnDefinitions.Add(new()); Grid.SetColumn(buttons[i], i); _actions.Children.Add(buttons[i]); }
         Grid.SetRow(_actions, 2); _root.Children.Add(_actions); Grid.SetRow(_status, 3); _root.Children.Add(_status);
+        _root.KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden;
         var escape = new KeyboardAccelerator { Key = VirtualKey.Escape };
         escape.Invoked += (_, e) => { Hide(); e.Handled = true; }; _root.KeyboardAccelerators.Add(escape);
         _viewport.SizeChanged += (_, _) => UpdateThumbnail();
@@ -182,7 +183,7 @@ internal sealed class DockPreviewWindow : Window
         _frame.BorderBrush = theme.Brush("NexusBorder"); _frame.BorderThickness = new Thickness(theme.HighContrast ? 1 : 0);
         _viewport.Background = theme.Brush("NexusInput"); _title.Foreground = theme.Brush("NexusText"); _detail.Foreground = _status.Foreground = theme.Brush("NexusMuted");
         foreach (var button in new[] { _restore, _minimize, _maximize, _close }) { button.Background = theme.Brush("NexusCard"); button.Foreground = theme.Brush("NexusText"); }
-        _chrome.SetCorners(theme.HighContrast);
+        _chrome.SetCorners(theme.HighContrast, 18);
         _motion?.SetEnabled(theme.Animations && !theme.HighContrast && !_environment.Session.State.ReducedEffects);
     }
 }

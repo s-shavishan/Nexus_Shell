@@ -1,4 +1,6 @@
-# Current validation — 1.8.0
+# Current validation — 2.0.0
+
+Read [major update source evidence](MAJOR-CHECKS-2.0.0.md) and [the Windows acceptance sequence](MAJOR-2.0.0.md). Shan reports the earlier 1.8 tests passing, while the supplied screenshot demonstrates separate Settings, minimized-caption, corner and tooltip defects. New 2.0 UI/native behavior requires fresh Windows acceptance. Earlier sections below are historical evidence.
 
 Read [startup source evidence](STARTUP-CHECKS-1.8.0.md), [VM evidence for 1.7](VM-EVIDENCE-2026-10-10.md), and [the 1.8 acceptance sequence](STARTUP-1.8.0.md). The new 1.8 paths are source-tested; Windows runtime acceptance remains pending. Earlier sections are historical evidence.
 

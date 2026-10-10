@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <Platforms>x64</Platforms>
     <PlatformTarget>x64</PlatformTarget>
-    <Version>1.8.0</Version>
+    <Version>2.0.0</Version>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
     <PublishTrimmed>false</PublishTrimmed>
@@ -15,6 +15,7 @@
   <ItemGroup>
     <Compile Include="../Nexus.Shell/Services/DesktopShellPolicy.cs" Link="DesktopShellPolicy.cs" />
     <Compile Include="../Nexus.Shell/Services/DesktopPolicyRequest.cs" Link="DesktopPolicyRequest.cs" />
+    <Compile Include="../Nexus.Shell/Services/MinimizedWindowPolicy.cs" Link="MinimizedWindowPolicy.cs" />
     <Compile Include="../Nexus.Shell/Services/DesktopShellRegistration.cs" Link="DesktopShellRegistration.cs" />
     <Compile Include="../Nexus.Shell/Services/DesktopSessionRecovery.cs" Link="DesktopSessionRecovery.cs" />
     <Compile Include="../Nexus.Shell/Services/DesktopSessionRecord.cs" Link="DesktopSessionRecord.cs" />

@@ -1,0 +1,72 @@
+Nexus Shell 2.0.0 source checks — 10 October 2026
+
+Portable/source environment: Linux; no Windows native/UI acceptance.
+Direct Roslyn compilation: Runtime, Core, DesktopHost, Core.Checks, Runtime.Checks: zero errors/warnings.
+Shell API compilation: zero errors, 19 check-setup warnings (six projection-unification, thirteen temporary-field).
+
+Major-Source.log
+XML OK: src/Nexus.Shell/MainWindow.xaml
+XML OK: src/Nexus.Shell/App.xaml
+XML OK: src/Nexus.Shell/Nexus.Shell.csproj
+XML OK: src/Nexus.Shell/app.manifest
+XML OK: NuGet.Config
+XAML content ordering OK
+Native runtime template XML OK: 9 templates
+Desktop WinRT event compatibility OK
+WinUI sealed Border inheritance OK
+WinUI Thickness constructors OK
+C# UI brush resources OK
+Native vector assets and publish wiring OK
+Cached wallpaper assets and publish wiring OK
+Independent desktop ownership, Sections lifetime and CI versions OK
+Nexus desktop mode, Files/pickers, switcher, host recovery and build/update ownership OK
+Interop imports OK
+Native Windows shortcut ownership OK
+Native utility lifetime, material fallback and own-window minimize wiring OK
+Isolated Files ownership, shared runtime projects, Core publish and update ownership OK
+Runtime project lock version OK
+PASS: 109 project files, 140 named elements, 70 handlers, resources, icon, JSON, and build references.
+C# / XAML compilation and Windows launch still required.
+
+Major-Nexus.Core.Checks-run.log
+PASS: Windows Pro capability, backup-before-policy, upgrade rollback, foreign-policy preservation, partial recovery retry, file I/O/filtering/bounds, restart/heartbeat policy.
+PASS: session takeover/restoration, durable visibility and work-area recovery, refused journal writes, reused handles, denied-policy recovery and denied-policy handling.
+PASS: dock identity, stable order, title changes, 130-window overflow, handle reuse, removal and auto-hide/reveal/fullscreen policy.
+PASS: dock motion transitions/initial discovery, rapid state sequence, preview pointer corridor/aspect fit and preference persistence.
+PASS: 1008 floating/appbar/menu placement and work-area cases across monitor origins, DPI and overflow; settings migration and persistence.
+PASS: desktop session saves after Sections closes/reopens, ordered/final writes, scaled Start bounds, native appbar layout and desktop shortcuts.
+PASS: unchanged work-area writes, failed-update retry, persistent visual profiles, scaled Quick Settings and brightness range validation.
+PASS: Explore migration, capture, note/tag search, persistent selection, independent snapshots, archive round-trip, reference deduplication, atomic import capacity and note launch exclusion.
+PASS: separate-space references, case-sensitive URLs, null imported fields, damaged/missing settings recovery, final-save ordering and atomic oversized-save rejection.
+PASS: decimal calculator/error recovery, shared notes/pins/stale edits, metadata file sorting, history commit, fullscreen priority, Spotlight placement and theme aliases.
+PASS: PC CPU counter semantics, bounded monitor layouts, stale-window rejection and workspace recovery.
+PASS: Aura palette contrast, safe default and glass preference persistence.
+PASS: navigation branching/bounds, categorized search, live recent resolution, privacy opt-out and personalization migration.
+PASS: timing, paused recovery, command search, legacy migration, bounded workspace data, JSON round-trip, and independent snapshots.
+PASS: 25 startup checks; supervised/legacy launch, folder selection, foreign-entry preservation, conflict refusal, switcher fallback, and policy-account binding.
+PASS: 65 major desktop checks; minimized-caption recovery/ownership, bounded notifications, Launchpad paging/filtering and menu-bar geometry.
+PASS: desktop migration, bounded profiles, launch-plan deduplication, nested snapshots, native structure layout, and atomic persistence.
+
+Major-Nexus.Runtime.Checks-run.log
+PASS: durable revisions, profile writer lease, failed writes, legacy migration, lost acknowledgements, and recovery-copy discovery.
+PASS: 30 simulated isolated picker crashes, browser reuse, cancellation, readiness/heartbeat timeouts, process bounds, and restart cooldown.
+PASS: production stream connection, framed state commit, role rejection, disconnect cancellation, empty-probe handling, and invalid/truncated frame rejection (OS transport replaced).
+SKIP: actual named-pipe tests explicitly disabled for this restricted test environment.
+SKIP: Windows job cleanup and external-app breakaway require Windows.
+PASS: 101 runtime assertions; durable state, uncertain-save reconciliation, caller cancellation, and simulated Files recovery. Native checks skipped: True.
+
+Major-PowerShell-fixtures.log
+Small update verified: 0.01 MB; 2 runtime files reused after compatibility checks.
+Checking update files and your existing runtime. The old app folder is retained.
+Nexus 0.5.0 is ready in: /tmp/Nexus-update-check-b76c9b2bfad24025bdf9d84e50633ad6/new
+Open Nexus.Shell.exe from the new folder to preview it. Select the new host in Personalize before your next sign-in.
+Checking update files and your existing runtime. The old app folder is retained.
+Checking update files and your existing runtime. The old app folder is retained.
+Checking update files and your existing runtime. The old app folder is retained.
+PASS: runtime reuse, folder preservation, hashes, destinations, canonical paths, and new app/resource payload requirements.
+
+PowerShell scripts parsed as part of the synthetic update fixture. Windows-only OS guard was mocked in the fixture subprocess only.
+Whitespace: git diff --check passed.
+
+Native Windows XAML/build/launch, URI activation, blur/motion/chrome, real named-pipe/jobs and sustained-use acceptance remain pending.
+See MAJOR-2.0.0.md.

@@ -42,6 +42,15 @@ internal sealed class ShellTheme
     }
     private bool _initialized;
     public Brush Brush(string key) => (Brush)((ResourceDictionary)Application.Current.Resources.ThemeDictionaries[HighContrast ? "HighContrast" : "Dark"])[key];
+    public Brush Glass(string role)
+    {
+        if (HighContrast || Simple) return Brush(role == "Frame" ? "NexusPanel" : "NexusSidebar");
+        string key = "glass:" + role;
+        if (_surfaces.TryGetValue(key, out var cached)) return cached;
+        string color = Palette.Panel[2..];
+        string alpha = role switch { "Frame" => "24", "Dock" => "42", "MenuBar" => "50", "Card" => "32", _ => "58" };
+        return _surfaces[key] = Gradient(alpha + color, (Palette.IsLight ? "60FFFFFF" : "64101C32"));
+    }
     // Reuse finite, lightweight paint across independent shell surfaces. No blur
     // or new gradient allocation is needed for a clock tick or window event.
     public Brush Surface(string name, bool simple = false)

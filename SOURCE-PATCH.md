@@ -1,24 +1,24 @@
-# Updating the source to 1.8.0
+# Updating source to 2.0.0
 
-The patch delivery contains two alternatives. Use exactly one that matches your clean source baseline:
+Use exactly one patch matching your clean baseline:
 
 | Patch | Baseline |
 | --- | --- |
-| `Nexus-Shell-1.7.0-to-1.8.0.patch` | Previous delivered 1.7.0 source, commit `72b96e9803c6ca57cb2cb1b05634c735fbcf94e7` |
-| `Nexus-Shell-main-1.5.0-to-1.8.0.patch` | Retrieved `s-shavishan/Nexus_Shell` main, commit `0184d98d5a36b433995fbf8d1b9e6e982f434ac2` |
+| `Nexus-Shell-1.8.0-to-2.0.0.patch` | Previous delivered 1.8.0 source, commit `1b8646766c87d589ee7074f72c7c1b1e25b6958d` |
+| `Nexus-Shell-main-1.5.0-to-2.0.0.patch` | Retrieved GitHub main, commit `0184d98d5a36b433995fbf8d1b9e6e982f434ac2` |
 
-Extract the patch ZIP outside the repository. Preserve local edits before applying and do not force an applicability error. In PowerShell from the repository root, substitute the actual path to the matching patch:
+Extract the patch ZIP outside your repository. Preserve local edits first. Do not force an applicability error; choose the correct baseline or use the complete Source ZIP in a fresh folder.
 
 ```powershell
-$nexusPatch = 'C:\Downloads\Nexus-Shell-1.8.0-Patch\Nexus-Shell-1.7.0-to-1.8.0.patch'
+$nexusPatch = 'C:\Downloads\Nexus-Shell-2.0.0-Patch\Nexus-Shell-1.8.0-to-2.0.0.patch'
 git apply --check --whitespace=error-all $nexusPatch
-if ($LASTEXITCODE -ne 0) { throw 'Patch does not apply cleanly; inspect your source version and local edits.' }
+if ($LASTEXITCODE -ne 0) { throw 'Patch does not apply cleanly; inspect your baseline and local edits.' }
 git apply --whitespace=error-all $nexusPatch
 if ($LASTEXITCODE -ne 0) { throw 'Patch application failed.' }
 git diff --check
 git status --short
 ```
 
-The complete Source ZIP is an alternative: extract it into a fresh directory. Review the changes and commit/push through your usual workflow. No remote branch or pull request was created by this delivery; the GitHub integration previously rejected repository writes with HTTP 403.
+Review, commit and push through the normal workflow. This delivery creates no remote branch or PR; earlier GitHub connector writes returned HTTP 403. Source delivery is not an executable update.
 
-Run the commands in README.md and complete [startup acceptance](docs/STARTUP-1.8.0.md). Expected compiled artifacts are `Nexus-Shell-1.8.0-win-x64.zip` and `Nexus-Shell-1.8.0-Update-win-x64.zip`. Native Windows build and execution remain pending.
+Build with README.md and complete [2.0 Windows acceptance](docs/MAJOR-2.0.0.md). Expected compiled packages are `Nexus-Shell-2.0.0-win-x64.zip` and `Nexus-Shell-2.0.0-Update-win-x64.zip`. Keep the current recovery helper with the current build; older helpers do not restore the newly journaled minimized-window arrangement.

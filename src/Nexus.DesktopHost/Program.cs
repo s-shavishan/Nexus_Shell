@@ -67,7 +67,7 @@ internal static class Program
                 else surfaces.RestoreDefaultSurfaces();
                 surfacesRestored = true;
             },
-            () => { RestoreWorkArea(original, snapshot); areaRestored = true; },
+            () => { RestoreWorkArea(original, snapshot); WindowsMinimizedMetrics.Restore(snapshot?.MinimizedMetrics); areaRestored = true; },
             () => { if (!WindowsDesktopSurfaces.DesktopExists) Process.Start(new ProcessStartInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe")) { UseShellExecute = true }); });
         if (surfacesRestored && areaRestored && result.WindowsDesktopRequested && recordErrors.Count == 0)
             try { SessionRecord.Delete(); } catch (Exception ex) { recordErrors.Add(ex); }
@@ -144,7 +144,7 @@ internal static class Program
             if (SessionRecord.Read(SessionId) is not null && RestoreWindows(false, null, null, false) != 0)
                 throw new InvalidOperationException("The previous desktop session still needs recovery.");
             original = Monitor();
-            var snapshot = new DesktopSessionSnapshot(1, SessionId, Environment.ProcessPath!, Rectangle(original.Value.Monitor), Rectangle(original.Value.Work), []);
+            var snapshot = new DesktopSessionSnapshot(1, SessionId, Environment.ProcessPath!, Rectangle(original.Value.Monitor), Rectangle(original.Value.Work), [], WindowsMinimizedMetrics.Read());
             SessionRecord.Save(snapshot);
             surfaces = new();
             lease = new(surfaces, saved => SessionRecord.Save(snapshot with { Surfaces = saved }));
@@ -167,6 +167,10 @@ internal static class Program
                     {
                         if (!received)
                         {
+                            var minimized = WindowsMinimizedMetrics.Read();
+                            if (minimized.Arrangement != snapshot.MinimizedMetrics!.Arrangement && !MinimizedWindowPolicy.Owns(minimized, snapshot.MinimizedMetrics))
+                                throw new InvalidOperationException("Minimized window arrangement changed during Nexus startup. Windows recovery will preserve that change.");
+                            WindowsMinimizedMetrics.Apply(MinimizedWindowPolicy.Hidden(minimized));
                             lease.TakeOver();
                             Log("Requested taskbar-only takeover; Explorer desktop windows remain behind Nexus.");
                         }
@@ -182,7 +186,7 @@ internal static class Program
                 if (!unresponsive && code == (int)DesktopExitCode.RestoreWindows)
                     return RestoreWindows(!sessionOnly, lease, original, false);
                 if (!unresponsive && code == (int)DesktopExitCode.SignOut)
-                { lease.Restore(); RestoreWorkArea(original); SessionRecord.Delete(); if (!ExitWindowsEx(0, 0)) return RestoreWindows(!sessionOnly, lease, original, true); return 0; }
+                { lease.Restore(); RestoreWorkArea(original); WindowsMinimizedMetrics.Restore(snapshot.MinimizedMetrics); SessionRecord.Delete(); if (!ExitWindowsEx(0, 0)) return RestoreWindows(!sessionOnly, lease, original, true); return 0; }
                 lease.Restore(); RestoreWorkArea(original);
                 if (!unresponsive && code == (int)DesktopExitCode.Restart) continue;
                 if (!budget.MayRestart(uptime.Elapsed)) { RestoreWindows(!sessionOnly, lease, original, true); return 1; }

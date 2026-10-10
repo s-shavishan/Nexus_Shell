@@ -63,7 +63,7 @@ public sealed class MotionController : IDisposable
         }
         _lift = Transition(new Vector3(0, -4, 0)); _settle = Transition(Vector3.Zero);
         _grow = Transition(new Vector3(1.025f)); _shrink = Transition(Vector3.One);
-        _dockGrow = Transition(new Vector3(1.12f)); _dockLift = Transition(new Vector3(0, -5, 0));
+        _dockGrow = Transition(new Vector3(1.09f)); _dockLift = Transition(new Vector3(0, -3, 0));
         _press = Transition(new Vector3(.96f)); _press.Duration = TimeSpan.FromMilliseconds(90);
     }
 

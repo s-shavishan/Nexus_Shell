@@ -9,7 +9,7 @@ public readonly record struct DesktopRectangle(int Left, int Top, int Right, int
         && value.Left >= Left && value.Top >= Top && value.Right <= Right && value.Bottom <= Bottom;
 }
 public sealed record DesktopSessionSnapshot(int Format, int SessionId, string HostPath,
-    DesktopRectangle Monitor, DesktopRectangle Work, IReadOnlyList<WindowsDesktopSurface> Surfaces);
+    DesktopRectangle Monitor, DesktopRectangle Work, IReadOnlyList<WindowsDesktopSurface> Surfaces, MinimizedDesktopMetrics? MinimizedMetrics = null);
 
 // Unlike the sign-in backup, this record never requires a registry write.
 public sealed class DesktopSessionRecord(string path)
@@ -19,7 +19,7 @@ public sealed class DesktopSessionRecord(string path)
     {
         if (snapshot.Format != 1 || snapshot.SessionId < 0 || string.IsNullOrWhiteSpace(snapshot.HostPath)
             || !Path.IsPathFullyQualified(snapshot.HostPath) || Path.GetFileName(snapshot.HostPath) != "Nexus.DesktopHost.exe"
-            || !snapshot.Monitor.Contains(snapshot.Work) || snapshot.Surfaces is null || snapshot.Surfaces.Count > 256
+            || !snapshot.Monitor.Contains(snapshot.Work) || snapshot.MinimizedMetrics is { } metrics && !MinimizedWindowPolicy.IsValid(metrics) || snapshot.Surfaces is null || snapshot.Surfaces.Count > 256
             || snapshot.Surfaces.Any(s => s.Handle == 0 || s.ProcessId <= 0 || s.ClassName is not ("Progman" or "WorkerW" or "Shell_TrayWnd" or "Shell_SecondaryTrayWnd")))
             throw new InvalidDataException("The saved desktop session is invalid.");
     }

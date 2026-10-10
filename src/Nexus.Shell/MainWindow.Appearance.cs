@@ -8,7 +8,7 @@ namespace Nexus.Shell;
 
 public sealed partial class MainWindow
 {
-    private AcrylicBrush? _auraGlass;
+    private UI.LiquidGlassBackdrop? _auraGlass;
     private bool _glassUnavailable;
     private static Windows.UI.Color AuraColorValue(string hex) => ShellTheme.Color(hex);
     private static LinearGradientBrush AuraGradient(string first, string last) => ShellTheme.Gradient(first, last);
@@ -28,37 +28,29 @@ public sealed partial class MainWindow
     }
     private void ConfigureAuraGlass(AuraPalette palette)
     {
-        if (!_state.NativeGlass || _state.ReducedEffects || _highContrast || !_isActive || _glassUnavailable)
-        { _auraGlass = null; return; }
+        if (!_state.NativeGlass || _state.ReducedEffects || _highContrast || _glassUnavailable)
+        { if (_auraGlass is not null) SystemBackdrop = null; _auraGlass = null; return; }
         try
         {
-            _auraGlass ??= new AcrylicBrush();
-            _auraGlass.TintColor = _auraGlass.FallbackColor = AuraColorValue("FF" + palette.Panel[2..]);
-            _auraGlass.TintOpacity = palette.IsLight ? .74 : .70;
-            _auraGlass.TintLuminosityOpacity = palette.IsLight ? .84 : .55;
-            _auraGlass.AlwaysUseFallback = false;
+            if (!Microsoft.UI.Composition.SystemBackdrops.DesktopAcrylicController.IsSupported()) { _glassUnavailable = true; return; }
+            if (_auraGlass is null) { _auraGlass = new UI.LiquidGlassBackdrop(); _auraGlass.Failed += () => DesktopRoot.DispatcherQueue.TryEnqueue(() => { _glassUnavailable = true; _auraGlass = null; SystemBackdrop = null; ApplyAuraSurfaces(true); }); SystemBackdrop = _auraGlass; }
+            _auraGlass.SetTint(AuraColorValue("FF" + palette.Panel[2..]));
         }
-        catch (Exception ex)
-        { _auraGlass = null; _glassUnavailable = true; Log.Write("Sections glass unavailable; using the solid theme", ex); }
+        catch (Exception error) { SystemBackdrop = null; _auraGlass = null; _glassUnavailable = true; Log.Write("Sections glass unavailable; using solid surfaces", error); }
     }
     private void ApplyAuraSurfaces(bool simple)
     {
-        Brush panel = _highContrast ? Resource("NexusPanel") : simple ? _solidPanel : (Brush?)_auraGlass ?? Resource("NexusPanel");
-        try { HomeBorder.Background = ControlPanel.Background = CommandPanel.Background = panel; }
-        catch (Exception ex) when (_auraGlass is not null)
-        {
-            _auraGlass = null; _glassUnavailable = true;
-            Log.Write("Sections material connection failed; using solid surfaces", ex);
-            HomeBorder.Background = ControlPanel.Background = CommandPanel.Background = _solidPanel;
-        }
-        Sidebar.Background = _environment.Theme.Surface("Sidebar", simple);
-        WindowChrome.Background = WindowFooter.Background = Resource("NexusPanel");
-        HeroCard.Background = _highContrast ? Resource("NexusCard") : simple ? _solidCard : _environment.Theme.Surface("Hero");
-        ApplyOverviewAppearance();
-        UpdateNavigation();
+        bool glass = _auraGlass is not null && !simple;
+        var theme = _environment.Theme;
+        Brush panel = glass ? theme.Glass("Panel") : _highContrast ? Resource("NexusPanel") : _solidPanel;
+        HomeBorder.Background = ControlPanel.Background = CommandPanel.Background = panel;
+        DesktopRoot.Background = glass ? theme.Glass("Frame") : Resource("NexusPanel");
+        Sidebar.Background = glass ? theme.Glass("Panel") : theme.Surface("Sidebar", simple);
+        WindowChrome.Background = WindowFooter.Background = glass ? theme.Glass("Frame") : Resource("NexusPanel");
+        HeroCard.Background = _highContrast ? Resource("NexusCard") : simple ? _solidCard : theme.Surface("Hero");
+        ApplyOverviewAppearance(); UpdateNavigation();
         GlassStatus.Text = _glassUnavailable ? "Solid fallback · native glass is unavailable on this system."
-            : _state.NativeGlass ? "Glass follows Windows availability, high contrast, reduced effects and window focus."
-            : "Enable native glass for the Sections window and its floating controls.";
+            : _state.NativeGlass ? "Liquid glass follows Windows transparency and accessibility settings." : "Enable liquid glass for Nexus windows and desktop controls.";
     }
     private void UpdateNavigation()
     {

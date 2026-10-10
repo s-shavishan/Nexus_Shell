@@ -7,6 +7,7 @@ public enum DockMotionCue { None, Arrive, Launch, Activate, Minimize, Restore }
 // and the first reconciliation cannot look like an app has minimized/restored.
 public static class DockMotionPolicy
 {
+    public static int Duration(DockMotionCue cue) => cue switch { DockMotionCue.Launch => 360, DockMotionCue.Arrive => 220, DockMotionCue.Restore => 190, DockMotionCue.Minimize => 150, _ => 130 };
     public static DockMotionCue Transition(DockPresence? previous, DockPresence next, bool newlyOpened = false)
     {
         if (previous is null) return newlyOpened ? DockMotionCue.Arrive : DockMotionCue.None;

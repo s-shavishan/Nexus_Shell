@@ -38,7 +38,7 @@ internal sealed class ExclusiveTaskbarRegistration : ITaskbarLayer
         double scale = ShellLayerInterop.Scale(_handle);
         int height = Math.Min(monitor.Bottom - monitor.Top, DesktopLayout.TaskbarReservationHeight(compact, floating, scale));
         var reservation = new ShellRect(monitor.Left, monitor.Bottom - height, monitor.Right - monitor.Left, height);
-        var work = DesktopLayout.TaskbarWorkArea(monitor.Bounds, compact, floating, scale);
+        var work = DesktopLayout.ManagedWorkArea(monitor.Bounds, compact, floating, scale);
         bool moved = Reservation != reservation;
         _workArea.Apply(work, DesktopWorkArea.Apply); WorkArea = work;
         Reservation = reservation; Bounds = DesktopLayout.TaskbarBounds(reservation, floating, preferredWidthDip, scale);

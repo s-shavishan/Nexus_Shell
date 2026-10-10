@@ -37,6 +37,7 @@ public sealed partial class MainWindow : Window
     private bool _highContrast, _animationsEnabled, _appearanceReadFailed;
     private readonly SolidColorBrush _selection = MakeBrush(190, 171, 248, 40);
     private readonly SolidColorBrush _solidPanel = MakeBrush(25, 32, 51), _solidCard = MakeBrush(37, 45, 69);
+    private readonly UI.WindowTransition _windowTransition;
     private readonly SolidColorBrush _transparent = MakeBrush(0, 0, 0, 0);
 
     internal MainWindow(Desktop.DesktopEnvironment environment)
@@ -69,7 +70,9 @@ public sealed partial class MainWindow : Window
             _appWindow.MoveAndResize(new RectInt32(workArea.X + (workArea.Width - initialWidth) / 2,
                 workArea.Y + (workArea.Height - initialHeight) / 2, initialWidth, initialHeight));
             if (_appWindow.Presenter is OverlappedPresenter presenter) presenter.SetBorderAndTitleBar(false, false);
-            _chrome = new(_handle, resizable: true);
+            _windowTransition = new(DesktopRoot, () => _environment.Theme.Animations && !_highContrast && !_state.ReducedEffects);
+            _chrome = new(_handle, resizable: true, stateChanged: maximized => { DesktopRoot.CornerRadius = new CornerRadius(maximized || _highContrast ? 0 : 14); DesktopRoot.BorderThickness = new Thickness(maximized ? 0 : 1); }, minimizeRequested: Minimize);
+            _chrome.Restored += _windowTransition.Restore;
             var icon = Path.Combine(AppContext.BaseDirectory, "Assets", "Nexus.ico");
             if (File.Exists(icon)) _appWindow.SetIcon(icon);
             DisplayNameBox.Text = _state.DisplayName;
@@ -513,6 +516,9 @@ public sealed partial class MainWindow : Window
         bool animation = !simple && _isActive && _animationsEnabled;
         _motion?.SetEnabled(animation);
         _chrome.SetCorners(highContrast);
+        bool square = _state.FullScreen || NativeMethods.IsZoomed(_handle);
+        DesktopRoot.CornerRadius = new CornerRadius(highContrast || square ? 0 : 14);
+        DesktopRoot.BorderThickness = new Thickness(square ? 0 : 1);
         
         DesktopRoot.Background = Resource("NexusPanel");
         ApplyAuraSurfaces(simple);
@@ -564,6 +570,7 @@ public sealed partial class MainWindow : Window
     }
     private void SetFullScreen(bool enabled)
     {
+        _windowTransition.Cancel();
         try
         {
             _chrome.SetFullscreen(enabled);
@@ -575,12 +582,11 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex) { Error("Could not change display mode", ex); }
     }
-    private void Minimize()
+    private async void Minimize()
     {
+        if (_windowTransition.IsMinimizing) { _windowTransition.Restore(); return; }
         if (_state.FullScreen) SetFullScreen(false);
-        _motion?.SetEnabled(false);
-        if (_appWindow.Presenter is OverlappedPresenter presenter) presenter.Minimize();
-        _environment.UpdateTaskbar();
+        await _windowTransition.MinimizeAsync(() => { _motion?.SetEnabled(false); if (_appWindow.Presenter is OverlappedPresenter presenter) presenter.Minimize(); _environment.UpdateTaskbar(); });
     }
     internal void ToggleFromDock()
     {
@@ -631,7 +637,7 @@ public sealed partial class MainWindow : Window
     private void FullScreen_Click(object sender, RoutedEventArgs args) => SetFullScreen(!_state.FullScreen);
     private void Minimize_Click(object sender, RoutedEventArgs args) => Minimize();
     
-    private void ExpandHome_Click(object sender, RoutedEventArgs args) { if (_appWindow.Presenter is OverlappedPresenter p) { if (p.State == OverlappedPresenterState.Maximized) p.Restore(); else p.Maximize(); } }
+    private void ExpandHome_Click(object sender, RoutedEventArgs args) { _windowTransition.Restore(); if (_appWindow.Presenter is OverlappedPresenter p) { if (p.State == OverlappedPresenterState.Maximized) p.Restore(); else p.Maximize(); } }
     private void Desktop_SizeChanged(object sender, SizeChangedEventArgs args) { if (_ready) ApplyWidgetLayout(); }
     private void PageHost_SizeChanged(object sender, SizeChangedEventArgs args)
     {
@@ -648,7 +654,7 @@ public sealed partial class MainWindow : Window
     }
     private void SystemSettings_Click(object sender, RoutedEventArgs args)
     {
-        try { AppCatalog.OpenSettings((string)((Button)sender).Tag); ControlsFlyout.Hide(); }
+        try { _environment.OpenTarget((string)((Button)sender).Tag); ControlsFlyout.Hide(); }
         catch (Exception ex) { Error("Could not open Windows settings", ex); }
     }
     private void DataFolder_Click(object sender, RoutedEventArgs args)
@@ -723,7 +729,7 @@ public sealed partial class MainWindow : Window
         _ready = false; _uiTimer.Stop(); _searchTimer.Stop();
         _audioWriteTimer.Stop(); _audio?.Dispose(); _focusTimer.Stop(); _discoveryCancellation.Cancel();
         try { _motion?.Dispose(); } catch (Exception ex) { Log.Write("Sections motion cleanup skipped", ex); }
-        _chrome.Dispose();
+        _windowTransition.Dispose(); _chrome.Dispose();
         _discoveryCancellation.Dispose();
         if (!_environment.IsStopping) _environment.SaveState();
     }

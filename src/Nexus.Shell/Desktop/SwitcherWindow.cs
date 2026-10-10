@@ -47,6 +47,7 @@ internal sealed class SwitcherWindow : Window
           """);
         _list.ItemClick += (_, e) => Commit((SwitcherItem)e.ClickedItem);
         _list.KeyDown += (_, e) => { if (e.Key == VirtualKey.Enter) { CommitSelection(); e.Handled = true; } };
+        _root.KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden;
         var escape = new KeyboardAccelerator { Key = VirtualKey.Escape }; escape.Invoked += (_, e) => { Hide(); e.Handled = true; }; _root.KeyboardAccelerators.Add(escape);
         Activated += (_, e) => { if (e.WindowActivationState == WindowActivationState.Deactivated && IsOpen) Hide(); };
         Closed += (_, _) => { IsOpen = false; _motion.Dispose(); _chrome.Dispose(); environment.SwitcherClosed(this); };
@@ -81,6 +82,6 @@ internal sealed class SwitcherWindow : Window
         var theme = _environment.Theme; _root.RequestedTheme = theme.ElementTheme;
         _frame.Background = _root.Background = theme.Brush("NexusPanel"); _frame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 18);
         _title.Foreground = _list.Foreground = theme.Brush("NexusText"); _hint.Foreground = theme.Brush("NexusMuted");
-        _chrome.SetCorners(theme.HighContrast); _motion.Refresh();
+        _chrome.SetCorners(theme.HighContrast, 18); _motion.Refresh();
     }
 }

@@ -21,16 +21,21 @@ internal sealed class WindowChrome : IDisposable
     private readonly bool _resizable, _customClip;
     private readonly int _minimumWidth, _minimumHeight;
     private readonly Action? _tuck;
+    private readonly Action<bool>? _stateChanged;
+    private readonly Action? _minimizeRequested;
+    private bool _wasMinimized;
+    internal event Action? Restored;
+    private bool? _maximized;
     private readonly ShellLayerInterop.SubclassProc _callback;
     private readonly UIntPtr _id = new(0x4E10);
     private ShellRect? _clip;
     private (ShellRect Rectangle, int Diameter, bool Clear)? _applied;
-    private double _radius = 18;
+    private double _radius = 14;
     private bool _fullscreen, _disposed, _applying, _reported, _regionsEnabled = true;
-    internal WindowChrome(IntPtr handle, bool resizable = false, bool customClip = false, Action? tuck = null, int minimumWidth = 480, int minimumHeight = 360)
+    internal WindowChrome(IntPtr handle, bool resizable = false, bool customClip = false, Action? tuck = null, int minimumWidth = 480, int minimumHeight = 360, Action<bool>? stateChanged = null, Action? minimizeRequested = null)
     {
         _minimumWidth = Math.Max(160, minimumWidth); _minimumHeight = Math.Max(160, minimumHeight);
-        _handle = handle; _resizable = resizable; _customClip = customClip; _tuck = tuck; _callback = Message;
+        _handle = handle; _resizable = resizable; _customClip = customClip; _tuck = tuck; _stateChanged = stateChanged; _minimizeRequested = minimizeRequested; _callback = Message;
         if (!ShellLayerInterop.SetWindowSubclass(handle, _callback, _id, UIntPtr.Zero)) throw new Win32Exception("Could not attach the Nexus window frame.");
         // DWMNCRP_DISABLED removes Windows 10's bright non-client outline.
         int policy = 1; _ = DwmSetWindowAttribute(handle, 2, ref policy, 4);
@@ -39,8 +44,8 @@ internal sealed class WindowChrome : IDisposable
         ShellLayerInterop.SetWindowPos(handle, IntPtr.Zero, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0004 | 0x0010 | 0x0020);
         Refresh();
     }
-    internal void SetCorners(bool highContrast)
-    { _radius = highContrast ? 0 : 18; Refresh(); }
+    internal void SetCorners(bool highContrast, double radiusDip = 14)
+    { _radius = highContrast ? 0 : radiusDip; Refresh(); }
     internal void SetFullscreen(bool value) { _fullscreen = value; Refresh(); }
     internal void SetClip(ShellRect rectangle, double radiusDip)
     { _clip = rectangle; _radius = Math.Max(0, radiusDip); Refresh(); }
@@ -56,6 +61,7 @@ internal sealed class WindowChrome : IDisposable
         int width = window.Right - window.Left, height = window.Bottom - window.Top;
         if (width <= 0 || height <= 0 || (_customClip && _clip is null)) return;
         bool clear = !_customClip && (_fullscreen || IsZoomed(_handle));
+        if (_maximized != clear) { _maximized = clear; _stateChanged?.Invoke(clear); }
         var rectangle = _clip ?? new ShellRect(0, 0, width, height);
         int diameter = (int)Math.Round(Math.Min(_radius * ShellLayerInterop.Scale(_handle) * 2, Math.Min(rectangle.Width, rectangle.Height)));
         var shape = (rectangle, diameter, clear);
@@ -87,6 +93,8 @@ internal sealed class WindowChrome : IDisposable
         {
             if (!_disposed)
             {
+                if (message == NativeMethods.NexusMinimizeMessage && _minimizeRequested is not null) { _minimizeRequested(); return IntPtr.Zero; }
+                if (message == NativeMethods.NexusRestoreMessage) { Restored?.Invoke(); return IntPtr.Zero; }
                 if (_tuck is not null && message == 0x0112 && (wp.ToUInt64() & 0xFFF0) == 0xF020)
                 { _tuck(); return IntPtr.Zero; }
                 if (message == 0x0083) return IntPtr.Zero; // whole HWND is client area
@@ -106,6 +114,7 @@ internal sealed class WindowChrome : IDisposable
         catch (Exception ex)
         { if (!_reported) { _reported = true; Log.Write("Nexus frame decoration unavailable", ex); } }
         var result = ShellLayerInterop.DefSubclassProc(window, message, wp, lp);
+        if (!_disposed && message == 0x0005) { bool minimized = wp.ToUInt64() == 1; bool restoring = _wasMinimized && !minimized; _wasMinimized = minimized; if (restoring) Restored?.Invoke(); }
         if (!_disposed && message is 0x0005 or 0x0047 or 0x02E0) Refresh();
         return result;
     }

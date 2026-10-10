@@ -1,6 +1,6 @@
-# Nexus desktop sessions — 1.8.0
+# Nexus desktop sessions — 2.0.0
 
-Core now starts with each Nexus desktop and owns settings plus isolated Files workers. Keep the complete build folder together and finish [the foundation acceptance checks](STARTUP-1.8.0.md). Only one session can own a user's settings profile at a time. Boot and authentication still use Windows.
+Core now starts with each Nexus desktop and owns settings plus isolated Files workers. Keep the complete build folder together and finish [the major desktop acceptance checks](MAJOR-2.0.0.md). Only one session can own a user's settings profile at a time. Boot and authentication still use Windows.
 
 ## Use Nexus now and restore Windows on exit
 

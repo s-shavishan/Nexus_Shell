@@ -12,16 +12,24 @@ namespace Nexus.Shell.UI;
 internal sealed class WindowMaterial
 {
     private bool _failed, _enabled;
-    internal void Apply(Window window, Border frame, DesktopEnvironment environment)
-        => Apply(window, frame, environment.Theme, environment.Session.State);
-    internal void Apply(Window window, Border frame, ShellTheme theme, ShellState state)
+    private LiquidGlassBackdrop? _backdrop;
+    internal void Apply(Window window, Border frame, DesktopEnvironment environment, string role = "Frame")
+        => Apply(window, frame, environment.Theme, environment.Session.State, role);
+    internal void Apply(Window window, Border frame, ShellTheme theme, ShellState state, string role = "Frame")
     {
         bool glass = !_failed && state.NativeGlass && !state.ReducedEffects && !theme.HighContrast;
         try
         {
+            glass = glass && Microsoft.UI.Composition.SystemBackdrops.DesktopAcrylicController.IsSupported();
+            frame.RequestedTheme = theme.ElementTheme;
             if (glass != _enabled)
-            { window.SystemBackdrop = glass ? new DesktopAcrylicBackdrop() : null; _enabled = glass; }
-            frame.Background = glass ? new SolidColorBrush(ShellTheme.Color(theme.Palette.IsLight ? "6AF0F2FA" : "6A101A2F")) : theme.Surface("Sidebar");
+            {
+                _backdrop = glass ? new LiquidGlassBackdrop() : null;
+                if (_backdrop is not null) _backdrop.Failed += () => frame.DispatcherQueue.TryEnqueue(() => { _failed = true; _enabled = false; window.SystemBackdrop = null; frame.Background = theme.Surface("Sidebar"); });
+                window.SystemBackdrop = _backdrop; _enabled = glass;
+            }
+            _backdrop?.SetTint(ShellTheme.Color("FF" + theme.Palette.Panel[2..]));
+            frame.Background = glass ? theme.Glass(role) : theme.Surface("Sidebar");
         }
         catch (Exception ex)
         { _failed = true; _enabled = false; window.SystemBackdrop = null; frame.Background = theme.Surface("Sidebar"); Log.Write("Window material unavailable; using the palette fallback", ex); }

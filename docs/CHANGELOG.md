@@ -1,3 +1,17 @@
+# 2.0.0 — Major desktop update
+
+- Route Windows Settings through the Windows URI launcher and report an unavailable page; retain Control Panel access.
+- Journal the original minimized-window arrangement before takeover. Hide native minimized captions off screen and restore only Nexus-owned arrangement changes, preserving current width/gap values.
+- Align native/XAML window corners at 14 DIP and remove both rounding and borders on maximized content windows. Hide automatic accelerator tooltips while retaining keyboard commands.
+- Add per-window desktop acrylic with translucent glass surfaces and Windows/accessibility fallback, including Files, Sections, utilities, dock, menu bar and panels.
+- Give the macOS-inspired menu bar its own native topmost window and reserve its height in managed sessions; hide shell overlays for fullscreen apps.
+- Open Start into a paged, keyboard-accessible Launchpad with categories and a separate search entry. Bound displayed pages to 24 apps.
+- Add an 80-entry Nexus notification inbox, badge, dismiss/clear and quiet mode for this session.
+- Rebuild Control Center around network/Bluetooth links, real sound controls, supported brightness, display projection, lock, Task Manager, Settings and Control Panel. Remove its dock icon.
+- Tune compositor dock cues, hover and hide/reveal; add finite Nexus window minimize/restore motion with cancellation and reduced-motion support. External apps retain native Windows animation.
+- Remove Exit Nexus from desktop and tray context menus. Preserve explicit recovery in the top Nexus menu and independent restore helpers.
+- Add major desktop and recovery-journal checks, update CI/package versions, and document Windows visual acceptance gates.
+
 # 1.8.0 — Supervised startup and Windows 10 sign-in recovery
 
 - Show a Nexus readiness surface driven by actual Core, workspace, desktop, and dock completion, with cancellation back to Windows.

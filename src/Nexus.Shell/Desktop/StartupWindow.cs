@@ -48,7 +48,7 @@ internal sealed class StartupWindow : Window
         WindowSwitcherPolicy.Request(() => window.IsShownInSwitchers = false, error => Log.Write("Startup switcher fallback", error));
         if (window.Presenter is OverlappedPresenter presenter)
         { presenter.SetBorderAndTitleBar(false, false); presenter.IsResizable = presenter.IsMaximizable = presenter.IsMinimizable = false; }
-        ShellLayerInterop.ToolWindow(handle); _chrome = new(handle, customClip: true);
+        ShellLayerInterop.ToolWindow(handle); _chrome = new(handle); _chrome.SetCorners(false, 22);
         var work = ShellLayerInterop.Monitor(handle).Work; double scale = ShellLayerInterop.Scale(handle);
         int width = (int)Math.Min(work.Right - work.Left, 600 * scale), height = (int)Math.Min(work.Bottom - work.Top, 445 * scale);
         window.MoveAndResize(new RectInt32(work.Left + (work.Right - work.Left - width) / 2, work.Top + (work.Bottom - work.Top - height) / 2, width, height));

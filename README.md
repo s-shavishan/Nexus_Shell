@@ -1,28 +1,21 @@
-# Nexus Shell 1.8.0 — Supervised startup
+# Nexus Shell 2.0.0 — Major desktop update
 
-A native C# / WinUI desktop environment for Windows. This source update adds a post-sign-in readiness screen, supervised automatic desktop startup, and fixes for the earlier Windows 10 sign-in failures observed in the VM logs. It retains the 1.7 Core and isolated Files foundation.
+Nexus is a native C# / WinUI desktop environment on Windows. This release rebuilds everyday desktop surfaces and addresses the Settings, minimized-caption, corner and accelerator-tooltip defects in the supplied Windows 10 VM screenshot. It retains supervised startup, the Core settings owner, isolated Files workers and independent Windows recovery.
 
-## What changed
+## Desktop changes
 
-- **Startup readiness:** real Core, saved-workspace, desktop, and dock completion, with a Return to Windows action. No fixed animation delay or fake percentage.
-- **Automatic desktop startup:** Personalize offers a supervised launcher after Windows sign-in, independently from shell replacement. Unknown startup commands are preserved, and conflicting Nexus shell configuration is refused.
-- **Windows 10 shell compatibility:** optional switcher requests tolerate the observed E_NOTIMPL while native tool-window styling remains in place. Other errors remain visible.
-- **Policy recovery:** protected changes use an explicit Windows elevation helper that verifies the originating account. `Restore-Nexus-SignIn.bat` provides independent policy restoration; GUI recovery remains separate.
-- **Core logging:** empty readiness-probe disconnects close quietly. Partial frames are still rejected and reported.
+- **Liquid glass styling:** per-window Windows desktop acrylic, translucent surfaces and restrained highlights for Files, Sections, utilities, Launchpad, dock, menu bar and panels. Windows transparency, graphics support and accessibility can select a solid fallback. This uses Windows blur/tint; it does not reproduce Apple's refraction shader.
+- **Menu bar:** an independent, macOS-inspired top bar with Nexus menus, network, sound, search, Control Center, notifications and date. Managed sessions reserve its height for maximized windows; fullscreen applications hide the shell overlays. Menus control Nexus, not arbitrary Windows applications.
+- **Launchpad:** Start opens a paged app grid with category filters and keyboard navigation. Search remains a separate entry. Only 24 app tiles are realized per page.
+- **Control Center:** network/Bluetooth settings, actual output volume/mute, brightness when supported, display projection, night light, lock, Task Manager, Windows Settings and Control Panel. Its dock icon is removed.
+- **Notifications:** an 80-entry Nexus inbox with unread badge, dismissal, clear and quiet mode. These are session-local Nexus alerts; Windows app toast capture and cross-session history are future work.
+- **Window fixes:** Settings uses the Windows URI launcher. Native minimized captions are moved off screen during supervised takeover, with journaled recovery. Content windows use matching 14-DIP corners; maximized windows have square edges. Automatic Esc/Ctrl+K hover tips are hidden without disabling the shortcuts.
+- **Motion:** retuned dock cues and hover, animated dock hide/reveal and finite Nexus minimize/restore transitions. New actions cancel stale transitions. Reduced-motion preferences skip these effects; other applications use Windows' native animation.
+- **Menus:** desktop and tray right-click menus no longer offer Exit Nexus. Explicit recovery remains available from the top Nexus menu and the shipped restore helpers.
 
-- **Core:** owns durable settings writes and launches/supervises Files. It starts with the desktop; it is not a machine-wide Windows service.
-- **Files:** the browser and each picker run in separate `Nexus.Shell.exe --files-worker` processes. They do not create a desktop, register a taskbar, or write settings.
-- **Picker lifetime:** closing the calling Sections window or the desktop cancels its outstanding picker. A tool failure completes the request with an error instead of leaving the desktop waiting indefinitely.
-- **Persistence:** revision checks reject stale commits. Lost acknowledgements are reconciled using the original commit ID before newer snapshots are submitted. Core acknowledges only after an atomic, flushed save.
-- **Recovery:** startup deadlines, UI heartbeats, an eight-process Files bound, bounded Core restarts, and Windows cleanup jobs manage component lifetime. External applications opened from Files are intended to outlive the Files cleanup job; a Windows test checks this behavior.
-- **Shutdown:** ordered final saves use a deadline. If they cannot be confirmed, Nexus attempts a separate unsaved-session recovery copy and reports its location.
-- **Delivery:** full packages and small updates include Core and the shared protocol assembly. Resource measurements include all Nexus components from the selected installation/session.
+## Build on Windows
 
-The Midnight Glass desktop, Files controls, Notes, Calculator, and existing Windows recovery controls remain available. Notes, Calculator, Sections, desktop, and dock still share the main UI process; further isolation is future work.
-
-## Build and validate on Windows
-
-Use the existing .NET 8 SDK and Windows app build tools:
+Use .NET 8 and the Windows app build tools. Source ZIPs contain no compiled executable.
 
 ```powershell
 python scripts/validate-source.py
@@ -33,18 +26,14 @@ dotnet run --project tests/Nexus.Runtime.Checks/Nexus.Runtime.Checks.csproj -c R
 .\scripts\package.ps1
 ```
 
-Keep the complete published folder together. It must contain `Nexus.Shell.exe`, `Nexus.DesktopHost.exe`, `Nexus.Core.exe`, `Nexus.Runtime.dll`, their supporting files, and compiled UI resources.
+CI publishes `Nexus-Shell-2.0.0-win-x64.zip` and the smaller update ZIP. Keep the complete published folder together, including Nexus.Shell, DesktopHost, Core, Nexus.Runtime and compiled UI resources. See [source patch routes](SOURCE-PATCH.md) and [start here](START-HERE.md).
 
-GitHub Actions and AppVeyor include the new runtime checks and package `Nexus-Shell-1.8.0-win-x64.zip` plus the smaller update ZIP.
+## Validation
 
-## Validation status
+Shan reports the earlier 1.8 tests passing; the screenshot shows additional UI/native defects. Source/API and portable checks for 2.0 are recorded in [validation evidence](docs/MAJOR-CHECKS-2.0.0.md). Native XAML compilation, Windows launch, blur quality, animation timing, Settings activation, native recovery and a sustained-use test still require [the Windows acceptance sequence](docs/MAJOR-2.0.0.md). There is no measured performance claim from source checks.
 
-Shan reported the 1.7 VM manual checks passing. Supplied logs corroborate the latest desktop session, Files launches, Core recovery, and committed settings; they also retain earlier sign-in failures. See [VM evidence](docs/VM-EVIDENCE-2026-10-10.md). The new 1.8 startup and policy paths still require their own Windows acceptance.
+## Session foundation
 
-Portable state, recovery, and stream-connection checks pass, as do the existing desktop core checks. C# type checking against the pinned Windows/WinUI APIs passes using temporary XAML field declarations. PowerShell parsing and update fixtures pass under PowerShell 7 on Linux.
+Core starts per user with Nexus and owns revisioned, atomic settings writes. Files browsers/pickers run in isolated `--files-worker` processes, with cancellation, deadlines, heartbeat supervision and a bounded process count. Lost save acknowledgements reconcile by commit ID; final-save failures attempt an independent recovery copy. Only one writer may own a user's settings profile at a time.
 
-These checks do not establish Windows launch or desktop stability. Native XAML compilation, package launch, named-pipe identity checks, cleanup jobs, dock behavior, and Windows lifecycle acceptance are still required. See [the startup acceptance sequence](docs/STARTUP-1.8.0.md), [source validation evidence](docs/STARTUP-CHECKS-1.8.0.md), and [the foundation release gates](docs/FOUNDATION-1.7.0.md).
-
-Only one Core writer may own a user's settings profile at a time, including across Windows sessions. A second session refuses to overwrite that profile.
-
-Firmware/Windows boot branding, credential-provider integration, Windows service reductions, and durable file-operation jobs are later milestones. This startup UI appears after Windows authentication; it is not a Windows boot animation or sign-in replacement.
+Desktop, dock, Sections, Notes and Calculator still share the main UI process. Windows continues to own boot, authentication, drivers, security and native application services. Boot/sign-in replacement, blanket Windows service removal and durable file-operation jobs are outside this release. The readiness UI starts after Windows authentication.

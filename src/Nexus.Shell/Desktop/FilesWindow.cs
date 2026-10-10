@@ -21,6 +21,7 @@ internal sealed class FilesWindow : Window
     private readonly WindowChrome _chrome;
     private readonly UI.SurfaceMotion _motion;
     private readonly UI.WindowMaterial _material = new();
+    private readonly UI.WindowTransition _transition;
     private bool _tucked;
     private readonly TextBlock _title;
     private readonly FilesEnvironment _environment;
@@ -44,23 +45,25 @@ internal sealed class FilesWindow : Window
         _title.PointerPressed += (_, e) => { if (e.GetCurrentPoint(_title).Properties.IsLeftButtonPressed) NativeMethods.BeginDrag(Handle); };
         _title.DoubleTapped += (_, _) => ToggleMaximize(); Grid.SetColumn(_title, 1); chrome.Children.Add(_title);
         _frame.Children.Add(chrome); Grid.SetRow(View, 1); _frame.Children.Add(View);
-        _surface = new Border { Child = _frame, CornerRadius = new CornerRadius(24), BorderThickness = new Thickness(1) }; Content = _surface;
+        _surface = new Border { Child = _frame, CornerRadius = new CornerRadius(14), BorderThickness = new Thickness(1) }; Content = _surface;
         Handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
         NativeWindow = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(Handle));
         NativeWindow.Title = request.Title + " · Nexus";
         if (request.Kind == FileSelectionKind.Browse) View.FolderChanged += title => { _title.Text = title; NativeWindow.Title = title + " · Nexus Files"; };
         if (NativeWindow.Presenter is OverlappedPresenter overlapped) overlapped.SetBorderAndTitleBar(false, false);
-        _chrome = new(Handle, resizable: true);
+        _transition = new(_surface, () => environment.Theme.Animations && !environment.Theme.HighContrast && !environment.State.ReducedEffects);
+        _chrome = new(Handle, resizable: true, stateChanged: maximized => { _surface.CornerRadius = new CornerRadius(maximized || environment.Theme.HighContrast ? 0 : 14); _surface.BorderThickness = new Thickness(maximized ? 0 : 1); }, minimizeRequested: Minimize);
+        _chrome.Restored += _transition.Restore;
         _motion = new(View, () => environment.Theme.Animations && !environment.Theme.HighContrast && !environment.State.ReducedEffects);
         var work = ShellLayerInterop.Monitor(Handle).Work.Bounds; double scale = ShellLayerInterop.Scale(Handle);
         int width = Math.Min(work.Width, (int)(1130 * scale)), height = Math.Min(work.Height, (int)(740 * scale));
         NativeWindow.MoveAndResize(new RectInt32(work.X + (work.Width - width) / 2, work.Y + (work.Height - height) / 2, width, height));
-        Closed += (_, _) => { _motion.Dispose(); _chrome.Dispose(); View.Release(); _selection.TrySetResult([]); };
+        Closed += (_, _) => { _transition.Dispose(); _motion.Dispose(); _chrome.Dispose(); View.Release(); _selection.TrySetResult([]); };
         ApplyAppearance(); Activate(); _motion.Open(); _ = View.NavigateAsync(folder);
     }
     private void Complete(IReadOnlyList<string> paths) { _selection.TrySetResult(paths); Close(); }
     internal void ShowFolder(string folder) { ReturnToWindow(); _ = View.NavigateAsync(folder); }
-    internal void ReturnToWindow() { bool hidden = _tucked; _tucked = false; NativeWindow.Show(); NativeMethods.Activate(Handle); if (hidden) _motion.Open(); }
+    internal void ReturnToWindow() { bool hidden = _tucked; _tucked = false; _transition.Restore(); NativeWindow.Show(); NativeMethods.Activate(Handle); if (hidden) _motion.Open(); }
     internal void ToggleFromDock()
     {
         if (!_tucked && NativeMethods.GetForegroundWindow() == Handle && NativeMethods.Visible(Handle) && !NativeMethods.IsMinimized(Handle)) Minimize();
@@ -70,18 +73,19 @@ internal sealed class FilesWindow : Window
     private void ToggleMaximize()
     {
         if (NativeWindow.Presenter is not OverlappedPresenter presenter) return;
+        _transition.Restore();
         if (presenter.State == OverlappedPresenterState.Maximized) presenter.Restore(); else presenter.Maximize();
     }
-    private void Minimize()
+    private async void Minimize()
     {
-        _tucked = true; _motion.Hide();
-        if (NativeWindow.Presenter is OverlappedPresenter presenter) presenter.Minimize();
+        if (_transition.IsMinimizing) { _transition.Restore(); return; }
+        await _transition.MinimizeAsync(() => { _tucked = true; _motion.Hide(); if (NativeWindow.Presenter is OverlappedPresenter presenter) presenter.Minimize(); });
     }
     internal void ApplyAppearance()
     {
         var theme = _environment.Theme;
         _frame.RequestedTheme = theme.ElementTheme; _frame.Background = null; _material.Apply(this, _surface, theme, _environment.State);
-        _surface.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 24); _surface.BorderBrush = theme.Brush("NexusBorder"); _title.Foreground = theme.Brush("NexusText");
+        _surface.CornerRadius = new CornerRadius(theme.HighContrast || NativeMethods.IsZoomed(Handle) ? 0 : 14); _surface.BorderBrush = theme.Brush("NexusBorder"); _title.Foreground = theme.Brush("NexusText");
         _chrome.SetCorners(theme.HighContrast); _motion.Refresh(); View.ApplyAppearance();
     }
 }

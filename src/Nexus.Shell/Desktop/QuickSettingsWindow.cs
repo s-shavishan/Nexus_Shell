@@ -44,8 +44,7 @@ internal sealed class QuickSettingsWindow : Window
     internal void Position()
     {
         if (_closed) return;
-        var rect = DesktopLayout.QuickSettingsBounds(ShellLayerInterop.Monitor(_environment.Taskbar.Handle).Monitor.Bounds,
-            _environment.Taskbar.BarBounds, ShellLayerInterop.Scale(_environment.Taskbar.Handle));
+        var rect = DesktopLayout.PanelBounds(ShellLayerInterop.Monitor(_environment.Taskbar.Handle).Monitor.Bounds, ShellLayerInterop.Scale(_environment.Taskbar.Handle));
         ShellLayerInterop.SetWindowPos(_handle, ShellLayerInterop.Topmost, rect.X, rect.Y, rect.Width, rect.Height, 0x0010);
     }
     internal void Hide() { if (_closed || !IsOpen) return; IsOpen = false; _motion.Hide(); _view.Hide(); _window.Hide(); }
@@ -53,8 +52,8 @@ internal sealed class QuickSettingsWindow : Window
     {
         var theme = _environment.Theme;
         _frame.RequestedTheme = theme.ElementTheme; _material.Apply(this, _frame, _environment); _frame.BorderBrush = theme.Brush("NexusBorder");
-        _frame.BorderThickness = new Thickness(1); _frame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 26);
-        _chrome.SetCorners(theme.HighContrast); _motion.Refresh(); _view.ApplyAppearance();
+        _frame.BorderThickness = new Thickness(1); _frame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 22);
+        _chrome.SetCorners(theme.HighContrast, 22); _motion.Refresh(); _view.ApplyAppearance();
     }
     internal void RefreshPreferences() => _view.RefreshPreferences();
 }

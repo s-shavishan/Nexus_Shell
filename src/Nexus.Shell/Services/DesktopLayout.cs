@@ -8,6 +8,28 @@ public readonly record struct ShellRect(int X, int Y, int Width, int Height)
 
 public static class DesktopLayout
 {
+    public const int MenuBarHeight = 32;
+    public static ShellRect ManagedWorkArea(ShellRect monitor, bool compact, bool floating, double scale)
+    {
+        var work = TaskbarWorkArea(monitor, compact, floating, scale);
+        int top = Math.Min(Math.Max(0, work.Height - 1), (int)Math.Round(MenuBarHeight * Scale(scale)));
+        return work with { Y = work.Y + top, Height = work.Height - top };
+    }
+    public static ShellRect LaunchpadBounds(ShellRect monitor, double scale)
+    {
+        scale = Scale(scale); int gap = Math.Min(24, Math.Max(0, Math.Min(monitor.Width, monitor.Height) / 6));
+        int width = Math.Min(Math.Max(1, monitor.Width - gap * 2), (int)Math.Round(760 * scale));
+        int height = Math.Min(Math.Max(1, monitor.Height - gap * 2), (int)Math.Round(740 * scale));
+        return new(monitor.X + (monitor.Width - width) / 2, monitor.Y + (monitor.Height - height) / 2, width, height);
+    }
+    public static ShellRect PanelBounds(ShellRect monitor, double scale, int widthDip = 380, int heightDip = 670)
+    {
+        scale = Scale(scale); int gap = Math.Min(14, Math.Max(0, Math.Min(monitor.Width, monitor.Height) / 8));
+        int top = Math.Min(Math.Max(0, monitor.Height - 1), (int)Math.Round((MenuBarHeight + 10) * scale));
+        int width = Math.Min(Math.Max(1, monitor.Width - gap * 2), (int)Math.Round(widthDip * scale));
+        int height = Math.Min(Math.Max(1, monitor.Height - top - gap), (int)Math.Round(heightDip * scale));
+        return new(monitor.Right - width - gap, monitor.Y + top, width, height);
+    }
     public static int TaskbarHeight(bool compact) => compact ? 56 : 68;
     private static double Scale(double value) => double.IsFinite(value) ? Math.Clamp(value, .5, 4) : 1;
     public static int TaskbarReservationHeight(bool compact, bool floating, double scale)

@@ -1,8 +1,8 @@
-# Desktop session updates — 1.8.0
+# Desktop session updates — 2.0.0
 
-After the Windows build and acceptance checks pass, use `Nexus-Shell-1.8.0-win-x64.zip` for a complete installation or `Nexus-Shell-1.8.0-Update-win-x64.zip` for a validated smaller update. The update carries Core and Nexus.Runtime as new application payload; they are never borrowed from the older folder. Runtime hashes must match or the updater requires the full ZIP. Exit the old desktop before launching the new folder. Sign-in registrations retain their selected folder until you explicitly update them. To move from an older shell replacement to supervised startup, restore shell policy first, then enable desktop startup in the new version.
+After the Windows build and acceptance checks pass, use `Nexus-Shell-2.0.0-win-x64.zip` for a complete installation or `Nexus-Shell-2.0.0-Update-win-x64.zip` for a validated smaller update. The update carries Core and Nexus.Runtime as new application payload; they are never borrowed from the older folder. Runtime hashes must match or the updater requires the full ZIP. Exit the old desktop before launching the new folder. Sign-in registrations retain their selected folder until you explicitly update them. To move from an older shell replacement to supervised startup, restore shell policy first, then enable desktop startup in the new version.
 
-Source ZIPs and source patches require compilation. See SOURCE-PATCH.md and [foundation acceptance](STARTUP-1.8.0.md). Earlier release instructions below are historical.
+Source ZIPs and source patches require compilation. See SOURCE-PATCH.md and [major desktop acceptance](MAJOR-2.0.0.md). Earlier release instructions below are historical.
 
 ## Historical 1.4.2 notes
 

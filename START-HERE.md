@@ -1,9 +1,9 @@
-# Start here — Nexus 1.8.0 startup
+# Start here — Nexus 2.0.0
 
-1. Use the complete Source ZIP or the matching patch in SOURCE-PATCH.md. These are source deliveries and require a Windows build.
-2. Run the Windows CI pipeline. It checks startup policy, Core persistence, Files recovery, real IPC/job behavior, updates, and native publishing.
-3. Extract the full `Nexus-Shell-1.8.0-win-x64.zip` into a separate folder. Exit the older Nexus and start `Nexus.Shell.exe` in preview.
-4. Follow docs/STARTUP-1.8.0.md. Test the readiness screen and temporary desktop before enabling automatic startup.
-5. If an older Nexus shell is selected, use Personalize → Restore Windows desktop at sign-in or Restore-Nexus-SignIn.bat. Windows may request permission. Then use Personalize → Start Nexus desktop after Windows sign-in.
+1. Extract the complete Source ZIP into a fresh folder, or apply exactly one matching patch from SOURCE-PATCH.md.
+2. Build on Windows with the commands in README.md, or commit/push the reviewed source and retrieve the CI build artifacts.
+3. Extract the full `Nexus-Shell-2.0.0-win-x64.zip` into a separate version folder. Close the older Nexus before launching the new one.
+4. Snapshot the VM, start `Launch-Nexus.bat` in preview, then follow `MAJOR-2.0.0.md` in the compiled folder (or docs/MAJOR-2.0.0.md in source).
+5. Test supervised takeover using `Launch-Nexus-Desktop.bat` and the **2.0** restore helper before enabling automatic startup or shell replacement.
 
-The 1.7 VM report is recorded in docs/VM-EVIDENCE-2026-10-10.md. Native 1.8 startup, shell-less compatibility, and elevation behavior remain pending.
+All visuals and native recovery need new Windows acceptance. The earlier 1.8 test report does not certify this 2.0 build. Keep the old build and VM snapshot available.

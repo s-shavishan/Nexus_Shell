@@ -7,6 +7,7 @@ namespace Nexus.Shell.Interop;
 
 internal static class NativeMethods
 {
+    internal const uint NexusMinimizeMessage = 0x805A, NexusRestoreMessage = 0x805B;
     [DllImport("dwmapi.dll", ExactSpelling = true)] private static extern int DwmGetWindowAttribute(IntPtr window, uint attribute, out uint value, uint size);
     private delegate bool EnumWindowCallback(IntPtr window, IntPtr parameter);
     [DllImport("user32.dll")] private static extern bool EnumWindows(EnumWindowCallback callback, IntPtr parameter);
@@ -75,6 +76,7 @@ internal static class NativeMethods
     internal static bool Activate(RunningWindow window)
     {
         if (!OwnsWindow(window)) return false;
+        if (IsCurrentNexus(window)) PostMessage(window.Handle, NexusRestoreMessage, IntPtr.Zero, IntPtr.Zero);
         return Activate(window.Handle);
     }
     internal static bool OwnsWindow(RunningWindow window) => window.Handle != IntPtr.Zero && window.ProcessId > 0
@@ -91,15 +93,23 @@ internal static class NativeMethods
     }
     internal static bool Visible(IntPtr window) => IsWindowVisible(window);
     internal static bool IsCloaked(IntPtr window) => DwmGetWindowAttribute(window, 14, out uint cloaked, 4) == 0 && cloaked != 0;
-    internal static bool Minimize(RunningWindow window) => OwnsWindow(window) && ShowWindowAsync(window.Handle, 6);
+    internal static bool Minimize(RunningWindow window) => OwnsWindow(window)
+        && (IsCurrentNexus(window) ? PostMessage(window.Handle, NexusMinimizeMessage, IntPtr.Zero, IntPtr.Zero) : ShowWindowAsync(window.Handle, 6));
     internal static bool MaximizeOrRestore(RunningWindow window)
     {
         if (!OwnsWindow(window)) return false;
+        if (IsCurrentNexus(window)) PostMessage(window.Handle, NexusRestoreMessage, IntPtr.Zero, IntPtr.Zero);
         bool queued = ShowWindowAsync(window.Handle, !IsIconic(window.Handle) && IsZoomed(window.Handle) ? 9 : 3);
         // Do not queue SW_RESTORE after SW_MAXIMIZE for an iconic window.
         // That would undo the requested maximize on a slow application's thread.
         if (queued) SetForegroundWindow(window.Handle);
         return queued;
+    }
+    private static bool IsCurrentNexus(RunningWindow window)
+    {
+        if (!window.ProcessName.Equals("Nexus.Shell", StringComparison.OrdinalIgnoreCase)) return false;
+        try { using var process = Process.GetProcessById(window.ProcessId); return string.Equals(process.MainModule?.FileName, Environment.ProcessPath, StringComparison.OrdinalIgnoreCase); }
+        catch { return false; }
     }
     internal static bool RequestClose(RunningWindow window) => OwnsWindow(window)
         && PostMessage(window.Handle, 0x0010, IntPtr.Zero, IntPtr.Zero); // WM_CLOSE; the app owns save prompts
@@ -110,7 +120,7 @@ internal static class NativeMethods
     {
         if (!OwnsWindow(window)) return false;
         return ForegroundTaskWindow() == window.Handle && !IsIconic(window.Handle)
-            ? ShowWindowAsync(window.Handle, 6) : Activate(window.Handle);
+            ? Minimize(window) : Activate(window);
     }
     internal static void BeginDrag(IntPtr window)
     {

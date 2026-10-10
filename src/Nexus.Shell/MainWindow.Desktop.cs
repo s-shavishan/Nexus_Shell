@@ -21,7 +21,7 @@ public sealed partial class MainWindow
     
     private void RefreshDesktopControls() { DesktopShortcutStatus.Text = "Windows handles keyboard shortcuts. Open Nexus Start and search from the dock."; }
     
-    private void ShowNexus() { _appWindow.Show(); if (_appWindow.Presenter is OverlappedPresenter p && p.State == OverlappedPresenterState.Minimized) p.Restore(); Activate(); NativeMethods.Activate(_handle); }
+    private void ShowNexus() { _windowTransition.Restore(); _appWindow.Show(); if (_appWindow.Presenter is OverlappedPresenter p && p.State == OverlappedPresenterState.Minimized) p.Restore(); Activate(); NativeMethods.Activate(_handle); }
     private void HideNexus() { if (_dialogOpen || _picking) return; Close(); }
     private void ExitNexus() => _environment.Shutdown();
     private void HideNexus_Click(object sender, RoutedEventArgs args) => HideNexus();

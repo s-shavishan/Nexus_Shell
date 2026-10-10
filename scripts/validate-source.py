@@ -37,6 +37,9 @@ required = [
     "Services/CalculatorEngine.cs", "Services/FilePresentation.cs",
     "Services/CoreProcessSession.cs", "Desktop/FilesEnvironment.cs",
     "Desktop/StartupWindow.cs", "Services/NexusStartupPolicy.cs", "Services/WindowSwitcherPolicy.cs",
+    "Desktop/MenuBarWindow.cs", "Desktop/NotificationWindow.cs", "UI/Desktop/MenuBarView.cs",
+    "UI/LiquidGlassBackdrop.cs", "UI/WindowTransition.cs", "Services/LaunchpadCatalog.cs",
+    "Services/MinimizedWindowPolicy.cs", "Services/NotificationInbox.cs",
     "Services/DesktopPolicyRequest.cs", "Services/DesktopPolicyElevation.cs", "Services/StartupStep.cs",
 ]
 for relative in required:
@@ -222,14 +225,14 @@ assert not (project / "MainWindow.Canvas.cs").exists(), "Obsolete packed desktop
 assert not {"MenuBar", "DockBorder", "DesktopCanvas", "DesktopClockCard", "DesktopWorkspaceCard", "WallpaperAccents"} & set(names), "Desktop UI must not be embedded in Sections"
 startup = (project / "App.xaml.cs").read_text()
 assert "new MainWindow(" not in startup and "DesktopEnvironment" in startup, "Startup must create the environment without Sections"
-for layer in ["DesktopWindow", "TaskbarWindow", "MenuWindow", "QuickSettingsWindow"]:
+for layer in ["DesktopWindow", "TaskbarWindow", "MenuWindow", "QuickSettingsWindow", "MenuBarWindow", "NotificationWindow"]:
     body = (project / "Desktop" / (layer + ".cs")).read_text()
     assert re.search(r"class\s+" + layer + r"\s*:\s*Window", body), f"{layer} must own a native Window"
 closed = code[code.index("private void Window_Closed("):]
 assert "SaveFinal(" not in closed and "DetachSnapshot(" in closed, "Closing Sections must not finalize the desktop session"
 for file in [root / "appveyor.yml", root / ".github/workflows/build-windows.yml", root / "scripts/package.ps1", root / "scripts/build.ps1"]:
     body = file.read_text()
-    assert "Nexus-Shell-1.8.0" in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
+    assert "Nexus-Shell-2.0.0" in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
 print("Independent desktop ownership, Sections lifetime and CI versions OK")
 # Desktop replacement cannot silently instantiate Explorer or common picker UI.
 environment = (project / "Desktop/DesktopEnvironment.cs").read_text()
@@ -297,6 +300,12 @@ for relative in ["scripts/package-update.ps1", "scripts/apply-update.ps1"]:
     body = (root / relative).read_text()
     assert "Nexus.Core.*" in body and "Nexus.Runtime.*" in body, f"Core/protocol must be app-owned update files: {relative}"
 print("Isolated Files ownership, shared runtime projects, Core publish and update ownership OK")
+runtime_version = ET.parse(root / "src/Nexus.Runtime/Nexus.Runtime.csproj").findtext("PropertyGroup/Version")
+for packages in json.loads((project / "packages.lock.json").read_text())["dependencies"].values():
+    for package, entry in packages.items():
+        if entry.get("type") == "Project" and package.lower() == "nexus.runtime":
+            assert entry["version"] == runtime_version, "Runtime version and locked project reference differ"
+print("Runtime project lock version OK")
 if options.syntax:
     from tree_sitter import Language, Parser
     import tree_sitter_c_sharp

@@ -23,6 +23,7 @@ internal sealed class UtilityWindow : Window
     private readonly WindowChrome _chrome;
     private readonly SurfaceMotion _motion;
     private readonly WindowMaterial _material = new();
+    private readonly WindowTransition _transition;
     private readonly Action _apply;
     internal UtilityWindow(DesktopEnvironment environment, string title, FrameworkElement view, int width, int height, Action apply, Action release)
     {
@@ -40,22 +41,23 @@ internal sealed class UtilityWindow : Window
         chrome.Children.Add(controls); _title = new() { Text = title, FontSize = 13, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Stretch, TextAlignment = TextAlignment.Center };
         _title.PointerPressed += (_, e) => { if (e.GetCurrentPoint(_title).Properties.IsLeftButtonPressed) NativeMethods.BeginDrag(Handle); };
         _title.DoubleTapped += (_, _) => ToggleMaximize(); Grid.SetColumn(_title, 1); chrome.Children.Add(_title); grid.Children.Add(chrome); Grid.SetRow(view, 1); grid.Children.Add(view);
-        _frame = new() { Child = grid, CornerRadius = new CornerRadius(18), BorderThickness = new Thickness(1) }; Content = _frame;
+        _frame = new() { Child = grid, CornerRadius = new CornerRadius(14), BorderThickness = new Thickness(1) }; Content = _frame;
         Handle = WinRT.Interop.WindowNative.GetWindowHandle(this); NativeWindow = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(Handle)); NativeWindow.Title = title + " · Nexus";
         if (NativeWindow.Presenter is OverlappedPresenter presenter) presenter.SetBorderAndTitleBar(false, false);
-        _chrome = new(Handle, resizable: true, minimumWidth: Math.Min(width, 480), minimumHeight: Math.Min(height, 360)); _motion = new(view, () => environment.Theme.Animations && !environment.Theme.HighContrast && !environment.Session.State.ReducedEffects);
+        _transition = new(_frame, () => environment.Theme.Animations && !environment.Theme.HighContrast && !environment.Session.State.ReducedEffects);
+        _chrome = new(Handle, resizable: true, minimumWidth: Math.Min(width, 480), minimumHeight: Math.Min(height, 360), stateChanged: maximized => { _frame.CornerRadius = new CornerRadius(maximized || environment.Theme.HighContrast ? 0 : 14); _frame.BorderThickness = new Thickness(maximized ? 0 : 1); }, minimizeRequested: Minimize); _chrome.Restored += _transition.Restore; _motion = new(view, () => environment.Theme.Animations && !environment.Theme.HighContrast && !environment.Session.State.ReducedEffects);
         var work = ShellLayerInterop.Monitor(Handle).Work.Bounds; double scale = ShellLayerInterop.Scale(Handle);
         int w = Math.Min(work.Width, (int)(width * scale)), h = Math.Min(work.Height, (int)(height * scale));
         NativeWindow.MoveAndResize(new RectInt32(work.X + (work.Width - w) / 2, work.Y + (work.Height - h) / 2, w, h));
-        Closed += (_, _) => { release(); _motion.Dispose(); _chrome.Dispose(); };
+        Closed += (_, _) => { release(); _transition.Dispose(); _motion.Dispose(); _chrome.Dispose(); };
         ApplyAppearance(); Activate(); _motion.Open();
     }
-    internal void Restore() { NativeWindow.Show(); NativeMethods.Activate(Handle); _environment.UpdateTaskbar(); }
-    internal void Minimize() { _motion.Hide(); if (NativeWindow.Presenter is OverlappedPresenter presenter) presenter.Minimize(); _environment.UpdateTaskbar(); }
+    internal void Restore() { _transition.Restore(); NativeWindow.Show(); NativeMethods.Activate(Handle); _environment.UpdateTaskbar(); }
+    internal async void Minimize() { if (_transition.IsMinimizing) { _transition.Restore(); return; } await _transition.MinimizeAsync(() => { _motion.Hide(); if (NativeWindow.Presenter is OverlappedPresenter presenter) presenter.Minimize(); _environment.UpdateTaskbar(); }); }
     internal void Toggle()
     { if (NativeMethods.ForegroundTaskWindow() == Handle && !NativeMethods.IsMinimized(Handle)) Minimize(); else Restore(); }
     private void ToggleMaximize()
-    { if (NativeWindow.Presenter is OverlappedPresenter presenter) { if (presenter.State == OverlappedPresenterState.Maximized) presenter.Restore(); else presenter.Maximize(); } }
+    { _transition.Restore(); if (NativeWindow.Presenter is OverlappedPresenter presenter) { if (presenter.State == OverlappedPresenterState.Maximized) presenter.Restore(); else presenter.Maximize(); } }
     internal void ApplyAppearance()
-    { _frame.RequestedTheme = _environment.Theme.ElementTheme; _frame.BorderBrush = _environment.Theme.Brush("NexusBorder"); _title.Foreground = _environment.Theme.Brush("NexusText"); _material.Apply(this, _frame, _environment); _chrome.SetCorners(_environment.Theme.HighContrast); _motion.Refresh(); _apply(); }
+    { _frame.CornerRadius = new CornerRadius(_environment.Theme.HighContrast || NativeMethods.IsZoomed(Handle) ? 0 : 14); _frame.RequestedTheme = _environment.Theme.ElementTheme; _frame.BorderBrush = _environment.Theme.Brush("NexusBorder"); _title.Foreground = _environment.Theme.Brush("NexusText"); _material.Apply(this, _frame, _environment); _chrome.SetCorners(_environment.Theme.HighContrast); _motion.Refresh(); _apply(); }
 }

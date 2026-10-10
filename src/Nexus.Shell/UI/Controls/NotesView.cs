@@ -100,7 +100,7 @@ internal sealed class NotesView : Grid
         finally { _dialog = false; }
     }
     internal void ApplyAppearance()
-    { var theme = _environment.Theme; RequestedTheme = theme.ElementTheme; _sidebar.Background = theme.Surface("Sidebar"); _sidebar.BorderBrush = theme.Brush("NexusBorder"); _list.Foreground = _editor.Foreground = _title.Foreground = theme.Brush("NexusText"); _editor.Background = _title.Background = theme.Brush("NexusInput"); _status.Foreground = theme.Brush("NexusMuted"); }
+    { var theme = _environment.Theme; RequestedTheme = theme.ElementTheme; _sidebar.Background = _environment.Session.State.NativeGlass ? theme.Glass("Panel") : theme.Surface("Sidebar"); _sidebar.BorderBrush = theme.Brush("NexusBorder"); _list.Foreground = _editor.Foreground = _title.Foreground = theme.Brush("NexusText"); _editor.Background = _title.Background = theme.Brush("NexusInput"); _status.Foreground = theme.Brush("NexusMuted"); }
     internal void Release()
     { if (_released) return; _released = true; bool pending = _save.IsEnabled; _save.Stop(); _environment.Session.Changed -= Changed; if (pending && !_environment.IsStopping) _environment.SaveState(); }
 }

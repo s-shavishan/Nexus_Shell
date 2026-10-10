@@ -75,9 +75,10 @@ public static class AppCatalog
         return new(hash, Path.GetFileNameWithoutExtension(path), path, category == "Game" ? "\uE7FC" : "\uE8A5", category);
     }
 
-    public static void OpenSettings(string uri)
+    public static async Task OpenSettingsAsync(string uri)
     {
-        if (!uri.StartsWith("ms-settings:", StringComparison.Ordinal)) throw new ArgumentException("A Windows Settings URI is required.");
-        Process.Start(new ProcessStartInfo(uri) { UseShellExecute = true });
+        if (!uri.StartsWith("ms-settings:", StringComparison.OrdinalIgnoreCase)) throw new ArgumentException("A Windows Settings URI is required.");
+        if (!await Windows.System.Launcher.LaunchUriAsync(new Uri(uri)))
+            throw new InvalidOperationException("Windows did not activate Settings. Control Panel is available in Nexus Control Center; Settings may need repair in this Windows installation.");
     }
 }

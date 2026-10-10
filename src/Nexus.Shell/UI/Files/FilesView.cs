@@ -55,7 +55,7 @@ internal sealed class FilesView : Grid
     {
         _environment = environment; _request = request; _complete = complete; Padding = new Thickness(12); RowSpacing = 10;
         _showGrid = request.Kind == FileSelectionKind.Browse;
-        RequestedTheme = environment.Theme.ElementTheme; Background = environment.Theme.Brush("NexusPanel");
+        RequestedTheme = environment.Theme.ElementTheme; KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden; Background = environment.Theme.Brush("NexusPanel");
         foreach (var height in new[] { GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto }) RowDefinitions.Add(new() { Height = height });
         var toolbar = new Grid { ColumnSpacing = 8 };
         foreach (var width in new[] { GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto }) toolbar.ColumnDefinitions.Add(new() { Width = width });
@@ -342,10 +342,10 @@ internal sealed class FilesView : Grid
     }
     internal void ApplyAppearance()
     {
-        var theme = _environment.Theme; RequestedTheme = theme.ElementTheme; Background = theme.Brush("NexusPanel");
+        var theme = _environment.Theme; RequestedTheme = theme.ElementTheme; Background = _environment.State.NativeGlass ? theme.Glass("Frame") : theme.Brush("NexusPanel");
         _status.Foreground = _modified.Foreground = theme.Brush("NexusMuted"); _list.Foreground = _tiles.Foreground = theme.Brush("NexusText");
-        _placesCard.Background = theme.Surface("Sidebar"); _placesCard.BorderBrush = theme.Brush("NexusBorder");
-        _inspectorCard.Background = theme.Brush("NexusCard"); _inspectorCard.BorderBrush = theme.Brush("NexusBorder");
+        _placesCard.Background = _environment.State.NativeGlass ? theme.Glass("Panel") : theme.Surface("Sidebar"); _placesCard.BorderBrush = theme.Brush("NexusBorder");
+        _inspectorCard.Background = _environment.State.NativeGlass ? theme.Glass("Card") : theme.Brush("NexusCard"); _inspectorCard.BorderBrush = theme.Brush("NexusBorder");
         _fileTitle.Foreground = theme.Brush("NexusText"); _fileKind.Foreground = theme.Brush("NexusMuted");
         _fileLocation.Foreground = theme.Brush("NexusSecondary");
         RefreshPlaces();

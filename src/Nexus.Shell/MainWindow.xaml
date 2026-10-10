@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:ui="using:Nexus.Shell.UI" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="Nexus.Shell.MainWindow" Title="NEXUS — Midnight Glass">
- <Grid x:Name="DesktopRoot" RequestedTheme="Dark" Background="{ThemeResource NexusPanel}" Loaded="Desktop_Loaded" SizeChanged="Desktop_SizeChanged">
+ <Grid x:Name="DesktopRoot" RequestedTheme="Dark" KeyboardAcceleratorPlacementMode="Hidden" Background="{ThemeResource NexusPanel}" Loaded="Desktop_Loaded" SizeChanged="Desktop_SizeChanged">
   <Grid.Resources>
    <ui:AppAccentConverter x:Key="AppAccent" />
    <ui:SavedKindConverter x:Key="SavedKind" />

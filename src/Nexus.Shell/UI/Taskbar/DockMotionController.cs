@@ -21,21 +21,21 @@ internal sealed class DockMotionController : IDisposable
     internal DockMotionController(FrameworkElement root)
     {
         var compositor = ElementCompositionPreview.GetElementVisual(root).Compositor;
-        _ease = compositor.CreateCubicBezierEasingFunction(new Vector2(.2f, .8f), new Vector2(.2f, 1));
-        Add(DockMotionCue.Arrive, 250, -4, new Vector3(.72f, .72f, 1), true);
-        Add(DockMotionCue.Launch, 333, -7, new Vector3(1.08f, 1.08f, 1));
-        Add(DockMotionCue.Activate, 167, -2, new Vector3(1.035f, 1.035f, 1));
-        Add(DockMotionCue.Minimize, 250, 5, new Vector3(1.04f, .88f, 1));
-        Add(DockMotionCue.Restore, 250, -6, new Vector3(.96f, 1.08f, 1));
-        void Add(DockMotionCue cue, int duration, float distance, Vector3 scale, bool entering = false)
+        _ease = compositor.CreateCubicBezierEasingFunction(new Vector2(.16f, 1), new Vector2(.3f, 1));
+        Add(DockMotionCue.Arrive, -3, new Vector3(.88f, .88f, 1), true);
+        Add(DockMotionCue.Launch, -8, new Vector3(1.04f, 1.04f, 1));
+        Add(DockMotionCue.Activate, -1, new Vector3(1.025f, 1.025f, 1));
+        Add(DockMotionCue.Minimize, 3, new Vector3(.98f, .94f, 1));
+        Add(DockMotionCue.Restore, -4, new Vector3(1.025f, 1.025f, 1));
+        void Add(DockMotionCue cue, float distance, Vector3 scale, bool entering = false)
         {
-            var move = compositor.CreateVector3KeyFrameAnimation(); move.Duration = TimeSpan.FromMilliseconds(duration);
+            var move = compositor.CreateVector3KeyFrameAnimation(); move.Duration = TimeSpan.FromMilliseconds(DockMotionPolicy.Duration(cue));
             move.InsertExpressionKeyFrame(0, "this.StartingValue");
-            move.InsertKeyFrame(.4f, new Vector3(0, distance, 0), _ease);
+            move.InsertKeyFrame(.3f, new Vector3(0, distance, 0), _ease);
             move.InsertKeyFrame(1, Vector3.Zero, _ease);
             var grow = compositor.CreateVector3KeyFrameAnimation(); grow.Duration = move.Duration;
             if (entering) grow.InsertKeyFrame(0, scale); else grow.InsertExpressionKeyFrame(0, "this.StartingValue");
-            if (!entering) grow.InsertKeyFrame(.4f, scale, _ease);
+            if (!entering) grow.InsertKeyFrame(.3f, scale, _ease);
             grow.InsertKeyFrame(1, Vector3.One, _ease);
             _cues.Add(cue, (move, grow));
         }

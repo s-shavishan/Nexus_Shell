@@ -269,4 +269,5 @@ try
 finally { if (Directory.Exists(settingsDirectory)) Directory.Delete(settingsDirectory, true); }
 if (OperatingSystem.IsWindows()) DesktopNativeChecks.Run();
 StartupChecks.Run();
+MajorDesktopChecks.Run();
 Console.WriteLine("PASS: desktop migration, bounded profiles, launch-plan deduplication, nested snapshots, native structure layout, and atomic persistence.");
