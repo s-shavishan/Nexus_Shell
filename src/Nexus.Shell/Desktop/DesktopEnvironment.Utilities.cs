@@ -7,7 +7,7 @@ namespace Nexus.Shell.Desktop;
 internal sealed partial class DesktopEnvironment
 {
     private readonly Dictionary<string, UtilityWindow> _utilities = [];
-    internal void LockScreen() { HideMenu(); if (!NativeMethods.LockScreen()) Report("Windows could not lock this session."); }
+    internal void LockScreen() { HideMenu(); _clipboardFeed?.Clear(); if (!NativeMethods.LockScreen()) Report("Windows could not lock this session."); }
     internal void ShowUtility(string name)
     {
         if (IsStopping) return; HideMenu();

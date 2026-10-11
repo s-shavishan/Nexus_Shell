@@ -18,6 +18,8 @@ internal sealed class DesktopIntegration : IDisposable
     private readonly uint _taskbarCreated;
     private IntPtr _icon;
     private bool _hooked, _disposed, _trayRequested;
+    private const int SearchHotkey = 0x4E53;
+    internal bool SearchHotkeyAvailable { get; private set; }
     internal static int NotificationDataSize => Marshal.SizeOf<NotifyData>();
     internal static int NotificationIconOffset => (int)Marshal.OffsetOf<NotifyData>(nameof(NotifyData.Icon));
     internal bool TrayAvailable { get; private set; }
@@ -47,6 +49,10 @@ internal sealed class DesktopIntegration : IDisposable
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool SetForegroundWindow(IntPtr window);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool PostMessage(IntPtr window, uint message, UIntPtr wParam, IntPtr lParam);
+    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool RegisterHotKey(IntPtr window, int id, uint modifiers, uint key);
+    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool UnregisterHotKey(IntPtr window, int id);
     [StructLayout(LayoutKind.Sequential)] private struct Point { public int X, Y; }
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct NotifyData
@@ -71,6 +77,8 @@ internal sealed class DesktopIntegration : IDisposable
         _taskbarCreated = RegisterWindowMessage("TaskbarCreated");
         _hooked = SetWindowSubclass(window, _callback, new UIntPtr(SubclassId), UIntPtr.Zero);
         if (!_hooked) throw new Win32Exception("Nexus could not attach its desktop controls.");
+        SearchHotkeyAvailable = RegisterHotKey(window, SearchHotkey, 0x4003, 0x20); // no repeat, Ctrl+Alt+Space
+        if (!SearchHotkeyAvailable) Services.Log.Write("Nexus Search shortcut is in use; menu-bar and desktop search remain available.");
     }
     private NotifyData Data() => new()
     {
@@ -97,6 +105,7 @@ internal sealed class DesktopIntegration : IDisposable
         {
             if (!_disposed)
             {
+                if (message == 0x0312 && wParam.ToUInt64() == SearchHotkey) { _dispatch("search"); return IntPtr.Zero; }
                 if (message == SummonMessage) { _dispatch("show"); return IntPtr.Zero; }
                 if (message == LaunchpadMessage) { _dispatch("start"); return IntPtr.Zero; }
                 if (message == StartUnavailableMessage) { _dispatch("start-unavailable"); return IntPtr.Zero; }
@@ -138,6 +147,7 @@ internal sealed class DesktopIntegration : IDisposable
     {
         if (_disposed) return;
         SetResident(false); _disposed = true;
+        if (SearchHotkeyAvailable) { UnregisterHotKey(_window, SearchHotkey); SearchHotkeyAvailable = false; }
         if (_hooked) { RemoveWindowSubclass(_window, _callback, new UIntPtr(SubclassId)); _hooked = false; }
         if (_icon != IntPtr.Zero) { DestroyIcon(_icon); _icon = IntPtr.Zero; }
     }

@@ -78,6 +78,9 @@ public sealed class StateStore
             state.DisplayName = state.DisplayName[..Math.Min(state.DisplayName.Length, 40)];
             state.PinnedApps ??= [];
             state.RecentApps = state.RememberRecentItems ? RecentApplications.Normalize(state.RecentApps) : [];
+            state.GlassStyle = GlassStyle.Normalize(state.GlassStyle);
+            SavedWindowLayouts.Normalize(state);
+            DesktopOrganization.Normalize(state);
             state.Activity ??= [];
             state.NotificationHistory = NotificationHistory.Normalize(state.NotificationHistory);
             state.Wallpaper = AuraPalette.NormalizeMood(state.Wallpaper);

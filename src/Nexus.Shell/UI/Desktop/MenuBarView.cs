@@ -16,6 +16,10 @@ internal sealed class MenuBarView : Grid, IDisposable
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(15) };
     private readonly Grid _controls = new() { Width = 17, Height = 17 };
     private readonly List<Button> _buttons = [];
+    private readonly TextBlock _activeTitle = new() { Text = "Desktop", FontSize = 12, MaxWidth = 190, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
+    private readonly Button _activeApp;
+    private readonly StackPanel _windowControls = new() { Orientation = Orientation.Horizontal, Spacing = 3, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 8, 0) };
+    private readonly Button _minimize, _maximize, _close;
     private bool _disposed;
     private int _refreshQueued;
     internal MenuBarView(DesktopEnvironment environment)
@@ -27,16 +31,27 @@ internal sealed class MenuBarView : Grid, IDisposable
         void Menu(string text, MenuFlyout flyout, bool bold = false)
         { var button = Basic(text, text + " menu"); button.FontWeight = bold ? Microsoft.UI.Text.FontWeights.SemiBold : Microsoft.UI.Text.FontWeights.Normal; button.Flyout = flyout; left.Children.Add(button); }
         var nexus = Basic(NexusIcons.Image("Launchpad", 19), "Nexus menu"); nexus.Width = 34; nexus.Padding = new Thickness(5, 0, 5, 0); nexus.Flyout = environment.Menus.NexusMenu(); left.Children.Add(nexus);
-        Menu("Desktop", environment.Menus.NexusMenu(), true);
+        _activeApp = Basic(_activeTitle, "Active window"); _activeApp.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold; _activeTitle.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
+        var activeMenu = environment.Menus.ActiveWindowMenu(); _activeApp.Flyout = activeMenu; left.Children.Add(_activeApp);
         Menu("File", environment.Menus.FileMenu()); Menu("View", environment.Menus.ViewMenu()); Menu("Window", environment.Menus.WindowMenu());
-        var help = Basic("Help", "Nexus help and personalization"); help.Click += (_, _) => environment.ShowSections("Personalize"); left.Children.Add(help); Children.Add(left);
-        var right = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
+        var help = Basic("Help", "Nexus desktop shortcuts and tools"); help.Click += (_, _) => environment.ShowDesktopGuide(); left.Children.Add(help); Children.Add(left);
+        Button WindowControl(string glyph, string name, Action action)
+        {
+            var button = Basic(ShellControls.Icon(glyph, 10), name); button.Width = 26; button.Padding = new Thickness(0); button.Height = button.MinHeight = 24;
+            button.Click += (_, _) => action(); _windowControls.Children.Add(button); return button;
+        }
+        _minimize = WindowControl("\uE921", "Minimize active window", () => { if (environment.ActiveWindow is { } window) environment.MinimizeDockWindow(window); });
+        _maximize = WindowControl("\uE922", "Maximize or restore active window", () => { if (environment.ActiveWindow is { } window) environment.MaximizeDockWindow(window); });
+        _close = WindowControl("\uE8BB", "Close active window", () => { if (environment.ActiveWindow is { } window) environment.CloseDockWindow(window); });
+        left.Children.Add(_windowControls);
+        var right = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 3, VerticalAlignment = VerticalAlignment.Center };
         Button Icon(string glyph, string name, Action action)
         { var button = Basic(new FontIcon { Glyph = glyph, FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14 }, name); button.Width = 31; button.Click += (_, _) => action(); right.Children.Add(button); return button; }
-        Icon("\uE701", "Network controls", () => environment.ShowQuickControl("Network"));
-        Icon("\uE767", "Sound controls", () => environment.ShowQuickControl("Sound"));
-        var bluetooth = Icon("\uE702", "Bluetooth controls", () => environment.ShowQuickControl("Bluetooth"));
-        var display = Icon("\uE7F4", "Display controls", () => environment.ShowQuickControl("Display"));
+        Button QuickControl(string glyph, string section)
+        { Button? button = null; button = Icon(glyph, section + " controls", () => environment.ShowQuickControl(section, environment.MenuControlAnchor(button!))); return button; }
+        QuickControl("\uE701", "Network"); QuickControl("\uE767", "Sound");
+        Icon("\uE721", "Nexus Search · Ctrl+Alt+Space", environment.ShowSearch);
+        var bluetooth = QuickControl("\uE702", "Bluetooth"); var display = QuickControl("\uE7F4", "Display");
         var controls = _controls;
         for (int i = 0; i < 2; i++)
         { controls.Children.Add(new Border { Height = 2, Background = new SolidColorBrush(Microsoft.UI.Colors.White), VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, i * 8 + 4, 0, 0), CornerRadius = new CornerRadius(1) }); controls.Children.Add(new Ellipse { Width = 5, Height = 5, Fill = new SolidColorBrush(Microsoft.UI.Colors.White), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(i == 0 ? 3 : 10, i * 8 + 2.5, 0, 0) }); }
@@ -45,10 +60,10 @@ internal sealed class MenuBarView : Grid, IDisposable
         _notification = Basic(bell, "Nexus notifications"); _notification.Click += (_, _) => environment.ShowNotifications(); right.Children.Add(_notification);
         var date = Basic(_clock, "Date and notifications"); date.Click += (_, _) => environment.ShowNotifications(); right.Children.Add(date);
         Grid.SetColumn(right, 1); Children.Add(right);
-        environment.Notifications.Changed += QueueRefresh; _timer.Tick += (_, _) => Refresh(); _timer.Start(); ApplyAppearance();
+        environment.Notifications.Changed += QueueRefresh; environment.ActiveWindowChanged += QueueRefresh; _timer.Tick += (_, _) => Refresh(); _timer.Start(); ApplyAppearance();
         SizeChanged += (_, _) =>
         {
-            int shown = ActualWidth < 480 ? 1 : ActualWidth < 820 ? 2 : int.MaxValue;
+            int shown = ActualWidth < 480 ? 1 : ActualWidth < 950 ? 2 : int.MaxValue;
             foreach (var (button, i) in left.Children.OfType<Button>().Select((button, i) => (button, i))) button.Visibility = i < shown ? Visibility.Visible : Visibility.Collapsed;
             foreach (var button in right.Children.OfType<Button>().Take(2)) button.Visibility = ActualWidth < 650 ? Visibility.Collapsed : Visibility.Visible;
             bluetooth.Visibility = display.Visibility = ActualWidth < 900 ? Visibility.Collapsed : Visibility.Visible;
@@ -68,6 +83,13 @@ internal sealed class MenuBarView : Grid, IDisposable
     internal void Refresh()
     {
         if (_disposed) return;
+        var window = _environment.ActiveWindow;
+        _activeTitle.Text = window is null ? "Desktop" : window.Title;
+        string name = window is null ? "Nexus desktop menu" : "Window controls for " + window.Title;
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_activeApp, name); ToolTipService.SetToolTip(_activeApp, name);
+        _windowControls.Visibility = window is not null && ActualWidth >= 1050 ? Visibility.Visible : Visibility.Collapsed;
+        _minimize.IsEnabled = _maximize.IsEnabled = _close.IsEnabled = window is not null;
+        ((FontIcon)_maximize.Content).Glyph = _environment.ActiveWindowMaximized ? "\uE923" : "\uE922";
         _clock.Text = DateTime.Now.ToString(DesktopPresentation.ClockFormat(ActualWidth < 650, _environment.Session.State.Clock24Hour));
         int unread = _environment.Notifications.Unread; _badge.Text = unread > 0 ? (unread > 9 ? "9+" : unread.ToString()) : "";
         _badge.Visibility = unread > 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -75,5 +97,5 @@ internal sealed class MenuBarView : Grid, IDisposable
     }
     internal void ApplyAppearance()
     { RequestedTheme = _environment.Theme.ElementTheme; foreach (var button in _buttons) button.Foreground = _environment.Theme.Brush("NexusText"); foreach (var line in _controls.Children.OfType<Border>()) line.Background = _environment.Theme.Brush("NexusText"); foreach (var dot in _controls.Children.OfType<Ellipse>()) dot.Fill = _environment.Theme.Brush("NexusText"); _clock.Foreground = _environment.Theme.Brush("NexusText"); _badge.Foreground = _environment.Theme.Brush("NexusAccent"); Refresh(); }
-    public void Dispose() { if (_disposed) return; _disposed = true; _timer.Stop(); _environment.Notifications.Changed -= QueueRefresh; }
+    public void Dispose() { if (_disposed) return; _disposed = true; _timer.Stop(); _environment.Notifications.Changed -= QueueRefresh; _environment.ActiveWindowChanged -= QueueRefresh; }
 }

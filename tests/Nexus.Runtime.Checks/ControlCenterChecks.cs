@@ -56,6 +56,7 @@ internal static class ControlCenterChecks
             new PanelAction(Guid.NewGuid(), "preference", DesktopPreference.NativeGlass, Value: "false"), new PanelAction(Guid.NewGuid(), "advanced", Value: "file:///cmd.exe") })
             Reject(() => ControlCenterPreferences.Validate(invalid));
         Reject(() => panel.Sync(Sync(1, true) with { Desired = Sync(1, true).Desired with { Monitor = new(0, 0, 0, 1080, double.NaN, 20, true) } }));
+        Reject(() => panel.Sync(Sync(1, true) with { Preferences = ControlCenterPreferences.From(state) with { GlassStyle = "invalid" } }));
         Check(panel.Hide(100, 0).Desired.Visible, "Stale hide must not dismiss a newer opening.");
         Check(!panel.Hide(100, 1).Desired.Visible && !panel.Sync(Sync(1, true)).Status.Visible, "Worker dismissal must win over a repeated desired-state publication.");
         panel.Sync(Sync(2, true)); Check(panel.Hide(100, 1).Desired.Visible, "Reopening needs a new sequence and must survive the old hide response.");

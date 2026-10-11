@@ -92,6 +92,7 @@ internal static class NativeMethods
         return owner == IntPtr.Zero ? foreground : owner;
     }
     internal static bool Visible(IntPtr window) => IsWindowVisible(window);
+    internal static long WindowStyle(IntPtr window) => GetWindowLongPtr(window, -16).ToInt64();
     internal static bool IsCloaked(IntPtr window) => DwmGetWindowAttribute(window, 14, out uint cloaked, 4) == 0 && cloaked != 0;
     internal static bool Minimize(RunningWindow window) => OwnsWindow(window)
         && (IsCurrentNexus(window) ? PostMessage(window.Handle, NexusMinimizeMessage, IntPtr.Zero, IntPtr.Zero) : ShowWindowAsync(window.Handle, 6));

@@ -43,6 +43,8 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     private Slider? _brightness;
     private TextBlock? _brightnessLabel;
     private TextBlock? _glassStatus;
+    private ComboBox? _glassStyle;
+    internal Func<string>? MaterialStatus;
     private ComboBox? _wallpaper;
     private string _section = "Sound", _signature = "";
     private bool _open, _disposed, _syncing, _busy, _readAgain, _compact;
@@ -110,7 +112,7 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     private void ClearBody()
     {
         if (_labels.Count > _fixedLabels) _labels.RemoveRange(_fixedLabels, _labels.Count - _fixedLabels);
-        _body.Children.Clear(); _cards.Clear(); _deviceButtons.Clear(); _preferences.Clear(); _networkEditors.Clear(); _mixer.Clear(); _brightness = null; _brightnessLabel = null; _wallpaper = null; _glassStatus = null;
+        _body.Children.Clear(); _cards.Clear(); _deviceButtons.Clear(); _preferences.Clear(); _networkEditors.Clear(); _mixer.Clear(); _brightness = null; _brightnessLabel = null; _wallpaper = null; _glassStatus = null; _glassStyle = null;
     }
     internal void ApplyAppearance()
     {
@@ -120,14 +122,19 @@ internal sealed class QuickSettingsView : Grid, IDisposable
         foreach (var card in _cards) { card.Background = _environment.Theme.Material("Card", _environment.State.NativeGlass); card.BorderBrush = _environment.Theme.Edge; card.CornerRadius = new CornerRadius(_environment.Theme.HighContrast ? 0 : 16); }
         foreach (var (section, tab) in _tabs) { tab.Background = section == _section ? _environment.Theme.Brush("NexusSelection") : _environment.Theme.Material("Card", _environment.State.NativeGlass); tab.BorderBrush = section == _section ? _environment.Theme.Brush("NexusAccent") : _environment.Theme.Edge; tab.CornerRadius = new CornerRadius(_environment.Theme.HighContrast ? 0 : 15); }
         RefreshPreferences();
+        RefreshGlassStatus();
+    }
+    internal void RefreshGlassStatus()
+    {
+        if (_disposed) return;
         if (_glassStatus is not null) _glassStatus.Text = _environment.Theme.HighContrast ? "High contrast uses your Windows system colors."
             : !_environment.Theme.Transparency ? "Windows transparency is off. Nexus uses solid surfaces until it is enabled."
             : _environment.State.ReducedEffects ? "Reduced effects uses solid surfaces. Turn it off to allow glass."
             : !_environment.State.NativeGlass ? "Glass is disabled in Nexus."
-            : "Glass is enabled in Nexus. Windows supplies live blur when graphics and power settings allow it.";
+            : MaterialStatus?.Invoke() ?? "Glass is preparing for this surface.";
     }
     internal void RefreshPreferences()
-    { if (_disposed) return; _syncing = true; try { foreach (var (toggle, read) in _preferences) if (toggle.IsEnabled) toggle.IsOn = read(); if (_wallpaper is { IsEnabled: true }) _wallpaper.SelectedItem = _environment.State.Wallpaper; } finally { _syncing = false; } }
+    { if (_disposed) return; _syncing = true; try { foreach (var (toggle, read) in _preferences) if (toggle.IsEnabled) toggle.IsOn = read(); if (_wallpaper is { IsEnabled: true }) _wallpaper.SelectedItem = _environment.State.Wallpaper; if (_glassStyle is { IsEnabled: true }) _glassStyle.SelectedItem = _environment.State.GlassStyle; } finally { _syncing = false; } }
     internal void Open(string? section = null, bool compact = false)
     {
         if (_disposed) return; _compact = compact; _open = true; _poll.Start();
@@ -352,6 +359,17 @@ internal sealed class QuickSettingsView : Grid, IDisposable
             finally { if (!_disposed) { wallpaper.IsEnabled = true; RefreshPreferences(); } }
         }; appearance.Children.Add(wallpaper);
         Preference(appearance, "Glass surfaces", DesktopPreference.NativeGlass, () => state.NativeGlass);
+        var glassStyle = _glassStyle = new ComboBox { Header = "Glass material", ItemsSource = GlassStyle.Choices, SelectedItem = state.GlassStyle, HorizontalAlignment = HorizontalAlignment.Stretch };
+        AutomationProperties.SetName(glassStyle, "Glass material");
+        glassStyle.SelectionChanged += async (_, _) =>
+        {
+            if (_syncing || !_open || _disposed || !glassStyle.IsEnabled || !ReferenceEquals(glassStyle, _glassStyle) || glassStyle.SelectedItem is not string style) return;
+            long generation = _session.Capture(); glassStyle.IsEnabled = false;
+            try { await _environment.SetPreferenceAsync(DesktopPreference.GlassStyle, value: style); }
+            catch (Exception error) { if (!_disposed && _session.Accepts(generation, "Desktop")) ShowError(error.Message); }
+            finally { if (!_disposed) { glassStyle.IsEnabled = true; RefreshPreferences(); } }
+        }; appearance.Children.Add(glassStyle);
+        appearance.Children.Add(Label("Balanced keeps text clear. Clear reveals more background. Frosted softens it. Changes apply without restarting.", 12, true));
         _glassStatus = Label("", 12, true); appearance.Children.Add(_glassStatus);
         Preference(appearance, "Interface animations", DesktopPreference.Animations, () => state.SurfaceAnimations);
         appearance.Children.Add(Label("Turn animations off for immediate interactions while keeping glass enabled.", 12, true));

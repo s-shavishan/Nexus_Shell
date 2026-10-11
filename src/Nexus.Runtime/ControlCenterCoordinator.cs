@@ -35,7 +35,8 @@ public sealed class ControlCenterCoordinator(Func<Guid, IControlCenterProcess> l
             var monitor = sync.Desired.Monitor;
             if (sync.Desired.Sequence < 0 || !ControlCenterPreferences.Sections.Contains(sync.Desired.Section) || sync.Acknowledged.Length > 64
                 || monitor.Width is < 1 or > 100_000 || monitor.Height is < 1 or > 100_000 || Math.Abs((long)monitor.X) > 1_000_000 || Math.Abs((long)monitor.Y) > 1_000_000
-                || !double.IsFinite(monitor.Scale) || monitor.Scale is < .5 or > 4 || !Nexus.Shell.Services.AuraPalette.Moods.Contains(sync.Preferences.Wallpaper))
+                || !double.IsFinite(monitor.Scale) || monitor.Scale is < .5 or > 4 || !Nexus.Shell.Services.AuraPalette.Moods.Contains(sync.Preferences.Wallpaper)
+                || !Nexus.Shell.Services.GlassStyle.Choices.Contains(sync.Preferences.GlassStyle))
                 throw new RuntimeFailure("panel-sync", "The desktop panel state is invalid.");
             bool changed = _preferences != sync.Preferences;
             _preferences = sync.Preferences;

@@ -3,17 +3,17 @@ using Nexus.Shell.Services;
 
 namespace Nexus.Runtime;
 
-public enum DesktopPreference { Wallpaper, NativeGlass, ReducedEffects, FloatingDock, CompactDock, WindowPreviews, Clock24Hour, ClockWidget, SpaceWidget, QuietAlerts, Animations }
+public enum DesktopPreference { Wallpaper, NativeGlass, ReducedEffects, FloatingDock, CompactDock, WindowPreviews, Clock24Hour, ClockWidget, SpaceWidget, QuietAlerts, Animations, GlassStyle }
 public sealed record ControlCenterPreferences(string Wallpaper, bool NativeGlass, bool ReducedEffects, bool FloatingDock, bool CompactDock,
-    bool WindowPreviews, bool Clock24Hour, bool ClockWidget, bool SpaceWidget, bool QuietAlerts, bool Animations = true)
+    bool WindowPreviews, bool Clock24Hour, bool ClockWidget, bool SpaceWidget, bool QuietAlerts, bool Animations = true, string GlassStyle = Nexus.Shell.Services.GlassStyle.Default)
 {
     public static ControlCenterPreferences From(ShellState state) => new(state.Wallpaper, state.NativeGlass, state.ReducedEffects, state.FloatingTaskbar,
-        state.CompactDock, state.DockPreviews, state.Clock24Hour, state.ShowClockWidget, state.ShowSpaceWidget, state.QuietNotifications, state.SurfaceAnimations);
+        state.CompactDock, state.DockPreviews, state.Clock24Hour, state.ShowClockWidget, state.ShowSpaceWidget, state.QuietNotifications, state.SurfaceAnimations, state.GlassStyle);
     public void Apply(ShellState state)
     {
         state.Wallpaper = Wallpaper; state.NativeGlass = NativeGlass; state.ReducedEffects = ReducedEffects; state.FloatingTaskbar = FloatingDock;
         state.CompactDock = CompactDock; state.DockPreviews = WindowPreviews; state.Clock24Hour = Clock24Hour;
-        state.ShowClockWidget = ClockWidget; state.ShowSpaceWidget = SpaceWidget; state.QuietNotifications = QuietAlerts; state.SurfaceAnimations = Animations;
+        state.ShowClockWidget = ClockWidget; state.ShowSpaceWidget = SpaceWidget; state.QuietNotifications = QuietAlerts; state.SurfaceAnimations = Animations; state.GlassStyle = Nexus.Shell.Services.GlassStyle.Normalize(GlassStyle);
     }
     public static void Set(ShellState state, PanelAction command)
     {
@@ -23,6 +23,7 @@ public sealed record ControlCenterPreferences(string Wallpaper, bool NativeGlass
         switch (command.Preference)
         {
             case DesktopPreference.Wallpaper: state.Wallpaper = command.Value!; break;
+            case DesktopPreference.GlassStyle: state.GlassStyle = command.Value!; break;
             case DesktopPreference.NativeGlass: state.NativeGlass = value; break;
             case DesktopPreference.ReducedEffects: state.ReducedEffects = value; break;
             case DesktopPreference.FloatingDock: state.FloatingTaskbar = value; break;
@@ -41,8 +42,13 @@ public sealed record ControlCenterPreferences(string Wallpaper, bool NativeGlass
         if (command.Action == "preference")
         {
             if (command.Preference is not { } preference || !Enum.IsDefined(preference)) throw new RuntimeFailure("panel-preference", "This desktop preference is unavailable.");
-            if (preference == DesktopPreference.Wallpaper ? command.Enabled is not null || command.Value is null || !AuraPalette.Moods.Contains(command.Value)
-                : command.Enabled is null || command.Value is not null) throw new RuntimeFailure("panel-preference", "The desktop preference has an invalid value.");
+            bool valid = preference switch
+            {
+                DesktopPreference.Wallpaper => command.Enabled is null && command.Value is not null && AuraPalette.Moods.Contains(command.Value),
+                DesktopPreference.GlassStyle => command.Enabled is null && command.Value is not null && Nexus.Shell.Services.GlassStyle.Choices.Contains(command.Value),
+                _ => command.Enabled is not null && command.Value is null
+            };
+            if (!valid) throw new RuntimeFailure("panel-preference", "The desktop preference has an invalid value.");
         }
         else if (command.Action == "advanced")
         {
@@ -57,7 +63,8 @@ public sealed record ControlCenterPreferences(string Wallpaper, bool NativeGlass
     public static readonly string[] Sections = ["Sound", "Network", "Bluetooth", "Display", "Power", "Desktop"];
 }
 public sealed record PanelMonitor(int X, int Y, int Width, int Height, double Scale, long DisplayWindow, bool Managed);
-public sealed record PanelDesired(long Sequence, bool Visible, string Section, PanelMonitor Monitor, bool Compact = false);
+public sealed record PanelAnchor(int X, int Y, int Width, int Height);
+public sealed record PanelDesired(long Sequence, bool Visible, string Section, PanelMonitor Monitor, bool Compact = false, PanelAnchor? Anchor = null);
 public sealed record PanelAction(Guid Id, string Action, DesktopPreference? Preference = null, bool? Enabled = null, string? Value = null);
 public sealed record PanelSync(PanelDesired Desired, ControlCenterPreferences Preferences, Guid[] Acknowledged);
 public sealed record PanelStatus(int ProcessId, long Window, bool Visible, bool Recovering, bool Paused, Guid IssueId, string Issue);

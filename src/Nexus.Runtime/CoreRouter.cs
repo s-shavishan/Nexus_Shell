@@ -1,6 +1,6 @@
 namespace Nexus.Runtime;
 
-public sealed class CoreRouter(CoreStateRepository state, FilesCoordinator files, SystemSettingsCoordinator? settings = null, ControlCenterCoordinator? panels = null)
+public sealed class CoreRouter(CoreStateRepository state, FilesCoordinator files, SystemSettingsCoordinator? settings = null, ControlCenterCoordinator? panels = null, SearchCoordinator? search = null)
 {
     private int _stop;
     public bool StopRequested => Volatile.Read(ref _stop) != 0;
@@ -17,7 +17,11 @@ public sealed class CoreRouter(CoreStateRepository state, FilesCoordinator files
                 Interlocked.Exchange(ref _stop, 1); return RuntimeProtocol.Success(request.Id, new { Stopping = true });
             case RuntimeOperations.ReadState: return RuntimeProtocol.Success(request.Id, state.Read());
             case RuntimeOperations.CommitState:
-                return RuntimeProtocol.Success(request.Id, state.Commit(RuntimeProtocol.Payload<StateCommit>(request.Payload)));
+                // Invalid data is rejected before the atomic write. Transport or
+                // filesystem failures remain uncertain and must be reconciled.
+                try { return RuntimeProtocol.Success(request.Id, state.Commit(RuntimeProtocol.Payload<StateCommit>(request.Payload))); }
+                catch (Exception error) when (error is InvalidDataException or System.Text.Json.JsonException)
+                { throw new RuntimeFailure("state-rejected", error.Message); }
             case RuntimeOperations.OpenFiles:
                 return RuntimeProtocol.Success(request.Id, await files.OpenAsync(request.Id, RuntimeProtocol.Payload<FilesLaunch>(request.Payload), cancellation).ConfigureAwait(false));
             case RuntimeOperations.Settings:
@@ -25,6 +29,9 @@ public sealed class CoreRouter(CoreStateRepository state, FilesCoordinator files
                 var settingsRequest = RuntimeProtocol.Payload<SettingsRequest>(request.Payload);
                 if (request.Role == "controlcenter") settingsRequest = settingsRequest with { Window = PanelService().DisplayWindow(request.ProcessId) };
                 return RuntimeProtocol.Success(request.Id, await settings.ExecuteAsync(settingsRequest, cancellation).ConfigureAwait(false));
+            case RuntimeOperations.Search:
+                return RuntimeProtocol.Success(request.Id, search is null ? SearchReply.Empty(SearchStatus.Unavailable)
+                    : await search.QueryAsync(RuntimeProtocol.Payload<SearchRequest>(request.Payload), cancellation).ConfigureAwait(false));
             case RuntimeOperations.PanelSync: return RuntimeProtocol.Success(request.Id, PanelService().Sync(RuntimeProtocol.Payload<PanelSync>(request.Payload)));
             case RuntimeOperations.PanelPulse: return RuntimeProtocol.Success(request.Id, PanelService().Pulse(request.ProcessId));
             case RuntimeOperations.PanelWait: return RuntimeProtocol.Success(request.Id, await PanelService().WaitAsync(request.ProcessId, RuntimeProtocol.Payload<PanelWait>(request.Payload).Revision, cancellation).ConfigureAwait(false));

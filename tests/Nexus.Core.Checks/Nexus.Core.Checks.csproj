@@ -16,6 +16,8 @@
     <Compile Include="../../src/Nexus.Shell/Services/MinimizedWindowPolicy.cs" Link="MinimizedWindowPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/LaunchpadCatalog.cs" Link="LaunchpadCatalog.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/GlassRecipe.cs" Link="GlassRecipe.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/MaximizedWindowLayout.cs" Link="MaximizedWindowLayout.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/WindowPlacementPlan.cs" Link="WindowPlacementPlan.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/AppIconPolicy.cs" Link="AppIconPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/NotificationInbox.cs" Link="NotificationInbox.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/CalculatorEngine.cs" Link="CalculatorEngine.cs" />
@@ -32,6 +34,10 @@
     <Compile Include="../../src/Nexus.Shell/Services/DesktopSessionRecovery.cs" Link="DesktopSessionRecovery.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DesktopSessionRecord.cs" Link="DesktopSessionRecord.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/FileCatalog.cs" Link="FileCatalog.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/LatestWorkQueue.cs" Link="LatestWorkQueue.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/DesktopSearchCatalog.cs" Link="DesktopSearchCatalog.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/FileMutationHistory.cs" Link="FileMutationHistory.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/DesktopFileMonitor.cs" Link="DesktopFileMonitor.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/ExclusiveTaskbarRegistration.cs" Link="ExclusiveTaskbarRegistration.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/DesktopWorkArea.cs" Link="DesktopWorkArea.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DesktopWorkAreaReservation.cs" Link="DesktopWorkAreaReservation.cs" />
@@ -52,5 +58,11 @@
     <Compile Include="../../src/Nexus.Shell/Services/FocusSession.cs" Link="FocusSession.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/DesktopIntegration.cs" Link="DesktopIntegration.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/NavigationTrail.cs" Link="NavigationTrail.cs" />
+
+    <Compile Include="../../src/Nexus.Shell/Services/ClipboardHistory.cs" Link="ClipboardHistory.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/ClipboardCaptureGate.cs" Link="ClipboardCaptureGate.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/ClipboardCapturePolicy.cs" Link="ClipboardCapturePolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/WindowBoardPolicy.cs" Link="WindowBoardPolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Interop/DesktopWindowCatalog.cs" Link="DesktopWindowCatalog.cs" />
   </ItemGroup>
 </Project>

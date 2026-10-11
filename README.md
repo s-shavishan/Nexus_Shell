@@ -1,17 +1,41 @@
-# Nexus Shell 3.2.0 — Responsive desktop controls
+# Nexus Shell 3.6.0 — Nexus Search / Phase 02
 
-Nexus is a native C# / WinUI desktop environment on Windows. This update continues from 3.1.0 with direct menu controls, faster panel interaction, revised glass rendering and useful Launchpad features. Its supervised Control Center, coordinated motion and durable notification history remain part of the Session Core foundation.
+Nexus is a native C# / WinUI desktop environment on Windows. This release adds an integrated Search panel backed by Everything's local index, plus desktop controls and open-window results. Launchpad remains the app launcher.
 
-## Changes in 3.2.0
+## Changes in 3.6.0
 
-- **Direct menu controls:** Network, Sound, Bluetooth and Display open compact Nexus panels beneath the menu bar. All controls expands the same supervised panel into the full Control Center.
-- **One Launchpad:** duplicate app-search buttons and the separate search layout are removed. Launchpad keeps its embedded search, Pinned filter and paging. Legacy app-search dispatches focus its search field. The standalone Windows key opens Launchpad in the managed desktop; native Windows combinations still pass through.
-- **Responsiveness:** transient panels dismiss immediately; motion stays inside their painted frame. Native content-window minimize commands run immediately. Launchpad warms after desktop startup, reuses unchanged tiles and shared vector sources, and briefly coalesces typed filtering.
-- **Control Center updates:** an authenticated, cancellable revision wait wakes the worker when its state changes. Its bounded idle reply keeps supervision alive. Device polling remains limited to an open panel.
-- **Glass recovery:** the acrylic target initializes the Windows system dispatcher, gets its palette before attachment, checks attachment success and uses a fully opaque matching fallback. Thin acrylic and restrained highlights replace the broad gray gradient. Windows transparency and accessibility policy remain respected.
-- **Desktop features:** a bounded, persistent Recent apps category, installed-app refresh, asynchronous Windows icons, and an independent Interface animations switch. Turning animations off keeps Nexus glass enabled. Recent history follows the existing privacy preference.
+- Search files by category and scope in a glass desktop panel. Use My files by default or explicitly include indexed local drives; open results, open their folder in Nexus Files, or copy a path.
+- Search 15 existing desktop controls and switch open windows even when Everything is unavailable.
+- Open Search from the menu bar, desktop/Nexus/File menus, Ctrl+Alt+Space across apps when available, or Ctrl+Shift+F on the desktop. Arrow keys, Enter, Ctrl+Enter, Ctrl+Shift+C, Ctrl+L and Escape keep it usable from the keyboard.
+- Bound native IPC inside Core, cancel obsolete queries, reject malformed/out-of-scope results, preserve selection as results arrive and show clear dependency/readiness/timeout states.
+- Keep queries in memory only while the panel is open. No duplicate index, SDK DLL or third-party binary is bundled; Session status reports the engine's last observed status.
 
-See [changes and Windows VM acceptance](docs/RESPONSIVENESS-3.2.0.md). The older [3.1 design projection](docs/UI-3.1.0-preview.png) remains a design reference with example content. Native Windows rendering and sustained resource/timing measurements must be verified on the VM.
+Read [Search setup, validation and the Windows acceptance pass](docs/SEARCH-PHASE-02-3.6.0.md). File search requires the default Everything client running in your Windows session; the indexing service alone is insufficient. Native Everything and rendering acceptance remain pending until tested on Windows.
+
+## Included Phase 01 fixes
+
+- Bound folder reads and image previews to one active operation each; discard superseded work and show slow-location feedback.
+- Keep file actions and Back/Forward states accurate during navigation, dialogs and Recycle Bin use. Ignore double-clicks on empty list space.
+- Recover from rejected settings saves; capture queued state before waiting. Preserve uncertain-acknowledgement and revision-conflict protections.
+- Normalize notification text before deduplication, retain severity changes, and handle backwards clock adjustments.
+- Reject alternate device/UNC path spellings and discard invalid Places individually during settings recovery.
+- Reposition open desktop panels when dock/work-area layout is refreshed.
+
+The [Phase 01 fix details](docs/STABILITY-PHASE-01-3.5.1.md) remain available. The [engine integration plan](docs/ENGINE-INTEGRATION-PLAN.md) records the next file-manager and transfer work; Explorer++ and transfer engines are not substituted in this release.
+
+## Included 3.5.0 features
+
+- **Launchpad collections:** create, rename and remove named collections; assign apps from their context menus. Add A–Z/catalog sorting, hide/restore controls and a dedicated Hidden tab. Collections do not alter installed apps or dock pins.
+- **Dock ordering:** move pins left/right from the dock or Launchpad context menu. Recent and Pinned views retain their meaningful order.
+- **Places:** an integrated favorite-folder panel with common locations, labels, ordering, a folder picker and a bounded quick preview. Continue in Nexus Files with one action. Folder reads run off the UI thread, with one active worker and stale-result rejection.
+- **Desktop file controls:** rename, new folder, copy path and open containing folder; sort by Name/Kind/Newest or hide icons. Desktop and Nexus Files gain one-step undo for local rename/new-folder edits, with collision and changed-item refusal.
+- **Automatic icon updates:** observe user/common desktop folders, coalesce notifications and retry refresh requests that arrive during an existing read. Manual refresh remains available; Session status reports observer health.
+- **Useful alert history:** search, unread/issues/snoozed filters, explicit mark-read, 15-minute snooze, bring-back and undo dismiss/clear. Rendering is limited to 20 cards per page; snooze deadlines persist through the existing Core writer.
+- **Desktop shortcuts:** the menu-bar Help button and desktop F1 open an integrated guide with direct routes to existing desktop tools. New controls use the current glass, high-contrast and reduced-motion system.
+
+Open **File → Places**, organize apps inside **Launchpad**, right-click desktop items or the desktop background, and use **Help** for shortcuts. The [Everyday Desktop guide](docs/EVERYDAY-DESKTOP-3.5.0.md) describes exact behavior, limits and one consolidated Windows VM acceptance pass. All [3.4 window-board, layout and clipboard features](docs/DESKTOP-COMMANDS-3.4.0.md) remain included.
+
+The source/API compilation and portable checks do not certify a native Windows build, compositor output or sustained performance. Delivery ZIPs contain source; build on Windows before VM acceptance.
 
 ## Integrated controls
 
@@ -41,7 +65,7 @@ dotnet run --project tests/Nexus.Runtime.Checks/Nexus.Runtime.Checks.csproj -c R
 .\scripts\package.ps1
 ```
 
-CI publishes `Nexus-Shell-3.2.0-win-x64.zip` and the smaller update ZIP. Keep the complete published folder together, including Nexus.Shell, DesktopHost, Core, Nexus.Runtime and compiled UI resources. See [source patch routes](SOURCE-PATCH.md) and [start here](START-HERE.md).
+CI publishes `Nexus-Shell-3.6.0-win-x64.zip` and the smaller update ZIP. Keep the complete published folder together, including Nexus.Shell, DesktopHost, Core, Nexus.Runtime and compiled UI resources. See [source patch routes](SOURCE-PATCH.md) and [start here](START-HERE.md).
 
 ## Next milestones
 

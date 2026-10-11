@@ -26,6 +26,10 @@ internal sealed class DesktopSurface : Grid
     private readonly InfoBar _status = new() { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(20), MaxWidth = 540 };
     private string? _wallpaperName;
     private bool _refreshing;
+    private bool _refreshAgain;
+    private IReadOnlyList<DesktopShortcut> _allIcons = [];
+    private string? _selectPath;
+    private bool _applyingIcons;
     internal DesktopSurface(DesktopEnvironment environment)
     {
         _environment = environment; KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden;
@@ -53,11 +57,18 @@ internal sealed class DesktopSurface : Grid
             </DataTemplate>
             """);
         _icons.DoubleTapped += OpenDoubleTapped;
-        _icons.KeyDown += (_, args) => { if (args.Key == VirtualKey.Enter && _icons.SelectedItem is DesktopShortcut item) { environment.OpenDesktopItem(item); args.Handled = true; } };
+        _icons.SelectionChanged += (_, _) => { if (!_applyingIcons) _selectPath = null; };
+        _icons.KeyDown += (_, args) =>
+        {
+            if (_icons.SelectedItem is not DesktopShortcut item) return;
+            if (args.Key == VirtualKey.Enter) { environment.OpenDesktopItem(item); args.Handled = true; }
+            else if (args.Key == VirtualKey.F2) { environment.RenameDesktopItem(item); args.Handled = true; }
+        };
         _icons.RightTapped += (_, args) =>
         {
             var item = ItemAt(args.OriginalSource);
             if (item is null) return;
+            _icons.SelectedItem = item;
             environment.Menus.DesktopItemMenu(item).ShowAt(_icons, new FlyoutShowOptions { Position = args.GetPosition(_icons) }); args.Handled = true;
         };
         RightTapped += (_, args) =>
@@ -73,6 +84,14 @@ internal sealed class DesktopSurface : Grid
         SizeChanged += (_, _) => { _calendar.MaxWidth = Math.Max(1, ActualWidth - 40); ApplyWidgetVisibility(); };
         var enter = new KeyboardAccelerator { Key = VirtualKey.K, Modifiers = VirtualKeyModifiers.Control };
         enter.Invoked += (_, args) => { environment.ShowMenu(true); args.Handled = true; }; KeyboardAccelerators.Add(enter);
+        void Shortcut(UIElement owner, VirtualKey key, VirtualKeyModifiers modifiers, Action action)
+        { var shortcut = new KeyboardAccelerator { Key = key, Modifiers = modifiers }; shortcut.Invoked += (_, args) => { action(); args.Handled = true; }; owner.KeyboardAccelerators.Add(shortcut); }
+        Shortcut(this, VirtualKey.F5, VirtualKeyModifiers.None, environment.RefreshDesktop);
+        Shortcut(this, VirtualKey.F1, VirtualKeyModifiers.None, environment.ShowDesktopGuide);
+        Shortcut(this, VirtualKey.N, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, environment.CreateDesktopFolder);
+        Shortcut(this, VirtualKey.P, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, environment.ShowPlaces);
+        Shortcut(this, VirtualKey.F, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, environment.ShowSearch);
+        Shortcut(_icons, VirtualKey.Z, VirtualKeyModifiers.Control, environment.UndoDesktopEdit);
         ApplyAppearance();
         RefreshContent();
     }
@@ -91,10 +110,10 @@ internal sealed class DesktopSurface : Grid
     }
     internal void RefreshContent()
     {
+        _icons.Visibility = _environment.Session.State.FocusMode || !_environment.Session.State.ShowDesktopIcons ? Visibility.Collapsed : Visibility.Visible;
         var tasks = _environment.Session.State.Tasks.Where(t => !t.Completed).Take(3).ToArray();
         var content = (_environment.Theme.Palette.Name, _environment.Theme.HighContrast, _environment.Session.State.FocusMode, _environment.Session.State.ShowClockWidget, string.Join("\0", tasks.Select(t => t.Id + ":" + t.Title)));
         if (_calendarContent == content) return; _calendarContent = content;
-        _icons.Visibility = _environment.Session.State.FocusMode ? Visibility.Collapsed : Visibility.Visible;
         ApplyWidgetVisibility();
         _tasks.Children.Clear();
         if (tasks.Length == 0) _tasks.Children.Add(new TextBlock { Text = "A little space for today.\nOpen Study to add a task.", FontSize = 12, Foreground = _environment.Theme.Brush("NexusMuted"), TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center });
@@ -119,16 +138,26 @@ internal sealed class DesktopSurface : Grid
     internal void SetWorkArea(double bottomInset) => Padding = new Thickness(0, 0, 0, Math.Max(0, bottomInset));
     internal async Task RefreshAsync()
     {
-        if (_refreshing || _environment.IsStopping) return; _refreshing = true;
+        if (_environment.IsStopping) return;
+        if (_refreshing) { _refreshAgain = true; return; } _refreshing = true;
         try
         {
             var items = await Task.Run(DesktopCatalog.Read);
             if (_environment.IsStopping) return;
-            string? selected = (_icons.SelectedItem as DesktopShortcut)?.Id;
-            _icons.ItemsSource = items; _icons.SelectedItem = items.FirstOrDefault(i => i.Id == selected);
+            _allIcons = items; ApplyIconPreferences();
         }
         catch (Exception ex) { _environment.Report("Could not refresh desktop icons", ex); }
-        finally { _refreshing = false; }
+        finally { _refreshing = false; if (_refreshAgain && !_environment.IsStopping) { _refreshAgain = false; _ = RefreshAsync(); } }
+    }
+    internal void SelectPath(string path) { _selectPath = path; ApplyIconPreferences(); _icons.Focus(FocusState.Programmatic); }
+    internal void ApplyIconPreferences()
+    {
+        string? selected = _selectPath ?? (_icons.SelectedItem as DesktopShortcut)?.Id;
+        var items = DesktopCatalog.Sort(_allIcons, _environment.Session.State.DesktopIconOrder);
+        _applyingIcons = true;
+        try { _icons.ItemsSource = items; _icons.SelectedItem = items.FirstOrDefault(i => string.Equals(i.Id, selected, StringComparison.OrdinalIgnoreCase)); if (_icons.SelectedItem is not null) _selectPath = null; }
+        finally { _applyingIcons = false; }
+        RefreshContent();
     }
     internal void ApplyAppearance()
     {
@@ -146,4 +175,5 @@ internal sealed class DesktopSurface : Grid
         RefreshContent();
     }
     internal void Report(string message) { _status.Message = message; _status.Severity = InfoBarSeverity.Error; _status.IsOpen = true; }
+    internal void Feedback(string message) { _status.Message = message; _status.Severity = InfoBarSeverity.Informational; _status.IsOpen = true; }
 }

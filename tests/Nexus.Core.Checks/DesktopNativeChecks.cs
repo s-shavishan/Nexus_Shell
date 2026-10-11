@@ -83,10 +83,13 @@ internal static class DesktopNativeChecks
                     throw new Exception("The desktop invocation message was not posted.");
                 Pump(window);
                 if (!actions.SequenceEqual(new[] { "show" })) throw new Exception("The native subclass must deliver desktop invocation exactly once.");
+                DesktopIntegration.PostMessage(window, 0x0312, new UIntPtr(0x4E53), IntPtr.Zero); Pump(window);
+                if (!actions.SequenceEqual(new[] { "show", "search" })) throw new Exception("Search hotkey messages must dispatch once without invoking Windows Start.");
                 if (!integration.SetResident(false) || integration.TrayAvailable) throw new Exception("Disabling resident mode must remove its tray registration.");
             }
             actions.Clear();
             DesktopIntegration.PostMessage(window, DesktopIntegration.SummonMessage, UIntPtr.Zero, IntPtr.Zero); Pump(window);
+            DesktopIntegration.PostMessage(window, 0x0312, new UIntPtr(0x4E53), IntPtr.Zero); Pump(window);
             if (actions.Count != 0) throw new Exception("Disposed desktop controls must no longer receive invocation.");
             Console.WriteLine("PASS: real Win32 desktop subclass, invocation, disabled controls, and cleanup (own test window).");
             var events = new List<uint>();

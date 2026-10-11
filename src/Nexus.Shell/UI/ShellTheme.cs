@@ -12,18 +12,21 @@ internal sealed class ShellTheme
     public bool Animations { get; private set; } = true;
     public bool Simple { get; private set; }
     public bool Transparency { get; private set; } = true;
+    public string GlassStyle { get; private set; } = Services.GlassStyle.Default;
     private Windows.UI.ViewManagement.UISettings? _settings;
     private readonly Dictionary<string, Brush> _surfaces = [];
     public ElementTheme ElementTheme => HighContrast ? ElementTheme.Default : Palette.IsLight ? ElementTheme.Light : ElementTheme.Dark;
-    public bool Apply(string mood, bool simple = false)
+    public bool Apply(string mood, bool simple = false, string glassStyle = Services.GlassStyle.Default)
     {
         bool contrast = HighContrast, animations = Animations, transparency = Transparency;
         if (NativeMethods.TryGetHighContrast(out bool value)) contrast = value;
         if (NativeMethods.TryGetAnimationsEnabled(out bool animation)) Animations = animation;
         try { _settings ??= new(); transparency = _settings.AdvancedEffectsEnabled; } catch { }
         var palette = AuraPalette.For(mood);
-        bool changed = palette.Name != Palette.Name || contrast != HighContrast || animations != Animations || transparency != Transparency || simple != Simple || !_initialized;
-        if (palette.Name != Palette.Name || !_initialized) _surfaces.Clear();
+        glassStyle = Services.GlassStyle.Normalize(glassStyle);
+        bool changed = palette.Name != Palette.Name || contrast != HighContrast || animations != Animations || transparency != Transparency || simple != Simple || GlassStyle != glassStyle || !_initialized;
+        if (palette.Name != Palette.Name || GlassStyle != glassStyle || !_initialized) _surfaces.Clear();
+        GlassStyle = glassStyle;
         Palette = palette; HighContrast = contrast; Simple = simple; Transparency = transparency;
         if (!changed) return false;
         var resources = Application.Current.Resources;
@@ -50,11 +53,12 @@ internal sealed class ShellTheme
         if (HighContrast || Simple) return Brush(role == "Frame" ? "NexusPanel" : "NexusSidebar");
         string key = "glass:" + role;
         if (_surfaces.TryGetValue(key, out var cached)) return cached;
-        var recipe = GlassRecipe.For(Palette, role);
+        var recipe = GlassRecipe.For(Palette, role, GlassStyle);
         var brush = Gradient(recipe.Start, recipe.End);
         brush.StartPoint = new(0, 0); brush.EndPoint = new(0, 1);
-        brush.GradientStops.Insert(1, new() { Color = Color(recipe.Highlight), Offset = .05 });
-        brush.GradientStops.Insert(2, new() { Color = Color(recipe.Start), Offset = .10 });
+        // Reflection belongs on the thin rim, never as a pale stripe across
+        // content. The large painted area uses only the coherent palette tint.
+        brush.GradientStops.Insert(1, new() { Color = Color(recipe.Start), Offset = .55 });
         return _surfaces[key] = brush;
     }
     public Brush Material(string role, bool glass)
@@ -73,8 +77,8 @@ internal sealed class ShellTheme
             if (HighContrast || Simple) return Brush("NexusBorder");
             const string key = "edge";
             if (_surfaces.TryGetValue(key, out var cached)) return cached;
-            var edge = Gradient(Palette.IsLight ? "B0FFFFFF" : "76D8E9FF", Palette.IsLight ? "30313B52" : "183D527C");
-            edge.StartPoint = new(0, 0); edge.EndPoint = new(0, 1);
+            var edge = Gradient(Palette.IsLight ? "A0FFFFFF" : "4AC6D9F7", Palette.IsLight ? "24313B52" : "1A5E739C");
+            edge.StartPoint = new(0, 0); edge.EndPoint = new(1, 1);
             return _surfaces[key] = edge;
         }
     }

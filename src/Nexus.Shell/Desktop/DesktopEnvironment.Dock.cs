@@ -8,6 +8,7 @@ internal sealed partial class DesktopEnvironment
 {
     private DockPreviewWindow? _dockPreview;
     internal bool CanShowDockPreview => !IsStopping && Session.State.DockPreviews && !_sessionDialog
+        && _clipboardShelf?.IsOpen != true && _sessionStatus?.IsOpen != true && _search?.IsOpen != true && _places?.IsOpen != true && _desktopGuide?.IsOpen != true
         && _menu?.IsOpen != true && !_controlVisible && _notifications?.IsOpen != true && _switcher?.IsOpen != true;
     internal void ShowDockPreview(RunningWindow window, ShellRect anchor, bool keyboard = false)
     {

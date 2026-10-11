@@ -24,12 +24,15 @@ internal sealed class FilesView : Grid
     private readonly GridView _tiles = new() { SelectionMode = ListViewSelectionMode.Single };
     private ListViewBase ActiveList => _showGrid ? _tiles : _list;
     private readonly NavigationTrail _history = new();
+    private readonly FileMutationHistory _edits = new();
+    private readonly Button _rename, _undo;
     private readonly Button _back, _forward, _gridButton, _listButton;
     private readonly ComboBox _sort = new() { Width = 110, FontSize = 12 };
     private readonly Image _preview = new() { Height = 136, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Stretch };
     private readonly Image _fileIcon = new() { Width = 70, Height = 70, HorizontalAlignment = HorizontalAlignment.Center };
     private readonly TextBlock _modified = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap };
     private readonly ProgressRing _loading = new() { Width = 28, Height = 28, IsActive = false, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, IsHitTestVisible = false };
+    private readonly DispatcherTimer _slowRead = new() { Interval = TimeSpan.FromSeconds(5) };
     private readonly Dictionary<Button, string> _places = [];
     internal event Action<string>? FolderChanged;
     private string? _previewPath;
@@ -49,11 +52,17 @@ internal sealed class FilesView : Grid
     private readonly TextBlock _binCount = new() { FontSize = 24 };
     private IReadOnlyList<FileEntry> _entries = [];
     private string _folder = "";
-    private bool _closed, _recycle, _dialog;
-    private CancellationTokenSource? _navigation;
+    private bool _closed, _recycle, _dialog, _navigating, _binHasItems;
+    private int _navigationVersion;
+    private readonly LatestWorkQueue _navigation = new(), _previews = new();
     internal FilesView(FilesEnvironment environment, FileSelectionRequest request, Action<IReadOnlyList<string>> complete)
     {
         _environment = environment; _request = request; _complete = complete; Padding = new Thickness(12); RowSpacing = 10;
+        _slowRead.Tick += (_, _) =>
+        {
+            _slowRead.Stop();
+            if (!_closed && _navigating) _status.Text = "This location is still responding. If it stays unavailable, close Files and reopen it to recover.";
+        };
         _showGrid = request.Kind == FileSelectionKind.Browse;
         RequestedTheme = environment.Theme.ElementTheme; KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden; Background = environment.Theme.Brush("NexusPanel");
         foreach (var height in new[] { GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto }) RowDefinitions.Add(new() { Height = height });
@@ -125,15 +134,32 @@ internal sealed class FilesView : Grid
         }
         foreach (var view in new ListViewBase[] { _list, _tiles })
         {
-            view.DoubleTapped += async (_, args) => { if (ActiveList.SelectedItem is FileEntry entry) { args.Handled = true; await OpenAsync(entry); } };
+            view.DoubleTapped += async (_, args) =>
+            {
+                var entry = ItemAt(view, args.OriginalSource);
+                if (entry is not null) { view.SelectedItem = entry; args.Handled = true; await OpenAsync(entry); }
+            };
             view.KeyDown += async (_, e) => { if (e.Key == VirtualKey.Enter && ActiveList.SelectedItem is FileEntry entry) { e.Handled = true; await OpenAsync(entry); } };
             view.SelectionChanged += (_, _) => Selected();
+            if (request.Kind == FileSelectionKind.Browse)
+            {
+                var renameKey = new KeyboardAccelerator { Key = VirtualKey.F2 }; renameKey.Invoked += async (_, e) => { e.Handled = true; try { await RenameAsync(); } catch (Exception error) { ShowError(error); } }; view.KeyboardAccelerators.Add(renameKey);
+                var undoKey = new KeyboardAccelerator { Key = VirtualKey.Z, Modifiers = VirtualKeyModifiers.Control }; undoKey.Invoked += async (_, e) => { e.Handled = true; try { await UndoAsync(); } catch (Exception error) { ShowError(error); } }; view.KeyboardAccelerators.Add(undoKey);
+                var context = new MenuFlyout(); var rename = new MenuFlyoutItem { Text = "Rename…" }; var undo = new MenuFlyoutItem { Text = "Undo file edit" };
+                rename.Click += async (_, _) => { try { await RenameAsync(); } catch (Exception error) { ShowError(error); } }; undo.Click += async (_, _) => { try { await UndoAsync(); } catch (Exception error) { ShowError(error); } }; context.Items.Add(rename); context.Items.Add(undo);
+                context.Opening += (_, _) => { rename.IsEnabled = !_dialog && !_navigating && !_recycle && ActiveList.SelectedItem is FileEntry; undo.Text = _edits.UndoLabel; undo.IsEnabled = !_dialog && !_navigating && _edits.CanUndo; }; view.ContextFlyout = context;
+                view.RightTapped += (_, args) => view.SelectedItem = ItemAt(view, args.OriginalSource);
+            }
         }
         var contents = new Grid { RowSpacing = 10 }; contents.RowDefinitions.Add(new() { Height = GridLength.Auto }); contents.RowDefinitions.Add(new() { Height = new GridLength(1, GridUnitType.Star) });
         var views = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
         _gridButton = Button("Grid", () => { _showGrid = true; Render(); return Task.CompletedTask; }); _listButton = Button("List", () => { _showGrid = false; Render(); return Task.CompletedTask; }); views.Children.Add(_gridButton); views.Children.Add(_listButton);
+        _rename = Button("Rename…", RenameAsync); _undo = Button("Undo edit", UndoAsync);
+        _rename.Visibility = _undo.Visibility = request.Kind == FileSelectionKind.Browse ? Visibility.Visible : Visibility.Collapsed;
+        views.Children.Add(_rename); views.Children.Add(_undo);
         foreach (string sort in new[] { "Name", "Newest", "Size", "Kind" }) _sort.Items.Add(sort);
-        _sort.SelectedIndex = 0; _sort.SelectionChanged += (_, _) => Render(); Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_sort, "Sort files"); views.Children.Add(_sort); contents.Children.Add(views);
+        _sort.SelectedIndex = 0; _sort.SelectionChanged += (_, _) => Render(); Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_sort, "Sort files"); views.Children.Add(_sort);
+        contents.Children.Add(new ScrollViewer { Content = views, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled });
         Grid.SetRow(_list, 1); Grid.SetRow(_tiles, 1); contents.Children.Add(_list); contents.Children.Add(_tiles); Grid.SetColumn(contents, 1); body.Children.Add(contents);
         Grid.SetColumn(_loading, 1); body.Children.Add(_loading);
         var details = new StackPanel { Spacing = 12 };
@@ -174,12 +200,18 @@ internal sealed class FilesView : Grid
         Shortcut(VirtualKey.F, VirtualKeyModifiers.Control, () => _filter.Focus(FocusState.Programmatic));
         Shortcut(VirtualKey.F5, VirtualKeyModifiers.None, () => _ = NavigateAsync(_recycle ? "nexus:recycle" : _folder));
         SizeChanged += (_, _) => _filter.Width = ActualWidth < 700 ? 120 : 170;
-        ApplyAppearance();
+        ApplyAppearance(); UpdateActions();
+    }
+    private static FileEntry? ItemAt(ListViewBase view, object source)
+    {
+        DependencyObject? node = source as DependencyObject;
+        while (node is not null && node is not ListViewItem && node is not GridViewItem && !ReferenceEquals(node, view)) node = VisualTreeHelper.GetParent(node);
+        return (node as ContentControl)?.Content as FileEntry;
     }
     private Button Button(string title, Func<Task> action)
     {
         var button = new Button { Content = title, Style = (Style)Application.Current.Resources["QuietButton"], HorizontalAlignment = HorizontalAlignment.Stretch };
-        button.Click += async (_, _) => { if (_dialog || _closed) return; button.IsEnabled = false; try { await action(); } catch (Exception ex) { ShowError(ex); } finally { if (!_closed) button.IsEnabled = true; } }; return button;
+        button.Click += async (_, _) => { if (_dialog || _closed) return; button.IsEnabled = false; try { await action(); } catch (Exception ex) { ShowError(ex); } finally { if (!_closed) { button.IsEnabled = true; UpdateActions(); } } }; return button;
     }
     private Button PlaceButton(string title, string path)
     {
@@ -191,31 +223,32 @@ internal sealed class FilesView : Grid
     }
     internal async Task NavigateAsync(string path, int historyMove = 0)
     {
-        if (_closed || _dialog) return;
-        _navigation?.Cancel(); _navigation?.Dispose(); var navigation = _navigation = new CancellationTokenSource();
-        var token = navigation.Token;
-        _choose.IsEnabled = _newFolder.IsEnabled = false; _status.Text = "Opening folder…"; _loading.IsActive = true;
+        if (_closed || _dialog || (historyMove != 0 && _navigating)) return;
+        int version = ++_navigationVersion; _navigating = true;
+        ResetPreview(); UpdateActions(); _status.Text = "Opening folder…"; _loading.IsActive = true;
+        _slowRead.Stop(); _slowRead.Start();
         try
         {
             if (path == "nexus:recycle" && _request.Kind == FileSelectionKind.Browse)
             {
-                var info = await Task.Run(RecycleBinService.Read, token);
-                if (_closed || navigation.IsCancellationRequested) return;
-                _recycle = true; _binCount.Text = info.Items + " items · " + FileCatalog.Size(info.Bytes); _empty.IsEnabled = info.Items > 0;
-                _address.Text = "Recycle Bin"; _fileTitle.Text = "Recycle Bin"; _fileKind.Text = "Deleted items"; _fileLocation.Text = "Windows Recycle Bin"; _bin.Visibility = Visibility.Visible; _list.Visibility = Visibility.Collapsed; _filter.IsEnabled = false;
-                _tiles.Visibility = Visibility.Collapsed; CommitHistory("nexus:recycle", historyMove); _status.Text = "Recycle Bin · Windows storage, Nexus controls"; return;
+                var info = await _navigation.RunAsync(token => Task.Run(RecycleBinService.Read, token));
+                if (_closed || version != _navigationVersion) return;
+                _recycle = true; _folder = ""; _entries = []; _binHasItems = info.Items > 0;
+                _list.ItemsSource = _tiles.ItemsSource = null;
+                _binCount.Text = info.Items + " items · " + FileCatalog.Size(info.Bytes);
+                _address.Text = "Recycle Bin"; _bin.Visibility = Visibility.Visible; _list.Visibility = _tiles.Visibility = Visibility.Collapsed; _filter.IsEnabled = false;
+                UpdateInspector(); CommitHistory("nexus:recycle", historyMove); _status.Text = "Recycle Bin · Windows storage, Nexus controls"; return;
             }
-            var snapshot = await Task.Run(() => FileCatalog.Read(path, _request.Extensions, token), token);
-            if (_closed || navigation.IsCancellationRequested) return;
+            var snapshot = await _navigation.RunAsync(token => Task.Run(() => FileCatalog.Read(path, _request.Extensions, token), token));
+            if (_closed || version != _navigationVersion) return;
             _folder = snapshot.Path; _entries = snapshot.Entries; _recycle = false; _filter.IsEnabled = true; _filter.Text = "";
             CommitHistory(_folder, historyMove);
             _address.Text = _folder; _bin.Visibility = Visibility.Collapsed; _list.Visibility = Visibility.Visible; Render(); UpdateInspector();
             _status.Text = _entries.Count + " items" + (snapshot.Limited ? " · First 1,000 entries; use the path field to reach another item" : " · Double-click or press Enter to open");
-            _choose.IsEnabled = _newFolder.IsEnabled = true;
         }
         catch (OperationCanceledException) { }
-        catch (Exception ex) { if (!_closed && !navigation.IsCancellationRequested) { ShowError(ex); _address.Text = _recycle ? "Recycle Bin" : _folder; _choose.IsEnabled = _newFolder.IsEnabled = _folder.Length > 0 && !_recycle; } }
-        finally { if (!_closed && ReferenceEquals(_navigation, navigation)) { _loading.IsActive = false; _back.IsEnabled = _history.CanGoBack; _forward.IsEnabled = _history.CanGoForward; } }
+        catch (Exception ex) { if (!_closed && version == _navigationVersion) { ShowError(ex); _address.Text = _recycle ? "Recycle Bin" : _folder; } }
+        finally { if (!_closed && version == _navigationVersion) { _slowRead.Stop(); _navigating = false; _loading.IsActive = false; UpdateInspector(); } }
     }
     private void CommitHistory(string path, int move)
     {
@@ -249,12 +282,13 @@ internal sealed class FilesView : Grid
     }
     private async Task OpenAsync(FileEntry entry)
     {
+        if (_closed || _dialog || _navigating || _recycle) return;
         try { if (entry.IsFolder) await NavigateAsync(entry.Path); else if (_request.Kind == FileSelectionKind.Browse) _environment.OpenTarget(entry.Path); else if (_request.Kind is FileSelectionKind.OpenFile or FileSelectionKind.OpenFiles) await ChooseAsync(); }
         catch (Exception ex) { ShowError(ex); }
     }
     private async Task ChooseAsync()
     {
-        if (_closed || _dialog || _recycle || _folder.Length == 0) return;
+        if (_closed || _dialog || _navigating || _recycle || _folder.Length == 0) return;
         try
         {
             IReadOnlyList<string> paths;
@@ -282,31 +316,63 @@ internal sealed class FilesView : Grid
     }
     private async Task NewFolderAsync()
     {
-        if (_dialog || _recycle || _folder.Length == 0) return; _dialog = true;
+        if (_closed || _dialog || _navigating || _recycle || _folder.Length == 0) return; _dialog = true; UpdateActions();
         try
         {
             var name = new TextBox { PlaceholderText = "Folder name" }; var dialog = Dialog("New folder", name, "Create");
             if (await dialog.ShowAsync() != ContentDialogResult.Primary || _closed) return;
-            string path = FileCatalog.ChildPath(_folder, name.Text);
-            if (File.Exists(path) || Directory.Exists(path)) throw new IOException("That name is already in use.");
-            await Task.Run(() => Directory.CreateDirectory(path));
+            string folder = _folder, value = name.Text;
+            await Task.Run(() => _edits.CreateFolder(folder, value));
         }
-        finally { _dialog = false; }
+        finally { _dialog = false; if (!_closed) UpdateActions(); }
         await NavigateAsync(_folder);
+    }
+    private async Task RenameAsync()
+    {
+        if (_closed || _dialog || _navigating || _recycle || _request.Kind != FileSelectionKind.Browse || ActiveList.SelectedItem is not FileEntry item) return;
+        _dialog = true; UpdateActions(); string? destination = null;
+        try
+        {
+            var name = new TextBox { Header = "Name, including the file extension", Text = item.Name, MaxLength = 240 };
+            if (await Dialog("Rename item", name, "Rename").ShowAsync() != ContentDialogResult.Primary || _closed) return;
+            string value = name.Text; _status.Text = "Renaming…";
+            destination = await Task.Run(() => _edits.Rename(item.Path, value));
+        }
+        finally { _dialog = false; if (!_closed) UpdateActions(); }
+        if (_closed) return; await NavigateAsync(_folder);
+        ActiveList.SelectedItem = _entries.FirstOrDefault(e => e.Path == destination);
+        _status.Text = _edits.CanUndo ? "Renamed. Use Undo edit or Ctrl+Z while the file list has focus." : "Renamed. Metadata was unavailable, so this edit cannot be undone here.";
+    }
+    private async Task UndoAsync()
+    {
+        if (_closed || _dialog || _navigating || _request.Kind != FileSelectionKind.Browse || !_edits.CanUndo) return; _dialog = true; UpdateActions();
+        try { _status.Text = "Undoing file edit…"; await Task.Run(_edits.Undo); }
+        finally { _dialog = false; if (!_closed) UpdateActions(); }
+        if (!_closed) { await NavigateAsync(_recycle ? "nexus:recycle" : _folder); _status.Text = "File edit undone."; }
     }
     private async Task EmptyBinAsync()
     {
+        if (_navigating || !_recycle) return;
         if (!await ConfirmAsync("Empty Recycle Bin?", "All deleted items for this user will be permanently removed from the Recycle Bin.", "Empty bin") || _closed) return;
-        await Task.Run(() => RecycleBinService.EmptyConfirmed(IntPtr.Zero)); await NavigateAsync("nexus:recycle");
+        _dialog = true; UpdateActions();
+        try { await Task.Run(() => RecycleBinService.EmptyConfirmed(IntPtr.Zero)); }
+        finally { _dialog = false; if (!_closed) UpdateActions(); }
+        await NavigateAsync("nexus:recycle");
     }
     internal void ShowMessage(string message) { if (!_closed) _status.Text = message; }
     private ContentDialog Dialog(string title, object content, string primary) => new() { XamlRoot = XamlRoot, RequestedTheme = RequestedTheme, Title = title, Content = content,
         PrimaryButtonText = primary, CloseButtonText = "Cancel", DefaultButton = ContentDialogButton.Close };
     private async Task<bool> ConfirmAsync(string title, string content, string primary)
-    { if (_dialog) return false; _dialog = true; try { return await Dialog(title, content, primary).ShowAsync() == ContentDialogResult.Primary; } finally { _dialog = false; } }
+    { if (_dialog) return false; _dialog = true; UpdateActions(); try { return await Dialog(title, content, primary).ShowAsync() == ContentDialogResult.Primary; } finally { _dialog = false; if (!_closed) UpdateActions(); } }
     private void ShowError(Exception error) { if (!_closed) _status.Text = error.Message; Log.Write("Nexus Files", error); }
     private void UpdateInspector()
     {
+        UpdateActions();
+        if (_recycle)
+        {
+            ResetPreview(); _fileTitle.Text = "Recycle Bin"; _fileKind.Text = "Deleted items";
+            _fileLocation.Text = "Windows Recycle Bin"; _modified.Text = ""; _fileIcon.Source = NexusIcons.Source("Windows"); return;
+        }
         if (ActiveList.SelectedItem is FileEntry item)
         {
             _fileTitle.Text = item.Name;
@@ -314,30 +380,50 @@ internal sealed class FilesView : Grid
             _fileLocation.Text = item.Path;
             _modified.Text = item.ModifiedUtc == default ? "" : "Modified\n" + item.ModifiedUtc.ToLocalTime().ToString("d MMM yyyy, h:mm tt");
             _fileIcon.Source = NexusIcons.Source(FilePresentation.Icon(item.Path, item.IsFolder));
-            if (_previewPath != item.Path) { _previewPath = item.Path; _ = PreviewAsync(item, ++_previewVersion); }
+            if (!_navigating && _previewPath != item.Path) { _previewPath = item.Path; _ = PreviewAsync(item, ++_previewVersion); }
         }
         else
         {
             _fileTitle.Text = "Choose an item";
             _fileKind.Text = "Select a file or folder to inspect it.";
             _fileLocation.Text = _folder;
-            _modified.Text = ""; _previewPath = null; _previewVersion++; _preview.Source = null; _preview.Visibility = Visibility.Collapsed; _fileIcon.Source = NexusIcons.Source("Files"); _fileIcon.Visibility = Visibility.Visible;
+            _modified.Text = ""; ResetPreview(); _fileIcon.Source = NexusIcons.Source("Files");
         }
+    }
+    private void UpdateActions()
+    {
+        bool ready = !_closed && !_dialog && !_navigating;
+        _back.IsEnabled = ready && _history.CanGoBack; _forward.IsEnabled = ready && _history.CanGoForward;
+        _list.IsEnabled = _tiles.IsEnabled = ready;
+        _choose.IsEnabled = _newFolder.IsEnabled = ready && !_recycle && _folder.Length > 0;
+        _rename.IsEnabled = ready && !_recycle && ActiveList.SelectedItem is FileEntry;
+        _undo.IsEnabled = ready && _edits.CanUndo; _undo.Content = _edits.UndoLabel;
+        _empty.IsEnabled = ready && _recycle && _binHasItems;
+    }
+    private void ResetPreview()
+    {
+        _previews.Cancel(); _previewPath = null; _previewVersion++;
+        _preview.Source = null; _preview.Visibility = Visibility.Collapsed; _fileIcon.Visibility = Visibility.Visible;
     }
     private async Task PreviewAsync(FileEntry entry, int version)
     {
-        _preview.Source = null; _preview.Visibility = Visibility.Collapsed; _fileIcon.Visibility = Visibility.Visible;
+        _previews.Cancel(); _preview.Source = null; _preview.Visibility = Visibility.Collapsed; _fileIcon.Visibility = Visibility.Visible;
         if (entry.IsFolder || !FilePresentation.CanPreview(entry.Path) || entry.Bytes > 20 * 1024 * 1024) return;
         try
         {
-            var file = await Windows.Storage.StorageFile.GetFileFromPathAsync(entry.Path);
-            using var stream = await file.OpenAsync(Windows.Storage.FileAccessMode.Read);
-            if (_closed || version != _previewVersion) return;
-        var bitmap = new BitmapImage { DecodePixelWidth = 440, DecodePixelHeight = 440 };
-            await bitmap.SetSourceAsync(stream);
+            var bitmap = await _previews.RunAsync(async token =>
+            {
+                var file = await Windows.Storage.StorageFile.GetFileFromPathAsync(entry.Path);
+                token.ThrowIfCancellationRequested();
+                using var stream = await file.OpenAsync(Windows.Storage.FileAccessMode.Read);
+                token.ThrowIfCancellationRequested();
+                var image = new BitmapImage { DecodePixelWidth = 440, DecodePixelHeight = 440 };
+                await image.SetSourceAsync(stream); return image;
+            });
             if (_closed || version != _previewVersion) return;
             _preview.Source = bitmap; _preview.Visibility = Visibility.Visible; _fileIcon.Visibility = Visibility.Collapsed;
         }
+        catch (OperationCanceledException) { }
         catch (Exception ex) { Log.Write("File preview unavailable; keeping the file icon", ex); }
     }
     internal void ApplyAppearance()
@@ -351,5 +437,5 @@ internal sealed class FilesView : Grid
         RefreshPlaces();
         foreach (var text in _bin.Children.OfType<TextBlock>()) text.Foreground = theme.Brush(text == _binCount ? "NexusText" : "NexusMuted");
     }
-    internal void Release() { _closed = true; _previewVersion++; _preview.Source = null; _navigation?.Cancel(); _navigation?.Dispose(); _entries = []; }
+    internal void Release() { _closed = true; _slowRead.Stop(); _navigationVersion++; _previewVersion++; _preview.Source = null; _navigation.Dispose(); _previews.Dispose(); _entries = []; }
 }

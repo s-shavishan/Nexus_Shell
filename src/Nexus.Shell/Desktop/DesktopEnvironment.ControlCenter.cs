@@ -15,6 +15,7 @@ internal sealed partial class DesktopEnvironment
     private long _controlSequence, _controlActivatedSequence = -1, _controlWindow, _lastControlWindow;
     private int _controlAllowedProcess;
     private Guid _controlIssue;
+    private PanelAnchor? _controlAnchor;
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool AllowSetForegroundWindow(uint processId);
     internal bool IsControlCenterWindow(IntPtr handle) => handle != IntPtr.Zero && handle.ToInt64() == _controlWindow;
     private void StartControlCenterSupervision()
@@ -28,9 +29,10 @@ internal sealed partial class DesktopEnvironment
         try
         {
             var monitor = ShellLayerInterop.Monitor(Taskbar.Handle).Monitor.Bounds;
-            var desired = new PanelDesired(sequence, _controlVisible, _controlSection, new(monitor.X, monitor.Y, monitor.Width, monitor.Height, ShellLayerInterop.Scale(Taskbar.Handle), Taskbar.Handle.ToInt64(), IsManagedDesktop), _controlCompact);
+            var desired = new PanelDesired(sequence, _controlVisible, _controlSection, new(monitor.X, monitor.Y, monitor.Width, monitor.Height, ShellLayerInterop.Scale(Taskbar.Handle), Taskbar.Handle.ToInt64(), IsManagedDesktop), _controlCompact, _controlAnchor);
             var result = await _core.SyncControlCenterAsync(new(desired, ControlCenterPreferences.From(Session.State), ack), _cancel.Token);
             if (IsStopping) return; _controlFailure = false; foreach (var id in ack) _controlAck.Remove(id);
+            _lastPanelHealth = result.Status; _panelHealthAt = DateTimeOffset.Now;
             _controlTimer.Interval = TimeSpan.FromMilliseconds(result.Status.ProcessId > 0 || _controlVisible ? 250 : 1500);
             if (sequence == _controlSequence) _controlVisible = result.Status.Visible;
             _controlWindow = result.Status.Window;

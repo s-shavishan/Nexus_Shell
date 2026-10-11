@@ -30,9 +30,27 @@ public static class DesktopLayout
         int height = Math.Min(Math.Max(1, monitor.Height - top - gap), (int)Math.Round(heightDip * scale));
         return new(monitor.Right - width - gap, monitor.Y + top, width, height);
     }
+    public static ShellRect CenteredPanelBounds(ShellRect work, double scale, int widthDip, int heightDip)
+    {
+        scale = Scale(scale); int gap = Math.Min(18, Math.Max(0, Math.Min(work.Width, work.Height) / 12));
+        int width = Math.Min(Math.Max(1, work.Width - gap * 2), Math.Max(1, (int)Math.Round(widthDip * scale)));
+        int height = Math.Min(Math.Max(1, work.Height - gap * 2), Math.Max(1, (int)Math.Round(heightDip * scale)));
+        return new(work.X + (work.Width - width) / 2, work.Y + (work.Height - height) / 2, width, height);
+    }
     public static ShellRect QuickControlBounds(ShellRect monitor, double scale, string section)
         => PanelBounds(monitor, scale, section is "Network" or "Bluetooth" ? 440 : 410,
             section switch { "Sound" => 490, "Display" => 430, "Power" => 480, _ => 590 });
+    public static ShellRect AnchoredQuickControlBounds(ShellRect monitor, double scale, string section, ShellRect? anchor)
+    {
+        var panel = QuickControlBounds(monitor, scale, section);
+        if (anchor is not { } button || button.Width <= 0 || button.Height <= 0 || monitor.Width <= 0 || monitor.Height <= 0) return panel;
+        long right = (long)button.X + button.Width, bottom = (long)button.Y + button.Height;
+        if (button.X < monitor.X || button.Y < monitor.Y || right > monitor.Right || bottom > monitor.Bottom) return panel;
+        int gap = (int)Math.Round(10 * Scale(scale));
+        int x = (int)Math.Clamp((long)button.X + button.Width / 2 - panel.Width / 2, monitor.X, (long)monitor.Right - panel.Width);
+        int y = (int)Math.Clamp(bottom + gap, panel.Y, (long)monitor.Bottom - panel.Height);
+        return panel with { X = x, Y = y };
+    }
     public static int TaskbarHeight(bool compact) => compact ? 56 : 68;
     private static double Scale(double value) => double.IsFinite(value) ? Math.Clamp(value, .5, 4) : 1;
     public static int TaskbarReservationHeight(bool compact, bool floating, double scale)

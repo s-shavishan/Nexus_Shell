@@ -66,6 +66,7 @@ internal sealed class TaskbarWindow : Window, IDisposable
         _chrome.SetClip(new ShellRect(bar.X - reservation.X, bar.Y - reservation.Y, bar.Width, bar.Height),
             _environment.Session.State.FloatingTaskbar && !_environment.Theme.HighContrast ? 22 : 0);
         var monitor = ShellLayerInterop.Monitor(Handle).Monitor.Bounds;
+        _environment.ReconcileMaximizedWindows(monitor, _registration.WorkArea, scale);
         _environment.Desktop.Surface.SetWorkArea((monitor.Bottom - _registration.WorkArea.Bottom) / scale);
         _environment.PositionDesktopPanels();
         RefreshVisibility();
@@ -80,10 +81,12 @@ internal sealed class TaskbarWindow : Window, IDisposable
         {
             var monitor = ShellLayerInterop.Monitor(Handle).Monitor.Bounds;
             var foreground = NativeMethods.ForegroundTaskWindow();
+            _environment.ObserveForeground(foreground);
             bool application = foreground != IntPtr.Zero && foreground != Handle && foreground != _environment.Desktop.Handle
                 && !ShellLayerInterop.IsExplorerDesktopWindow(foreground);
             bool sameMonitor = application && ShellLayerInterop.Monitor(foreground).Monitor.Bounds == monitor;
             bool maximized = sameMonitor && NativeMethods.IsZoomed(foreground);
+            _environment.ReconcileForeground(monitor, _registration.WorkArea, ShellLayerInterop.Scale(Handle));
             bool fullscreen = sameMonitor && !maximized && NativeMethods.GetWindowRect(foreground, out var rect)
                 && rect.Left <= monitor.X && rect.Top <= monitor.Y && rect.Right >= monitor.Right && rect.Bottom >= monitor.Bottom;
             // Preview does not own Explorer's work area. Avoid covering a

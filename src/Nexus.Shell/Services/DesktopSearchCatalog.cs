@@ -1,0 +1,27 @@
+namespace Nexus.Shell.Services;
+
+public sealed record DesktopSearchCommand(string Id, string Name, string Detail, string Keywords);
+public static class DesktopSearchCatalog
+{
+    private static readonly DesktopSearchCommand[] Commands =
+    [
+        new("launchpad", "Launchpad", "Find and launch your apps", "apps start programs"),
+        new("files", "Nexus Files", "Browse folders and drives", "explorer documents downloads"),
+        new("places", "Places", "Favorite folders and a quick look inside", "favorites pinned folders"),
+        new("windows", "Window board", "Switch windows and restore layouts", "arrange snap layout workspace"),
+        new("controls", "Control Center", "Sound, network, display and desktop preferences", "settings system pc"),
+        new("sound", "Sound controls", "Volume and audio devices", "speaker microphone headphones mute audio"),
+        new("network", "Network controls", "Connections and Wi-Fi", "internet wifi ethernet adapter"),
+        new("display", "Display controls", "Brightness and displays", "monitor resolution screen"),
+        new("bluetooth", "Bluetooth controls", "Bluetooth devices", "wireless pairing"),
+        new("power", "Power controls", "Battery and power plans", "energy charging balanced performance"),
+        new("appearance", "Desktop appearance", "Wallpaper, dock and glass preferences", "personalize theme effects animations"),
+        new("notifications", "Notifications", "Read and manage your alerts", "inbox messages alerts"),
+        new("clipboard", "Clipboard shelf", "Your captured text", "copy paste history"),
+        new("status", "Session status", "Desktop health and recovery", "services diagnostics core stability"),
+        new("guide", "Desktop shortcuts", "Nexus keyboard guide", "help keyboard hotkeys")
+    ];
+    public static IReadOnlyList<DesktopSearchCommand> Find(string query) => Commands.Where(command => Matches(query, command.Name + " " + command.Detail + " " + command.Keywords))
+        .OrderByDescending(command => query.Trim().Length > 0 && command.Name.StartsWith(query.Trim(), StringComparison.OrdinalIgnoreCase)).ToArray();
+    public static bool Matches(string query, string text) => query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).All(word => text.Contains(word, StringComparison.OrdinalIgnoreCase));
+}

@@ -16,7 +16,7 @@ public sealed partial class MainWindow
     private void ApplyAuraPalette()
     {
         var theme = _environment.Theme;
-        theme.Apply(_state.Wallpaper, _state.ReducedEffects);
+        theme.Apply(_state.Wallpaper, _state.ReducedEffects, _state.GlassStyle);
         _highContrast = theme.HighContrast; _animationsEnabled = theme.Animations;
         DesktopRoot.RequestedTheme = theme.ElementTheme;
         var palette = theme.Palette;
@@ -39,31 +39,37 @@ public sealed partial class MainWindow
             if (_auraGlass is null)
             {
                 var source = _auraGlass = new UI.LiquidGlassBackdrop();
-                source.SetAppearance(GlassRecipe.For(palette), palette.IsLight);
+                source.SetAppearance(GlassRecipe.For(palette, style: _state.GlassStyle), palette.IsLight);
                 source.Failed += () => DesktopRoot.DispatcherQueue.TryEnqueue(() =>
                 { if (!ReferenceEquals(source, _auraGlass)) return; _glassUnavailable = true; _auraGlass = null; try { SystemBackdrop = null; if (DesktopRoot.IsLoaded) ApplyAuraSurfaces(true); } catch (Exception error) { Log.Write("Sections glass fallback arrived after close", error); } });
+                source.StateChanged += () => DesktopRoot.DispatcherQueue.TryEnqueue(() =>
+                { if (ReferenceEquals(source, _auraGlass) && DesktopRoot.IsLoaded) { ApplyAuraSurfaces(false); Log.Write($"Glass[Sections] palette={_environment.Theme.Palette.Name} style={_state.GlassStyle} state={source.State}"); } });
                 SystemBackdrop = _auraGlass;
             }
-            _auraGlass.SetAppearance(GlassRecipe.For(palette), palette.IsLight);
+            _auraGlass.SetAppearance(GlassRecipe.For(palette, style: _state.GlassStyle), palette.IsLight);
         }
         catch (Exception error)
         { _auraGlass = null; _glassUnavailable = true; try { SystemBackdrop = null; } catch (Exception cleanup) { Log.Write("Sections glass cleanup failed", cleanup); } Log.Write("Sections glass unavailable; using solid surfaces", error); }
     }
     private void ApplyAuraSurfaces(bool simple)
     {
-        bool glass = _auraGlass is not null && !simple;
+        bool glass = (_auraGlass?.State is "Active" or "Pending") && !simple;
         var theme = _environment.Theme;
         Brush panel = glass ? theme.Glass("Panel") : _highContrast ? Resource("NexusPanel") : _solidPanel;
         HomeBorder.Background = ControlPanel.Background = CommandPanel.Background = panel;
-        DesktopRoot.Background = glass ? theme.Glass("Frame") : Resource("NexusPanel");
+        DesktopRoot.Background = glass ? theme.Glass("Frame") : _highContrast ? Resource("NexusPanel") : _solidPanel;
         Sidebar.Background = glass ? theme.Glass("Panel") : theme.Surface("Sidebar", simple);
-        WindowChrome.Background = WindowFooter.Background = glass ? theme.Glass("Frame") : Resource("NexusPanel");
+        WindowChrome.Background = WindowFooter.Background = glass ? theme.Glass("Frame") : _highContrast ? Resource("NexusPanel") : _solidPanel;
         HeroCard.Background = _highContrast ? Resource("NexusCard") : simple ? _solidCard : theme.Surface("Hero");
         ApplyOverviewAppearance(); UpdateNavigation();
-        GlassStatus.Text = !_environment.Theme.Transparency ? "Windows transparency is off. Nexus uses solid surfaces."
+        GlassStatus.Text = _highContrast ? "High contrast uses Windows system colors."
+            : !_environment.Theme.Transparency ? "Windows transparency is off. Nexus uses solid surfaces."
             : _state.ReducedEffects ? "Reduced effects is using solid surfaces."
             : _glassUnavailable ? "Solid fallback · native glass is unavailable on this system."
-            : _state.NativeGlass ? "Liquid glass follows Windows transparency and accessibility settings." : "Enable liquid glass for Nexus windows and desktop controls.";
+            : !_state.NativeGlass ? "Enable glass for Nexus windows and desktop controls."
+            : _auraGlass?.State == "Active" ? $"{_state.GlassStyle} glass · Windows reports acrylic active."
+            : _auraGlass?.State is "Fallback" or "HighContrast" ? "Windows reports a solid backdrop fallback. Check graphics, transparency and power settings."
+            : "Glass is preparing for this surface.";
     }
     private void UpdateNavigation()
     {

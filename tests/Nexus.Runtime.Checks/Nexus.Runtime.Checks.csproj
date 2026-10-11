@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="../../src/Nexus.Runtime/Nexus.Runtime.csproj" />
     <Compile Include="../../src/Nexus.Core/FilesProcessJob.cs" Link="FilesProcessJob.cs" />
+    <Compile Include="../../src/Nexus.Core/Search/EverythingSearchBackend.cs" Link="Native/EverythingSearchBackend.cs" />
     <Compile Include="../../src/Nexus.Core/Settings/NetworkSettings.cs" Link="Native/NetworkSettings.cs" />
     <Compile Include="../../src/Nexus.Core/Settings/WifiProfile.cs" Link="Native/WifiProfile.cs" />
     <Compile Include="../../src/Nexus.Core/Settings/BluetoothSettings.cs" Link="Native/BluetoothSettings.cs" />

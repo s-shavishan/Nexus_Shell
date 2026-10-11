@@ -25,7 +25,7 @@ foreach ($file in $all) {
     # Ship app binaries, loose compiled XAML and app assets. All other files
     # must already exist with these exact bytes in the user's full base folder.
     $owned = $relative -like 'Nexus.Shell.*' -or $relative -like 'Nexus.DesktopHost.*' -or $relative -like 'Nexus.Core.*' -or $relative -like 'Nexus.Runtime.*' -or $relative -eq 'Nexus.resources.json' -or
-        $relative -eq 'resources.pri' -or $relative -like 'Assets/*' -or
+        $relative -eq 'resources.pri' -or $relative -in @('Nexus.UI-Templates.json','Nexus.UI-Check.json') -or $relative -like 'Assets/*' -or
         $file.Extension -eq '.xbf' -or $file.Extension -in @('.md', '.ps1', '.bat')
     if ($owned) { $payload += $record } else { $runtime += $record }
 }

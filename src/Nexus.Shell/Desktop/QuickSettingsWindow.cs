@@ -26,6 +26,8 @@ internal sealed class QuickSettingsWindow : Window
     internal QuickSettingsWindow(ControlCenterEnvironment environment)
     {
         _environment = environment; _view = new(environment, environment.Hide);
+        _view.MaterialStatus = () => _material.Status;
+        _material.StatusChanged += _view.RefreshGlassStatus;
         _frame = new Border { Child = _view, CornerRadius = new CornerRadius(16), BorderThickness = new Thickness(1) }; Content = _frame;
         _handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
         _window = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(_handle));
@@ -49,7 +51,9 @@ internal sealed class QuickSettingsWindow : Window
         if (_closed) return;
         var monitor = _environment.Snapshot.Desired.Monitor;
         var bounds = new ShellRect(monitor.X, monitor.Y, monitor.Width, monitor.Height);
-        var rect = _compact ? DesktopLayout.QuickControlBounds(bounds, monitor.Scale, _environment.Snapshot.Desired.Section) : DesktopLayout.PanelBounds(bounds, monitor.Scale, 540, 740);
+        var anchor = _environment.Snapshot.Desired.Anchor;
+        var rect = _compact ? DesktopLayout.AnchoredQuickControlBounds(bounds, monitor.Scale, _environment.Snapshot.Desired.Section,
+            anchor is null ? null : new ShellRect(anchor.X, anchor.Y, anchor.Width, anchor.Height)) : DesktopLayout.PanelBounds(bounds, monitor.Scale, 540, 740);
         ShellLayerInterop.SetWindowPos(_handle, ShellLayerInterop.Topmost, rect.X, rect.Y, rect.Width, rect.Height, 0x0010);
     }
     internal void HideSurface() { if (_closed || !IsOpen) return; IsOpen = false; _frame.IsHitTestVisible = false; _view.Hide(); _window.Hide(); _motion.Hide(); }

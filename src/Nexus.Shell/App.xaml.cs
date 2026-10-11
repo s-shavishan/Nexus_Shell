@@ -16,7 +16,11 @@ public partial class App : Application
     private DesktopSessionMode _launchMode;
     public App()
     {
-        UnhandledException += (_, args) => Log.Write("Unhandled UI exception; native message: " + args.Message, args.Exception);
+        UnhandledException += (_, args) =>
+        {
+            Log.Write("Unhandled UI exception; native message: " + args.Message, args.Exception);
+            if (Environment.GetCommandLineArgs().Contains("--verify-ui")) { args.Handled = true; UI.UiResourceProbe.Fail(args.Exception); }
+        };
         AppDomain.CurrentDomain.UnhandledException += (_, args) => Log.Write("Unhandled process exception", args.ExceptionObject as Exception);
         TaskScheduler.UnobservedTaskException += (_, args) => Log.Write("Unobserved task exception", args.Exception);
         // Subscribe before loading either application's resources or its window.
@@ -29,7 +33,7 @@ public partial class App : Application
         try { InitializeComponent(); }
         catch (Exception ex)
         {
-            ReportStartupFailure("loading App.xaml resources", ex);
+            ReportStartupFailure("loading App.xaml resources", ex, showDialog: !Environment.GetCommandLineArgs().Contains("--verify-ui"));
             throw;
         }
     }
@@ -37,6 +41,14 @@ public partial class App : Application
     protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
         var command = Environment.GetCommandLineArgs();
+        if (command.Contains("--verify-ui"))
+        {
+            int index = Array.IndexOf(command, "--report");
+            string report = index >= 0 && index + 1 < command.Length ? command[index + 1] : Path.Combine(AppContext.BaseDirectory, "Nexus.UI-Check.json");
+            try { await UI.UiResourceProbe.RunAsync(report); Environment.ExitCode = 0; }
+            catch (Exception error) { Log.Write("Native UI preflight failed", error); Environment.ExitCode = 1; }
+            Exit(); return;
+        }
         if (command.Contains("--control-center-worker"))
         {
             try

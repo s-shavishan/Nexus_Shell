@@ -57,6 +57,18 @@ internal sealed class MenuBarWindow : Window
         else { ResetMotion(); Clip(local); }
     }
     internal void SetAttached(bool value) { if (_closed || _attached == value) return; _attached = value; Position(); }
+    internal Nexus.Runtime.PanelAnchor? AnchorFor(FrameworkElement element)
+    {
+        if (_closed || _bounds is not { } bounds || !element.IsLoaded) return null;
+        try
+        {
+            var point = element.TransformToVisual(_frame).TransformPoint(new(0, 0));
+            var monitor = ShellLayerInterop.Monitor(_handle).Monitor.Bounds;
+            return new(monitor.X + bounds.X + (int)Math.Round(point.X * _scale), monitor.Y + bounds.Y + (int)Math.Round(point.Y * _scale),
+                Math.Max(1, (int)Math.Round(element.ActualWidth * _scale)), Math.Max(1, (int)Math.Round(element.ActualHeight * _scale)));
+        }
+        catch (Exception error) { Log.Write("Control anchor unavailable; using the menu-bar fallback", error); return null; }
+    }
     private async Task MoveAsync(ShellRect before, ShellRect after, double scale, int generation)
     {
         try
@@ -64,14 +76,12 @@ internal sealed class MenuBarWindow : Window
             ElementCompositionPreview.SetIsTranslationEnabled(_frame, true);
             var visual = ElementCompositionPreview.GetElementVisual(_frame); var compositor = visual.Compositor; visual.CenterPoint = Vector3.Zero;
             using var ease = compositor.CreateCubicBezierEasingFunction(new(.2f, .8f), new(.2f, 1));
-            using var move = compositor.CreateVector3KeyFrameAnimation(); move.Duration = TimeSpan.FromMilliseconds(220);
+            using var move = compositor.CreateVector3KeyFrameAnimation(); move.Duration = TimeSpan.FromMilliseconds(150);
             move.InsertExpressionKeyFrame(0, FormattableString.Invariant($"this.StartingValue + Vector3({(before.X - after.X) / scale}, {(before.Y - after.Y) / scale}, 0)")); move.InsertKeyFrame(1, Vector3.Zero, ease);
-            using var resize = compositor.CreateVector3KeyFrameAnimation(); resize.Duration = move.Duration;
-            resize.InsertExpressionKeyFrame(0, FormattableString.Invariant($"this.StartingValue * Vector3({(double)before.Width / after.Width}, {(double)before.Height / after.Height}, 1)")); resize.InsertKeyFrame(1, Vector3.One, ease);
             using var batch = compositor.CreateScopedBatch(CompositionBatchTypes.Animation);
             var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously); batch.Completed += (_, _) => done.TrySetResult();
-            visual.StartAnimation("Translation", move); visual.StartAnimation("Scale", resize); batch.End();
-            await done.Task.WaitAsync(TimeSpan.FromMilliseconds(450));
+            visual.StartAnimation("Translation", move); batch.End();
+            await done.Task.WaitAsync(TimeSpan.FromMilliseconds(260));
         }
         catch (Exception error) { if (!_closed) Log.Write("Menu bar motion used immediate placement", error); }
         if (!_closed && generation == _generation) { ResetMotion(); Clip(after); }

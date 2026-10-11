@@ -1,3 +1,15 @@
+# 3.5.1 source validation
+
+Stability Phase 01 adds 29 desktop and eight state-writer assertions. A 3.5.0 baseline probe reproduced the rejected-save trap, three notification failures and pre-cancelled filesystem access. The fixed production code passes all new and existing portable suites, including a 201-request cancellation burst, queue disposal, actual settings IO and production Core rejection/conflict routing.
+
+All application C# source/API checks pass. Shell uses temporary XAML field stubs and emits the existing 19 reference/stub warnings, so this is not a native XAML build. Native Windows IPC, job cleanup, settings hardware and WinUI rendering remain unexecuted here. Follow the [Phase 01 acceptance pass](STABILITY-PHASE-01-3.5.1.md). The earlier evidence below refers to earlier source releases.
+
+# 3.5.0 source validation
+
+The Everyday Desktop Pack adds 78 portable checks covering collections/hidden apps, favorite normalization and persistence, real rename/create/undo with conflict refusal, a real local folder-observation event, notification snooze and dismissal recovery. All earlier Core checks and the Runtime suite's explicit `--no-native-ipc` mode pass. Source/API compilation uses restored Windows references and temporary XAML field stubs; it is not a native Windows build.
+
+Follow [one consolidated Windows acceptance pass](EVERYDAY-DESKTOP-3.5.0.md). The production UI probe now includes Places, desktop shortcuts, Launchpad collections and paged notification controls. It has been source/API compiled here; native execution remains pending. Older evidence below is historical.
+
 # Current validation — 2.0.0
 
 Read [major update source evidence](MAJOR-CHECKS-2.0.0.md) and [the Windows acceptance sequence](MAJOR-2.0.0.md). Shan reports the earlier 1.8 tests passing, while the supplied screenshot demonstrates separate Settings, minimized-caption, corner and tooltip defects. New 2.0 UI/native behavior requires fresh Windows acceptance. Earlier sections below are historical evidence.

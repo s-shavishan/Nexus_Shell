@@ -1,4 +1,6 @@
 using Nexus.Shell.Models;
+using Nexus.Shell.Services;
+using System.Text.Json;
 
 namespace Nexus.Runtime;
 
@@ -12,13 +14,25 @@ public sealed class RevisionedStateWriter(long revision, Func<Task<StateReadResu
     public long Revision => Interlocked.Read(ref _revision);
     private async Task SendAsync(StateCommit request)
     {
-        var response = await commit(request).ConfigureAwait(false);
+        StateCommitResult response;
+        try { response = await commit(request).ConfigureAwait(false); }
+        catch (RuntimeFailure error) when (error.Code == "state-rejected")
+        {
+            // Core explicitly rejected the contents before writing. Do not keep
+            // replaying that bad snapshot after the user corrects their settings.
+            _pending = null; throw;
+        }
         if (response.CommitId != request.CommitId || response.Revision != checked(request.ExpectedRevision + 1))
             throw new InvalidDataException("The settings acknowledgement does not match its commit.");
         Interlocked.Exchange(ref _revision, response.Revision); _pending = null;
     }
     public async Task SaveAsync(ShellState snapshot)
     {
+        // Freeze at enqueue time, before another save can hold this caller at the
+        // gate. Reject oversized content locally before it can become uncertain.
+        var captured = snapshot.Snapshot();
+        if (JsonSerializer.SerializeToUtf8Bytes(captured).Length > StateStore.MaximumBytes)
+            throw new InvalidDataException("Settings exceed the 2 MB limit. The previous save is intact.");
         await _gate.WaitAsync().ConfigureAwait(false);
         try
         {
@@ -32,7 +46,7 @@ public sealed class RevisionedStateWriter(long revision, Func<Task<StateReadResu
                     await SendAsync(pending).ConfigureAwait(false);
                 else throw new RuntimeFailure("conflict", "Settings changed while a save was interrupted. Your current edits have been retained instead of overwriting newer settings.");
             }
-            _pending = new(snapshot.Snapshot(), _revision, Guid.NewGuid());
+            _pending = new(captured, _revision, Guid.NewGuid());
             await SendAsync(_pending).ConfigureAwait(false);
         }
         finally { _gate.Release(); }

@@ -7,7 +7,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $projectFile = Join-Path $projectRoot 'src\Nexus.Shell\Nexus.Shell.csproj'
-$publishDirectory = Join-Path $projectRoot 'artifacts\Nexus-Shell-3.2.0-win-x64'
+$publishDirectory = Join-Path $projectRoot 'artifacts\Nexus-Shell-3.6.0-win-x64'
 $logDirectory = Join-Path $projectRoot 'artifacts\logs'
 
 if ($env:OS -ne 'Windows_NT') { throw 'WinUI must be built on Windows. Use an included Windows cloud-build route in START-HERE.md.' }
@@ -79,6 +79,8 @@ try {
     $exe = Join-Path $publishDirectory 'Nexus.Shell.exe'
     if (-not (Test-Path $exe)) { throw 'Build returned success without Nexus.Shell.exe.' }
     if (-not (Get-ChildItem $publishDirectory -Recurse -Filter 'Microsoft.UI.Xaml.dll')) { throw 'The native WinUI runtime is missing from the publish directory.' }
+    & (Join-Path $PSScriptRoot 'export-ui-templates.ps1') -SourceDirectory (Join-Path $projectRoot 'src\Nexus.Shell') -OutputFile (Join-Path $publishDirectory 'Nexus.UI-Templates.json')
+    & (Join-Path $PSScriptRoot 'verify-native-ui.ps1') -PublishDirectory $publishDirectory -ReportFile (Join-Path $logDirectory 'native-ui.json') -AllowHeadlessSkip
     [xml]$projectXml = Get-Content $projectFile -Raw
     $toolsReference = $projectXml.SelectSingleNode("//PackageReference[@Include='Microsoft.Windows.SDK.BuildTools']")
     $packageRoot = if ($env:NUGET_PACKAGES) { $env:NUGET_PACKAGES } else { Join-Path ([Environment]::GetFolderPath('UserProfile')) '.nuget\packages' }
@@ -100,12 +102,22 @@ try {
     Copy-Item (Join-Path $projectRoot 'docs\STARTUP-1.8.0.md') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'docs\MAJOR-2.0.0.md') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'docs\CONTROL-CENTER-2.1.0.md') $publishDirectory
-    Copy-Item (Join-Path $projectRoot 'docs\START-AND-SIGNIN-3.2.0.md') $publishDirectory
-    Copy-Item (Join-Path $projectRoot 'docs\RESPONSIVENESS-3.2.0.md') $publishDirectory
+    Copy-Item (Join-Path $projectRoot 'docs\START-AND-SIGNIN-3.6.0.md') $publishDirectory
+    Copy-Item (Join-Path $projectRoot 'docs\GLASS-AND-WINDOWS-3.3.0.md') $publishDirectory
+    Copy-Item (Join-Path $projectRoot 'docs\DESKTOP-COMMANDS-3.4.0.md') $publishDirectory
+    Copy-Item (Join-Path $projectRoot 'docs\EVERYDAY-DESKTOP-3.5.0.md') $publishDirectory
+    Copy-Item (Join-Path $projectRoot 'docs\STABILITY-PHASE-01-3.5.1.md') $publishDirectory
+    Copy-Item (Join-Path $projectRoot 'docs\SEARCH-PHASE-02-3.6.0.md') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'docs\SESSION-CORE-3.0.0.md') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'docs\NEXT-DESKTOP-PACK.md') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'scripts\inspect-startup.ps1') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'scripts\Inspect-Nexus-Startup.bat') $publishDirectory
+    Copy-Item (Join-Path $projectRoot 'scripts\diagnostics.ps1') $publishDirectory
+    Copy-Item (Join-Path $projectRoot 'scripts\desktop-health.ps1') $publishDirectory
+    Copy-Item (Join-Path $projectRoot 'scripts\Check-Nexus-Desktop.bat') $publishDirectory
+    Copy-Item (Join-Path $projectRoot 'scripts\verify-native-ui.ps1') $publishDirectory
+    Copy-Item (Join-Path $projectRoot 'scripts\Check-Nexus-UI.bat') $publishDirectory
+    Copy-Item (Join-Path $logDirectory 'native-ui.json') (Join-Path $publishDirectory 'Nexus.UI-Check.json')
     Copy-Item (Join-Path $projectRoot 'scripts\restore-windows-desktop.ps1') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'scripts\restore-sign-in.ps1') $publishDirectory
     Set-Content (Join-Path $publishDirectory 'Launch-Nexus.bat') "@echo off`r`nstart `"`" `"%~dp0Nexus.Shell.exe`"" -Encoding ASCII

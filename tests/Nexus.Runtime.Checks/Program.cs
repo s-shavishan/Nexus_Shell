@@ -32,6 +32,10 @@ internal static class RuntimeChecks
     }
     internal static async Task RunAsync(bool noNativeIpc)
     {
+        GlassPreferenceChecks.Run();
+        await SearchChecks.RunAsync();
+        await WindowsSearchChecks.RunAsync();
+        await StateWriterStabilityChecks.RunAsync();
         await StateAsync(); await FilesAsync(); await SettingsChecks.RunAsync(); await ControlCenterChecks.RunAsync(); await ControlCenterWakeChecks.RunAsync(); await ConnectionChecks.RunAsync();
         if (noNativeIpc) Console.WriteLine("SKIP: actual named-pipe tests explicitly disabled for this restricted test environment.");
         else await PipesAsync();

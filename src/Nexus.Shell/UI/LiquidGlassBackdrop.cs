@@ -13,6 +13,8 @@ internal sealed class LiquidGlassBackdrop : SystemBackdrop
     private SystemBackdropConfiguration? _configuration;
     private bool _connected, _failed;
     internal event Action? Failed;
+    internal event Action? StateChanged;
+    internal string State { get; private set; } = "Pending";
     private Services.GlassRecipe _recipe = Services.GlassRecipe.For(Services.AuraPalette.For("Midnight"));
     private SystemBackdropTheme _theme = SystemBackdropTheme.Dark;
     internal void SetAppearance(Services.GlassRecipe recipe, bool light)
@@ -25,6 +27,8 @@ internal sealed class LiquidGlassBackdrop : SystemBackdrop
     private void ApplyTint()
     {
         if (_controller is not { } controller) return;
+        var kind = _recipe.Frosted ? DesktopAcrylicKind.Base : DesktopAcrylicKind.Thin;
+        if (controller.Kind != kind) controller.Kind = kind;
         controller.TintColor = ShellTheme.Color(_recipe.Tint); controller.FallbackColor = ShellTheme.Color(_recipe.Fallback);
         controller.TintOpacity = _recipe.TintOpacity; controller.LuminosityOpacity = _recipe.LuminosityOpacity;
     }
@@ -38,16 +42,19 @@ internal sealed class LiquidGlassBackdrop : SystemBackdrop
             Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().EnsureSystemDispatcherQueue();
             _configuration = new SystemBackdropConfiguration { IsInputActive = true, Theme = _theme };
             _controller = new DesktopAcrylicController { Kind = DesktopAcrylicKind.Thin };
+            _controller.StateChanged += ControllerStateChanged;
             _controller.SetSystemBackdropConfiguration(_configuration);
             ApplyTint();
             if (!_controller.AddSystemBackdropTarget(connectedTarget)) throw new InvalidOperationException("Windows did not attach the acrylic target.");
             _connected = true;
+            UpdateState(_controller.State.ToString());
         }
         catch (Exception error) { Fail(error); }
     }
     protected override void OnTargetDisconnected(ICompositionSupportsSystemBackdrop disconnectedTarget)
     {
         _connected = false; _configuration = null;
+        UpdateState("Detached");
         try { _controller?.RemoveSystemBackdropTarget(disconnectedTarget); } catch (Exception error) { Services.Log.Write("Glass target already disconnected", error); }
         ReleaseController();
         try { base.OnTargetDisconnected(disconnectedTarget); } catch (Exception error) { Services.Log.Write("Glass base target already disconnected", error); }
@@ -60,11 +67,16 @@ internal sealed class LiquidGlassBackdrop : SystemBackdrop
         try { if (_configuration is not null) _configuration.Theme = _theme; ApplyTint(); }
         catch (Exception error) { Fail(error); }
     }
+    private void ControllerStateChanged(ISystemBackdropControllerWithTargets sender, object args)
+    { try { if (_controller is { } controller) UpdateState(controller.State.ToString()); } catch (Exception error) { Services.Log.Write("Glass state unavailable", error); } }
+    private void UpdateState(string state)
+    { if (State == state) return; State = state; try { StateChanged?.Invoke(); } catch (Exception error) { Services.Log.Write("Glass status callback failed", error); } }
     private void ReleaseController()
-    { var controller = _controller; _controller = null; try { controller?.Dispose(); } catch (Exception error) { Services.Log.Write("Glass controller cleanup failed", error); } }
+    { var controller = _controller; _controller = null; try { if (controller is not null) { controller.StateChanged -= ControllerStateChanged; controller.Dispose(); } } catch (Exception error) { Services.Log.Write("Glass controller cleanup failed", error); } }
     private void Fail(Exception error)
     {
         _connected = false; ReleaseController(); _configuration = null;
+        UpdateState("Unavailable");
         if (_failed) return; _failed = true; Services.Log.Write("Liquid glass used the solid fallback", error);
         try { Failed?.Invoke(); } catch (Exception fallbackError) { Services.Log.Write("Glass fallback notification failed", fallbackError); }
     }

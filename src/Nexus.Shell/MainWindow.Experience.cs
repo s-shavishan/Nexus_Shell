@@ -142,6 +142,11 @@ public sealed partial class MainWindow
         interfacePanel.Children.Add(Text("Feel & interaction", 21));
         interfacePanel.Children.Add(PersonalizeToggle("Native glass", () => _state.NativeGlass, v => _state.NativeGlass = v,
             "Windows acrylic", "Layered surfaces"));
+        var material = new ComboBox { Header = "Glass material", ItemsSource = GlassStyle.Choices, SelectedItem = _state.GlassStyle, HorizontalAlignment = HorizontalAlignment.Stretch };
+        material.SelectionChanged += (_, _) =>
+        { if (_syncingPersonalization || !_ready || material.SelectedItem is not string style) return; _state.GlassStyle = style; ApplyEffects(); SaveState(); };
+        _personalizationSync.Add(() => material.SelectedItem = _state.GlassStyle); interfacePanel.Children.Add(material);
+        interfacePanel.Children.Add(Text("Balanced · Clear · Frosted. Adjust the material live; no new build or restart is needed.", 12, true));
         interfacePanel.Children.Add(PersonalizeToggle("Interface animations", () => _state.SurfaceAnimations, v => _state.SurfaceAnimations = v,
             "Short, smooth motion", "Immediate interaction; glass stays enabled"));
         interfacePanel.Children.Add(PersonalizeToggle("Reduced effects", () => _state.ReducedEffects, v => _state.ReducedEffects = v));

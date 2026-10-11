@@ -138,6 +138,13 @@ internal sealed class CoreProcessSession : IAsyncDisposable
         var client = await ClientAsync().ConfigureAwait(false);
         return await client.CallAsync<PanelSyncResult>(RuntimeOperations.PanelSync, state, TimeSpan.FromSeconds(3), linked.Token).ConfigureAwait(false);
     }
+    internal async Task<SearchReply> SearchAsync(SearchRequest request, CancellationToken cancellation)
+    {
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellation, _operations.Token);
+        var client = await ClientAsync().ConfigureAwait(false);
+        linked.Token.ThrowIfCancellationRequested();
+        return await client.CallAsync<SearchReply>(RuntimeOperations.Search, request, TimeSpan.FromSeconds(6), linked.Token).ConfigureAwait(false);
+    }
     public async ValueTask DisposeAsync()
     {
         _disposed = true; _operations.Cancel();

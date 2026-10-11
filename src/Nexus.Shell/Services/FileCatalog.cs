@@ -13,8 +13,10 @@ public static class FileCatalog
     public const int MaximumEntries = 1000;
     public static FolderSnapshot Read(string path, string[]? extensions = null, CancellationToken cancellation = default)
     {
+        cancellation.ThrowIfCancellationRequested();
         path = System.IO.Path.GetFullPath(path);
         if (!Directory.Exists(path)) throw new DirectoryNotFoundException("This folder is no longer available.");
+        cancellation.ThrowIfCancellationRequested();
         var entries = new List<FileEntry>(); int scanned = 0;
         var options = new EnumerationOptions { IgnoreInaccessible = true, AttributesToSkip = FileAttributes.Hidden | FileAttributes.System };
         foreach (string item in Directory.EnumerateFileSystemEntries(path, "*", options))
@@ -32,6 +34,7 @@ public static class FileCatalog
             }
             catch (IOException) { } catch (UnauthorizedAccessException) { }
         }
+        cancellation.ThrowIfCancellationRequested();
         return new(path, entries.OrderByDescending(e => e.IsFolder).ThenBy(e => e.Name, StringComparer.CurrentCultureIgnoreCase).ToArray(), scanned > MaximumEntries);
     }
     public static bool Accepts(string path, string[]? extensions) => extensions is null || extensions.Length == 0 || extensions.Contains("*")

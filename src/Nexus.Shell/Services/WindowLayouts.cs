@@ -5,6 +5,7 @@ using Nexus.Shell.Models;
 namespace Nexus.Shell.Services;
 
 public sealed record WindowRect(int X, int Y, int Width, int Height);
+public sealed record WindowMove(RunningWindow Window, LayoutRect Bounds, bool Maximized = false);
 
 public sealed class WindowLayouts
 {
@@ -25,10 +26,11 @@ public sealed class WindowLayouts
     }
     private static void Validate(RunningWindow window)
     {
-        if (window.Handle == IntPtr.Zero || window.ProcessId <= 0 || !IsWindow(window.Handle)
-            || GetWindowThreadProcessId(window.Handle, out uint pid) == 0 || pid != window.ProcessId)
+        if (!Owns(window))
             throw new InvalidOperationException("A selected window closed or changed. Refresh the window list.");
     }
+    private static bool Owns(RunningWindow window) => window.Handle != IntPtr.Zero && window.ProcessId > 0 && IsWindow(window.Handle)
+        && GetWindowThreadProcessId(window.Handle, out uint pid) != 0 && pid == window.ProcessId;
     public int Arrange(IReadOnlyList<RunningWindow> windows, string layout)
     {
         if (windows.Count is < 1 or > 4 || windows.Select(w => w.Handle).Distinct().Count() != windows.Count)
@@ -38,39 +40,59 @@ public sealed class WindowLayouts
         if (!GetMonitorInfo(MonitorFromWindow(windows[0].Handle, 2), ref monitor)) throw new Win32Exception(Marshal.GetLastWin32Error());
         var area = new WindowRect(monitor.Work.Left, monitor.Work.Top, monitor.Work.Right - monitor.Work.Left, monitor.Work.Bottom - monitor.Work.Top);
         var plan = Plan(area, windows.Count, layout);
+        return Apply(windows.Select((window, i) => new WindowMove(window, new(plan[i].X, plan[i].Y, plan[i].Width, plan[i].Height))).ToArray());
+    }
+    public int Apply(IReadOnlyList<WindowMove> moves)
+    {
+        if (moves.Count is < 1 or > SavedWindowLayouts.MaximumWindows || moves.Select(m => m.Window.Handle).Distinct().Count() != moves.Count)
+            throw new ArgumentException("Choose one to twelve different windows.");
         var before = new List<(RunningWindow Window, Placement Before)>();
-        foreach (var window in windows)
+        foreach (var move in moves)
         {
+            var window = move.Window; Validate(window);
+            if ((GetWindowLongPtr(window.Handle, -16).ToInt64() & 0x00040000) == 0)
+                throw new InvalidOperationException("A selected window does not support resizing.");
+            if (move.Bounds.Width < 1 || move.Bounds.Height < 1) throw new ArgumentException("A window has no usable area.");
             var placement = new Placement { Length = (uint)Marshal.SizeOf<Placement>() };
             if (!GetWindowPlacement(window.Handle, ref placement)) throw new Win32Exception(Marshal.GetLastWin32Error());
             before.Add((window, placement));
         }
         try
         {
-            for (int i = 0; i < windows.Count; i++)
+            for (int i = 0; i < moves.Count; i++)
             {
-                Validate(windows[i]);
+                var move = moves[i]; Validate(move.Window);
                 var placement = before[i].Before;
-                var rect = plan[i]; placement.Flags = 0; placement.Show = 4; // SW_SHOWNOACTIVATE
-                if (!SetWindowPlacement(windows[i].Handle, ref placement)) throw new Win32Exception(Marshal.GetLastWin32Error());
+                var rect = move.Bounds; placement.Flags = 4; placement.Show = 4; // ASYNCWINDOWPLACEMENT / SW_SHOWNOACTIVATE
+                if (!SetWindowPlacement(move.Window.Handle, ref placement)) throw new Win32Exception(Marshal.GetLastWin32Error());
                 // SetWindowPos takes screen coordinates; saved placement uses workspace
                 // coordinates. Keeping these separate also handles cross-monitor moves.
-                if (!SetWindowPos(windows[i].Handle, IntPtr.Zero, rect.X, rect.Y, rect.Width, rect.Height, 0x0014))
-                    throw new Win32Exception(Marshal.GetLastWin32Error()); // NOZORDER | NOACTIVATE
+                Validate(move.Window);
+                if (!SetWindowPos(move.Window.Handle, IntPtr.Zero, rect.X, rect.Y, rect.Width, rect.Height, 0x4214))
+                    throw new Win32Exception(Marshal.GetLastWin32Error()); // ASYNCWINDOWPOS | NOZORDER | NOACTIVATE | NOOWNERZORDER
+                if (move.Maximized)
+                {
+                    Validate(move.Window);
+                    if (!ShowWindowAsync(move.Window.Handle, 3)) throw new Win32Exception(Marshal.GetLastWin32Error());
+                }
             }
         }
         catch { foreach (var entry in before) TryRestore(entry); throw; }
-        _undo.Clear(); _undo.AddRange(before); return windows.Count;
+        _undo.Clear(); _undo.AddRange(before); return moves.Count;
     }
     public int Undo()
     {
         int restored = 0;
-        foreach (var entry in _undo.ToArray()) if (TryRestore(entry)) { restored++; _undo.Remove(entry); }
+        foreach (var entry in _undo.ToArray())
+        {
+            if (!Owns(entry.Window)) { _undo.Remove(entry); continue; }
+            if (TryRestore(entry)) { restored++; _undo.Remove(entry); }
+        }
         return restored;
     }
     private static bool TryRestore((RunningWindow Window, Placement Before) entry)
     {
-        try { Validate(entry.Window); var placement = entry.Before; return SetWindowPlacement(entry.Window.Handle, ref placement); }
+        try { Validate(entry.Window); var placement = entry.Before; placement.Flags |= 4; return SetWindowPlacement(entry.Window.Handle, ref placement); }
         catch { return false; }
     }
     public static bool Lock() => LockWorkStation();
@@ -79,6 +101,8 @@ public sealed class WindowLayouts
     [StructLayout(LayoutKind.Sequential)] private struct Placement
     { public uint Length, Flags, Show; public Point Minimum, Maximum; public Rect Normal; }
     [StructLayout(LayoutKind.Sequential)] private struct MonitorInfo { public uint Size; public Rect Bounds, Work; public uint Flags; }
+    [DllImport("user32.dll", ExactSpelling = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool ShowWindowAsync(IntPtr window, int command);
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] private static extern IntPtr GetWindowLongPtr(IntPtr window, int index);
     [DllImport("user32.dll", ExactSpelling = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool IsWindow(IntPtr window);
     [DllImport("user32.dll", ExactSpelling = true)] private static extern uint GetWindowThreadProcessId(IntPtr window, out uint process);
     [DllImport("user32.dll", ExactSpelling = true)] private static extern IntPtr MonitorFromWindow(IntPtr window, uint flags);

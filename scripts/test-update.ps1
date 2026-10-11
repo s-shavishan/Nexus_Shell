@@ -23,6 +23,7 @@ function Reject-Update([string]$Target) {
 try {
     Set-Content (Join-Path $pub 'Nexus.Shell.exe') 'new app' -Encoding ASCII
     Set-Content (Join-Path $pub 'Nexus.Shell.dll') 'new app assembly' -Encoding ASCII
+    Set-Content (Join-Path $pub 'Nexus.UI-Templates.json') '{"FormatVersion":1,"Templates":[]}' -Encoding ASCII
     foreach ($name in @('Nexus.DesktopHost.exe', 'Nexus.DesktopHost.dll', 'Nexus.DesktopHost.deps.json', 'Nexus.DesktopHost.runtimeconfig.json')) { Set-Content (Join-Path $pub $name) 'new host' -Encoding ASCII }
     foreach ($name in @('Nexus.Core.exe', 'Nexus.Core.dll', 'Nexus.Core.deps.json', 'Nexus.Core.runtimeconfig.json', 'Nexus.Runtime.dll')) { Set-Content (Join-Path $pub $name) 'new core' -Encoding ASCII }
     foreach ($name in @('Launch-Nexus-Desktop.bat', 'Restore-Windows-Desktop.bat', 'restore-windows-desktop.ps1')) { Set-Content (Join-Path $pub $name) 'new launch/recovery helper' -Encoding ASCII }
@@ -52,6 +53,7 @@ try {
     Assert-Check ((Get-Content (Join-Path $base 'Nexus.Shell.exe') -Raw).Trim() -eq 'old app') 'The old folder must remain intact.'
     Assert-Check ((Get-Content (Join-Path $target 'resources.pri') -Raw).Trim() -eq 'app index') 'The new app resource index is required.'
     Assert-Check (Test-Path (Join-Path $target 'MainWindow.xbf')) 'Loose compiled UI was omitted.'
+    Assert-Check ((Get-Content (Join-Path $target 'Nexus.UI-Templates.json') -Raw).Contains('Templates')) 'The UI preflight templates must come from the new payload.'
     $installedScene = Join-Path $target 'Assets/Wallpapers/MidnightGlass.svg'
     Assert-Check (Test-Path $installedScene) 'The new wallpaper must be included in the app payload.'
     Assert-Check ((Get-FileHash $installedScene -Algorithm SHA256).Hash -eq (Get-FileHash $sceneSource -Algorithm SHA256).Hash) 'The installed wallpaper bytes must match the verified source.'
@@ -89,6 +91,14 @@ try {
     Copy-Item (Join-Path $pub 'Nexus.Shell.exe') $base -Force
     $manifest | ConvertTo-Json -Depth 6 | Set-Content $manifestPath -Encoding UTF8
     Reject-Update (Join-Path $fixture 'reused-app')
+    Set-Content $manifestPath $originalManifest -Encoding UTF8
+    $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
+    $uiRecord = @($manifest.PayloadFiles | Where-Object { $_.File -eq 'Nexus.UI-Templates.json' })[0]
+    $manifest.PayloadFiles = @($manifest.PayloadFiles | Where-Object { $_.File -ne 'Nexus.UI-Templates.json' })
+    $manifest.RuntimeFiles = @($manifest.RuntimeFiles) + @($uiRecord)
+    Copy-Item (Join-Path $pub 'Nexus.UI-Templates.json') $base -Force
+    $manifest | ConvertTo-Json -Depth 6 | Set-Content $manifestPath -Encoding UTF8
+    Reject-Update (Join-Path $fixture 'reused-ui-templates')
     Set-Content $manifestPath $originalManifest -Encoding UTF8
     $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
     $priRecord = @($manifest.PayloadFiles | Where-Object { $_.File -eq 'resources.pri' })[0]

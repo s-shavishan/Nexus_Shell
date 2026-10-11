@@ -43,7 +43,7 @@ foreach ($record in @($manifest.PayloadFiles) + @($manifest.RuntimeFiles)) {
     $seen[$key] = $true
 }
 foreach ($record in $manifest.PayloadFiles) { $payloadFiles[([string]$record.File).Replace('\', '/')] = $record }
-foreach ($required in @('Nexus.Shell.exe', 'Nexus.Shell.dll', 'Nexus.DesktopHost.exe', 'Nexus.DesktopHost.dll', 'Nexus.DesktopHost.deps.json', 'Nexus.DesktopHost.runtimeconfig.json', 'Nexus.resources.json')) {
+foreach ($required in @('Nexus.Shell.exe', 'Nexus.Shell.dll', 'Nexus.DesktopHost.exe', 'Nexus.DesktopHost.dll', 'Nexus.DesktopHost.deps.json', 'Nexus.DesktopHost.runtimeconfig.json', 'Nexus.resources.json', 'Nexus.UI-Templates.json')) {
     if (-not $payloadFiles.ContainsKey($required)) { throw "The update payload is missing $required." }
 }
 foreach ($required in @('Nexus.Core.exe', 'Nexus.Core.dll', 'Nexus.Core.deps.json', 'Nexus.Core.runtimeconfig.json', 'Nexus.Runtime.dll')) {
@@ -52,7 +52,7 @@ foreach ($required in @('Nexus.Core.exe', 'Nexus.Core.dll', 'Nexus.Core.deps.jso
 foreach ($record in $manifest.RuntimeFiles) {
     $relative = ([string]$record.File).Replace('\', '/')
     if ($relative -like 'Nexus.Shell.*' -or $relative -like 'Nexus.DesktopHost.*' -or $relative -like 'Nexus.Core.*' -or $relative -like 'Nexus.Runtime.*' -or $relative -eq 'Nexus.resources.json' -or $relative -eq 'resources.pri' -or
-        $relative -like 'Assets/*' -or [IO.Path]::GetExtension($relative) -eq '.xbf') {
+        $relative -in @('Nexus.UI-Templates.json','Nexus.UI-Check.json') -or $relative -like 'Assets/*' -or [IO.Path]::GetExtension($relative) -eq '.xbf') {
         throw "App-owned files must come from the new payload: $relative"
     }
 }

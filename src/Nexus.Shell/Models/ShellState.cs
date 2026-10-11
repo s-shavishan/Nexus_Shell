@@ -13,6 +13,11 @@ public sealed record CommandEntry(string Title, string Subtitle, string Glyph, s
 public sealed record WorkspaceProfile(string Id, string Name, string Description, string Page, string Glyph,
     List<AppEntry> Apps, List<string> SavedItemIds);
 public sealed record WorkspaceLaunchItem(string Title, string Target, string Kind);
+public sealed record SavedWindowPosition(string ProcessPath, string Title, string MonitorId,
+    double Left, double Top, double Width, double Height, bool Maximized);
+public sealed record SavedWindowLayout(string Id, string Name, List<SavedWindowPosition> Windows);
+public sealed record AppCollection(string Id, string Name, List<string> Targets);
+public sealed record PinnedPlace(string Id, string Name, string Path);
 
 public sealed class ShellState
 {
@@ -27,6 +32,15 @@ public sealed class ShellState
     public bool CatalogInitialized { get; set; }
     public string Wallpaper { get; set; } = "Midnight";
     public bool NativeGlass { get; set; } = true;
+    public string GlassStyle { get; set; } = Services.GlassStyle.Default;
+    public bool ClipboardShelf { get; set; }
+    public List<SavedWindowLayout> WindowLayouts { get; set; } = [];
+    public List<AppCollection> AppCollections { get; set; } = [];
+    public List<string> HiddenAppTargets { get; set; } = [];
+    public string LaunchpadOrder { get; set; } = "Name";
+    public List<PinnedPlace> Places { get; set; } = [];
+    public bool ShowDesktopIcons { get; set; } = true;
+    public string DesktopIconOrder { get; set; } = "Name";
     public List<ExploreSpace> ExploreSpaces { get; set; } = [];
     public string ActiveExploreSpaceId { get; set; } = "personal";
     public string ExploreSelectedItemId { get; set; } = "";
@@ -78,7 +92,11 @@ public sealed class ShellState
         ExploreSpaces = [.. ExploreSpaces], ActiveExploreSpaceId = ActiveExploreSpaceId,
         ExploreSelectedItemId = ExploreSelectedItemId, ExploreView = ExploreView,
         ExploreQuery = ExploreQuery, ExploreCollection = ExploreCollection, ExploreFavoritesOnly = ExploreFavoritesOnly,
-        NativeGlass = NativeGlass, DesktopLayout = DesktopLayout, KeepAvailable = KeepAvailable,
+        NativeGlass = NativeGlass, GlassStyle = GlassStyle, DesktopLayout = DesktopLayout, KeepAvailable = KeepAvailable,
+        ClipboardShelf = ClipboardShelf, WindowLayouts = WindowLayouts.Select(layout => layout with { Windows = [.. layout.Windows] }).ToList(),
+        AppCollections = AppCollections.Select(group => group with { Targets = [.. group.Targets] }).ToList(),
+        HiddenAppTargets = [.. HiddenAppTargets], LaunchpadOrder = LaunchpadOrder, Places = [.. Places],
+        ShowDesktopIcons = ShowDesktopIcons, DesktopIconOrder = DesktopIconOrder,
         ResumeWorkspace = ResumeWorkspace, LastPage = LastPage, ActiveProfileId = ActiveProfileId,
         Profiles = Profiles.Select(p => p with { Apps = [.. p.Apps], SavedItemIds = [.. p.SavedItemIds] }).ToList(),
         Wallpaper = Wallpaper, QuickNote = QuickNote, FocusMinutes = FocusMinutes,

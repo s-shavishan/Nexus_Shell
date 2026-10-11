@@ -44,6 +44,14 @@ required = [
     "Services/DesktopPolicyRequest.cs", "Services/DesktopPolicyElevation.cs", "Services/StartupStep.cs",
     "Services/SurfaceSession.cs", "Services/DesktopPresentation.cs", "UI/ShellControls.cs", "Assets/Wallpapers/MidnightGlass.svg",
     "Services/RecentApplications.cs", "Services/GlassRecipe.cs", "Services/AppIconPolicy.cs", "UI/AppIconCache.cs",
+    "Services/GlassStyle.cs", "Services/MaximizedWindowLayout.cs", "Services/WindowPlacementPlan.cs",
+    "Interop/MaximizedWindowReconciler.cs", "Interop/WindowPlacementCommands.cs", "Desktop/DesktopEnvironment.Windows.cs",
+    "UI/GlassDecorations.cs", "UI/UiResourceProbe.cs",
+    "Desktop/DesktopPanelWindow.cs", "Desktop/ClipboardShelfWindow.cs", "Desktop/SessionStatusWindow.cs", "Desktop/DesktopEnvironment.Features.cs",
+    "Services/SavedWindowLayouts.cs", "Services/WindowBoardPolicy.cs", "Services/ClipboardHistory.cs", "Services/ClipboardCaptureGate.cs", "Services/ClipboardCapturePolicy.cs",
+    "Desktop/SearchWindow.cs", "Desktop/DesktopEnvironment.Search.cs", "Services/DesktopSearchCatalog.cs",
+    "Desktop/PlacesWindow.cs", "Desktop/DesktopGuideWindow.cs", "Desktop/DesktopEnvironment.Organization.cs", "Services/DesktopOrganization.cs", "Services/FileMutationHistory.cs", "Services/DesktopFileMonitor.cs",
+    "Interop/DesktopWindowCatalog.cs", "Interop/ClipboardCaptureService.cs",
 ]
 for relative in required:
     assert (project / relative).is_file(), f"Missing file: {relative}"
@@ -82,6 +90,8 @@ for source in project.rglob("*.cs"):
     for match in re.finditer(r'XamlReader\.Load\("(<ItemsPanelTemplate[^"\n]*)"\)', body):
         ET.fromstring(match[1]); templates += 1
 print(f"Native runtime template XML OK: {templates} templates")
+for script in ["export-ui-templates.ps1", "verify-native-ui.ps1", "desktop-health.ps1", "Check-Nexus-UI.bat", "Check-Nexus-Desktop.bat"]:
+    assert (root / "scripts" / script).is_file(), f"Missing build/diagnostic helper: {script}"
 
 for path in project.glob("*.xaml"):
     for node in ET.parse(path).getroot().iter():
@@ -240,7 +250,7 @@ closed = code[code.index("private void Window_Closed("):]
 assert "SaveFinal(" not in closed and "DetachSnapshot(" in closed, "Closing Sections must not finalize the desktop session"
 for file in [root / "appveyor.yml", root / ".github/workflows/build-windows.yml", root / "scripts/package.ps1", root / "scripts/build.ps1"]:
     body = file.read_text()
-    assert "Nexus-Shell-3.2.0" in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
+    assert "Nexus-Shell-" + ET.parse(project / "Nexus.Shell.csproj").findtext("PropertyGroup/Version") in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
 print("Independent desktop ownership, Sections lifetime and CI versions OK")
 # Desktop replacement cannot silently instantiate Explorer or common picker UI.
 environment = (project / "Desktop/DesktopEnvironment.cs").read_text()
@@ -251,8 +261,10 @@ for source in project.rglob("*.cs"):
     assert not re.search(r"\bnew\s+(?:FileOpenPicker|FileSavePicker|FolderPicker)\b", body), f"Windows picker UI remains: {source}"
 assert 'new("files", "Files", "nexus:files"' in (project / "Services/AppCatalog.cs").read_text()
 assert "new ExclusiveTaskbarRegistration" in (project / "Desktop/TaskbarWindow.cs").read_text()
-for layer in ["FilesWindow", "SwitcherWindow"]:
+for layer in ["FilesWindow", "DesktopPanelWindow"]:
     assert re.search(r"class\s+" + layer + r"\s*:\s*Window", (project / "Desktop" / (layer + ".cs")).read_text())
+for layer in ["SwitcherWindow", "ClipboardShelfWindow", "SessionStatusWindow", "PlacesWindow", "DesktopGuideWindow"]:
+    assert re.search(r"class\s+" + layer + r"\s*:\s*DesktopPanelWindow", (project / "Desktop" / (layer + ".cs")).read_text())
 for relative in ["src/Nexus.DesktopHost/Nexus.DesktopHost.csproj", "src/Nexus.DesktopHost/Program.cs", "src/Nexus.DesktopHost/WindowsDesktopSurfaces.cs", "docs/NEXUS-DESKTOP-MODE.md", "docs/TEST-DESKTOP-MODE.md", "scripts/restore-windows-desktop.ps1"]:
     assert (root / relative).is_file(), f"Missing desktop-mode deliverable: {relative}"
 ET.parse(root / "src/Nexus.DesktopHost/Nexus.DesktopHost.csproj")
@@ -279,8 +291,9 @@ for source in project.rglob("*.cs"):
         assert "using Nexus.Shell.Interop;" in body or "Interop.NativeMethods." in body, f"Missing interop import: {source}"
 print("Interop imports OK")
 
-# Native combinations belong to Windows. Only the standalone Start-key router
-# may install a hook; a leftover general shortcut hook still fails validation.
+# Native Windows combinations belong to Windows. Only the standalone Start-key
+# router may install a hook. Search reserves one non-Windows combination through
+# RegisterHotKey; it neither observes general input nor synthesizes key releases.
 assert not (project / "Interop/ShellKeyboardHook.cs").exists(), (
     "Remove src/Nexus.Shell/Interop/ShellKeyboardHook.cs from the repository. "
     "It was retired; overlaying a new Source ZIP does not delete old files."
@@ -288,9 +301,14 @@ assert not (project / "Interop/ShellKeyboardHook.cs").exists(), (
 for source in project.rglob("*.cs"):
     if source == project / "Interop/StartKeyRouter.cs":
         continue
-    assert not re.search(r"\b(?:SetWindowsHookEx|RegisterHotKey|ShellKeyboardState|ShellKeyAction)\b", source.read_text()), (
+    body = source.read_text()
+    assert not re.search(r"\b(?:SetWindowsHookEx|ShellKeyboardState|ShellKeyAction)\b", body), (
         f"Global shortcut interception remains: {source.relative_to(root)}"
     )
+    if re.search(r"\bRegisterHotKey\b", body):
+        assert source == project / "Interop/DesktopIntegration.cs", "Unexpected global shortcut owner"
+        assert body.count("RegisterHotKey(") == 2 and "RegisterHotKey(window, SearchHotkey, 0x4003, 0x20)" in body, "Only Ctrl+Alt+Space may be reserved for Search"
+        assert "UnregisterHotKey(_window, SearchHotkey)" in body and "SearchHotkeyAvailable" in body, "Search shortcut needs conflict handling and cleanup"
 start_router = (project / "Interop/StartKeyRouter.cs").read_text()
 assert "CallNextHookEx" in start_router and "sent == inputs.Length" in start_router and "StartKeyGesture" in start_router
 assert "if (IsManagedDesktop) _ = ConnectStartKeyAsync()" in environment

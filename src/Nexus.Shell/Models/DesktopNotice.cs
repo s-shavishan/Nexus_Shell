@@ -1,7 +1,7 @@
 namespace Nexus.Shell.Services;
 
 public enum NoticeKind { Information, Warning, Error }
-public sealed record DesktopNotice(Guid Id, string Title, string Message, NoticeKind Kind, DateTimeOffset Created, bool Read = false);
+public sealed record DesktopNotice(Guid Id, string Title, string Message, NoticeKind Kind, DateTimeOffset Created, bool Read = false, DateTimeOffset? SnoozedUntil = null);
 
 public static class NotificationHistory
 {

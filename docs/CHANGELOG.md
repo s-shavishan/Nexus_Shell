@@ -1,3 +1,22 @@
+# 3.5.1 — Stability Phase 01
+
+- Bound Files folder/preview work, cancel superseded requests, and show delayed-location feedback.
+- Repair file-action states, blank-space double-clicks, Recycle Bin selection/preview cleanup and overlapping empty operations.
+- Recover after rejected settings snapshots and freeze queued snapshots before waiting; retain uncertain-save reconciliation.
+- Correct notification deduplication for bounded text, severity changes and backwards clock movement.
+- Normalize Places defensively, reject alternate device/UNC spellings and reposition common desktop panels on layout refresh.
+- Add 37 regression assertions, a consolidated Windows acceptance pass and a researched engine integration plan. Native Windows build/VM acceptance remain pending; third-party engines are not bundled.
+
+# 3.5.0 — Everyday Desktop Pack
+
+- Add Launchpad collections, A–Z/catalog order, hidden-app recovery and dock pin ordering.
+- Add an integrated Places panel with favorite-folder picking, labels, ordering and bounded background previews.
+- Add desktop local rename/new-folder/copy-path actions, sorting/icon visibility and single-action undo; add rename/undo to Nexus Files.
+- Observe desktop folder changes, coalesce refresh work and retain refresh requests received during enumeration.
+- Add Nexus notification search, unread/issues/snoozed views, explicit mark-read, persisted snooze deadlines and session-only undo dismiss/clear; build at most 20 alert cards per page.
+- Add a desktop shortcuts panel and make it reachable from Help/F1. Suppress dock hover previews while the newer panels are open.
+- Expand native UI construction checks, add real filesystem and state regression checks, and ship one consolidated Windows acceptance guide. Native build and VM acceptance remain pending.
+
 # 2.0.0 — Major desktop update
 
 - Route Windows Settings through the Windows URI launcher and report an unavailable page; retain Control Panel access.
