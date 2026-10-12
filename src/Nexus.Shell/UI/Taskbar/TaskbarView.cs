@@ -277,8 +277,10 @@ internal sealed class TaskbarView : Grid
             item.State = state;
             if (item.Button.IsEnabled != valid) item.Button.IsEnabled = valid;
             item.PreviewsEnabled = _environment.Session.State.DockPreviews;
-        item.Button.Background = active ? _environment.Theme.Brush("NexusSelection") : _transparent;
-            item.Indicator.Background = _environment.Theme.Brush(active ? "NexusAccent" : "NexusMuted");
+            var background = active ? _environment.Theme.Brush("NexusSelection") : _transparent;
+            if (!ReferenceEquals(item.Button.Background, background)) item.Button.Background = background;
+            var marker = _environment.Theme.Brush(active ? "NexusAccent" : "NexusMuted");
+            if (!ReferenceEquals(item.Indicator.Background, marker)) item.Indicator.Background = marker;
             // Indicator brush already reflects the active state above.
             if (_dockMotion is null) { item.Indicator.Width = active ? 22 : minimized ? 5 : 10; item.Indicator.Opacity = minimized ? .45 : 1; }
             string action = minimized ? "Restore " : active ? "Minimize " : "Switch to ";
