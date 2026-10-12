@@ -449,7 +449,10 @@ internal sealed class TaskbarView : Grid
         ApplyFrameCorners();
         if (!MaterialOwnedByWindow) GlassPaintRetention.Edge(_frame, theme.Edge);
         if (!_frame.BorderThickness.Equals(new Thickness(1))) _frame.BorderThickness = new Thickness(1);
-        _separator.Background = theme.Brush("NexusBorder"); _time.Foreground = theme.Brush("NexusText"); _date.Foreground = theme.Brush("NexusMuted");
+        var border = theme.Brush("NexusBorder"); var text = theme.Brush("NexusText"); var muted = theme.Brush("NexusMuted");
+        if (!ReferenceEquals(_separator.Background, border)) _separator.Background = border;
+        if (!ReferenceEquals(_time.Foreground, text)) _time.Foreground = text;
+        if (!ReferenceEquals(_date.Foreground, muted)) _date.Foreground = muted;
         _clockButton.Background = theme.Brush("NexusSelection");
         foreach (var button in _iconButtons) { button.Background = _transparent; button.Foreground = theme.Brush("NexusText"); }
         foreach (var item in _items.Values) item.State = null;
