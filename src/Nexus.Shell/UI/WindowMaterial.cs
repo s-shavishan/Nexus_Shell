@@ -46,28 +46,33 @@ internal sealed class WindowMaterial
                 _backdrop = glass ? new LiquidGlassBackdrop(role, WinRT.Interop.WindowNative.GetWindowHandle(window)) : null;
                 _attachment.Attach(_backdrop);
                 _backdrop?.SetAppearance(GlassRecipe.For(theme.Palette, role, state.GlassStyle), theme.Palette.IsLight);
-                if (_backdrop is { } source) source.Failed += () => frame.DispatcherQueue.TryEnqueue(() =>
-                {
-                    if (!_attachment.DetachFailed(source)) return;
-                    _failed = true; _enabled = false; _backdrop = null;
-                    try
+                if (_backdrop is { } source) source.Failed += () => GlassUiDispatch.TryPost(
+                    action => frame.DispatcherQueue.TryEnqueue(() => action()),
+                    () => _attachment.IsCurrent(source),
+                    () =>
                     {
-                        window.SystemBackdrop = null;
+                        if (!_attachment.DetachFailed(source)) return;
+                        _failed = true; _enabled = false; _backdrop = null;
+                        try { window.SystemBackdrop = null; }
+                        catch (Exception error) { Log.Write("Glass native target could not detach", error); }
+                        // Keep the palette readable even when native detach failed.
                         if (_latestTheme is { } currentTheme && _latestState is { } currentState)
                         {
                             frame.Background = currentTheme.Material(_latestRole, false);
                             UpdateStatus(currentTheme, currentState, _latestRole);
                         }
-                    }
-                    catch (Exception error) { Log.Write("Glass fallback could not detach", error); }
-                });
-                if (_backdrop is { } current) current.StateChanged += () => frame.DispatcherQueue.TryEnqueue(() =>
-                {
-                    if (!_attachment.IsCurrent(current)) return;
-                    if (_latestTheme is not { } currentTheme || _latestState is not { } currentState) return;
-                    frame.Background = currentTheme.Material(_latestRole, current.State == "Active");
-                    UpdateStatus(currentTheme, currentState, _latestRole);
-                });
+                    },
+                    error => Log.Write("Glass failure callback could not update the solid fallback", error));
+                if (_backdrop is { } current) current.StateChanged += () => GlassUiDispatch.TryPost(
+                    action => frame.DispatcherQueue.TryEnqueue(() => action()),
+                    () => _attachment.IsCurrent(current),
+                    () =>
+                    {
+                        if (_latestTheme is not { } currentTheme || _latestState is not { } currentState) return;
+                        frame.Background = currentTheme.Material(_latestRole, current.State == "Active");
+                        UpdateStatus(currentTheme, currentState, _latestRole);
+                    },
+                    error => Log.Write("Glass state callback could not update the surface", error));
                 window.SystemBackdrop = _backdrop; _enabled = glass;
                 UiTrace.Surface(glass ? "backdrop-attached" : "backdrop-detached", role, WinRT.Interop.WindowNative.GetWindowHandle(window), value: _backdrop?.TraceId ?? 0);
             }
@@ -99,6 +104,7 @@ internal sealed class WindowMaterial
             : "Glass is preparing for this surface.";
         // LiquidGlassBackdrop emits opt-in ETW state events. Avoid blocking the
         // WinUI thread with a synchronous disk log on normal state changes.
-        StatusChanged?.Invoke();
+        try { StatusChanged?.Invoke(); }
+        catch (Exception error) { Log.Write("Glass status observer could not refresh", error); }
     }
 }
