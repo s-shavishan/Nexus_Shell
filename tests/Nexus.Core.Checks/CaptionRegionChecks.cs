@@ -27,6 +27,8 @@ internal static class CaptionRegionChecks
             && ChromeAppearancePolicy.ClipChanged(identicalClip, identicalClip, 22, 0),
             "Initial, geometry and accessibility changes must refresh native regions.");
 
+        Check(!LiveResizeRegionPolicy.RedrawWhileSuspending && LiveResizeRegionPolicy.RedrawAfterRestore,
+            "Release obsolete sizing clips without an extra synchronous repaint, but repaint final restored corners.");
         Check(LiveResizeRegionPolicy.ShouldSuspend(true, true, false, false, false),
             "User sizing of a normal resizable window must release its stale rounded clip.");
         Check(!LiveResizeRegionPolicy.ShouldSuspend(false, true, false, false, false),
