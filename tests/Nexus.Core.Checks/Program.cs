@@ -7,6 +7,7 @@ DesktopModeChecks.Run();
 DesktopUiChecks.Run();
 LaunchpadCacheChecks.Run();
 WindowEventPipelineChecks.Run();
+ForegroundLookupChecks.Run();
 GlassAttachmentGateChecks.Run();
 GlassUiDispatchChecks.Run();
 
