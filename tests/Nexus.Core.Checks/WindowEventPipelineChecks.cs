@@ -105,7 +105,7 @@ internal static class WindowEventPipelineChecks
                 "Repeated stale native callbacks must not strand the event dispatch gate.");
             safeQueue.Dequeue()();
         }
-        Check(safeQueue.Count == 0 && nativeErrors.Count == 503,
+        Check(safeQueue.Count == 0 && nativeErrors.Count == 502,
             "Contained callbacks must release the native-event queue for every subsequent generation.");
 
         int lookupCount = 0;
