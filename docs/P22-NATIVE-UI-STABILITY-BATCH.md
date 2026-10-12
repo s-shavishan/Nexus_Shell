@@ -65,9 +65,35 @@ The visibility timer can run every 80 ms while the dock is being interacted with
 - Cached selection does not suppress reading `IsZoomed`; existing maximized state changes and `ActiveWindowChanged` continue to propagate.
 - Portable checks use 1,500 stable polls, new snapshot publications, HWND/process reuse, negative-cache and thrown-discovery recovery. This measures a policy outcome, not a claimed FPS improvement.
 
+### H. Remove UI-thread disk logging from successful maximized-window repair
+
+The existing `MaximizedWindowReconciler` emitted a synchronous `Log.Write` for every accepted native `SetWindowPos` repair. Since the logger opens/rotates a file on the caller thread, this could add unrelated disk latency during focus, maximize and work-area transitions.
+
+- Preserve the two-attempt native `WindowRepairBudget`, HWND ownership checks and asynchronous Win32 positioning flags.
+- Publish accepted/refused repair outcomes through the already-established opt-in `Nexus-Shell-UI` ETW Surface event. An accepted outcome no longer triggers a disk write.
+- Preserve one diagnostic file message when Windows **refuses** the correction. The ETW payload includes the target HWND and intended dimensions, but no window title or document path.
+- No claim of measured compositor FPS improvement without Windows frame-time traces.
+
+### I. Isolate native Win32 chrome observers
+
+A throwing `Restored` subscriber after `DefSubclassProc` could propagate out of the hook; a throwing maximize-state listener previously propagated into `WindowChrome.Refresh` and permanently disabled rounded-region updates.
+
+- Restore and attached-state event consumers are now called individually within exception boundaries. A failed subscriber does not skip later subscribers, and diagnostics are logged at most once per listener group per chrome lifetime.
+- Preserve the original `WM_SIZE`, Nexus restore message and `WindowChrome` subclass lifecycle.
+- The actual Windows `NativeChromeChecks` fixture now registers one throwing and one healthy state/restore listener and verifies the healthy listeners still execute without disabling GDI decoration.
+
+### J. Recover queued dock/desktop and native WinEvent failures
+
+An accepted `DispatcherQueue` work item can execute after a WinUI window has begun closing. Both `CoalescedUiDispatch` (dock/desktop position) and `WindowEventDispatchGate` (native task-list events) previously released their queue gate but allowed subsequent consumer exceptions to escape the asynchronous UI callback.
+
+- Add optional error reporters to both production dispatch gates, preserving existing exception propagation for callers without a reporter.
+- The native dock, desktop and WinEvent call sites supply diagnostics to contain late UI exceptions. Refusal and throwing dispatcher admission release the pending flag, and native foreground priority is still retained after a rejected queue request.
+- New portable `NativeUiDispatchChecks` covers coalescing, reentrant dispatch, logging failures and **500** failed callbacks. Expanded `WindowEventPipelineChecks` covers rejected foreground events and 500 failing deliveries.
+- The 80 ms dock timer now passes its sampled foreground HWND to `TaskbarView.RefreshWindowStates`, avoiding an extra native foreground read on a changed-foreground tick.
+
 ### Integration with parallel Liquid Glass work
 
-Draft PR #20 (`codex/glass-quality-policy`) is a separate appearance/runtime upgrade based on the current `main`. P2.2 deliberately does **not** reimplement glass-quality tiers or edit its new runtime protocol, power-policy, state model, or backdrop classes. Both branches currently touch `UiResourceProbe.cs`: the final integrator must retain **both** glass-quality probe checks and P2.2's pinned-icon regression probe after rebasing/merging. Do not merge either branch merely to clear a conflict without running the consolidated Windows checks.
+Draft PR #20 (`codex/glass-quality-policy`) is a separate appearance/runtime upgrade based on the current `main`. P2.2 deliberately does **not** reimplement glass-quality tiers or edit its new runtime protocol, power-policy, state model, or backdrop classes. Both branches currently touch `UiResourceProbe.cs` **and** `DesktopEnvironment.cs`: the final integrator must retain glass-quality appearance/policy updates, P2.2's WinEvent dispatch recovery, and **both** glass-quality and pinned-icon probe checks after rebasing/merging. Do not merge either branch merely to clear a conflict without running the consolidated Windows checks.
 
 ## Safety boundaries
 
@@ -84,7 +110,8 @@ Draft PR #20 (`codex/glass-quality-policy`) is a separate appearance/runtime upg
 4. Toggle compact vs normal dock, floating vs attached, High Contrast, transparency and Reduced Effects; move across negative-origin and fractional-DPI monitors. Compare actual desktop bounds and icon geometry.
 5. Change a pinned app shortcut icon (same path), explicitly Refresh installed apps, and verify both Launchpad and the dock show the updated image. Ordinary polling should not recreate pins.
 6. Rename window titles while their preview is open, including title-dependent Nexus windows; process label, icon and action state should update without a broken DWM relationship.
-7. Collect opt-in `dock-frame-layout`, `dock-desktop-relayout`, `dock-refresh`, `dock-enumerate` and compositor frame-time data before claiming responsiveness gains.
+7. Collect opt-in `dock-frame-layout`, `dock-desktop-relayout`, `dock-refresh`, `dock-enumerate`, `maximized-repair-queued/refused` and compositor frame-time data before claiming responsiveness gains.
+8. During native tests, exercise a thrown/deferred window-state observer and a failed dispatcher callback; subsequent restore/dock updates must still work, including after multiple sequential failures.
 
 ## Rollback
 
