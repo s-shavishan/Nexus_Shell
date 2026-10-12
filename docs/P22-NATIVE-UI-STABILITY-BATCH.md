@@ -46,6 +46,15 @@ An explicit Launchpad catalog refresh already invalidated completed `AppIconCach
 - Add opt-in `RegionRefreshRequests` diagnostic counter on the native chrome instance. A test-owned Win32 fixture asserts that repeated settings do not invoke a redundant refresh, while true changes do.
 - Extend portable Core tests for fractional/invalid corner inputs, clip equality, and accessibility transitions.
 
+### F. Retain desktop bounds without unnecessary AppWindow moves
+
+The native desktop layer previously sent `AppWindow.MoveAndResize` on every monitor/shell-position event, including when the HWND was already exactly the target monitor size and position. Repeated native position messages can cascade into WinUI layout and subclass callbacks.
+
+- `DesktopWindow.Position()` now reads the actual native HWND rectangle and resizes only if it differs from the current monitor bounds (or cannot be read).
+- `ShellLayerInterop.AnchorDesktop` still runs **on every event**, even if geometry is unchanged, because Windows WorkerW/Progman ancestry and desktop Z-order can change independently of dimensions. No desktop ownership or shell takeover logic is bypassed.
+- New `DesktopSurfacePositionPolicy` is compiled into portable Core checks. Windows `DesktopNativeChecks` also verifies the no-op behavior against its own real Win32 test HWND.
+- Opt-in `desktop-native-resize` ETW work timing records actual native desktop resize operations; no background polling or new disk writes.
+
 ## Safety boundaries
 
 - Do **not** modify Windows Explorer integration, shell installation/registration, work-area ownership, input hooks, native privileges or elevation, application execution, data persistence or file-provider behavior.
