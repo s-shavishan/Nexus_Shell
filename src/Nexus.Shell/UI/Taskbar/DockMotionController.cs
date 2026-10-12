@@ -13,6 +13,7 @@ internal sealed class DockMotionController : IDisposable
 {
     private readonly HashSet<FrameworkElement> _icons = [];
     private readonly Dictionary<Border, DockPresence> _indicators = [];
+    private readonly HashSet<Border> _animatedIndicators = [];
     private readonly Dictionary<DockMotionCue, (Vector3KeyFrameAnimation Move, Vector3KeyFrameAnimation Scale)> _cues = [];
     private readonly Dictionary<DockPresence, (Vector3KeyFrameAnimation Scale, ScalarKeyFrameAnimation Opacity)> _lines = [];
     private readonly CubicBezierEasingFunction _ease;
@@ -76,14 +77,26 @@ internal sealed class DockMotionController : IDisposable
     {
         if (_disposed) return;
         bool changed = !_indicators.TryGetValue(indicator, out var previous) || previous != presence;
+        var update = DockIndicatorUpdatePolicy.Decide(changed, _animatedIndicators.Contains(indicator),
+            animate, _enabled, indicator.IsLoaded);
         _indicators[indicator] = presence;
+        if (update == DockIndicatorUpdate.None) return;
         try
         {
-            var visual = ElementCompositionPreview.GetElementVisual(indicator);
-            visual.CenterPoint = new Vector3(11, 1.5f, 0);
-            if (_enabled && animate && changed && indicator.IsLoaded)
-            { var line = _lines[presence]; visual.StartAnimation("Scale", line.Scale); visual.StartAnimation("Opacity", line.Opacity); }
-            else if (changed || !animate || !_enabled) SetLine(indicator, presence);
+            if (update == DockIndicatorUpdate.Animate)
+            {
+                var visual = ElementCompositionPreview.GetElementVisual(indicator);
+                visual.CenterPoint = new Vector3(11, 1.5f, 0);
+                var line = _lines[presence];
+                visual.StartAnimation("Scale", line.Scale);
+                visual.StartAnimation("Opacity", line.Opacity);
+                _animatedIndicators.Add(indicator);
+            }
+            else
+            {
+                SetLine(indicator, presence);
+                _animatedIndicators.Remove(indicator);
+            }
         }
         catch (Exception ex) { Disable(ex); }
     }
@@ -105,19 +118,23 @@ internal sealed class DockMotionController : IDisposable
     {
         _icons.Remove(icon); try { ResetIcon(icon); } catch { }
         if (indicator is not null && _indicators.Remove(indicator, out var presence))
+        {
+            _animatedIndicators.Remove(indicator);
             try { SetLine(indicator, presence); } catch { }
+        }
     }
     private void ResetAll()
     {
         foreach (var icon in _icons) try { ResetIcon(icon); } catch { }
         foreach (var pair in _indicators) try { SetLine(pair.Key, pair.Value); } catch { }
+        _animatedIndicators.Clear();
     }
     private void Disable(Exception ex)
     { if (_usable) Log.Write("Dock state motion unavailable", ex); _usable = _enabled = false; ResetAll(); }
     public void Dispose()
     {
         if (_disposed) return; _disposed = true; _enabled = false; ResetAll();
-        _icons.Clear(); _indicators.Clear();
+        _icons.Clear(); _indicators.Clear(); _animatedIndicators.Clear();
         foreach (var cue in _cues.Values) { cue.Move.Dispose(); cue.Scale.Dispose(); }
         foreach (var line in _lines.Values) { line.Scale.Dispose(); line.Opacity.Dispose(); }
         _cues.Clear(); _lines.Clear(); _ease.Dispose();
