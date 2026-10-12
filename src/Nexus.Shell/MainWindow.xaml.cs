@@ -38,6 +38,7 @@ public sealed partial class MainWindow : Window
     private readonly SolidColorBrush _selection = MakeBrush(190, 171, 248, 40);
     private readonly SolidColorBrush _solidPanel = MakeBrush(25, 32, 51), _solidCard = MakeBrush(37, 45, 69);
     private readonly UI.WindowTransition _windowTransition;
+    private readonly UI.NativeCaptionRegions _caption;
     private readonly SolidColorBrush _transparent = MakeBrush(0, 0, 0, 0);
 
     internal MainWindow(Desktop.DesktopEnvironment environment)
@@ -71,9 +72,10 @@ public sealed partial class MainWindow : Window
                 workArea.Y + (workArea.Height - initialHeight) / 2, initialWidth, initialHeight));
             if (_appWindow.Presenter is OverlappedPresenter presenter) presenter.SetBorderAndTitleBar(false, false);
             _windowTransition = new(DesktopRoot, () => _environment.Theme.Animations && _state.SurfaceAnimations && !_highContrast && !_state.ReducedEffects);
-            _chrome = new(_handle, resizable: true, stateChanged: maximized => { DesktopRoot.CornerRadius = new CornerRadius(maximized || _highContrast ? 0 : 14); DesktopRoot.BorderThickness = new Thickness(maximized ? 0 : 1); }, minimizeRequested: Minimize, closeRequested: RequestCloseSections);
+            _chrome = new(_handle, resizable: true, stateChanged: maximized => { DesktopRoot.CornerRadius = new CornerRadius(maximized || _highContrast ? 0 : 14); DesktopRoot.BorderThickness = new Thickness(maximized ? 0 : 1); }, minimizeRequested: Minimize, closeRequested: RequestCloseSections, role: "Sections");
             _chrome.Restored += _windowTransition.Restore;
             _chrome.Resized += _windowTransition.Restore;
+            _caption = new(_appWindow, _chrome, SectionsDragArea, () => !_state.FullScreen, ChromeSearchButton);
             var icon = Path.Combine(AppContext.BaseDirectory, "Assets", "Nexus.ico");
             if (File.Exists(icon)) _appWindow.SetIcon(icon);
             DisplayNameBox.Text = _state.DisplayName;
@@ -576,8 +578,9 @@ public sealed partial class MainWindow : Window
         {
             _chrome.SetFullscreen(enabled);
             _appWindow.SetPresenter(enabled ? AppWindowPresenterKind.FullScreen : AppWindowPresenterKind.Overlapped);
-            if (!enabled && _appWindow.Presenter is OverlappedPresenter p) p.SetBorderAndTitleBar(false, false);
+            if (!enabled && _appWindow.Presenter is OverlappedPresenter p) p.SetBorderAndTitleBar(_caption.UsesSystemFrame, _caption.UsesSystemFrame);
             _state.FullScreen = enabled;
+            _caption.Refresh();
             
             SaveState();
         }
@@ -645,10 +648,6 @@ public sealed partial class MainWindow : Window
     {
         ((Grid)sender).Clip = new RectangleGeometry { Rect = new Windows.Foundation.Rect(0, 0, args.NewSize.Width, args.NewSize.Height) };
         if (_ready) { UpdateHero(); UpdateWorkspaceLayout(); UpdateHomeColumns(); UpdateExperienceLayout(); UpdatePcLayout(); }
-    }
-    private void DragArea_PointerPressed(object sender, PointerRoutedEventArgs args)
-    {
-        if (_ready && !_state.FullScreen && args.GetCurrentPoint(DesktopRoot).Properties.IsLeftButtonPressed) NativeMethods.BeginDrag(_handle);
     }
     private void QuickLaunch_Click(object sender, RoutedEventArgs args)
     {
@@ -731,7 +730,7 @@ public sealed partial class MainWindow : Window
         _ready = false; _uiTimer.Stop(); _searchTimer.Stop();
         _audioWriteTimer.Stop(); _audio?.Dispose(); _focusTimer.Stop(); _discoveryCancellation.Cancel();
         try { _motion?.Dispose(); } catch (Exception ex) { Log.Write("Sections motion cleanup skipped", ex); }
-        _windowTransition.Dispose(); _chrome.Dispose();
+        _caption.Dispose(); _windowTransition.Dispose(); _chrome.Dispose();
         _discoveryCancellation.Dispose();
         if (!_environment.IsStopping) _environment.SaveState();
     }

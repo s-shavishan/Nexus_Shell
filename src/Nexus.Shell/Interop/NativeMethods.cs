@@ -28,8 +28,6 @@ internal static class NativeMethods
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] internal static extern IntPtr FindWindow(string? className, string? name);
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] private static extern IntPtr GetWindowLongPtr(IntPtr window, int index);
     [DllImport("user32.dll")] private static extern bool GetLastInputInfo(ref LastInputInfo input);
-    [DllImport("user32.dll")] private static extern bool ReleaseCapture();
-    [DllImport("user32.dll")] private static extern IntPtr SendMessage(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
     [DllImport("user32.dll", EntryPoint = "MessageBoxW", CharSet = CharSet.Unicode, ExactSpelling = true)]
     private static extern int MessageBox(IntPtr owner, string text, string caption, uint type);
     [StructLayout(LayoutKind.Sequential)] private struct LastInputInfo { public uint Size; public uint Tick; }
@@ -123,12 +121,6 @@ internal static class NativeMethods
         return ForegroundTaskWindow() == window.Handle && !IsIconic(window.Handle)
             ? Minimize(window) : Activate(window);
     }
-    internal static void BeginDrag(IntPtr window)
-    {
-        ReleaseCapture();
-        SendMessage(window, 0x00A1, new IntPtr(2), IntPtr.Zero); // WM_NCLBUTTONDOWN / HTCAPTION
-    }
-
     internal static string? ForegroundProcessName()
     {
         GetWindowThreadProcessId(GetForegroundWindow(), out uint id);

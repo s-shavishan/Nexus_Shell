@@ -8,6 +8,9 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Nexus.Runtime/Nexus.Runtime.csproj" />
+    <Compile Include="../../src/Nexus.Shell/Services/CaptionRegionLayout.cs" Link="CaptionRegionLayout.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/UiTrace.cs" Link="UiTrace.cs" />
+    <Compile Include="../../src/Nexus.Shell/Interop/WindowChrome.cs" Link="WindowChrome.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/NexusStartupPolicy.cs" Link="NexusStartupPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/StartKeyGesture.cs" Link="StartKeyGesture.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/StartKeyRouter.cs" Link="StartKeyRouter.cs" />

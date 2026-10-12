@@ -57,6 +57,7 @@ internal static class DesktopNativeChecks
         {
             window = CreateWindowEx(0, className, "Nexus desktop control check", 0x00CF0000, 100, 100, 240, 160, IntPtr.Zero, IntPtr.Zero, definition.Instance, IntPtr.Zero);
             if (window == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
+            NativeChromeChecks.Run(window);
             if (NativeMethods.Activate(new RunningWindow(window, "Wrong owner", "test", Environment.ProcessId + 1)))
                 throw new Exception("Taskbar/window activation must reject a stale process identity.");
             if (NativeMethods.ToggleDockWindow(new(window, "Wrong owner", "test", Environment.ProcessId + 1))

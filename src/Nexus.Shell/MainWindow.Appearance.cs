@@ -32,16 +32,17 @@ public sealed partial class MainWindow
         bool requested = _state.NativeGlass && !_state.ReducedEffects && !_highContrast && _environment.Theme.Transparency;
         if (_glassRequested != requested) { _glassRequested = requested; _glassUnavailable = false; }
         if (!requested || _glassUnavailable)
-        { if (_auraGlass is not null) SystemBackdrop = null; _auraGlass = null; return; }
+        { DesktopRoot.Background = _highContrast ? Resource("NexusPanel") : _solidPanel; if (_auraGlass is not null) SystemBackdrop = null; _auraGlass = null; return; }
         try
         {
             if (!Microsoft.UI.Composition.SystemBackdrops.DesktopAcrylicController.IsSupported()) { _glassUnavailable = true; return; }
             if (_auraGlass is null)
             {
-                var source = _auraGlass = new UI.LiquidGlassBackdrop();
+                DesktopRoot.Background = _highContrast ? Resource("NexusPanel") : _solidPanel;
+                var source = _auraGlass = new UI.LiquidGlassBackdrop("Sections", _handle);
                 source.SetAppearance(GlassRecipe.For(palette, style: _state.GlassStyle), palette.IsLight);
                 source.Failed += () => DesktopRoot.DispatcherQueue.TryEnqueue(() =>
-                { if (!ReferenceEquals(source, _auraGlass)) return; _glassUnavailable = true; _auraGlass = null; try { SystemBackdrop = null; if (DesktopRoot.IsLoaded) ApplyAuraSurfaces(true); } catch (Exception error) { Log.Write("Sections glass fallback arrived after close", error); } });
+                { if (!ReferenceEquals(source, _auraGlass)) return; _glassUnavailable = true; _auraGlass = null; try { DesktopRoot.Background = _highContrast ? Resource("NexusPanel") : _solidPanel; SystemBackdrop = null; if (DesktopRoot.IsLoaded) ApplyAuraSurfaces(true); } catch (Exception error) { Log.Write("Sections glass fallback arrived after close", error); } });
                 source.StateChanged += () => DesktopRoot.DispatcherQueue.TryEnqueue(() =>
                 { if (ReferenceEquals(source, _auraGlass) && DesktopRoot.IsLoaded) { ApplyAuraSurfaces(false); Log.Write($"Glass[Sections] palette={_environment.Theme.Palette.Name} style={_state.GlassStyle} state={source.State}"); } });
                 SystemBackdrop = _auraGlass;
@@ -49,11 +50,11 @@ public sealed partial class MainWindow
             _auraGlass.SetAppearance(GlassRecipe.For(palette, style: _state.GlassStyle), palette.IsLight);
         }
         catch (Exception error)
-        { _auraGlass = null; _glassUnavailable = true; try { SystemBackdrop = null; } catch (Exception cleanup) { Log.Write("Sections glass cleanup failed", cleanup); } Log.Write("Sections glass unavailable; using solid surfaces", error); }
+        { _auraGlass = null; _glassUnavailable = true; try { DesktopRoot.Background = _highContrast ? Resource("NexusPanel") : _solidPanel; SystemBackdrop = null; } catch (Exception cleanup) { Log.Write("Sections glass cleanup failed", cleanup); } Log.Write("Sections glass unavailable; using solid surfaces", error); }
     }
     private void ApplyAuraSurfaces(bool simple)
     {
-        bool glass = (_auraGlass?.State is "Active" or "Pending") && !simple;
+        bool glass = _auraGlass?.State == "Active" && !simple;
         var theme = _environment.Theme;
         Brush panel = glass ? theme.Glass("Panel") : _highContrast ? Resource("NexusPanel") : _solidPanel;
         HomeBorder.Background = ControlPanel.Background = CommandPanel.Background = panel;

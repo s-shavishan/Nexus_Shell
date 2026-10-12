@@ -142,7 +142,7 @@
         <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="" FontSize="14" />
        </Button>
       </StackPanel>
-      <Border Grid.Column="1" Background="Transparent" PointerPressed="DragArea_PointerPressed" />
+      <Border x:Name="SectionsDragArea" Grid.Column="1" Background="Transparent" />
       <TextBlock Visibility="Collapsed" IsHitTestVisible="False" x:Name="PageTitle" Text="Sections" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource NexusText}" TextTrimming="CharacterEllipsis" />
       <Button x:Name="ChromeSearchButton" Grid.Column="1" Click="SearchApps_Click" Style="{StaticResource QuietButton}" MaxWidth="520" HorizontalAlignment="Stretch" Margin="24,0" Padding="14,8" CornerRadius="22" Background="{ThemeResource NexusInput}" AutomationProperties.Name="Search Nexus; Control K">
        <Grid ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>

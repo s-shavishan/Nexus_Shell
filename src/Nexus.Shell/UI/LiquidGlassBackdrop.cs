@@ -17,6 +17,12 @@ internal sealed class LiquidGlassBackdrop : SystemBackdrop
     internal string State { get; private set; } = "Pending";
     private Services.GlassRecipe _recipe = Services.GlassRecipe.For(Services.AuraPalette.For("Midnight"));
     private SystemBackdropTheme _theme = SystemBackdropTheme.Dark;
+    private readonly int _traceId = Interlocked.Increment(ref _nextTraceId);
+    private static int _nextTraceId;
+    private readonly string _role;
+    private readonly IntPtr _owner;
+    internal int TraceId => _traceId;
+    internal LiquidGlassBackdrop(string role = "Frame", IntPtr owner = default) { _role = role; _owner = owner; }
     internal void SetAppearance(Services.GlassRecipe recipe, bool light)
     {
         var next = light ? SystemBackdropTheme.Light : SystemBackdropTheme.Dark;
@@ -42,6 +48,7 @@ internal sealed class LiquidGlassBackdrop : SystemBackdrop
             Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().EnsureSystemDispatcherQueue();
             _configuration = new SystemBackdropConfiguration { IsInputActive = true, Theme = _theme };
             _controller = new DesktopAcrylicController { Kind = DesktopAcrylicKind.Thin };
+            Services.UiTrace.Surface("controller-created", _role, _owner, value: _traceId);
             _controller.StateChanged += ControllerStateChanged;
             _controller.SetSystemBackdropConfiguration(_configuration);
             ApplyTint();
@@ -70,9 +77,9 @@ internal sealed class LiquidGlassBackdrop : SystemBackdrop
     private void ControllerStateChanged(ISystemBackdropControllerWithTargets sender, object args)
     { try { if (_controller is { } controller) UpdateState(controller.State.ToString()); } catch (Exception error) { Services.Log.Write("Glass state unavailable", error); } }
     private void UpdateState(string state)
-    { if (State == state) return; State = state; try { StateChanged?.Invoke(); } catch (Exception error) { Services.Log.Write("Glass status callback failed", error); } }
+    { if (State == state) return; State = state; Services.UiTrace.Surface(state, _role, _owner, value: _traceId); try { StateChanged?.Invoke(); } catch (Exception error) { Services.Log.Write("Glass status callback failed", error); } }
     private void ReleaseController()
-    { var controller = _controller; _controller = null; try { if (controller is not null) { controller.StateChanged -= ControllerStateChanged; controller.Dispose(); } } catch (Exception error) { Services.Log.Write("Glass controller cleanup failed", error); } }
+    { var controller = _controller; _controller = null; try { if (controller is not null) { controller.StateChanged -= ControllerStateChanged; controller.Dispose(); Services.UiTrace.Surface("controller-disposed", _role, _owner, value: _traceId); } } catch (Exception error) { Services.Log.Write("Glass controller cleanup failed", error); } }
     private void Fail(Exception error)
     {
         _connected = false; ReleaseController(); _configuration = null;

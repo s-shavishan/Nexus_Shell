@@ -273,6 +273,8 @@ MajorDesktopChecks.Run();
 await UIReliabilityChecks.RunAsync();
 ResponsiveUiChecks.Run();
 WindowPolishChecks.Run();
+CaptionRegionChecks.Run();
+UiTraceChecks.Run();
 DesktopCommandChecks.Run();
 EverydayDesktopChecks.Run();
 await StabilityPhaseOneChecks.RunAsync();

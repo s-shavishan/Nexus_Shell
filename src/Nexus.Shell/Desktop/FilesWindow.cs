@@ -19,6 +19,7 @@ internal sealed class FilesWindow : Window
     private readonly Grid _frame = new();
     private readonly Border _surface;
     private readonly WindowChrome _chrome;
+    private readonly UI.NativeCaptionRegions _caption;
     private readonly UI.SurfaceMotion _motion;
     private readonly UI.WindowMaterial _material = new();
     private readonly UI.WindowTransition _transition;
@@ -43,8 +44,8 @@ internal sealed class FilesWindow : Window
         controls.Children.Add(Control("Minimize", Windows.UI.Color.FromArgb(255, 255, 189, 45), Minimize));
         controls.Children.Add(Control("Maximize or restore", Windows.UI.Color.FromArgb(255, 40, 200, 64), ToggleMaximize)); chrome.Children.Add(controls);
         _title = new TextBlock { Text = request.Title, FontSize = 13, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Left, Margin = new Thickness(28, 0, 0, 0), HorizontalAlignment = HorizontalAlignment.Stretch, TextTrimming = TextTrimming.CharacterEllipsis };
-        _title.PointerPressed += (_, e) => { if (e.GetCurrentPoint(_title).Properties.IsLeftButtonPressed) NativeMethods.BeginDrag(Handle); };
-        _title.DoubleTapped += (_, _) => ToggleMaximize(); Grid.SetColumn(_title, 1); chrome.Children.Add(_title);
+        var dragArea = new Border { Child = _title, Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent) };
+        Grid.SetColumn(dragArea, 1); chrome.Children.Add(dragArea);
         _frame.Children.Add(chrome); Grid.SetRow(View, 1); _frame.Children.Add(View);
         _surface = new Border { Child = _frame, CornerRadius = new CornerRadius(14), BorderThickness = new Thickness(1) }; Content = _surface;
         Handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
@@ -53,14 +54,15 @@ internal sealed class FilesWindow : Window
         if (request.Kind == FileSelectionKind.Browse) View.FolderChanged += title => { _title.Text = title; NativeWindow.Title = title + " · Nexus Files"; };
         if (NativeWindow.Presenter is OverlappedPresenter overlapped) overlapped.SetBorderAndTitleBar(false, false);
         _transition = new(_surface, () => environment.Theme.Animations && !environment.Theme.HighContrast && environment.State.SurfaceAnimations && !environment.State.ReducedEffects);
-        _chrome = new(Handle, resizable: true, stateChanged: maximized => { _surface.CornerRadius = new CornerRadius(maximized || environment.Theme.HighContrast ? 0 : 14); _surface.BorderThickness = new Thickness(maximized ? 0 : 1); }, minimizeRequested: Minimize, closeRequested: RequestClose);
+        _chrome = new(Handle, resizable: true, stateChanged: maximized => { _surface.CornerRadius = new CornerRadius(maximized || environment.Theme.HighContrast ? 0 : 14); _surface.BorderThickness = new Thickness(maximized ? 0 : 1); }, minimizeRequested: Minimize, closeRequested: RequestClose, role: "Files");
         _chrome.Restored += _transition.Restore;
         _chrome.Resized += _transition.Restore;
+        _caption = new(NativeWindow, _chrome, dragArea);
         _motion = new(_surface, () => environment.Theme.Animations && !environment.Theme.HighContrast && environment.State.SurfaceAnimations && !environment.State.ReducedEffects);
         var work = ShellLayerInterop.Monitor(Handle).Work.Bounds; double scale = ShellLayerInterop.Scale(Handle);
         int width = Math.Min(work.Width, (int)(1130 * scale)), height = Math.Min(work.Height, (int)(740 * scale));
         NativeWindow.MoveAndResize(new RectInt32(work.X + (work.Width - width) / 2, work.Y + (work.Height - height) / 2, width, height));
-        Closed += (_, _) => { _transition.Dispose(); _motion.Dispose(); _chrome.Dispose(); View.Release(); _selection.TrySetResult([]); };
+        Closed += (_, _) => { _caption.Dispose(); _transition.Dispose(); _motion.Dispose(); _chrome.Dispose(); View.Release(); _selection.TrySetResult([]); };
         ApplyAppearance(); Activate(); _motion.Open(); _ = View.NavigateAsync(folder);
     }
     private void Complete(IReadOnlyList<string> paths) { _selection.TrySetResult(paths); RequestClose(); }

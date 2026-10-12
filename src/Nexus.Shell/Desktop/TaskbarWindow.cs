@@ -34,7 +34,7 @@ internal sealed class TaskbarWindow : Window, IDisposable
         if (NativeWindow.Presenter is OverlappedPresenter presenter)
         { presenter.SetBorderAndTitleBar(false, false); presenter.IsResizable = presenter.IsMinimizable = presenter.IsMaximizable = false; }
         ShellLayerInterop.ToolWindow(Handle, noActivate: true);
-        _chrome = new(Handle, customClip: true);
+        _chrome = new(Handle, customClip: true, role: "Dock");
         _material.Apply(this, View.Frame, environment, "Dock");
         View.Loaded += (_, _) => { if (!_disposed) _material.Apply(this, View.Frame, environment, "Dock"); };
         _registration = environment.IsManagedDesktop
@@ -58,6 +58,7 @@ internal sealed class TaskbarWindow : Window, IDisposable
         _environment.HideDockPreview();
         _registration.Position(_environment.Session.State.CompactDock, _environment.Session.State.FloatingTaskbar, View.PreferredWidthDip);
         var reservation = _registration.Reservation; var bar = BarBounds;
+        _chrome.Trace("dock-position", bar.Width, bar.Height);
         double scale = ShellLayerInterop.Scale(Handle);
         View.Width = bar.Width / scale; View.Height = bar.Height / scale;
         View.HorizontalAlignment = HorizontalAlignment.Left; View.VerticalAlignment = VerticalAlignment.Top;

@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Nexus.Shell.Services;
 
@@ -13,6 +14,7 @@ internal sealed class WindowChrome : IDisposable
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool GetWindowRect(IntPtr window, out ShellLayerInterop.Rect rectangle);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool IsZoomed(IntPtr window);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool IsIconic(IntPtr window);
+    [DllImport("user32.dll")] private static extern short GetAsyncKeyState(int key);
     [DllImport("user32.dll", SetLastError = true)] private static extern int SetWindowRgn(IntPtr window, IntPtr region, [MarshalAs(UnmanagedType.Bool)] bool redraw);
     [DllImport("gdi32.dll")] private static extern IntPtr CreateRoundRectRgn(int left, int top, int right, int bottom, int width, int height);
     [DllImport("gdi32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool DeleteObject(IntPtr value);
@@ -36,9 +38,14 @@ internal sealed class WindowChrome : IDisposable
     private double _radius = 14;
     private bool _fullscreen, _disposed, _applying, _reported, _regionsEnabled = true;
     private bool _interactiveResize;
+    private bool _systemFrame;
+    private readonly string _role;
+    private long _moveStarted;
+    private int _sizeEvents, _regionUpdates;
     private (int Width, int Height)? _size;
-    internal WindowChrome(IntPtr handle, bool resizable = false, bool customClip = false, Action? tuck = null, int minimumWidth = 480, int minimumHeight = 360, Action<bool>? stateChanged = null, Action? minimizeRequested = null, Action? closeRequested = null)
+    internal WindowChrome(IntPtr handle, bool resizable = false, bool customClip = false, Action? tuck = null, int minimumWidth = 480, int minimumHeight = 360, Action<bool>? stateChanged = null, Action? minimizeRequested = null, Action? closeRequested = null, string role = "Window")
     {
+        _role = role;
         _minimumWidth = Math.Max(160, minimumWidth); _minimumHeight = Math.Max(160, minimumHeight);
         _handle = handle; _resizable = resizable; _customClip = customClip; _tuck = tuck; _stateChanged = stateChanged; _minimizeRequested = minimizeRequested; _closeRequested = closeRequested; _callback = Message;
         if (!ShellLayerInterop.SetWindowSubclass(handle, _callback, _id, UIntPtr.Zero)) throw new Win32Exception("Could not attach the Nexus window frame.");
@@ -48,12 +55,21 @@ internal sealed class WindowChrome : IDisposable
         int ownCorners = 1; _ = DwmSetWindowAttribute(handle, 33, ref ownCorners, 4);
         ShellLayerInterop.SetWindowPos(handle, IntPtr.Zero, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0004 | 0x0010 | 0x0020);
         Refresh();
+        Trace("chrome-created");
     }
+    internal void Trace(string stage, int width = 0, int height = 0, int value = 0) => UiTrace.Surface(stage, _role, _handle, width, height, value);
     internal void SetCorners(bool highContrast, double radiusDip = 14)
     { _radius = highContrast ? 0 : radiusDip; Refresh(); }
     internal void SetFullscreen(bool value) { _fullscreen = value; Refresh(); }
     internal void SetClip(ShellRect rectangle, double radiusDip)
     { _clip = rectangle; _radius = Math.Max(0, radiusDip); Refresh(); }
+    internal void UseSystemFrame()
+    {
+        _systemFrame = true;
+        _ = SetWindowRgn(_handle, IntPtr.Zero, true);
+        int policy = 0; _ = DwmSetWindowAttribute(_handle, 2, ref policy, 4);
+        ShellLayerInterop.SetWindowPos(_handle, IntPtr.Zero, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0004 | 0x0010 | 0x0020);
+    }
     private void Refresh()
     {
         try { RefreshCore(); }
@@ -62,7 +78,7 @@ internal sealed class WindowChrome : IDisposable
     }
     private void RefreshCore()
     {
-        if (_disposed || _applying || !_regionsEnabled || IsIconic(_handle) || !GetWindowRect(_handle, out var window)) return;
+        if (_disposed || _systemFrame || _applying || !_regionsEnabled || IsIconic(_handle) || !GetWindowRect(_handle, out var window)) return;
         int width = window.Right - window.Left, height = window.Bottom - window.Top;
         if (width <= 0 || height <= 0 || (_customClip && _clip is null)) return;
         bool clear = !_customClip && (_fullscreen || MenuBarLayout.Attached(window.Bounds, ShellLayerInterop.Monitor(_handle).Work.Bounds, IsZoomed(_handle), ShellLayerInterop.Scale(_handle)));
@@ -80,6 +96,8 @@ internal sealed class WindowChrome : IDisposable
             if (SetWindowRgn(_handle, region, true) == 0)
             { int error = Marshal.GetLastWin32Error(); if (region != IntPtr.Zero) DeleteObject(region); throw new Win32Exception(error, "Could not round the Nexus window."); }
             _applied = shape;
+            if (_interactiveResize) _regionUpdates++;
+            Trace("region-applied", rectangle.Width, rectangle.Height, diameter);
         }
         finally { _applying = false; }
     }
@@ -100,12 +118,24 @@ internal sealed class WindowChrome : IDisposable
             {
                 if (message == NativeMethods.NexusMinimizeMessage && _minimizeRequested is not null) { _minimizeRequested(); return IntPtr.Zero; }
                 if (message == NativeMethods.NexusRestoreMessage) { Restored?.Invoke(); return IntPtr.Zero; }
-                if (message == 0x0231) _interactiveResize = true;
-                if (message == 0x0232) _interactiveResize = false;
+                if (message == 0x0231)
+                {
+                    _interactiveResize = true; _moveStarted = Stopwatch.GetTimestamp(); _sizeEvents = _regionUpdates = 0;
+                    UiTrace.MoveSize("enter", _role, _handle, GetAsyncKeyState(1) < 0, 0, 0, 0);
+                }
+                if (message == 0x0232)
+                {
+                    _interactiveResize = false;
+                    UiTrace.MoveSize("exit", _role, _handle, GetAsyncKeyState(1) < 0, _sizeEvents, _regionUpdates,
+                        _moveStarted == 0 ? 0 : Stopwatch.GetElapsedTime(_moveStarted).TotalMilliseconds);
+                    _moveStarted = 0;
+                }
+                if (message == 0x0215) Trace("capture-changed");
+                if (message == 0x001F) Trace("cancel-mode");
                 if (message == 0x0112 && (wp.ToUInt64() & 0xFFF0) == 0xF060 && _closeRequested is not null) { _closeRequested(); return IntPtr.Zero; }
                 if (_tuck is not null && message == 0x0112 && (wp.ToUInt64() & 0xFFF0) == 0xF020)
                 { _tuck(); return IntPtr.Zero; }
-                if (message == 0x0083)
+                if (!_systemFrame && message == 0x0083)
                 {
                     // RECT is also the first member of NCCALCSIZE_PARAMS.
                     // A maximized borderless HWND can extend beyond rcWork;
@@ -117,11 +147,13 @@ internal sealed class WindowChrome : IDisposable
                         proposed.Left = bounds.X; proposed.Top = bounds.Y; proposed.Right = bounds.Right; proposed.Bottom = bounds.Bottom;
                         Marshal.StructureToPtr(proposed, lp, false);
                     }
-                    return wp == UIntPtr.Zero ? IntPtr.Zero : new IntPtr(0x0300); // WVR_REDRAW
+                    // Preserve existing client pixels; WinUI redraws newly exposed
+                    // content. WVR_REDRAW invalidated the entire HWND on every size.
+                    return IntPtr.Zero;
                 }
-                if (message == 0x0085) return IntPtr.Zero;
-                if (message == 0x0086) return new IntPtr(1);
-                if (message == 0x0084) { var hit = ResizeHit(lp); if (hit != IntPtr.Zero) return hit; }
+                if (!_systemFrame && message == 0x0085) return IntPtr.Zero;
+                if (!_systemFrame && message == 0x0086) return new IntPtr(1);
+                if (!_systemFrame && message == 0x0084) { var hit = ResizeHit(lp); if (hit != IntPtr.Zero) return hit; }
                 if (_resizable && !_fullscreen && message == 0x0024 && lp != IntPtr.Zero)
                 {
                     var monitor = ShellLayerInterop.Monitor(window); var info = Marshal.PtrToStructure<MinMaxInfo>(lp);
@@ -135,6 +167,12 @@ internal sealed class WindowChrome : IDisposable
         catch (Exception ex)
         { if (!_reported) { _reported = true; Log.Write("Nexus frame decoration unavailable", ex); } }
         var result = ShellLayerInterop.DefSubclassProc(window, message, wp, lp);
+        if (!_disposed && message == 0x0005)
+        {
+            if (_interactiveResize) _sizeEvents++;
+            long packed = lp.ToInt64();
+            Trace("native-size", (int)(packed & 0xFFFF), (int)((packed >> 16) & 0xFFFF), (int)wp.ToUInt64());
+        }
         if (!_disposed && message == 0x0005) { bool minimized = wp.ToUInt64() == 1; bool restoring = _wasMinimized && !minimized; _wasMinimized = minimized; if (restoring) Restored?.Invoke(); }
         if (!_disposed && message is 0x0005 or 0x0047 or 0x02E0) Refresh();
         if (!_disposed && _resizable && message == 0x0005 && wp.ToUInt64() != 1 && GetWindowRect(window, out var current))
@@ -146,5 +184,5 @@ internal sealed class WindowChrome : IDisposable
         return result;
     }
     public void Dispose()
-    { if (_disposed) return; _disposed = true; ShellLayerInterop.RemoveWindowSubclass(_handle, _callback, _id); }
+    { if (_disposed) return; Trace("chrome-disposed"); _disposed = true; ShellLayerInterop.RemoveWindowSubclass(_handle, _callback, _id); }
 }

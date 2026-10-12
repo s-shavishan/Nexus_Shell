@@ -64,6 +64,7 @@ internal static class UiResourceProbe
             frame.UpdateLayout();
             if (launchpad.ActualWidth <= 0 || menu.ActualHeight <= 0) throw new InvalidOperationException("The production surfaces did not lay out.");
             checks.Add("Production menu bar and populated Launchpad layout");
+            checks.Add(await NativeCaptionProbe.RunAsync());
             var board = new SwitcherWindow(environment); board.PopulateValidation(); panels.Add(board);
             environment.Clipboard.SetEnabled(true); environment.Clipboard.Add("Native construction check — session memory only.", DateTimeOffset.Now);
             var clipboard = new ClipboardShelfWindow(environment); panels.Add(clipboard);

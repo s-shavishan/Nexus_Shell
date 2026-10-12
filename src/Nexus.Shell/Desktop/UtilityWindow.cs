@@ -21,6 +21,7 @@ internal sealed class UtilityWindow : Window
     private readonly Border _frame;
     private readonly TextBlock _title;
     private readonly WindowChrome _chrome;
+    private readonly NativeCaptionRegions _caption;
     private readonly SurfaceMotion _motion;
     private readonly WindowMaterial _material = new();
     private readonly WindowTransition _transition;
@@ -39,17 +40,18 @@ internal sealed class UtilityWindow : Window
         }
         Control("Close", "FFFF6058", RequestClose); Control("Minimize", "FFFFBD2D", Minimize); Control("Maximize or restore", "FF28C840", ToggleMaximize);
         chrome.Children.Add(controls); _title = new() { Text = title, FontSize = 13, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Stretch, TextAlignment = TextAlignment.Center };
-        _title.PointerPressed += (_, e) => { if (e.GetCurrentPoint(_title).Properties.IsLeftButtonPressed) NativeMethods.BeginDrag(Handle); };
-        _title.DoubleTapped += (_, _) => ToggleMaximize(); Grid.SetColumn(_title, 1); chrome.Children.Add(_title); grid.Children.Add(chrome); Grid.SetRow(view, 1); grid.Children.Add(view);
+        var dragArea = new Border { Child = _title, Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent) };
+        Grid.SetColumn(dragArea, 1); chrome.Children.Add(dragArea); grid.Children.Add(chrome); Grid.SetRow(view, 1); grid.Children.Add(view);
         _frame = new() { Child = grid, CornerRadius = new CornerRadius(14), BorderThickness = new Thickness(1) }; Content = _frame;
         Handle = WinRT.Interop.WindowNative.GetWindowHandle(this); NativeWindow = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(Handle)); NativeWindow.Title = title + " · Nexus";
         if (NativeWindow.Presenter is OverlappedPresenter presenter) presenter.SetBorderAndTitleBar(false, false);
         _transition = new(_frame, () => environment.Theme.Animations && !environment.Theme.HighContrast && environment.Session.State.SurfaceAnimations && !environment.Session.State.ReducedEffects);
-        _chrome = new(Handle, resizable: true, minimumWidth: Math.Min(width, 480), minimumHeight: Math.Min(height, 360), stateChanged: maximized => { _frame.CornerRadius = new CornerRadius(maximized || environment.Theme.HighContrast ? 0 : 14); _frame.BorderThickness = new Thickness(maximized ? 0 : 1); }, minimizeRequested: Minimize, closeRequested: RequestClose); _chrome.Restored += _transition.Restore; _chrome.Resized += _transition.Restore; _motion = new(_frame, () => environment.Theme.Animations && !environment.Theme.HighContrast && environment.Session.State.SurfaceAnimations && !environment.Session.State.ReducedEffects);
+        _chrome = new(Handle, resizable: true, minimumWidth: Math.Min(width, 480), minimumHeight: Math.Min(height, 360), stateChanged: maximized => { _frame.CornerRadius = new CornerRadius(maximized || environment.Theme.HighContrast ? 0 : 14); _frame.BorderThickness = new Thickness(maximized ? 0 : 1); }, minimizeRequested: Minimize, closeRequested: RequestClose, role: "Utility"); _chrome.Restored += _transition.Restore; _chrome.Resized += _transition.Restore; _motion = new(_frame, () => environment.Theme.Animations && !environment.Theme.HighContrast && environment.Session.State.SurfaceAnimations && !environment.Session.State.ReducedEffects);
+        _caption = new(NativeWindow, _chrome, dragArea);
         var work = ShellLayerInterop.Monitor(Handle).Work.Bounds; double scale = ShellLayerInterop.Scale(Handle);
         int w = Math.Min(work.Width, (int)(width * scale)), h = Math.Min(work.Height, (int)(height * scale));
         NativeWindow.MoveAndResize(new RectInt32(work.X + (work.Width - w) / 2, work.Y + (work.Height - h) / 2, w, h));
-        Closed += (_, _) => { release(); _transition.Dispose(); _motion.Dispose(); _chrome.Dispose(); };
+        Closed += (_, _) => { release(); _caption.Dispose(); _transition.Dispose(); _motion.Dispose(); _chrome.Dispose(); };
         ApplyAppearance(); Activate(); _motion.Open();
     }
     internal void Restore() { _transition.Restore(); NativeWindow.Show(); NativeMethods.Activate(Handle); _environment.UpdateTaskbar(); }
