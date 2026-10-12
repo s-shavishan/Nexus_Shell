@@ -108,11 +108,14 @@ internal sealed class MenuBarView : Grid, IDisposable
         if (_minimize.IsEnabled != hasWindow) _minimize.IsEnabled = hasWindow;
         if (_maximize.IsEnabled != hasWindow) _maximize.IsEnabled = hasWindow;
         if (_close.IsEnabled != hasWindow) _close.IsEnabled = hasWindow;
-        ((FontIcon)_maximize.Content).Glyph = _environment.ActiveWindowMaximized ? "\uE923" : "\uE922";
-        _clock.Text = DateTime.Now.ToString(DesktopPresentation.ClockFormat(ActualWidth < 650, _environment.Session.State.Clock24Hour));
-        int unread = _environment.Notifications.Unread; _badge.Text = unread > 0 ? (unread > 9 ? "9+" : unread.ToString()) : "";
-        _badge.Visibility = unread > 0 ? Visibility.Visible : Visibility.Collapsed;
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_notification, unread + " unread Nexus notifications");
+        var icon = (FontIcon)_maximize.Content;
+        string glyph = _environment.ActiveWindowMaximized ? "\uE923" : "\uE922";
+        if (icon.Glyph != glyph) icon.Glyph = glyph;
+        SetText(_clock, (clockOverride ?? DateTime.Now).ToString(DesktopPresentation.ClockFormat(ActualWidth < 650, _environment.Session.State.Clock24Hour)));
+        int unread = _environment.Notifications.Unread;
+        SetText(_badge, unread > 0 ? (unread > 9 ? "9+" : unread.ToString()) : "");
+        SetVisible(_badge, unread > 0);
+        SetName(_notification, unread + " unread Nexus notifications");
     }
     internal void ApplyAppearance()
     { RequestedTheme = _environment.Theme.ElementTheme; foreach (var button in _buttons) button.Foreground = _environment.Theme.Brush("NexusText"); foreach (var line in _controls.Children.OfType<Border>()) line.Background = _environment.Theme.Brush("NexusText"); foreach (var dot in _controls.Children.OfType<Ellipse>()) dot.Fill = _environment.Theme.Brush("NexusText"); _clock.Foreground = _environment.Theme.Brush("NexusText"); _badge.Foreground = _environment.Theme.Brush("NexusAccent"); Refresh(); }
