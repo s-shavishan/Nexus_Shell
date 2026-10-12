@@ -51,6 +51,9 @@ internal sealed class TaskbarView : Grid
     internal event Action? PreferredWidthChanged;
     internal double PreferredWidthDip => (_environment.Session.State.FloatingTaskbar ? 168 : 304) + (_pins.Children.Count + _windows.Children.Count) * (_environment.Session.State.CompactDock ? 44 : 52);
     internal Border Frame => _frame;
+    // The real HWND uses WindowMaterial to control native acrylic, opaque
+    // preparation and fallback. Its view must not repaint that same surface.
+    internal bool MaterialOwnedByWindow { get; set; }
     private MotionController? _motion;
     private DockMotionController? _dockMotion;
     internal TaskbarView(DesktopEnvironment environment)
@@ -400,11 +403,14 @@ internal sealed class TaskbarView : Grid
     {
         if (_released) return;
         var theme = _environment.Theme; RequestedTheme = theme.ElementTheme;
-        _frame.Background = theme.Material("Dock", _environment.Session.State.NativeGlass);
+        // In isolation (native resource probe) render a readable solid dock.
+        // In the real dock, WindowMaterial owns both material and fallback.
+        if (!MaterialOwnedByWindow) GlassPaintRetention.Background(_frame, theme.Material("Dock", false));
         bool motionEnabled = !theme.HighContrast && theme.Animations && _environment.Session.State.SurfaceAnimations && !_environment.Session.State.ReducedEffects;
         _motion?.SetEnabled(motionEnabled); _dockMotion?.SetEnabled(motionEnabled);
         ApplyFrameCorners();
-        _frame.BorderBrush = theme.Edge; _frame.BorderThickness = new Thickness(1);
+        if (!MaterialOwnedByWindow) GlassPaintRetention.Edge(_frame, theme.Edge);
+        if (_frame.BorderThickness != new Thickness(1)) _frame.BorderThickness = new Thickness(1);
         _separator.Background = theme.Brush("NexusBorder"); _time.Foreground = theme.Brush("NexusText"); _date.Foreground = theme.Brush("NexusMuted");
         _clockButton.Background = theme.Brush("NexusSelection");
         foreach (var button in _iconButtons) { button.Background = _transparent; button.Foreground = theme.Brush("NexusText"); }
