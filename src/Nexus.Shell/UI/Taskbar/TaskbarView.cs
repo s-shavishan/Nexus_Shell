@@ -254,10 +254,10 @@ internal sealed class TaskbarView : Grid
         { if (e.Key == VirtualKey.Down && _environment.CanShowDockPreview && TryGetAnchor(item.Button, out var anchor)) { CancelPreviewRequest(); _environment.ShowDockPreview(item.Window, anchor, true); e.Handled = true; } };
         _motion?.AttachHover(item.Button); return item;
     }
-    internal void RefreshWindowStates()
+    internal void RefreshWindowStates(IntPtr? observedForeground = null)
     {
         if (_released) return;
-        var foreground = NativeMethods.ForegroundTaskWindow();
+        var foreground = observedForeground ?? NativeMethods.ForegroundTaskWindow();
         foreach (var item in _items.Values)
         {
             bool valid = NativeMethods.OwnsWindow(item.Window);
