@@ -16,6 +16,13 @@ build_script:
 test: off
 deploy: off
 
+# Preserve the failing preflight evidence even when packaging never runs.
+on_failure:
+  - ps: |
+      foreach ($path in @('artifacts\logs\native-ui.json', 'artifacts\logs\native-ui.json.log')) {
+        if (Test-Path $path -PathType Leaf) { Push-AppveyorArtifact $path }
+      }
+
 artifacts:
   - path: artifacts\Nexus-Shell-3.6.0-win-x64.zip
   - path: artifacts\Nexus-Shell-3.6.0-win-x64.zip.sha256
@@ -23,3 +30,5 @@ artifacts:
   - path: artifacts\Nexus-Shell-3.6.0-Update-win-x64.zip.sha256
   - path: artifacts\logs\resources-check.json
   - path: artifacts\logs\app-resources.xml
+  - path: artifacts\logs\native-ui.json
+  - path: artifacts\logs\native-ui.json.log

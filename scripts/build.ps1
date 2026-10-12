@@ -116,6 +116,7 @@ try {
     Copy-Item (Join-Path $projectRoot 'scripts\desktop-health.ps1') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'scripts\Check-Nexus-Desktop.bat') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'scripts\verify-native-ui.ps1') $publishDirectory
+    Copy-Item (Join-Path $projectRoot 'scripts\verify-native-input.ps1') $publishDirectory
     Copy-Item (Join-Path $projectRoot 'scripts\Check-Nexus-UI.bat') $publishDirectory
     Copy-Item (Join-Path $logDirectory 'native-ui.json') (Join-Path $publishDirectory 'Nexus.UI-Check.json')
     Copy-Item (Join-Path $projectRoot 'scripts\restore-windows-desktop.ps1') $publishDirectory
