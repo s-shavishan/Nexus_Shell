@@ -12,7 +12,13 @@ internal static class NativeChromeChecks
     // Called only on Windows using DesktopNativeChecks' own test HWND.
     internal static void Run(IntPtr window)
     {
-        using var chrome = new WindowChrome(window, resizable: true);
+        int healthyStateObservers = 0;
+        Action<bool> faultyState = _ => throw new InvalidOperationException("Fixture: state observer unavailable");
+        Action<bool> healthyState = _ => healthyStateObservers++;
+        using var chrome = new WindowChrome(window, resizable: true,
+            stateChanged: faultyState + healthyState);
+        if (!chrome.RegionDecorationsEnabled || healthyStateObservers == 0)
+            throw new Exception("A throwing native state observer disabled GDI decoration or suppressed healthy observers.");
         var original = new ShellLayerInterop.Rect { Left = 100, Top = 100, Right = 700, Bottom = 500 };
         IntPtr data = Marshal.AllocHGlobal(Marshal.SizeOf<NcCalc>());
         try
@@ -33,6 +39,14 @@ internal static class NativeChromeChecks
             if (restores != 1) throw new Exception("A minimize/restore sequence must request restore motion exactly once.");
             SendMessage(window, NativeMethods.NexusRestoreMessage, UIntPtr.Zero, IntPtr.Zero);
             if (restores != 2) throw new Exception("Explicit Nexus restore requests must remain available.");
+            int survivingRestoreObservers = 0;
+            chrome.Restored += () => throw new InvalidOperationException("Fixture: stale WinUI restore subscriber");
+            chrome.Restored += () => survivingRestoreObservers++;
+            // Native subclass callbacks must isolate individual subscribers,
+            // rather than propagate through user32 or strand another listener.
+            SendMessage(window, NativeMethods.NexusRestoreMessage, UIntPtr.Zero, IntPtr.Zero);
+            if (restores != 3 || survivingRestoreObservers != 1 || !chrome.RegionDecorationsEnabled)
+                throw new Exception("A throwing restore subscriber lost native notifications or disabled decoration.");
             // Exercise the exact native component against this test-owned HWND.
             // No-op appearance changes must not even enter GDI region refresh.
             int requests = chrome.RegionRefreshRequests;
