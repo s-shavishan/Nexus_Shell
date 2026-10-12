@@ -27,6 +27,7 @@
     <Compile Include="../../src/Nexus.Shell/Services/MaximizedWindowLayout.cs" Link="MaximizedWindowLayout.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/WindowPlacementPlan.cs" Link="WindowPlacementPlan.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/AppIconPolicy.cs" Link="AppIconPolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/AppIconRefreshPolicy.cs" Link="AppIconRefreshPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/NotificationInbox.cs" Link="NotificationInbox.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/CalculatorEngine.cs" Link="CalculatorEngine.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/NotesWorkspace.cs" Link="NotesWorkspace.cs" />

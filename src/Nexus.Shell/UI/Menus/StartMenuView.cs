@@ -202,7 +202,7 @@ internal sealed class StartMenuView : Grid, IDisposable
             if (refresh) _subtitle.Text = "Refresh queued after the current app scan.";
             return;
         }
-        if (admission.Force) { AppIconCache.RetryFailures(); _shown = []; }
+        if (admission.Force) { AppIconCache.RefreshCompleted(); _shown = []; }
         // Leave Refresh enabled: a click during a scan queues one follow-up,
         // not a concurrent shortcut enumeration or a lost user request.
         try
