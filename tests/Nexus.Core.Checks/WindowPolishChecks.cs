@@ -16,6 +16,18 @@ internal static class WindowPolishChecks
         Check(!WindowExitPolicy.AcceptRestore(true, true),
             "Disposed closing frames must not restart compositor animations.");
 
+        var desktop = new ShellRect(-1920, -220, 1920, 1080);
+        Check(DesktopSurfacePositionPolicy.RequiresMove(false, default, desktop),
+            "Desktop must initially acquire its monitor rectangle even if the native position query fails.");
+        Check(!DesktopSurfacePositionPolicy.RequiresMove(true, desktop, desktop),
+            "Repeated shell positioning with unchanged real HWND geometry must not resize the desktop again.");
+        Check(DesktopSurfacePositionPolicy.RequiresMove(true, desktop with { X = -1919 }, desktop),
+            "An external one-pixel displacement must be repaired.");
+        Check(DesktopSurfacePositionPolicy.RequiresMove(true, desktop, desktop with { Width = 2560 }),
+            "A display resolution change must resize the desktop.");
+        Check(DesktopSurfacePositionPolicy.RequiresMove(true, desktop, new ShellRect(0, 0, 1920, 1080)),
+            "Moving between negative-origin and primary monitors must restore desktop bounds.");
+
         var work = new ShellRect(0, 38, 1920, 1042);
         Check(MaximizedWindowLayout.Repair(new(-8, -8, 1936, 1056), new(0, 0, 1920, 1040), work, 1)
             == new ShellRect(-8, 30, 1936, 1058), "Correct the hidden caption and old bottom gap while retaining native resize borders.");
