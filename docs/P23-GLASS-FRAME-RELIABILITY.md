@@ -79,6 +79,20 @@ The actual dock HWND already calls `WindowMaterial.Apply` to manage acrylic atta
 - `TaskbarView.ApplyDensity` now only writes button/icon dimensions and divider visibility when the target values differ. Window-list changes can still reconcile running apps but do not relayout every previously stable button.
 - The production native WinUI density probe now calls `ApplyDensity` **100 times** and asserts no unchanged button/icon height/width, separator-visibility or preferred-width notifications. Compact↔normal geometry is still validated separately.
 
+### Stage 11 — Retain menu-bar clock, title and action properties
+
+- `MenuBarView.Refresh` now compares the active window title, accessible names, tooltips, minimize/maximize/close enabled state, maximize glyph, clock label and notification badge before changing their WinUI properties. Foreground and notification events still refresh on the existing dispatcher; they no longer force identical layout/property notifications.
+- Responsive menu-bar `SizeChanged` updates visibility only when controls actually cross the 480/650/900 DIP thresholds. Actual visibility and window-control availability remain unchanged.
+- `MenuBarView.ApplyAppearance` reuses theme brush references on no-op refreshes instead of repainting the entire button, clock and control-center palette.
+- Production `UiResourceProbe` calls `MenuBarView.VerifyRetainedRefresh` with a fixed clock 100 times and checks native WinUI text dependency properties do not change.
+
+### Stage 12 — Keep dock application/appearance paint idempotent
+
+- `TaskbarView.RefreshWindowStates` no longer writes the active indicator brush twice, and updates button enabled state and selection/indicator brushes only when different.
+- `TaskbarView.ApplyAppearance` skips unchanged theme, divider/clock and launcher brush writes; the native `WindowMaterial` still exclusively owns the live dock frame's background.
+- New native `VerifyRetainedAppearance` fixture watches actual WinUI clock and launcher foreground properties during 100 repeated dock appearance updates.
+- Real foreground/minimize/restore and theme changes still cause the necessary visual state change. Performance gains remain unquantified until Windows profiling.
+
 ## Required AppVeyor validation
 
 1. Build this **exact branch head SHA**, not the already-green P2.2 revision.
