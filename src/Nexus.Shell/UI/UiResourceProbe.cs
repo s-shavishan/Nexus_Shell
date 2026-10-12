@@ -7,6 +7,7 @@ using Nexus.Shell.Models;
 using Nexus.Shell.Services;
 using Nexus.Shell.UI.Desktop;
 using Nexus.Shell.UI.Menus;
+using Nexus.Shell.UI.Taskbar;
 
 namespace Nexus.Shell.UI;
 
@@ -24,6 +25,7 @@ internal static class UiResourceProbe
         Window? window = null;
         MenuBarView? menu = null;
         StartMenuView? launchpad = null;
+        TaskbarView? dock = null;
         NotificationWindow? notifications = null;
         var panels = new List<DesktopPanelWindow>();
         int parsed = 0;
@@ -56,8 +58,10 @@ internal static class UiResourceProbe
             var environment = new DesktopEnvironment(session, core);
             environment.Theme.Apply("Midnight", glassStyle: GlassStyle.Default);
             menu = new(environment); launchpad = new(environment); launchpad.PrepareValidation();
-            var surface = new Grid(); surface.RowDefinitions.Add(new() { Height = new GridLength(38) }); surface.RowDefinitions.Add(new());
+            dock = new(environment);
+            var surface = new Grid(); surface.RowDefinitions.Add(new() { Height = new GridLength(38) }); surface.RowDefinitions.Add(new()); surface.RowDefinitions.Add(new() { Height = GridLength.Auto });
             surface.Children.Add(menu); Grid.SetRow(launchpad, 1); surface.Children.Add(launchpad);
+            Grid.SetRow(dock, 2); surface.Children.Add(dock);
             var frame = new Border { Child = surface, CornerRadius = new CornerRadius(22), BorderThickness = new Thickness(1) };
             var material = new WindowMaterial(); window = new Window { Content = frame };
             material.Apply(window, frame, environment);
@@ -72,6 +76,9 @@ internal static class UiResourceProbe
             stage = "retained-launchpad-rendering";
             launchpad.VerifyRetainedRendering();
             checks.Add("Twenty unchanged Launchpad renders retain item source and page-control identities");
+            stage = "retained-dock-density";
+            dock.VerifyRetainedDensity();
+            checks.Add("Production dock: compact/normal changes update actual icon geometry; twenty unchanged snapshots retain buttons and avoid width writes");
             stage = "native-caption-registration-and-layout";
             checks.Add(await NativeCaptionProbe.RunAsync());
             stage = "native-resize-motion-and-close";
@@ -131,7 +138,7 @@ internal static class UiResourceProbe
         }
         finally
         {
-            _loaded = null; menu?.Dispose(); launchpad?.Dispose();
+            _loaded = null; menu?.Dispose(); launchpad?.Dispose(); dock?.Release();
             try { notifications?.Close(); } catch (Exception error) { failures.Add("Notification cleanup: " + error.Message); }
             foreach (var panel in panels) try { panel.Close(); } catch (Exception error) { failures.Add("Panel cleanup: " + error.Message); }
             try { window?.Close(); } catch (Exception error) { failures.Add("Window cleanup: " + error.Message); }

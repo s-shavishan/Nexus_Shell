@@ -201,11 +201,19 @@ assert (root / "docs/UPDATING.md").is_file()
 assert (root / "tests/Nexus.Core.Checks/Nexus.Core.Checks.csproj").is_file()
 assert (root / "tests/Nexus.Core.Checks/Program.cs").is_file()
 assert (root / "tests/Nexus.Core.Checks/DesktopNativeChecks.cs").is_file()
-workflow = (root / ".github/workflows/build-windows.yml").read_text()
-assert "./scripts/build.ps1 -UseMSBuild" in workflow
-assert "./scripts/package.ps1" in workflow
-assert "contents: read" in workflow
-assert "windows-2022" in workflow
+appveyor_file = root / "appveyor.yml"
+appveyor = appveyor_file.read_text()
+assert "image: Visual Studio 2022" in appveyor
+assert r".\scripts\build.ps1 -UseMSBuild" in appveyor
+assert r".\scripts\package.ps1" in appveyor
+assert r".\tests\Nexus.Runtime.Checks\Nexus.Runtime.Checks.csproj" in appveyor
+workflow_file = root / ".github/workflows/build-windows.yml"
+workflow = workflow_file.read_text() if workflow_file.is_file() else None
+if workflow is not None:
+    assert "./scripts/build.ps1 -UseMSBuild" in workflow
+    assert "./scripts/package.ps1" in workflow
+    assert "contents: read" in workflow
+    assert "windows-2022" in workflow
 assert "src\\Nexus.Shell\\Nexus.Shell.csproj" in (root / "Nexus.Shell.sln").read_text()
 # The project's own resource index must be carried into the unpackaged publish;
 # the native framework DLL/PRIs alone cannot resolve ms-appx:///MainWindow.xaml.
@@ -248,7 +256,10 @@ for layer in ["DesktopWindow", "TaskbarWindow", "MenuWindow", "QuickSettingsWind
     assert re.search(r"class\s+" + layer + r"\s*:\s*Window", body), f"{layer} must own a native Window"
 closed = code[code.index("private void Window_Closed("):]
 assert "SaveFinal(" not in closed and "DetachSnapshot(" in closed, "Closing Sections must not finalize the desktop session"
-for file in [root / "appveyor.yml", root / ".github/workflows/build-windows.yml", root / "scripts/package.ps1", root / "scripts/build.ps1"]:
+build_files = [appveyor_file, root / "scripts/package.ps1", root / "scripts/build.ps1"]
+if workflow is not None:
+    build_files.append(workflow_file)
+for file in build_files:
     body = file.read_text()
     assert "Nexus-Shell-" + ET.parse(project / "Nexus.Shell.csproj").findtext("PropertyGroup/Version") in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
 print("Independent desktop ownership, Sections lifetime and CI versions OK")
@@ -350,7 +361,9 @@ assert "WindowsSettingsBackend" in (root / "src/Nexus.Core/Program.cs").read_tex
 backdrop = (project / "UI/LiquidGlassBackdrop.cs").read_text()
 callback = backdrop.split("protected override void OnDefaultSystemBackdropConfigurationChanged", 1)[1].split("private void ReleaseController", 1)[0]
 assert "base.OnDefaultSystemBackdropConfigurationChanged" not in callback and "GetDefaultSystemBackdropConfiguration(" not in callback, "Invalid-target backdrop regression: do not re-enter the detached native target"
-assert '"--no-native-ipc"' not in (root / ".github/workflows/build-windows.yml").read_text(), "Windows CI must run native checks"
+assert "--no-native-ipc" not in appveyor, "AppVeyor must run native checks"
+if workflow is not None:
+    assert "--no-native-ipc" not in workflow, "GitHub Windows CI must run native checks"
 print("Core-owned control service, settings routes, command buffer and invalid-target regression wiring OK")
 panel = (project / "Desktop/ControlCenterEnvironment.cs").read_text()
 coordinator = (root / "src/Nexus.Runtime/ControlCenterCoordinator.cs").read_text()

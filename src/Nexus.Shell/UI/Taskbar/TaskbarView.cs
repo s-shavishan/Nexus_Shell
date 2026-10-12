@@ -30,6 +30,7 @@ internal sealed class TaskbarView : Grid
     private readonly EventHandler<object> _hoverTick;
     private DockItem? _hoverItem;
     private bool _baselineReconciled, _released;
+    private bool? _appliedCompactDock;
     internal bool ContextMenuOpen => _openContextMenus.Count > 0;
     private sealed class DockItem
     {
@@ -140,6 +141,7 @@ internal sealed class TaskbarView : Grid
             // A foreground/minimize change still needs state icons and actions,
             // but a stable snapshot does not need XAML layout reconciliation.
             RefreshWindowStates();
+            if (_appliedCompactDock != _environment.Session.State.CompactDock) ApplyDensity();
             return;
         }
         var live = _windowSet.Windows.Select(DockWindowIdentity.Of).ToHashSet();
@@ -270,6 +272,33 @@ internal sealed class TaskbarView : Grid
         _separator.Visibility = _windows.Children.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
         double width = PreferredWidthDip;
         if (_reportedWidth != width) { _reportedWidth = width; PreferredWidthChanged?.Invoke(); }
+        _appliedCompactDock = compact;
+    }
+    internal void VerifyRetainedDensity()
+    {
+        bool original = _environment.Session.State.CompactDock;
+        var button = _iconButtons[0]; var icon = (Image)button.Content;
+        try
+        {
+            _environment.Session.State.CompactDock = false; Refresh([]);
+            if (button.Width != 48 || button.Height != 52 || icon.Width != 36 || icon.Height != 36)
+                throw new InvalidOperationException("The normal dock did not apply its production icon geometry.");
+            _environment.Session.State.CompactDock = true; Refresh([]);
+            if (button.Width != 40 || button.Height != 44 || icon.Width != 30 || icon.Height != 30 || !ReferenceEquals(button, _iconButtons[0]))
+                throw new InvalidOperationException("Compact dock changes were lost behind unchanged window/pin snapshots.");
+            int writes = 0;
+            long token = button.RegisterPropertyChangedCallback(WidthProperty, (_, _) => writes++);
+            try
+            {
+                for (int i = 0; i < 20; i++) Refresh([]);
+                if (writes != 0) throw new InvalidOperationException("Unchanged dock snapshots rewrote icon sizing.");
+                _environment.Session.State.CompactDock = false; Refresh([]);
+                if (button.Width != 48 || button.Height != 52 || icon.Width != 36 || icon.Height != 36)
+                    throw new InvalidOperationException("The dock did not restore normal geometry after compact mode.");
+            }
+            finally { button.UnregisterPropertyChangedCallback(WidthProperty, token); }
+        }
+        finally { _environment.Session.State.CompactDock = original; ApplyDensity(); }
     }
     internal void SetAvailableWidth(double widthDip)
     {
