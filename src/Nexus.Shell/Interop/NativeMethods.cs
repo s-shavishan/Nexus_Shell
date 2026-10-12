@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using Nexus.Shell.Models;
+using Nexus.Shell.Services;
 
 namespace Nexus.Shell.Interop;
 
@@ -157,6 +158,15 @@ internal static class NativeMethods
         var result = new List<RunningWindow>();
         using var ownProcess = Process.GetCurrentProcess();
         int session = ownProcess.SessionId;
+        var processes = new WindowProcessSnapshot(session, pid =>
+        {
+            try
+            {
+                using var process = Process.GetProcessById(pid);
+                return (process.SessionId, process.ProcessName);
+            }
+            catch { return null; } // The HWND may outlive its process metadata.
+        });
         EnumWindows((window, _) =>
         {
             if (window == ownHandle || !HasDockPresence(window)) return true;
@@ -168,13 +178,9 @@ internal static class NativeMethods
             GetWindowText(window, title, title.Capacity);
             if (title.Length == 0 || ShellLayerInterop.IsExplorerDesktopWindow(window)) return true;
             GetWindowThreadProcessId(window, out uint id);
-            if (id == (uint)Environment.ProcessId) return true;
-            try
-            {
-                using var process = Process.GetProcessById((int)id);
-                if (process.SessionId == session) result.Add(new(window, title.ToString(), process.ProcessName, (int)id));
-            }
-            catch { /* A window can disappear while it is being enumerated. */ }
+            if (id == (uint)Environment.ProcessId || id > int.MaxValue) return true;
+            if (processes.TryGetName((int)id, out var processName))
+                result.Add(new(window, title.ToString(), processName, (int)id));
             return true; // Overflow scrolls; never silently lose the 21st/81st app.
         }, IntPtr.Zero);
         return result;
