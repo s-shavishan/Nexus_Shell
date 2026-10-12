@@ -42,6 +42,18 @@ internal sealed class DesktopWindow : Window, IDisposable
             () => { if (!_disposed) Position(); });
     }
     private void Position()
-    { var b = ShellLayerInterop.Monitor(Handle).Monitor.Bounds; NativeWindow.MoveAndResize(new RectInt32(b.X, b.Y, b.Width, b.Height)); ShellLayerInterop.AnchorDesktop(Handle); }
+    {
+        if (_disposed) return;
+        var target = ShellLayerInterop.Monitor(Handle).Monitor.Bounds;
+        bool actualAvailable = NativeMethods.GetWindowRect(Handle, out var actual);
+        if (DesktopSurfacePositionPolicy.RequiresMove(actualAvailable, actual.Bounds, target))
+        {
+            using var work = UiTrace.Measure("desktop-native-resize", "Desktop");
+            NativeWindow.MoveAndResize(new RectInt32(target.X, target.Y, target.Width, target.Height));
+        }
+        // WorkerW/Progman parentage can change even without geometry changes:
+        // always restore the required desktop Z-order/anchor relationship.
+        ShellLayerInterop.AnchorDesktop(Handle);
+    }
     public void Dispose() { if (_disposed) return; _disposed = true; _hook.Dispose(); _chrome.Dispose(); }
 }
