@@ -134,5 +134,23 @@ internal sealed class MenuBarView : Grid, IDisposable
         if (!ReferenceEquals(_badge.Foreground, accent)) _badge.Foreground = accent;
         Refresh();
     }
+    internal void VerifyRetainedRefresh()
+    {
+        DateTime stable = new(2026, 10, 12, 12, 34, 0);
+        Refresh(stable);
+        int writes = 0;
+        long clock = _clock.RegisterPropertyChangedCallback(TextBlock.TextProperty, (_, _) => writes++);
+        long title = _activeTitle.RegisterPropertyChangedCallback(TextBlock.TextProperty, (_, _) => writes++);
+        try
+        {
+            for (int i = 0; i < 100; i++) Refresh(stable);
+            if (writes != 0) throw new InvalidOperationException("Stable menu bar poll invalidated title or clock layout.");
+        }
+        finally
+        {
+            _clock.UnregisterPropertyChangedCallback(TextBlock.TextProperty, clock);
+            _activeTitle.UnregisterPropertyChangedCallback(TextBlock.TextProperty, title);
+        }
+    }
     public void Dispose() { if (_disposed) return; _disposed = true; _timer.Stop(); _environment.Notifications.Changed -= QueueRefresh; _environment.ActiveWindowChanged -= QueueRefresh; }
 }
