@@ -8,6 +8,7 @@ DesktopUiChecks.Run();
 LaunchpadCacheChecks.Run();
 WindowEventPipelineChecks.Run();
 GlassAttachmentGateChecks.Run();
+GlassUiDispatchChecks.Run();
 
 static void Check(bool condition, string message)
 {
