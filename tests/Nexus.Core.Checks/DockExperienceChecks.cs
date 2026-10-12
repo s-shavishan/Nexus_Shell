@@ -51,6 +51,24 @@ internal static class DockExperienceChecks
             "Moving the dock between monitors must dismiss stale preview geometry.");
         Check(DockPlacementPolicy.RequiresPreviewDismissal(initial, initial with { Floating = false }),
             "Changing from floating to attached dock must dismiss the old hover preview.");
+        Check(DockPlacementPolicy.RequiresPreviewDismissal(initial, initial with { Scale = 1.25 }),
+            "DPI changes must invalidate preview anchor measurements even with unchanged pixel bounds.");
+        Check(DockPlacementPolicy.RequiresDesktopRelayout(null, initial),
+            "Initial dock positioning must reconcile the native monitor and desktop work area.");
+        Check(!DockPlacementPolicy.RequiresDesktopRelayout(initial, initial),
+            "No-op position notifications must not repeat global maximized-window and panel layout.");
+        Check(!DockPlacementPolicy.RequiresDesktopRelayout(initial, initial with { Bounds = initial.Bounds with { Width = 450 } }),
+            "Dock width animation or pin count changes must not reposition unrelated desktop windows.");
+        Check(DockPlacementPolicy.RequiresDesktopRelayout(initial, initial with { Reservation = initial.Reservation with { Height = 80 } }),
+            "Reservation height changes require desktop-wide reconciliation.");
+        Check(DockPlacementPolicy.RequiresDesktopRelayout(initial, initial with { WorkArea = initial.WorkArea with { Height = 1000 } }),
+            "Work-area adjustments must trigger native maximized-window repair.");
+        Check(DockPlacementPolicy.RequiresDesktopRelayout(initial, initial with { Monitor = new(0, 0, 2560, 1440) }),
+            "Changed monitor topology must reflow desktop panels.");
+        Check(DockPlacementPolicy.RequiresDesktopRelayout(initial, initial with { Floating = false }),
+            "Attached/floating transitions must recompute all work-area-dependent geometry.");
+        Check(DockPlacementPolicy.RequiresDesktopRelayout(initial, initial with { Scale = 1.25 }),
+            "DPI changes must recompute native work-area geometry even with identical pixel rectangles.");
 
         var anchor = new ShellRect(-950, 850, 48, 52); var preview = new ShellRect(-1100, 570, 336, 268);
         Check(DockPreviewPolicy.InInteractionArea(anchor, preview, -930, 870)
