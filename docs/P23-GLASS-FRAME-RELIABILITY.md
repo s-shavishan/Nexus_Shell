@@ -106,12 +106,12 @@ The actual dock HWND already calls `WindowMaterial.Apply` to manage acrylic atta
 - `TaskbarView.VerifyRetainedIndicatorLayout` runs **100 stable indicator updates** against real WinUI dependency properties and requires zero writes; changed states must still update both width and opacity.
 - The test is included in the Windows native UI preflight. Physical dock interactions, animation completion timing, multi-monitor DPI and accessibility transitions still need user acceptance.
 
-### Stage 15 — Portable Windows CI visibility and stale dock HWND recovery
+### Stage 15 — Stale dock HWND recovery and AppVeyor-only validation
 
-- Added `.github/workflows/p23-core-runtime.yml`, an independent Windows Server 2022 workflow for the existing Core and Runtime test runners on push and PR. It records the workflow SHA and .NET 8 SDK; it is **not** a replacement for AppVeyor's actual WinUI XAML build, packaging or native UI preflight.
-- Initial GitHub Actions jobs are failing **before any job step** (empty steps and unavailable job logs). This is an **unresolved CI infrastructure/admission issue**, not evidence that compilation passed or failed. Check the run's GitHub Actions UI, runner availability and repository settings/billing before relying on it. Do not treat a queued or failed-without-steps run as tested source.
-- `DockIndicatorUpdatePolicy.ShouldTransition` prevents dead/invalid HWND snapshots from repeatedly animating a dock presence that has already been invalidated; future valid HWND reconciliation still initializes the correct static state. Portable checks cover all `DockPresence` values, invalid HWNDs and unchanged states.
-- Preserve draft PR status and the **exact head SHA** gate. Failed/unavailable CI is a blocker, not permission to merge.
+- `DockIndicatorUpdatePolicy.ShouldTransition` prevents invalid or expired HWND snapshots from replaying phantom dock indicator animations. A subsequent valid HWND reconciles the correct indicator state; portable Core checks exercise invalid, newly valid and unchanged states.
+- **AppVeyor is the only supported CI provider for Nexus Shell.** The experimental P2.3 GitHub Actions workflow was deleted from this branch at the owner's request. No GitHub Actions run, status or result is part of the P2.3 merge gate.
+- `appveyor.yml` remains responsible for Core/Runtime checks, update and native diagnostics scripts, native WinUI/MSBuild publish and ZIP packaging. Only successful, exact-revision AppVeyor branch **and** PR builds, followed by Windows preview acceptance, can release the merge hold.
+- Older GitHub Actions red statuses are historical and irrelevant. They are **not** AppVeyor results and must not be interpreted as C# test or WinUI compilation failures.
 
 ## Required AppVeyor validation
 
