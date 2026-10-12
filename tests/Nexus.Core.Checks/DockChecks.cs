@@ -33,6 +33,29 @@ internal static class DockChecks
         Check(!visibility.Update(true, false, true, false, true, 601), "Fullscreen must hide the dock even at the reveal edge.");
         Check(visibility.Update(false, true, false, false, false, 602), "Edge mode must stay visible for maximized windows.");
         Check(!visibility.Update(false, false, true, false, false, 603), "Fullscreen must also hide edge mode.");
+        // Fullscreen detection must be driven by coverage + native frame style,
+        // not solely by IsZoomed (some borderless games report maximized).
+        var mainMonitor = new ShellRect(0, 0, 1920, 1080);
+        var secondaryMonitor = new ShellRect(-2560, -100, 2560, 1440);
+        const long captionedStyle = 0x00C00000;
+        const long borderlessStyle = unchecked((long)0x80000000); // WS_POPUP
+        Check(DockFullscreenPolicy.IsFullscreen(mainMonitor, mainMonitor, false, borderlessStyle),
+            "A borderless full-monitor app must hide the dock.");
+        Check(DockFullscreenPolicy.IsFullscreen(mainMonitor, mainMonitor, true, borderlessStyle),
+            "A borderless game reporting maximized must still hide the dock.");
+        Check(!DockFullscreenPolicy.IsFullscreen(mainMonitor, mainMonitor, true, captionedStyle),
+            "A normal captioned maximized app must retain floating dock edge reveal.");
+        Check(DockFullscreenPolicy.IsFullscreen(secondaryMonitor, secondaryMonitor, true, borderlessStyle),
+            "Fullscreen detection must support negative-origin monitors.");
+        Check(!DockFullscreenPolicy.IsFullscreen(new(0, 0, 1919, 1080), mainMonitor, false, borderlessStyle),
+            "A nearly-fullscreen ordinary window must not suppress the dock.");
+        Check(!DockFullscreenPolicy.IsFullscreen(mainMonitor, secondaryMonitor, false, borderlessStyle),
+            "A window on another monitor must not suppress this dock.");
+        Check(!DockFullscreenPolicy.IsFullscreen(default, mainMonitor, true, borderlessStyle),
+            "Invalid app geometry must not trigger fullscreen.");
+        Check(!DockFullscreenPolicy.IsFullscreen(mainMonitor, default, true, borderlessStyle),
+            "Invalid monitor geometry must not trigger fullscreen.");
+
         var monitor = new ShellRect(-1920, -180, 1920, 1080);
         var bar = new ShellRect(-1500, 800, 900, 76);
         Check(DockVisibility.InRevealArea(monitor, bar, -1000, 899, false, 1), "Reveal edges must work on monitors with negative origins.");
