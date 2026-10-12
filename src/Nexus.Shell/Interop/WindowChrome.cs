@@ -42,6 +42,7 @@ internal sealed class WindowChrome : IDisposable
     private long _moveStarted;
     private int _sizeEvents, _regionUpdates;
     internal int RegionRefreshRequests { get; private set; }
+    internal bool RegionDecorationsEnabled => _regionsEnabled;
     internal WindowChrome(IntPtr handle, bool resizable = false, bool customClip = false, Action? tuck = null, int minimumWidth = 480, int minimumHeight = 360, Action<bool>? stateChanged = null, Action? minimizeRequested = null, Action? closeRequested = null, string role = "Window")
     {
         _role = role;
@@ -73,13 +74,16 @@ internal sealed class WindowChrome : IDisposable
     }
     private void NotifyAttached(bool attached)
     {
-        if (_stateChanged is null) return;
-        try { _stateChanged(attached); }
-        catch (Exception error)
+        if (_stateChanged is not { } listeners) return;
+        foreach (Action<bool> listener in listeners.GetInvocationList())
         {
-            if (_stateObserverReported) return;
-            _stateObserverReported = true;
-            Log.Write("A native window state observer failed; frame decoration remains available", error);
+            try { listener(attached); }
+            catch (Exception error)
+            {
+                if (_stateObserverReported) continue;
+                _stateObserverReported = true;
+                Log.Write("A native window state observer failed; frame decoration remains available", error);
+            }
         }
     }
     internal void SetCorners(bool highContrast, double radiusDip = 14)
