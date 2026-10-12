@@ -21,6 +21,7 @@ internal sealed class TaskbarWindow : Window, IDisposable
     private readonly UI.WindowTransition _transition;
     private readonly DispatcherTimer _visibilityTimer = new() { Interval = TimeSpan.FromMilliseconds(80) };
     private readonly DockVisibility _visibility = new();
+    private readonly ForegroundRepairCadence _foregroundRepairCadence = new();
     private readonly CoalescedUiDispatch _positionDispatch = new();
     private bool _disposed, _shown = true, _arranging, _visibilityReported;
     private IntPtr _lastForeground;
@@ -93,7 +94,10 @@ internal sealed class TaskbarWindow : Window, IDisposable
                 && !ShellLayerInterop.IsExplorerDesktopWindow(foreground);
             bool sameMonitor = application && ShellLayerInterop.Monitor(foreground).Monitor.Bounds == monitor;
             bool maximized = sameMonitor && NativeMethods.IsZoomed(foreground);
-            _environment.ReconcileForeground(monitor, _registration.WorkArea, ShellLayerInterop.Scale(Handle));
+            // The event-driven window reconciliation still runs immediately.
+            // Only throttle this extra check from the 80 ms visibility poll.
+            if (_foregroundRepairCadence.ShouldSample(foreground, maximized, Environment.TickCount64))
+                _environment.ReconcileForeground(monitor, _registration.WorkArea, ShellLayerInterop.Scale(Handle));
             bool fullscreen = sameMonitor && NativeMethods.GetWindowRect(foreground, out var rect)
                 && DockFullscreenPolicy.IsFullscreen(rect.Bounds, monitor, maximized, NativeMethods.WindowStyle(foreground));
             // Preview does not own Explorer's work area. Avoid covering a
