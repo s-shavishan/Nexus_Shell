@@ -69,7 +69,9 @@ public sealed class MotionController : IDisposable
     public void SetEnabled(bool value)
     {
         if (_disposed) return;
-        _enabled = value && _usable;
+        bool next = value && _usable;
+        if (_enabled == next) return;
+        _enabled = next;
         if (!_enabled) { _overTargets.Clear(); _pressedTargets.Clear(); ResetAll(); }
     }
 
