@@ -24,10 +24,23 @@ internal static class UiTraceChecks
             || (int)events[0].Payload![4]! != 800 || (long)events[0].Payload![2]! != 123) throw new Exception("The surface ETW event must retain native geometry and owner identity.");
         if (events[1].Payload?.Count != 8 || (bool)events[1].Payload![4]! || (int)events[1].Payload![5]! != 20
             || (double)events[1].Payload![7]! != 140.25) throw new Exception("The move-size event must retain actual release state, counts and duration.");
+        using (UiTrace.Measure("launchpad-render", "Launchpad", 24))
+        { GC.KeepAlive(new byte[256]); Thread.SpinWait(1000); }
+        var work = listener.Records.Last();
+        if (work.EventId != 3 || work.Payload?.Count != 7 || (int)work.Payload![2]! != Environment.ProcessId
+            || (int)work.Payload[3]! != Environment.CurrentManagedThreadId || (int)work.Payload[4]! != 24
+            || (double)work.Payload[5]! < 0 || (long)work.Payload[6]! < 256)
+            throw new Exception("UI work tracing lost its owner, item count, duration or actual allocation payload.");
         listener.DisableEvents(UiTrace.Source);
         int before = listener.Records.Count;
         UiTrace.Surface("native-size", "Files", new IntPtr(123), 900, 600);
         if (listener.Records.Count != before) throw new Exception("Disabled UI diagnostics must stop recording events.");
-        Console.WriteLine("PASS: UI ETW schema, owner/geometry payload, mouse-state/duration payload and disabled listener checks.");
+        // Warm the disabled path before measuring its per-call cost.
+        for (int i = 0; i < 10; i++) { using var scope = UiTrace.Measure("disabled", "Probe"); }
+        long allocated = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 1000; i++) { using var scope = UiTrace.Measure("disabled", "Probe"); }
+        if (GC.GetAllocatedBytesForCurrentThread() != allocated || listener.Records.Count != before)
+            throw new Exception("Disabled work tracing allocated memory or emitted events.");
+        Console.WriteLine("PASS: UI ETW schema, owner/geometry/release payload, synchronous work timing/allocations and 1000 allocation-free disabled scopes.");
     }
 }

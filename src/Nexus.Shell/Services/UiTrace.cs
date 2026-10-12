@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Diagnostics.Tracing;
 
 namespace Nexus.Shell.Services;
@@ -24,4 +25,31 @@ internal sealed class UiTrace : EventSource
     [Event(2, Level = EventLevel.Informational)]
     public void MoveSizeEvent(string stage, string role, long handle, int processId, bool leftDown, int sizes, int regions, double durationMs)
         => WriteEvent(2, stage, role, handle, processId, leftDown, sizes, regions, durationMs);
+    [NonEvent]
+    internal static WorkScope Measure(string stage, string role, int items = 0)
+        => Source.IsEnabled() ? new(stage, role, items) : default;
+    [Event(3, Level = EventLevel.Informational)]
+    public void WorkEvent(string stage, string role, int processId, int threadId, int items, double durationMs, long allocatedBytes)
+        => WriteEvent(3, stage, role, processId, threadId, items, durationMs, allocatedBytes);
+
+    // Synchronous work only. Disabled tracing has no stopwatch, allocations,
+    // timers or disk writes. A cross-thread disposal marks allocation unknown.
+    internal readonly struct WorkScope : IDisposable
+    {
+        private readonly string? _stage, _role;
+        private readonly int _items, _thread;
+        private readonly long _started, _allocated;
+        internal WorkScope(string stage, string role, int items)
+        {
+            _stage = stage; _role = role; _items = items;
+            _thread = Environment.CurrentManagedThreadId;
+            _allocated = GC.GetAllocatedBytesForCurrentThread(); _started = Stopwatch.GetTimestamp();
+        }
+        public void Dispose()
+        {
+            if (_stage is null || !Source.IsEnabled()) return;
+            long bytes = _thread == Environment.CurrentManagedThreadId ? GC.GetAllocatedBytesForCurrentThread() - _allocated : -1;
+            Source.WorkEvent(_stage, _role!, Environment.ProcessId, _thread, _items, Stopwatch.GetElapsedTime(_started).TotalMilliseconds, bytes);
+        }
+    }
 }

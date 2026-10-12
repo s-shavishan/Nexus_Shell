@@ -38,6 +38,7 @@ internal sealed class MenuWindow : Window
     internal void ShowMenu(DesktopEnvironment environment, ShellRect taskbar, bool search)
     {
         if (_closed) return;
+        using var work = UiTrace.Measure("menu-open", "Launchpad");
         ApplyAppearance(environment);
         var monitor = ShellLayerInterop.Monitor(environment.Taskbar.Handle).Monitor.Bounds;
         var rect = DesktopLayout.LaunchpadBounds(monitor, ShellLayerInterop.Scale(environment.Taskbar.Handle));

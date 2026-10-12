@@ -23,6 +23,7 @@ internal sealed class WindowMaterial
     internal void Apply(Window window, Border frame, ShellTheme theme, ShellState state, string role = "Frame")
     {
         if (_closed) return;
+        using var work = UiTrace.Measure("material-apply", role);
         if (!_observedWindow) { _observedWindow = true; window.Closed += (_, _) => { _closed = true; StatusChanged = null; }; }
         bool requested = state.NativeGlass && !state.ReducedEffects && !theme.HighContrast && theme.Transparency;
         if (_requested != requested) { _requested = requested; _failed = false; }
