@@ -95,15 +95,19 @@ internal sealed class MenuBarView : Grid, IDisposable
         if (_disposed || Interlocked.Exchange(ref _refreshQueued, 1) != 0) return;
         if (!DispatcherQueue.TryEnqueue(() => { Interlocked.Exchange(ref _refreshQueued, 0); if (!_disposed) Refresh(); })) Interlocked.Exchange(ref _refreshQueued, 0);
     }
-    internal void Refresh()
+    internal void Refresh(DateTime? clockOverride = null)
     {
         if (_disposed) return;
         var window = _environment.ActiveWindow;
-        _activeTitle.Text = window is null ? "Desktop" : window.Title;
+        SetText(_activeTitle, window is null ? "Desktop" : window.Title);
         string name = window is null ? "Nexus desktop menu" : "Window controls for " + window.Title;
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_activeApp, name); ToolTipService.SetToolTip(_activeApp, name);
-        _windowControls.Visibility = window is not null && ActualWidth >= 1050 ? Visibility.Visible : Visibility.Collapsed;
-        _minimize.IsEnabled = _maximize.IsEnabled = _close.IsEnabled = window is not null;
+        SetName(_activeApp, name);
+        if (!Equals(ToolTipService.GetToolTip(_activeApp), name)) ToolTipService.SetToolTip(_activeApp, name);
+        SetVisible(_windowControls, window is not null && ActualWidth >= 1050);
+        bool hasWindow = window is not null;
+        if (_minimize.IsEnabled != hasWindow) _minimize.IsEnabled = hasWindow;
+        if (_maximize.IsEnabled != hasWindow) _maximize.IsEnabled = hasWindow;
+        if (_close.IsEnabled != hasWindow) _close.IsEnabled = hasWindow;
         ((FontIcon)_maximize.Content).Glyph = _environment.ActiveWindowMaximized ? "\uE923" : "\uE922";
         _clock.Text = DateTime.Now.ToString(DesktopPresentation.ClockFormat(ActualWidth < 650, _environment.Session.State.Clock24Hour));
         int unread = _environment.Notifications.Unread; _badge.Text = unread > 0 ? (unread > 9 ? "9+" : unread.ToString()) : "";
