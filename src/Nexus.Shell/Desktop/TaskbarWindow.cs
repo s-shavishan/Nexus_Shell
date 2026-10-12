@@ -61,21 +61,26 @@ internal sealed class TaskbarWindow : Window, IDisposable
         _registration.Position(_environment.Session.State.CompactDock, _environment.Session.State.FloatingTaskbar, View.PreferredWidthDip);
         var reservation = _registration.Reservation; var bar = BarBounds;
         var monitor = ShellLayerInterop.Monitor(Handle).Monitor.Bounds;
-        var placement = new DockPlacementSnapshot(bar, reservation, _registration.WorkArea, monitor, _environment.Session.State.FloatingTaskbar);
+        double scale = ShellLayerInterop.Scale(Handle);
+        var placement = new DockPlacementSnapshot(bar, reservation, _registration.WorkArea, monitor, _environment.Session.State.FloatingTaskbar, scale);
+        bool relayout = DockPlacementPolicy.RequiresDesktopRelayout(_lastPlacement, placement);
         if (DockPlacementPolicy.RequiresPreviewDismissal(_lastPlacement, placement))
             _environment.HideDockPreview();
         _lastPlacement = placement;
         _chrome.Trace("dock-position", bar.Width, bar.Height);
-        double scale = ShellLayerInterop.Scale(Handle);
         View.Width = bar.Width / scale; View.Height = bar.Height / scale;
         View.HorizontalAlignment = HorizontalAlignment.Left; View.VerticalAlignment = VerticalAlignment.Top;
         View.Margin = new Thickness((bar.X - reservation.X) / scale, (bar.Y - reservation.Y) / scale, 0, 0);
         View.SetAvailableWidth(bar.Width / scale);
         _chrome.SetClip(new ShellRect(bar.X - reservation.X, bar.Y - reservation.Y, bar.Width, bar.Height),
             _environment.Session.State.FloatingTaskbar && !_environment.Theme.HighContrast ? 22 : 0);
-        _environment.ReconcileMaximizedWindows(monitor, _registration.WorkArea, scale);
-        _environment.Desktop.Surface.SetWorkArea((monitor.Bottom - _registration.WorkArea.Bottom) / scale);
-        _environment.PositionDesktopPanels();
+        if (relayout)
+        {
+            using var measurement = UiTrace.Measure("dock-desktop-relayout", "Dock");
+            _environment.ReconcileMaximizedWindows(monitor, _registration.WorkArea, scale);
+            _environment.Desktop.Surface.SetWorkArea((monitor.Bottom - _registration.WorkArea.Bottom) / scale);
+            _environment.PositionDesktopPanels();
+        }
         RefreshVisibility();
     }
     private void QueuePosition()
