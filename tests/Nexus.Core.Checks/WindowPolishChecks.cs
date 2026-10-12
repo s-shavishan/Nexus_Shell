@@ -100,6 +100,16 @@ internal static class WindowPolishChecks
         Check(tint.RequiresApply(secondRecipe),
             "Recreating an acrylic controller must reapply the tint from scratch.");
 
+        foreach (var requestedQuality in new[] { "Ultra", "Balanced", "Essential", "Solid" })
+        foreach (var nativeState in new string?[] { null, "Pending", "Detached", "Unavailable", "Fallback", "HighContrast", "Active" })
+        {
+            var rimQuality = GlassRimStatePolicy.AppearanceQuality(requestedQuality, nativeState);
+            Check(rimQuality == (nativeState == "Active" ? requestedQuality : "Solid"),
+                "Native glass highlight must remain hidden before activation, after detach and through fallback.");
+            if (nativeState == "Active")
+                Check(rimQuality == requestedQuality,
+                    "An active compositor must restore the selected quality without modifying the preference.");
+        }
         foreach (string quality in GlassQuality.Choices)
         foreach (bool contrast in new[] { false, true })
         foreach (bool simple in new[] { false, true })
