@@ -64,7 +64,8 @@ internal sealed class WindowTransition(FrameworkElement surface, Func<bool> enab
     }
     internal void Restore()
     {
-        Cancel(); if (_disposed) return;
+        if (!Services.WindowExitPolicy.AcceptRestore(_disposed, IsClosing)) return;
+        Cancel();
         if (!enabled() || !_content.IsLoaded) return;
         try
         {

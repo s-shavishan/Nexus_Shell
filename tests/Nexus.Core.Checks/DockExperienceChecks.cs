@@ -32,6 +32,26 @@ internal static class DockExperienceChecks
         Check(cues.SequenceEqual(new[] { DockMotionCue.Minimize, DockMotionCue.None, DockMotionCue.Restore, DockMotionCue.Activate }),
             "A rapid state sequence must settle to the current state without duplicate minimize cues.");
 
+        // Idle ABN_POSCHANGED callbacks must not close a hover card when its
+        // real anchor/work-area geometry hasn't changed.
+        var initial = new DockPlacementSnapshot(
+            new(-950, 900, 500, 70), new(-1200, 890, 1920, 90),
+            new(-1200, -100, 1920, 1080), new(-1200, -100, 1920, 1080), true);
+        Check(DockPlacementPolicy.RequiresPreviewDismissal(null, initial),
+            "Initial placement should invalidate a potentially stale preview.");
+        Check(!DockPlacementPolicy.RequiresPreviewDismissal(initial, initial),
+            "Repeated appbar or appearance notifications with unchanged geometry must preserve hover previews.");
+        Check(DockPlacementPolicy.RequiresPreviewDismissal(initial, initial with { Bounds = initial.Bounds with { X = -940 } }),
+            "An actual floating dock move must invalidate its preview anchor.");
+        Check(DockPlacementPolicy.RequiresPreviewDismissal(initial, initial with { Reservation = initial.Reservation with { Height = 80 } }),
+            "Reservation changes must invalidate the preview's interaction corridor.");
+        Check(DockPlacementPolicy.RequiresPreviewDismissal(initial, initial with { WorkArea = initial.WorkArea with { Height = 1000 } }),
+            "Work-area changes must refresh the preview's placement.");
+        Check(DockPlacementPolicy.RequiresPreviewDismissal(initial, initial with { Monitor = new(0, 0, 2560, 1440) }),
+            "Moving the dock between monitors must dismiss stale preview geometry.");
+        Check(DockPlacementPolicy.RequiresPreviewDismissal(initial, initial with { Floating = false }),
+            "Changing from floating to attached dock must dismiss the old hover preview.");
+
         var anchor = new ShellRect(-950, 850, 48, 52); var preview = new ShellRect(-1100, 570, 336, 268);
         Check(DockPreviewPolicy.InInteractionArea(anchor, preview, -930, 870)
             && DockPreviewPolicy.InInteractionArea(anchor, preview, -1000, 700)
@@ -40,6 +60,24 @@ internal static class DockExperienceChecks
             && !DockPreviewPolicy.InInteractionArea(anchor, preview, -1000, 540), "Unrelated desktop areas must not keep a preview open.");
         Check(!DockPreviewPolicy.Contains(anchor, anchor.Right, anchor.Y) && !DockPreviewPolicy.Contains(default, 0, 0),
             "The hover delay must require a real, non-empty icon hit area.");
+        // A live preview can remain open while its target is minimized, cloaked,
+        // restored or moved between virtual desktops. Reattach DWM once only
+        // when the app becomes drawable, with accessibility fallbacks intact.
+        Check(DockPreviewPolicy.ShouldAttachThumbnail(true, true, false, false, false, false),
+            "An open, drawable restored window should regain a live DWM thumbnail.");
+        Check(!DockPreviewPolicy.ShouldAttachThumbnail(true, true, false, false, false, true),
+            "A still-attached thumbnail must not be registered twice.");
+        Check(!DockPreviewPolicy.ShouldAttachThumbnail(true, true, true, false, false, false),
+            "Minimized apps must retain the readable static preview card.");
+        Check(!DockPreviewPolicy.ShouldAttachThumbnail(true, true, false, true, false, false),
+            "Cloaked virtual-desktop windows must not have a live preview.");
+        Check(!DockPreviewPolicy.ShouldAttachThumbnail(true, false, false, false, false, false),
+            "Closed/reused HWND identities must never acquire a DWM relationship.");
+        Check(!DockPreviewPolicy.ShouldAttachThumbnail(false, true, false, false, false, false),
+            "Hidden preview surfaces must not hold a live thumbnail.");
+        Check(!DockPreviewPolicy.ShouldAttachThumbnail(true, true, false, false, true, false),
+            "Reduced-effects or high-contrast display must stay on the static preview fallback.");
+
         var viewport = new ShellRect(14, 58, 308, 130);
         foreach (var (width, height) in new[] { (1920, 1080), (1080, 1920), (1, 10000), (10000, 1), (1, 1) })
         {

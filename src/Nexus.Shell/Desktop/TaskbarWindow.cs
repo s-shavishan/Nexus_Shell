@@ -25,6 +25,7 @@ internal sealed class TaskbarWindow : Window, IDisposable
     private readonly CoalescedUiDispatch _positionDispatch = new();
     private bool _disposed, _shown = true, _arranging, _visibilityReported;
     private IntPtr _lastForeground;
+    private DockPlacementSnapshot? _lastPlacement;
     internal TaskbarWindow(DesktopEnvironment environment)
     {
         _environment = environment; View = new(environment);
@@ -57,9 +58,13 @@ internal sealed class TaskbarWindow : Window, IDisposable
     internal void Position()
     {
         if (_disposed) return;
-        _environment.HideDockPreview();
         _registration.Position(_environment.Session.State.CompactDock, _environment.Session.State.FloatingTaskbar, View.PreferredWidthDip);
         var reservation = _registration.Reservation; var bar = BarBounds;
+        var monitor = ShellLayerInterop.Monitor(Handle).Monitor.Bounds;
+        var placement = new DockPlacementSnapshot(bar, reservation, _registration.WorkArea, monitor, _environment.Session.State.FloatingTaskbar);
+        if (DockPlacementPolicy.RequiresPreviewDismissal(_lastPlacement, placement))
+            _environment.HideDockPreview();
+        _lastPlacement = placement;
         _chrome.Trace("dock-position", bar.Width, bar.Height);
         double scale = ShellLayerInterop.Scale(Handle);
         View.Width = bar.Width / scale; View.Height = bar.Height / scale;
@@ -68,7 +73,6 @@ internal sealed class TaskbarWindow : Window, IDisposable
         View.SetAvailableWidth(bar.Width / scale);
         _chrome.SetClip(new ShellRect(bar.X - reservation.X, bar.Y - reservation.Y, bar.Width, bar.Height),
             _environment.Session.State.FloatingTaskbar && !_environment.Theme.HighContrast ? 22 : 0);
-        var monitor = ShellLayerInterop.Monitor(Handle).Monitor.Bounds;
         _environment.ReconcileMaximizedWindows(monitor, _registration.WorkArea, scale);
         _environment.Desktop.Surface.SetWorkArea((monitor.Bottom - _registration.WorkArea.Bottom) / scale);
         _environment.PositionDesktopPanels();

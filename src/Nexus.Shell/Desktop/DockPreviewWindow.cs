@@ -38,7 +38,7 @@ internal sealed class DockPreviewWindow : Window
     private RunningWindow? _window;
     private ShellRect _anchor, _bounds;
     private long? _leaveSince;
-    private (bool Valid, bool Minimized, bool Cloaked, bool Maximized, bool Fast)? _state;
+    private (bool Valid, bool Minimized, bool Cloaked, bool Maximized, bool Fast, bool Contrast)? _state;
     private bool _keyboardOpen, _closed, _maximized;
     internal bool IsOpen { get; private set; }
 
@@ -107,11 +107,6 @@ internal sealed class DockPreviewWindow : Window
             _environment.Taskbar.BarBounds, anchor, ShellLayerInterop.Scale(_environment.Taskbar.Handle));
         _native.MoveAndResize(new RectInt32(_bounds.X, _bounds.Y, _bounds.Width, _bounds.Height));
         IsOpen = true; ApplyAppearance(); _native.Show(false); RefreshState();
-        if (!_environment.Session.State.ReducedEffects && !_environment.Theme.HighContrast)
-        {
-            try { _thumbnail = WindowThumbnail.TryCreate(_handle, window); UpdateThumbnail(); }
-            catch (Exception ex) { ReleaseThumbnail(); Log.Write("Live window preview unavailable", ex); }
-        }
         if (_root.IsLoaded) Enter();
         if (keyboard) { Activate(); if (_root.IsLoaded) _restore.Focus(FocusState.Programmatic); }
     }
@@ -137,19 +132,31 @@ internal sealed class DockPreviewWindow : Window
     }
     private void RefreshState()
     {
-        if (_window is null) return;
-        bool valid = NativeMethods.OwnsWindow(_window);
-        bool minimized = valid && (NativeMethods.IsMinimized(_window.Handle) || !NativeMethods.Visible(_window.Handle));
-        bool maximized = valid && NativeMethods.IsZoomed(_window.Handle);
-        bool cloaked = valid && NativeMethods.IsCloaked(_window.Handle);
-        var state = (valid, minimized, cloaked, maximized, _environment.Session.State.ReducedEffects);
+        if (_window is not { } target) return;
+        bool valid = NativeMethods.OwnsWindow(target);
+        bool minimized = valid && (NativeMethods.IsMinimized(target.Handle) || !NativeMethods.Visible(target.Handle));
+        bool maximized = valid && NativeMethods.IsZoomed(target.Handle);
+        bool cloaked = valid && NativeMethods.IsCloaked(target.Handle);
+        var state = (valid, minimized, cloaked, maximized, _environment.Session.State.ReducedEffects, _environment.Theme.HighContrast);
         if (_state == state) return; _state = state;
         _restore.IsEnabled = _viewport.IsEnabled = _close.IsEnabled = valid;
         _minimize.IsEnabled = valid && !minimized; _maximize.IsEnabled = valid;
         if (_maximized != maximized)
         { _maximized = maximized; _maximizeIcon.Glyph = maximized ? "\uE923" : "\uE922"; string name = maximized ? "Restore window size" : "Maximize window"; AutomationProperties.SetName(_maximize, name); ToolTipService.SetToolTip(_maximize, name); }
-        if (minimized || !valid || cloaked) ReleaseThumbnail();
-        _status.Text = minimized ? "Minimized · restore to see the window" : _environment.Session.State.ReducedEffects ? "Fast mode · window card" : "Click the preview to switch";
+        if (minimized || !valid || cloaked || _environment.Session.State.ReducedEffects || _environment.Theme.HighContrast)
+            ReleaseThumbnail();
+        else if (DockPreviewPolicy.ShouldAttachThumbnail(IsOpen, valid, minimized, cloaked,
+                     _environment.Session.State.ReducedEffects || _environment.Theme.HighContrast, _thumbnail is not null))
+        {
+            try
+            {
+                _thumbnail = WindowThumbnail.TryCreate(_handle, target);
+                UpdateThumbnail();
+            }
+            catch (Exception ex) { ReleaseThumbnail(); Log.Write("Live window preview unavailable", ex); }
+        }
+        _status.Text = minimized ? "Minimized · restore to see the window"
+            : _environment.Session.State.ReducedEffects ? "Fast mode · window card" : "Click the preview to switch";
     }
     internal void UpdatePointer(bool fullscreen)
     {
@@ -185,5 +192,8 @@ internal sealed class DockPreviewWindow : Window
         foreach (var button in new[] { _restore, _minimize, _maximize, _close }) { button.Background = theme.Brush("NexusCard"); button.Foreground = theme.Brush("NexusText"); }
         _chrome.SetCorners(theme.HighContrast, 18);
         _motion?.SetEnabled(theme.Animations && !theme.HighContrast && _environment.Session.State.SurfaceAnimations && !_environment.Session.State.ReducedEffects);
+        // An already-visible card must switch immediately between a DWM
+        // relationship and an accessible solid fallback on preference changes.
+        if (IsOpen && NativeMethods.Visible(_handle)) RefreshState();
     }
 }
