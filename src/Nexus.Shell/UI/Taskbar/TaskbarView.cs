@@ -310,7 +310,15 @@ internal sealed class TaskbarView : Grid
         _date.Visibility = widthDip < 620 ? Visibility.Collapsed : Visibility.Visible;
     }
     internal void RefreshClock()
-    { var now = DateTime.Now; _time.Text = now.ToString(_environment.Session.State.Clock24Hour ? "HH:mm" : "h:mm tt"); _date.Text = now.ToString("ddd, d MMM"); }
+    {
+        var now = DateTime.Now;
+        string time = now.ToString(_environment.Session.State.Clock24Hour ? "HH:mm" : "h:mm tt");
+        string date = now.ToString("ddd, d MMM");
+        // The desktop heartbeat is more frequent than the displayed minute.
+        // Do not invalidate XAML text layout when the clock has not changed.
+        if (_time.Text != time) _time.Text = time;
+        if (_date.Text != date) _date.Text = date;
+    }
     internal void ApplyAppearance()
     {
         if (_released) return;
