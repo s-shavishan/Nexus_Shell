@@ -73,6 +73,9 @@ internal static class UiResourceProbe
             frame.UpdateLayout();
             if (launchpad.ActualWidth <= 0 || menu.ActualHeight <= 0) throw new InvalidOperationException("The production surfaces did not lay out.");
             checks.Add("Production menu bar and populated Launchpad layout");
+            stage = "retained-menu-bar-refresh";
+            menu.VerifyRetainedRefresh();
+            checks.Add("100 unchanged menu bar refreshes retain native title and clock XAML properties");
             stage = "retained-launchpad-rendering";
             launchpad.VerifyRetainedRendering();
             checks.Add("Twenty unchanged Launchpad renders retain item source and page-control identities");
