@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Nexus.Shell.Services;
 
 internal static class GlassStateDispatchChecks
@@ -94,6 +95,53 @@ internal static class GlassStateDispatchChecks
         queue.Dequeue()();
         Check(paint == 5, "The paint path must recover despite a failing logger.");
 
-        Console.WriteLine($"PASS: {assertions} coalesced glass-state assertions; 1000 events, detach, controller replacement, WinUI failures, reentrancy and recovery.");
+        // Actual cross-thread contention: all native notifications race
+        // against one gate while the UI queue is intentionally not drained.
+        var concurrentGate = new GlassStateDispatchGate();
+        var concurrentQueue = new ConcurrentQueue<Action>();
+        int admissions = 0, concurrentPaints = 0;
+        Parallel.For(0, 1500, _ =>
+        {
+            if (concurrentGate.Request(work => { concurrentQueue.Enqueue(work); return true; },
+                    () => true, () => Interlocked.Increment(ref concurrentPaints), Report))
+                Interlocked.Increment(ref admissions);
+        });
+        Check(admissions == 1 && concurrentQueue.Count == 1,
+            "Concurrent native callbacks must admit exactly one pending UI frame.");
+        Check(concurrentQueue.TryDequeue(out var concurrentWork), "Admitted frame update was lost.");
+        concurrentWork!();
+        Check(concurrentPaints == 1
+            && concurrentGate.Request(work => { concurrentQueue.Enqueue(work); return true; },
+                () => true, () => Interlocked.Increment(ref concurrentPaints), Report),
+            "Draining a contended native event gate must permit a subsequent repaint.");
+        Check(concurrentQueue.TryDequeue(out concurrentWork), "Subsequent glass repaint was lost.");
+        concurrentWork!();
+        Check(concurrentPaints == 2, "Concurrent gate recovery must repaint exactly once per admitted callback.");
+
+        // A queued callback may run inline, release the old admission, and
+        // admit a replacement before the original enqueue reports failure.
+        // The original failure path must not clear the newer admission.
+        var racingGate = new GlassStateDispatchGate();
+        var raceQueue = new Queue<Action>();
+        bool replacementAdmitted = false;
+        bool outerAdmitted = racingGate.Request(first =>
+        {
+            first();
+            replacementAdmitted = racingGate.Request(next => { raceQueue.Enqueue(next); return true; },
+                () => true, () => paint++, Report);
+            return false;
+        }, () => true, () => paint++, Report);
+        Check(!outerAdmitted && replacementAdmitted && raceQueue.Count == 1,
+            "Inline callback completion must allow an independently queued replacement.");
+        Check(!racingGate.Request(next => { raceQueue.Enqueue(next); return true; },
+                () => true, () => paint++, Report),
+            "An obsolete enqueue rejection must not clear the replacement's pending ticket.");
+        raceQueue.Dequeue()();
+        Check(racingGate.Request(next => { raceQueue.Enqueue(next); return true; },
+                () => true, () => paint++, Report),
+            "After replacement completes, a new acrylic update must be admitted.");
+        raceQueue.Dequeue()();
+
+        Console.WriteLine($"PASS: {assertions} coalesced glass-state assertions; 1000 event burst, 1500 concurrent events, stale-ticket races, detach, replacement, UI failures and recovery.");
     }
 }
