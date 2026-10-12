@@ -309,9 +309,20 @@ internal sealed class TaskbarView : Grid
     private void ApplyDensity()
     {
         bool compact = _environment.Session.State.CompactDock;
-        foreach (var button in _iconButtons.Concat(_pins.Children.OfType<Button>()).Concat(_windows.Children.OfType<Button>())) { button.Width = compact ? 40 : 48; button.Height = compact ? 44 : 52; if (button.Content is Image i) i.Width = i.Height = compact ? 30 : 36; }
-        foreach (var icon in _pinImages.Values.Concat(_items.Values.Select(i => i.Icon))) icon.Width = icon.Height = compact ? 30 : 40;
-        _separator.Visibility = _windows.Children.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+        static void Size(FrameworkElement target, double width, double height)
+        {
+            if (target.Width != width) target.Width = width;
+            if (target.Height != height) target.Height = height;
+        }
+        foreach (var button in _iconButtons.Concat(_pins.Children.OfType<Button>()).Concat(_windows.Children.OfType<Button>()))
+        {
+            Size(button, compact ? 40 : 48, compact ? 44 : 52);
+            if (button.Content is Image icon) Size(icon, compact ? 30 : 36, compact ? 30 : 36);
+        }
+        foreach (var icon in _pinImages.Values.Concat(_items.Values.Select(i => i.Icon)))
+            Size(icon, compact ? 30 : 40, compact ? 30 : 40);
+        var separator = _windows.Children.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+        if (_separator.Visibility != separator) _separator.Visibility = separator;
         double width = PreferredWidthDip;
         if (_reportedWidth != width) { _reportedWidth = width; PreferredWidthChanged?.Invoke(); }
         _appliedCompactDock = compact;
