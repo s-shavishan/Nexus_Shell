@@ -171,16 +171,27 @@ internal sealed class DockPreviewWindow : Window
             return;
         }
         if (!_thumbnailRetry.ShouldAttempt(true, _thumbnail is not null, Environment.TickCount64)) return;
+        UiTrace.Surface("thumbnail-attempt", "DockPreview", _handle);
         try
         {
             _thumbnail = WindowThumbnail.TryCreate(_handle, target);
             if (_thumbnail is not null)
             {
                 UpdateThumbnail();
-                if (_thumbnail is not null) _thumbnailRetry.Reset();
+                if (_thumbnail is not null)
+                {
+                    _thumbnailRetry.Reset();
+                    UiTrace.Surface("thumbnail-active", "DockPreview", _handle);
+                }
             }
+            if (_thumbnail is null) UiTrace.Surface("thumbnail-unavailable", "DockPreview", _handle);
         }
-        catch (Exception ex) { ReleaseThumbnail(); Log.Write("Live window preview unavailable", ex); }
+        catch (Exception ex)
+        {
+            ReleaseThumbnail();
+            UiTrace.Surface("thumbnail-unavailable", "DockPreview", _handle);
+            Log.Write("Live window preview unavailable", ex);
+        }
     }
     internal void UpdatePointer(bool fullscreen)
     {
