@@ -17,6 +17,7 @@ internal sealed class LiquidGlassBackdrop : SystemBackdrop
     internal string State { get; private set; } = "Pending";
     private Services.GlassRecipe _recipe = Services.GlassRecipe.For(Services.AuraPalette.For("Midnight"));
     private SystemBackdropTheme _theme = SystemBackdropTheme.Dark;
+    private readonly Services.GlassTintRetention _tintRetention = new();
     private readonly int _traceId = Interlocked.Increment(ref _nextTraceId);
     private static int _nextTraceId;
     private readonly string _role;
@@ -30,13 +31,14 @@ internal sealed class LiquidGlassBackdrop : SystemBackdrop
         _recipe = recipe; _theme = next;
         try { if (_configuration is not null) _configuration.Theme = _theme; ApplyTint(); } catch (Exception error) { Fail(error); }
     }
-    private void ApplyTint()
+    private void ApplyTint(bool force = false)
     {
-        if (_controller is not { } controller) return;
+        if (_controller is not { } controller || !_tintRetention.RequiresApply(_recipe, force)) return;
         var kind = _recipe.Frosted ? DesktopAcrylicKind.Base : DesktopAcrylicKind.Thin;
         if (controller.Kind != kind) controller.Kind = kind;
         controller.TintColor = ShellTheme.Color(_recipe.Tint); controller.FallbackColor = ShellTheme.Color(_recipe.Fallback);
         controller.TintOpacity = _recipe.TintOpacity; controller.LuminosityOpacity = _recipe.LuminosityOpacity;
+        _tintRetention.Commit(_recipe);
     }
     protected override void OnTargetConnected(ICompositionSupportsSystemBackdrop connectedTarget, XamlRoot xamlRoot)
     {
@@ -71,7 +73,7 @@ internal sealed class LiquidGlassBackdrop : SystemBackdrop
         // Palette updates arrive explicitly from the owner. No native target
         // lookup during configuration/detach notifications on Windows 10.
         if (!_connected || _failed) return;
-        try { if (_configuration is not null) _configuration.Theme = _theme; ApplyTint(); }
+        try { if (_configuration is not null) _configuration.Theme = _theme; ApplyTint(force: true); }
         catch (Exception error) { Fail(error); }
     }
     private void ControllerStateChanged(ISystemBackdropControllerWithTargets sender, object args)
@@ -79,7 +81,7 @@ internal sealed class LiquidGlassBackdrop : SystemBackdrop
     private void UpdateState(string state)
     { if (State == state) return; State = state; Services.UiTrace.Surface(state, _role, _owner, value: _traceId); try { StateChanged?.Invoke(); } catch (Exception error) { Services.Log.Write("Glass status callback failed", error); } }
     private void ReleaseController()
-    { var controller = _controller; _controller = null; try { if (controller is not null) { controller.StateChanged -= ControllerStateChanged; controller.Dispose(); Services.UiTrace.Surface("controller-disposed", _role, _owner, value: _traceId); } } catch (Exception error) { Services.Log.Write("Glass controller cleanup failed", error); } }
+    { var controller = _controller; _controller = null; _tintRetention.Reset(); try { if (controller is not null) { controller.StateChanged -= ControllerStateChanged; controller.Dispose(); Services.UiTrace.Surface("controller-disposed", _role, _owner, value: _traceId); } } catch (Exception error) { Services.Log.Write("Glass controller cleanup failed", error); } }
     private void Fail(Exception error)
     {
         _connected = false; ReleaseController(); _configuration = null;
