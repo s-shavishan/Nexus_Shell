@@ -139,6 +139,15 @@ internal sealed class WindowChrome : IDisposable
                 }
                 if (message == 0x0215) Trace("capture-changed");
                 if (message == 0x001F) Trace("cancel-mode");
+                if (LiveResizeRegionPolicy.IsInterrupted(message) && _interactiveResize)
+                {
+                    // A drag can be interrupted without WM_EXITSIZEMOVE (e.g.
+                    // losing mouse capture). Never leave regions disabled.
+                    _interactiveResize = false;
+                    UiTrace.MoveSize("cancel", _role, _handle, false, _sizeEvents, _regionUpdates,
+                        _moveStarted == 0 ? 0 : Stopwatch.GetElapsedTime(_moveStarted).TotalMilliseconds);
+                    _moveStarted = 0;
+                }
                 if (message == 0x0112 && (wp.ToUInt64() & 0xFFF0) == 0xF060 && _closeRequested is not null) { _closeRequested(); return IntPtr.Zero; }
                 if (_tuck is not null && message == 0x0112 && (wp.ToUInt64() & 0xFFF0) == 0xF020)
                 { _tuck(); return IntPtr.Zero; }
@@ -181,7 +190,7 @@ internal sealed class WindowChrome : IDisposable
             Trace("native-size", (int)(packed & 0xFFFF), (int)((packed >> 16) & 0xFFFF), (int)wp.ToUInt64());
         }
         if (!_disposed && message == 0x0005) { bool minimized = wp.ToUInt64() == 1; bool restoring = _wasMinimized && !minimized; _wasMinimized = minimized; if (restoring) Restored?.Invoke(); }
-        if (!_disposed && message == 0x0232 && _liveSizeUnclipped)
+        if (!_disposed && LiveResizeRegionPolicy.ShouldRestore(message, _liveSizeUnclipped))
         {
             _liveSizeUnclipped = false;
             Refresh();
