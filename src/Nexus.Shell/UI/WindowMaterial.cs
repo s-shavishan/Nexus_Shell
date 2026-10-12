@@ -76,8 +76,9 @@ internal sealed class WindowMaterial
                     {
                         if (_latestTheme is not { } currentTheme || _latestState is not { } currentState) return;
                         GlassPaintRetention.Background(frame, currentTheme.Material(_latestRole, current.State == "Active"));
-                        GlassDecorations.Apply(frame, currentTheme, currentTheme.ResolveQuality(currentState.NativeGlass,
-                            currentState.ReducedEffects, fallback: current.State is "Fallback" or "HighContrast").Effective);
+                        var effective = currentTheme.ResolveQuality(currentState.NativeGlass, currentState.ReducedEffects,
+                            fallback: current.State is "Fallback" or "HighContrast").Effective;
+                        GlassDecorations.Apply(frame, currentTheme, GlassRimStatePolicy.AppearanceQuality(effective, current.State));
                         UpdateStatus(currentTheme, currentState, _latestRole);
                     },
                     error => Log.Write("Glass state callback could not update the surface", error));
@@ -88,8 +89,9 @@ internal sealed class WindowMaterial
             _backdrop?.SetAppearance(GlassRecipe.For(theme.Palette, role, state.GlassStyle), theme.Palette.IsLight);
             GlassPaintRetention.Background(frame, theme.Material(role, glass && _backdrop?.State == "Active"));
             GlassPaintRetention.Edge(frame, theme.Edge);
-            GlassDecorations.Apply(frame, theme, theme.ResolveQuality(state.NativeGlass, state.ReducedEffects,
-                _failed, _backdrop?.State is "Fallback" or "HighContrast").Effective);
+            var effective = theme.ResolveQuality(state.NativeGlass, state.ReducedEffects,
+                _failed, _backdrop?.State is "Fallback" or "HighContrast").Effective;
+            GlassDecorations.Apply(frame, theme, GlassRimStatePolicy.AppearanceQuality(effective, _backdrop?.State));
             UpdateStatus(theme, state, role);
         }
         catch (Exception ex)
