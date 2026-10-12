@@ -79,6 +79,27 @@ internal static class UiResourceProbe
             stage = "retained-dock-density";
             dock.VerifyRetainedDensity();
             checks.Add("Production dock: compact/normal changes update actual icon geometry; twenty unchanged snapshots retain buttons and avoid width writes");
+            stage = "dock-material-ownership";
+            if (dock.Frame.Background is not Microsoft.UI.Xaml.Media.SolidColorBrush { Color.A: 255 })
+                throw new InvalidOperationException("A standalone dock requires a fully opaque material.");
+            dock.MaterialOwnedByWindow = true;
+            int dockPaintWrites = 0;
+            long dockBackgroundToken = dock.Frame.RegisterPropertyChangedCallback(Border.BackgroundProperty, (_, _) => dockPaintWrites++);
+            long dockBorderToken = dock.Frame.RegisterPropertyChangedCallback(Border.BorderBrushProperty, (_, _) => dockPaintWrites++);
+            try
+            {
+                for (int i = 0; i < 100; i++) dock.ApplyAppearance();
+                if (dockPaintWrites != 0)
+                    throw new InvalidOperationException("Dock view overwrote the window-owned native glass or solid fallback brushes.");
+            }
+            finally
+            {
+                dock.Frame.UnregisterPropertyChangedCallback(Border.BackgroundProperty, dockBackgroundToken);
+                dock.Frame.UnregisterPropertyChangedCallback(Border.BorderBrushProperty, dockBorderToken);
+                dock.MaterialOwnedByWindow = false;
+                dock.ApplyAppearance();
+            }
+            checks.Add("Standalone dock remains opaque; 100 window-owned appearance refreshes do not overwrite native fallback paints");
             stage = "pinned-dock-icon-refresh";
             dock.VerifyPinnedIconRefresh();
             checks.Add("Explicit catalog refresh recreates pinned icon controls; ordinary dock polls retain refreshed buttons");
