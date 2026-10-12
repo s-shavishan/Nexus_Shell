@@ -128,12 +128,20 @@ internal sealed class TaskbarView : Grid
         if (_released) return;
         using var work = UiTrace.Measure("dock-refresh", "Dock", windows.Count);
         var pins = _environment.Session.State.PinnedApps.ToArray();
-        if (!_shownPins.SequenceEqual(pins))
+        bool pinsChanged = !_shownPins.SequenceEqual(pins);
+        if (pinsChanged)
         {
             foreach (var button in _pins.Children.OfType<Button>()) { if (button.ContextFlyout is MenuFlyout menu) { menu.Hide(); _openContextMenus.Remove(menu); } _motion?.DetachHover(button); if (_pinImages.TryGetValue(button, out var icon)) _dockMotion?.Detach(icon); }
             _pinImages.Clear(); _pins.Children.Clear(); foreach (var pin in pins) _pins.Children.Add(PinButton(pin)); _shownPins = pins;
         }
-        _windowSet.Reconcile(windows);
+        bool windowsChanged = _windowSet.Reconcile(windows);
+        if (_baselineReconciled && !pinsChanged && !windowsChanged)
+        {
+            // A foreground/minimize change still needs state icons and actions,
+            // but a stable snapshot does not need XAML layout reconciliation.
+            RefreshWindowStates();
+            return;
+        }
         var live = _windowSet.Windows.Select(DockWindowIdentity.Of).ToHashSet();
         _environment.RefreshDockPreviewWindows(_windowSet.Windows);
         foreach (var key in _items.Keys.Where(k => !live.Contains(k)).ToArray())
