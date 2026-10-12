@@ -14,9 +14,14 @@ internal sealed class WindowTransition(FrameworkElement surface, Func<bool> enab
     private int _generation;
     private bool _disposed;
     private WindowChrome? _chrome;
+    private AnimationSet? _restoreAnimations, _minimizeAnimations, _closeAnimations;
     private readonly FrameworkElement _content = surface is Border { Child: FrameworkElement child } ? child : surface;
     internal bool IsMinimizing { get; private set; }
     internal bool IsClosing { get; private set; }
+    // Native preflight checks actual resource-set creation and ownership.
+    internal int AnimationSetCreations { get; private set; }
+    internal int RetainedAnimationSetCount => (_restoreAnimations is null ? 0 : 1)
+        + (_minimizeAnimations is null ? 0 : 1) + (_closeAnimations is null ? 0 : 1);
     // Bounds changes must not replay restore motion or cancel a pending close.
     internal void BindRestore(WindowChrome chrome)
     {
@@ -43,17 +48,18 @@ internal sealed class WindowTransition(FrameworkElement surface, Func<bool> enab
             ElementCompositionPreview.SetIsTranslationEnabled(_content, true);
             var visual = ElementCompositionPreview.GetElementVisual(_content); var compositor = visual.Compositor;
             visual.CenterPoint = new Vector3((float)_content.ActualWidth / 2, (float)_content.ActualHeight * (closing ? .5f : 1), 0);
-            using var ease = compositor.CreateCubicBezierEasingFunction(new Vector2(.2f, .75f), new Vector2(.3f, 1));
-            using var scale = compositor.CreateVector3KeyFrameAnimation(); scale.Duration = TimeSpan.FromMilliseconds(closing ? 120 : 160); scale.InsertExpressionKeyFrame(0, "this.StartingValue"); scale.InsertKeyFrame(1, dock ? Vector3.One : new Vector3(closing ? .98f : .94f, closing ? .98f : .94f, 1), ease);
-            using var move = compositor.CreateVector3KeyFrameAnimation(); move.Duration = scale.Duration; move.InsertExpressionKeyFrame(0, "this.StartingValue"); move.InsertKeyFrame(1, new Vector3(0, closing ? 0 : dock ? 36 : 20, 0), ease);
-            using var opacity = compositor.CreateScalarKeyFrameAnimation(); opacity.Duration = scale.Duration; opacity.InsertExpressionKeyFrame(0, "this.StartingValue"); opacity.InsertKeyFrame(1, .92f, ease);
+            var animations = Animations(compositor, closing);
             using var batch = compositor.CreateScopedBatch(CompositionBatchTypes.Animation);
             var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             batch.Completed += (_, _) => completed.TrySetResult();
-            visual.StartAnimation("Scale", scale); visual.StartAnimation("Translation", move); visual.StartAnimation("Opacity", opacity); batch.End();
+            animations.Start(visual); batch.End();
             await completed.Task.WaitAsync(TimeSpan.FromMilliseconds(220));
         }
-        catch (Exception error) { Services.Log.Write("Window transition used native fallback", error); }
+        catch (Exception error)
+        {
+            if (!_disposed && generation == _generation) ReleaseAnimations();
+            Services.Log.Write("Window transition used native fallback", error);
+        }
         if (!_disposed && generation == _generation) { IsMinimizing = IsClosing = false; ApplyNative(action); Reset(); }
     }
     internal void Restore()
@@ -64,14 +70,28 @@ internal sealed class WindowTransition(FrameworkElement surface, Func<bool> enab
         {
             var visual = ElementCompositionPreview.GetElementVisual(_content); var compositor = visual.Compositor;
             visual.CenterPoint = new Vector3((float)_content.ActualWidth / 2, (float)_content.ActualHeight / 2, 0);
-            using var ease = compositor.CreateCubicBezierEasingFunction(new Vector2(.16f, 1), new Vector2(.3f, 1));
-            using var scale = compositor.CreateVector3KeyFrameAnimation(); scale.Duration = TimeSpan.FromMilliseconds(130); scale.InsertKeyFrame(0, dock ? Vector3.One : new Vector3(.99f, .99f, 1)); scale.InsertKeyFrame(1, Vector3.One, ease);
-            using var opacity = compositor.CreateScalarKeyFrameAnimation(); opacity.Duration = scale.Duration; opacity.InsertKeyFrame(0, .92f); opacity.InsertKeyFrame(1, 1, ease);
-            using var move = compositor.CreateVector3KeyFrameAnimation(); move.Duration = scale.Duration; move.InsertKeyFrame(0, new Vector3(0, dock ? 6 : 0, 0)); move.InsertKeyFrame(1, Vector3.Zero, ease);
-            ElementCompositionPreview.SetIsTranslationEnabled(_content, true); visual.StartAnimation("Translation", move);
-            visual.StartAnimation("Scale", scale); visual.StartAnimation("Opacity", opacity);
+            ElementCompositionPreview.SetIsTranslationEnabled(_content, true);
+            Animations(compositor, null).Start(visual);
         }
-        catch (Exception error) { Services.Log.Write("Window restore motion unavailable", error); Reset(); }
+        catch (Exception error) { ReleaseAnimations(); Services.Log.Write("Window restore motion unavailable", error); Reset(); }
+    }
+    private AnimationSet Animations(Compositor compositor, bool? closing)
+    {
+        var cached = closing is null ? _restoreAnimations : closing.Value ? _closeAnimations : _minimizeAnimations;
+        if (cached is not null) return cached;
+        using var work = Services.UiTrace.Measure("motion-resources-create", dock ? "Dock" : "Window");
+        var created = new AnimationSet(compositor, dock, closing);
+        if (closing is null) _restoreAnimations = created;
+        else if (closing.Value) _closeAnimations = created;
+        else _minimizeAnimations = created;
+        AnimationSetCreations++;
+        return created;
+    }
+    private void ReleaseAnimations()
+    {
+        var restore = _restoreAnimations; var minimize = _minimizeAnimations; var close = _closeAnimations;
+        _restoreAnimations = _minimizeAnimations = _closeAnimations = null;
+        restore?.Dispose(); minimize?.Dispose(); close?.Dispose();
     }
     internal void Cancel() { ++_generation; IsMinimizing = IsClosing = false; if (!_disposed) Reset(); }
     private void Reset()
@@ -85,6 +105,61 @@ internal sealed class WindowTransition(FrameworkElement surface, Func<bool> enab
         if (_disposed) return;
         if (_chrome is not null) _chrome.Restored -= Restore;
         _chrome = null; _disposed = true; ++_generation;
-        IsMinimizing = IsClosing = false; Reset();
+        IsMinimizing = IsClosing = false; Reset(); ReleaseAnimations();
+    }
+
+    // Immutable animation templates, retained only by this surface. Batches
+    // remain per-operation so cancelled completions cannot run a later action.
+    private sealed class AnimationSet : IDisposable
+    {
+        private CubicBezierEasingFunction? _ease;
+        private Vector3KeyFrameAnimation? _scale, _move;
+        private ScalarKeyFrameAnimation? _opacity;
+        private bool _disposed;
+        internal AnimationSet(Compositor compositor, bool dock, bool? closing)
+        {
+            try
+            {
+                bool restoring = closing is null;
+                _ease = compositor.CreateCubicBezierEasingFunction(restoring ? new Vector2(.16f, 1) : new Vector2(.2f, .75f), new Vector2(.3f, 1));
+                _scale = compositor.CreateVector3KeyFrameAnimation();
+                _move = compositor.CreateVector3KeyFrameAnimation();
+                _opacity = compositor.CreateScalarKeyFrameAnimation();
+                _scale.Duration = _move.Duration = _opacity.Duration = TimeSpan.FromMilliseconds(restoring ? 130 : closing == true ? 120 : 160);
+                if (restoring)
+                {
+                    _scale.InsertKeyFrame(0, dock ? Vector3.One : new Vector3(.99f, .99f, 1));
+                    _scale.InsertKeyFrame(1, Vector3.One, _ease);
+                    _move.InsertKeyFrame(0, new Vector3(0, dock ? 6 : 0, 0)); _move.InsertKeyFrame(1, Vector3.Zero, _ease);
+                    _opacity.InsertKeyFrame(0, .92f); _opacity.InsertKeyFrame(1, 1, _ease);
+                }
+                else
+                {
+                    _scale.InsertExpressionKeyFrame(0, "this.StartingValue");
+                    _scale.InsertKeyFrame(1, dock ? Vector3.One : new Vector3(closing == true ? .98f : .94f, closing == true ? .98f : .94f, 1), _ease);
+                    _move.InsertExpressionKeyFrame(0, "this.StartingValue"); _move.InsertKeyFrame(1, new Vector3(0, closing == true ? 0 : dock ? 36 : 20, 0), _ease);
+                    _opacity.InsertExpressionKeyFrame(0, "this.StartingValue"); _opacity.InsertKeyFrame(1, .92f, _ease);
+                }
+            }
+            catch { Dispose(); throw; }
+        }
+        internal void Start(Visual visual)
+        {
+            visual.StartAnimation("Scale", _scale!);
+            visual.StartAnimation("Translation", _move!);
+            visual.StartAnimation("Opacity", _opacity!);
+        }
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            void Release(CompositionObject? resource)
+            {
+                try { resource?.Dispose(); }
+                catch (Exception error) { Services.Log.Write("Retained window motion cleanup failed", error); }
+            }
+            Release(_scale); Release(_move); Release(_opacity); Release(_ease);
+            _scale = _move = null; _opacity = null; _ease = null;
+        }
     }
 }
