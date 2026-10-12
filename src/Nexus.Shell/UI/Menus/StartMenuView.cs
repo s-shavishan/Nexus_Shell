@@ -43,14 +43,17 @@ internal sealed class StartMenuView : Grid, IDisposable
     private bool _organizing;
     private readonly Button _refresh;
     private readonly DispatcherTimer _filterTimer = new() { Interval = TimeSpan.FromMilliseconds(45) };
-    private IReadOnlyList<AppEntry> _catalog = [], _filtered = [];
+    private readonly LaunchpadCatalogCache _catalog;
+    private IReadOnlyList<AppEntry> _filtered = [];
+    private (int Pages, int Page, bool HighContrast)? _indicatorKey;
     private int _page, _epoch, _renderVersion;
     private bool _disposed, _open, _refreshing;
     private IReadOnlyList<AppEntry> _shown = [];
     private string _category = "All";
     internal StartMenuView(DesktopEnvironment environment)
     {
-        _environment = environment; Padding = new Thickness(26); RowSpacing = 16;
+        _environment = environment; _catalog = new(Builtins());
+        Padding = new Thickness(26); RowSpacing = 16;
         SizeChanged += (_, _) => _subtitle.MaxWidth = Math.Max(140, ActualWidth - 176);
         KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden;
         foreach (var height in new[] { GridLength.Auto, GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto }) RowDefinitions.Add(new() { Height = height });
@@ -131,6 +134,7 @@ internal sealed class StartMenuView : Grid, IDisposable
         _search.KeyDown += (_, e) => { if (e.Key == VirtualKey.Down) { _filterTimer.Stop(); Render(); _apps.Focus(FocusState.Programmatic); e.Handled = true; } else if (e.Key == VirtualKey.Enter) { _filterTimer.Stop(); Render(); if (_filtered.Count > 0) Open(_filtered[0]); e.Handled = true; } };
         var escape = new KeyboardAccelerator { Key = VirtualKey.Escape }; escape.Invoked += (_, e) => { environment.HideMenu(); e.Handled = true; }; KeyboardAccelerators.Add(escape);
         ApplyAppearance();
+        environment.Session.Changed += _catalog.Invalidate;
     }
     private IEnumerable<AppEntry> Builtins() => [new("sections", "Sections", "nexus:sections", "\uE80F", "System"), new("files", "Files", "nexus:files", "\uE8B7", "System"), new("settings", "Settings", "ms-settings:", "\uE713", "System"), new("notes", "Notes", "nexus:notes", "\uE70B", "Utility"), new("calculator", "Calculator", "nexus:calculator", "\uE8EF", "Utility")];
     private string CurrentCollectionId => _category.StartsWith("collection:", StringComparison.Ordinal) ? _category[11..] : "";
@@ -174,18 +178,25 @@ internal sealed class StartMenuView : Grid, IDisposable
     {
         ++_epoch; _open = true; _title.Text = "Launchpad";
         _category = "All"; _page = 0; _search.Text = ""; _filterTimer.Stop(); RefreshCollections();
-        _catalog = LaunchpadCatalog.Build(Builtins(), _environment.Session.State.PinnedApps, _catalog); Render();
+        _catalog.Update(_environment.Session.State.PinnedApps); Render();
         return RefreshCatalogAsync();
     }
     internal void FocusEntry(bool search) { if (search) _search.Focus(FocusState.Programmatic); else _apps.Focus(FocusState.Programmatic); }
     internal void PrepareValidation()
-    { _catalog = LaunchpadCatalog.Build(Builtins(), [], []); Render(); }
+    { _catalog.Update([], []); Render(); }
+    internal void VerifyRetainedRendering()
+    {
+        var items = _apps.ItemsSource; var indicators = _dots.Children.ToArray();
+        for (int i = 0; i < 20; i++) Render();
+        if (!ReferenceEquals(items, _apps.ItemsSource) || !indicators.SequenceEqual(_dots.Children))
+            throw new InvalidOperationException("Unchanged Launchpad renders replaced retained items or page controls.");
+    }
     private async Task RefreshCatalogAsync(bool refresh = false)
     {
         int epoch = _epoch; if (_refreshing || _disposed || !_open) return;
         if (refresh) { AppIconCache.RetryFailures(); _shown = []; }
         _refreshing = true; _refresh.IsEnabled = false;
-        try { var discovered = await _environment.GetCatalogAsync(refresh); if (epoch != _epoch || _environment.IsStopping || !_open || _disposed) return; _catalog = LaunchpadCatalog.Build(Builtins(), _environment.Session.State.PinnedApps, discovered); Render(); }
+        try { var discovered = await _environment.GetCatalogAsync(refresh); if (epoch != _epoch || _environment.IsStopping || !_open || _disposed) return; _catalog.Update(_environment.Session.State.PinnedApps, discovered); Render(); }
         catch (OperationCanceledException) { }
         catch (Exception error) { if (_open && !_disposed) _environment.Report("Launchpad could not refresh installed apps", error); }
         finally { _refreshing = false; if (!_disposed) { _refresh.IsEnabled = true; if (_open && epoch != _epoch) _ = RefreshCatalogAsync(); } }
@@ -194,7 +205,8 @@ internal sealed class StartMenuView : Grid, IDisposable
     private void Render()
     {
         if (_disposed) return;
-        _filtered = DesktopOrganization.Apps(_catalog, _environment.Session.State, _category, _search.Text);
+        using var work = UiTrace.Measure("launchpad-render", "Launchpad", _catalog.Catalog.Count);
+        _filtered = _catalog.Filter(_environment.Session.State, _category, _search.Text);
         int pages = Math.Max(1, (_filtered.Count + LaunchpadCatalog.PageSize - 1) / LaunchpadCatalog.PageSize); _page = Math.Clamp(_page, 0, pages - 1);
         var shown = LaunchpadCatalog.Page(_filtered, _page);
         if (!_shown.SequenceEqual(shown))
@@ -204,9 +216,14 @@ internal sealed class StartMenuView : Grid, IDisposable
         }
         _previous.IsEnabled = _page > 0; _next.IsEnabled = _page + 1 < pages;
         _empty.Visibility = _filtered.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        _dots.Children.Clear();
-        for (int index = Math.Max(0, _page - 2); index < Math.Min(pages, _page + 3); index++)
-        { int target = index; var dot = new Button { Content = new Border { Width = target == _page ? 15 : 5, Height = 5, CornerRadius = new CornerRadius(3), Background = _environment.Theme.Brush(target == _page ? "NexusAccent" : "NexusMuted") }, Width = 22, Height = 28, Padding = new Thickness(0), Style = (Style)Application.Current.Resources["QuietButton"] }; dot.Click += (_, _) => { _page = target; Render(); }; Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(dot, "App page " + (index + 1)); _dots.Children.Add(dot); }
+        var indicatorKey = (pages, _page, _environment.Theme.HighContrast);
+        if (_indicatorKey != indicatorKey)
+        {
+            _dots.Children.Clear();
+            for (int index = Math.Max(0, _page - 2); index < Math.Min(pages, _page + 3); index++)
+            { int target = index; var dot = new Button { Content = new Border { Width = target == _page ? 15 : 5, Height = 5, CornerRadius = new CornerRadius(3), Background = _environment.Theme.Brush(target == _page ? "NexusAccent" : "NexusMuted") }, Width = 22, Height = 28, Padding = new Thickness(0), Style = (Style)Application.Current.Resources["QuietButton"] }; dot.Click += (_, _) => { _page = target; Render(); }; Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(dot, "App page " + (index + 1)); _dots.Children.Add(dot); }
+            _indicatorKey = indicatorKey;
+        }
         _hint.Text = _filtered.Count == 0 ? "No apps match. Try another category or search." : $"{_filtered.Count} apps   ·   Page {_page + 1} of {pages}";
         foreach (var (category, button) in _categories) { button.Background = category == _category ? _environment.Theme.Brush("NexusSelection") : _environment.Theme.Material("Card", _environment.Session.State.NativeGlass); button.Foreground = _environment.Theme.Brush("NexusText"); }
     }
@@ -224,5 +241,5 @@ internal sealed class StartMenuView : Grid, IDisposable
         foreach (var (category, button) in _categories) { button.Background = category == _category ? theme.Brush("NexusSelection") : theme.Material("Card", _environment.Session.State.NativeGlass); button.Foreground = theme.Brush("NexusText"); button.BorderBrush = theme.Edge; button.BorderThickness = new Thickness(1); button.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 10); }
         if (_empty.Child is StackPanel empty) { foreach (var label in empty.Children.OfType<TextBlock>()) label.Foreground = theme.Brush(label.FontSize > 15 ? "NexusText" : "NexusMuted"); foreach (var icon in empty.Children.OfType<FontIcon>()) icon.Foreground = theme.Brush("NexusMuted"); }
     }
-    public void Dispose() { if (_disposed) return; Hide(); _disposed = true; ++_renderVersion; _filterTimer.Stop(); }
+    public void Dispose() { if (_disposed) return; _environment.Session.Changed -= _catalog.Invalidate; Hide(); _disposed = true; ++_renderVersion; _filterTimer.Stop(); }
 }

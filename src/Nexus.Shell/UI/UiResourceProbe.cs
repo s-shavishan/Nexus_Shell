@@ -69,6 +69,9 @@ internal static class UiResourceProbe
             frame.UpdateLayout();
             if (launchpad.ActualWidth <= 0 || menu.ActualHeight <= 0) throw new InvalidOperationException("The production surfaces did not lay out.");
             checks.Add("Production menu bar and populated Launchpad layout");
+            stage = "retained-launchpad-rendering";
+            launchpad.VerifyRetainedRendering();
+            checks.Add("Twenty unchanged Launchpad renders retain item source and page-control identities");
             stage = "native-caption-registration-and-layout";
             checks.Add(await NativeCaptionProbe.RunAsync());
             stage = "native-resize-motion-and-close";
