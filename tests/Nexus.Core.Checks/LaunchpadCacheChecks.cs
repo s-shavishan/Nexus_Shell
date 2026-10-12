@@ -8,6 +8,29 @@ internal static class LaunchpadCacheChecks
     {
         int checks = 0;
         void Check(bool condition, string message) { checks++; if (!condition) throw new Exception(message); }
+
+        // Manual catalog refresh must not keep previously loaded icons forever.
+        // Active icon loads stay retained to avoid duplicate thumbnail work.
+        var loadingIcon = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var failedIcon = Task.FromException<string?>(new IOException("Previous icon read failed"));
+        var cachedIcons = new Dictionary<string, Task<string?>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["loaded"] = Task.FromResult<string?>("old shortcut icon"),
+            ["missing"] = Task.FromResult<string?>(null),
+            ["failed"] = failedIcon,
+            ["cancelled"] = Task.FromCanceled<string?>(new CancellationToken(true)),
+            ["loading"] = loadingIcon.Task
+        };
+        Check(AppIconRefreshPolicy.EvictCompleted(cachedIcons) == 4
+            && cachedIcons.Count == 1 && ReferenceEquals(cachedIcons["loading"], loadingIcon.Task),
+            "An explicit refresh must discard completed icons and retain in-flight thumbnails.");
+        _ = failedIcon.Exception; // Observe the intentional faulted test task.
+        Check(AppIconRefreshPolicy.EvictCompleted(cachedIcons) == 0,
+            "Repeated refresh must not evict or duplicate an active icon request.");
+        loadingIcon.SetResult("new shortcut icon");
+        Check(AppIconRefreshPolicy.EvictCompleted(cachedIcons) == 1 && cachedIcons.Count == 0,
+            "A formerly active icon should be eligible for eviction after it finishes.");
+
         // A slow initial scan must not discard an explicit Refresh click.
         // Even a burst of repeated clicks should produce exactly one forced
         // installed-app rescan after the current operation finishes.
