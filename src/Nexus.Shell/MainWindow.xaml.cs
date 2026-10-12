@@ -561,7 +561,7 @@ public sealed partial class MainWindow : Window
         {
             if (NativeMethods.TryGetHighContrast(out bool contrast)) _highContrast = contrast;
             else failed = true;
-            if (NativeMethods.TryGetAnimationsEnabled(out bool animations)) _animationsEnabled = animations;
+            if (NativeMethods.TryGetAnimationsEnabled(out bool animations)) _animationsEnabled = animations && _environment.Theme.Quality.Motion;
             else failed = true;
         }
         catch (Exception ex) { failed = true; error = ex; }
