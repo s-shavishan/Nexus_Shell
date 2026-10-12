@@ -88,8 +88,8 @@ internal sealed class TaskbarWindow : Window, IDisposable
             bool sameMonitor = application && ShellLayerInterop.Monitor(foreground).Monitor.Bounds == monitor;
             bool maximized = sameMonitor && NativeMethods.IsZoomed(foreground);
             _environment.ReconcileForeground(monitor, _registration.WorkArea, ShellLayerInterop.Scale(Handle));
-            bool fullscreen = sameMonitor && !maximized && NativeMethods.GetWindowRect(foreground, out var rect)
-                && rect.Left <= monitor.X && rect.Top <= monitor.Y && rect.Right >= monitor.Right && rect.Bottom >= monitor.Bottom;
+            bool fullscreen = sameMonitor && NativeMethods.GetWindowRect(foreground, out var rect)
+                && DockFullscreenPolicy.IsFullscreen(rect.Bounds, monitor, maximized, NativeMethods.WindowStyle(foreground));
             // Preview does not own Explorer's work area. Avoid covering a
             // maximized application's native title controls in that mode.
             bool attached = sameMonitor && !NativeMethods.IsMinimized(foreground) && NativeMethods.GetWindowRect(foreground, out var appBounds)
