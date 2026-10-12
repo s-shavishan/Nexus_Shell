@@ -36,7 +36,7 @@ internal sealed class WindowChrome : IDisposable
     private (ShellRect Rectangle, int Diameter, bool Clear)? _applied;
     private double _radius = 14;
     private bool _fullscreen, _disposed, _applying, _reported, _regionsEnabled = true;
-    private bool _interactiveResize;
+    private bool _interactiveResize, _liveSizeUnclipped;
     private bool _systemFrame;
     private readonly string _role;
     private long _moveStarted;
@@ -63,7 +63,7 @@ internal sealed class WindowChrome : IDisposable
     { _clip = rectangle; _radius = Math.Max(0, radiusDip); Refresh(); }
     internal void UseSystemFrame()
     {
-        _systemFrame = true;
+        _systemFrame = true; _liveSizeUnclipped = false; _applied = null;
         _ = SetWindowRgn(_handle, IntPtr.Zero, true);
         int policy = 0; _ = DwmSetWindowAttribute(_handle, 2, ref policy, 4);
         ShellLayerInterop.SetWindowPos(_handle, IntPtr.Zero, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0004 | 0x0010 | 0x0020);
@@ -76,7 +76,7 @@ internal sealed class WindowChrome : IDisposable
     }
     private void RefreshCore()
     {
-        if (_disposed || _systemFrame || _applying || !_regionsEnabled || IsIconic(_handle) || !GetWindowRect(_handle, out var window)) return;
+        if (_disposed || _systemFrame || _applying || !_regionsEnabled || _liveSizeUnclipped || IsIconic(_handle) || !GetWindowRect(_handle, out var window)) return;
         int width = window.Right - window.Left, height = window.Bottom - window.Top;
         if (width <= 0 || height <= 0 || (_customClip && _clip is null)) return;
         bool clear = !_customClip && (_fullscreen || MenuBarLayout.Attached(window.Bounds, ShellLayerInterop.Monitor(_handle).Work.Bounds, IsZoomed(_handle), ShellLayerInterop.Scale(_handle)));
@@ -116,6 +116,13 @@ internal sealed class WindowChrome : IDisposable
             {
                 if (message == NativeMethods.NexusMinimizeMessage && _minimizeRequested is not null) { _minimizeRequested(); return IntPtr.Zero; }
                 if (message == NativeMethods.NexusRestoreMessage) { Restored?.Invoke(); return IntPtr.Zero; }
+                if (message == 0x0214 && LiveResizeRegionPolicy.ShouldSuspend(_interactiveResize, _resizable, _customClip, _systemFrame, _liveSizeUnclipped))
+                {
+                    // Stop clipping to a stale rectangle while WM_SIZING changes
+                    // HWND dimensions. Recreate rounded corners once sizing ends.
+                    if (SetWindowRgn(_handle, IntPtr.Zero, true) != 0)
+                    { _liveSizeUnclipped = true; _applied = null; Trace("region-live-sizing"); }
+                }
                 if (message == 0x0231)
                 {
                     _interactiveResize = true; _moveStarted = Stopwatch.GetTimestamp(); _sizeEvents = _regionUpdates = 0;
@@ -172,6 +179,11 @@ internal sealed class WindowChrome : IDisposable
             Trace("native-size", (int)(packed & 0xFFFF), (int)((packed >> 16) & 0xFFFF), (int)wp.ToUInt64());
         }
         if (!_disposed && message == 0x0005) { bool minimized = wp.ToUInt64() == 1; bool restoring = _wasMinimized && !minimized; _wasMinimized = minimized; if (restoring) Restored?.Invoke(); }
+        if (!_disposed && message == 0x0232 && _liveSizeUnclipped)
+        {
+            _liveSizeUnclipped = false;
+            Refresh();
+        }
         if (!_disposed && message is 0x0005 or 0x0047 or 0x02E0) Refresh();
         return result;
     }
