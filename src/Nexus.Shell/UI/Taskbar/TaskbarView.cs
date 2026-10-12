@@ -124,6 +124,45 @@ internal sealed class TaskbarView : Grid
         ToolTipService.SetToolTip(button, "Open " + app.Name); Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, "Open " + app.Name);
         _motion?.AttachHover(button); return button;
     }
+    // Explicit Launchpad rescan invalidates the shared icon cache. Recreate
+    // pinned icon surfaces once, without losing the current running-window
+    // entries or turning normal dock polling into a visual rebuild.
+    internal void RefreshPinnedAppIcons()
+    {
+        if (_released) return;
+        _shownPins = [];
+        Refresh(_windowSet.Windows.ToArray());
+    }
+
+    internal void VerifyPinnedIconRefresh()
+    {
+        var saved = _environment.Session.State.PinnedApps.ToArray();
+        try
+        {
+            _environment.Session.State.PinnedApps.Clear();
+            _environment.Session.State.PinnedApps.Add(
+                new AppEntry("files", "Files", "nexus:files", "", "System"));
+            Refresh([]);
+            var oldButton = (Button)_pins.Children[0];
+            var oldIcon = _pinImages[oldButton];
+            RefreshPinnedAppIcons();
+            var newButton = (Button)_pins.Children[0];
+            if (ReferenceEquals(oldButton, newButton) || !_pinImages.TryGetValue(newButton, out var newIcon)
+                || ReferenceEquals(oldIcon, newIcon))
+                throw new InvalidOperationException("Manual installed-app refresh retained the old pinned dock icon.");
+            var stableButton = newButton;
+            for (int i = 0; i < 20; i++) Refresh([]);
+            if (!ReferenceEquals(stableButton, _pins.Children[0]))
+                throw new InvalidOperationException("Ordinary dock polling rebuilt a refreshed pin.");
+        }
+        finally
+        {
+            _environment.Session.State.PinnedApps.Clear();
+            _environment.Session.State.PinnedApps.AddRange(saved);
+            Refresh([]);
+        }
+    }
+
     internal void Refresh(IReadOnlyList<RunningWindow> windows)
     {
         if (_released) return;
