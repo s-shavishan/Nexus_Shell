@@ -68,6 +68,17 @@ The actual dock HWND already calls `WindowMaterial.Apply` to manage acrylic atta
 - An in-flight animation continues when the state is unchanged; turning off animation, unloading a control, disabling effects or changing presence still applies the correct static final state. Dispose, detach and global motion-reset clear tracked animation state.
 - Portable dock checks cover animation vs settle decisions and accessibility/reduced-effects changes. Test actual minimize/restore cues in the Windows preview before accepting this change.
 
+### Stage 9 — Native glass dispatcher races
+
+- The per-controller `GlassStateDispatchGate` now uses atomic admission tickets. A late completion or error from an old ticket cannot release the pending callback belonging to a newer event.
+- Regression tests include **1,500 parallel native state requests** (exactly one admitted pending update) and a simulated inline-completion/late-rejection race. They verify that the newer update is not lost or accidentally unblocked.
+- This is defensive concurrency work. Real controller callback timing and actual frame pacing remain part of Windows acceptance.
+
+### Stage 10 — Dock density geometry retention
+
+- `TaskbarView.ApplyDensity` now only writes button/icon dimensions and divider visibility when the target values differ. Window-list changes can still reconcile running apps but do not relayout every previously stable button.
+- The production native WinUI density probe now calls `ApplyDensity` **100 times** and asserts no unchanged button/icon height/width, separator-visibility or preferred-width notifications. Compact↔normal geometry is still validated separately.
+
 ## Required AppVeyor validation
 
 1. Build this **exact branch head SHA**, not the already-green P2.2 revision.
