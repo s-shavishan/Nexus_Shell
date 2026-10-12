@@ -69,6 +69,32 @@ internal static class DockChecks
             && DockRefreshCadence.Interval(false, false, true) == DockRefreshCadence.ActiveMilliseconds,
             "Open dock previews, menus and other interactions require fast native pointer sampling.");
 
+        // Visibility edge polling is intentionally fast, but native maximize
+        // repair should not issue duplicate DWM queries on every 80 ms tick.
+        var repair = new ForegroundRepairCadence();
+        var firstWindow = new IntPtr(101);
+        var nextWindow = new IntPtr(102);
+        Check(!repair.ShouldSample(IntPtr.Zero, false, 0),
+            "No foreground window must not trigger a native repair pass.");
+        Check(repair.ShouldSample(firstWindow, true, 0),
+            "The initial maximized foreground window must receive an immediate repair.");
+        Check(!repair.ShouldSample(firstWindow, true, 80)
+            && !repair.ShouldSample(firstWindow, true, 999),
+            "Repeated edge-reveal ticks must not repeat native DWM repair before the fallback interval.");
+        Check(repair.ShouldSample(firstWindow, true, 1000),
+            "A stable foreground window must receive bounded periodic reconciliation.");
+        Check(repair.ShouldSample(nextWindow, true, 1001),
+            "Switching foreground windows must never wait for the fallback interval.");
+        Check(repair.ShouldSample(nextWindow, false, 1002)
+            && repair.ShouldSample(nextWindow, true, 1003),
+            "Maximize and restore transitions must trigger immediate native geometry checks.");
+        Check(!repair.ShouldSample(nextWindow, true, 1004)
+            && repair.ShouldSample(nextWindow, true, 999),
+            "Clock rollback must recover the repair schedule instead of stranding updates.");
+        Check(!repair.ShouldSample(IntPtr.Zero, false, 1000)
+            && repair.ShouldSample(nextWindow, true, 1001),
+            "Foreground loss and reacquisition must resample even the same HWND.");
+
         var visibility = new DockVisibility();
         Check(visibility.Update(true, false, false, false, false, 0), "Floating dock must be visible on the desktop.");
         Check(!visibility.Update(true, true, false, false, false, 1), "A maximized app must hide the floating dock.");
