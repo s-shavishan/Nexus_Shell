@@ -16,6 +16,16 @@ internal static class WindowPolishChecks
         Check(!WindowExitPolicy.AcceptRestore(true, true),
             "Disposed closing frames must not restart compositor animations.");
 
+        var menuBounds = new ShellRect(-1920, -220, 1920, 38);
+        uint unchangedMenu = MenuBarNativePlacement.Flags(true, menuBounds, menuBounds);
+        Check((unchangedMenu & (MenuBarNativePlacement.NoMove | MenuBarNativePlacement.NoSize))
+                == (MenuBarNativePlacement.NoMove | MenuBarNativePlacement.NoSize)
+            && (unchangedMenu & MenuBarNativePlacement.NoActivate) != 0,
+            "Repeated menu bar positioning must reassert topmost Z-order without moving, resizing or activating the HWND.");
+        uint monitorChange = MenuBarNativePlacement.Flags(true, menuBounds, new ShellRect(0, 0, 2560, 48));
+        Check(monitorChange == MenuBarNativePlacement.NoActivate
+            && MenuBarNativePlacement.Flags(false, menuBounds, menuBounds) == MenuBarNativePlacement.NoActivate,
+            "A changed or unreadable native monitor geometry must fully reposition the menu bar.");
         var desktop = new ShellRect(-1920, -220, 1920, 1080);
         Check(DesktopSurfacePositionPolicy.RequiresMove(false, default, desktop),
             "Desktop must initially acquire its monitor rectangle even if the native position query fails.");
