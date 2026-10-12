@@ -145,6 +145,13 @@ internal static class UiResourceProbe
                 }
                 if (!material.Status.Contains("requested " + quality))
                     throw new InvalidOperationException("The surface did not disclose requested and effective quality.");
+                // Native XAML probe: quality and fallback must retain the same
+                // bevel element and must not rewrite identical properties.
+                int writes = GlassDecorations.PropertyWrites(frame);
+                for (int i = 0; i < 100; i++)
+                    GlassDecorations.Apply(frame, environment.Theme, material.Quality.Effective);
+                if (GlassDecorations.PropertyWrites(frame) != writes)
+                    throw new InvalidOperationException("Unchanged Liquid Glass bevel styling triggered repeated XAML dependency-property writes.");
             }
             checks.Add("Four requested glass qualities; native surface retains the user's selection and palette tiers detach backdrop with an opaque base");
             session.State.NativeGlass = false; material.Apply(window, frame, environment); frame.UpdateLayout();
