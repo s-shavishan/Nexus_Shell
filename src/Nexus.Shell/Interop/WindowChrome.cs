@@ -41,6 +41,7 @@ internal sealed class WindowChrome : IDisposable
     private readonly string _role;
     private long _moveStarted;
     private int _sizeEvents, _regionUpdates;
+    internal int RegionRefreshRequests { get; private set; }
     internal WindowChrome(IntPtr handle, bool resizable = false, bool customClip = false, Action? tuck = null, int minimumWidth = 480, int minimumHeight = 360, Action<bool>? stateChanged = null, Action? minimizeRequested = null, Action? closeRequested = null, string role = "Window")
     {
         _role = role;
@@ -57,10 +58,26 @@ internal sealed class WindowChrome : IDisposable
     }
     internal void Trace(string stage, int width = 0, int height = 0, int value = 0) => UiTrace.Surface(stage, _role, _handle, width, height, value);
     internal void SetCorners(bool highContrast, double radiusDip = 14)
-    { _radius = highContrast ? 0 : radiusDip; Refresh(); }
-    internal void SetFullscreen(bool value) { _fullscreen = value; Refresh(); }
+    {
+        double radius = ChromeAppearancePolicy.Radius(radiusDip, highContrast);
+        if (!ChromeAppearancePolicy.CornersChanged(_radius, radius)) return;
+        _radius = radius;
+        Refresh();
+    }
+    internal void SetFullscreen(bool value)
+    {
+        if (_fullscreen == value) return;
+        _fullscreen = value;
+        Refresh();
+    }
     internal void SetClip(ShellRect rectangle, double radiusDip)
-    { _clip = rectangle; _radius = Math.Max(0, radiusDip); Refresh(); }
+    {
+        double radius = ChromeAppearancePolicy.Radius(radiusDip);
+        if (!ChromeAppearancePolicy.ClipChanged(_clip, rectangle, _radius, radius)) return;
+        _clip = rectangle;
+        _radius = radius;
+        Refresh();
+    }
     internal void UseSystemFrame()
     {
         _systemFrame = true; _liveSizeUnclipped = false; _applied = null;
@@ -70,6 +87,7 @@ internal sealed class WindowChrome : IDisposable
     }
     private void Refresh()
     {
+        RegionRefreshRequests++;
         try { RefreshCore(); }
         catch (Exception ex)
         { _regionsEnabled = false; if (!_reported) { _reported = true; Log.Write("Rounded window decoration unavailable", ex); } }
