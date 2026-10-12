@@ -80,6 +80,26 @@ internal static class WindowPolishChecks
         }
         budget.Prune([1]); Check(budget.Admit(65, 100, work, 5000), "Pruning closed apps must free budget capacity.");
         Check(!budget.Admit(0, 100, work, 5000) && !budget.Admit(2, 0, work, 5000), "Invalid native identities must not consume retry capacity.");
+        var tint = new GlassTintRetention();
+        var recipe = GlassRecipe.For(AuraPalette.For("Midnight"), "Dock", "Clear");
+        var secondRecipe = GlassRecipe.For(AuraPalette.For("Midnight"), "Dock", "Frosted");
+        Check(tint.RequiresApply(recipe), "A new native acrylic controller must receive its first tint.");
+        tint.Commit(recipe);
+        Check(!tint.RequiresApply(recipe)
+            && !tint.RequiresApply(recipe with { }),
+            "A stable acrylic recipe must not rewrite native tint and luminosity properties.");
+        Check(tint.RequiresApply(secondRecipe),
+            "A changed glass profile must reconfigure native controller tint.");
+        // A failed partial update does not commit an unverified recipe.
+        Check(tint.RequiresApply(secondRecipe),
+            "An uncommitted tint change must be retried rather than assumed applied.");
+        tint.Commit(secondRecipe);
+        Check(!tint.RequiresApply(secondRecipe) && tint.RequiresApply(secondRecipe, force: true),
+            "System configuration changes can explicitly reassert native tint even when the recipe is unchanged.");
+        tint.Reset();
+        Check(tint.RequiresApply(secondRecipe),
+            "Recreating an acrylic controller must reapply the tint from scratch.");
+
         foreach (string quality in GlassQuality.Choices)
         foreach (bool contrast in new[] { false, true })
         foreach (bool simple in new[] { false, true })
