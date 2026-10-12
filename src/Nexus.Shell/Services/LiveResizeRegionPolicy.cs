@@ -18,7 +18,7 @@ internal static class LiveResizeRegionPolicy
     // GDI work until the final WM_EXITSIZEMOVE or capture-cancellation event.
     // Noninteractive/programmable window resizes still refresh immediately.
     internal static bool ShouldRefreshNative(uint message, bool unclipped)
-        => !unclipped && message is 0x0005 or 0x0047 or 0x02E0;
+        => !unclipped && (message is 0x0005 or 0x0047 or 0x02E0);
 
     internal static bool IsInterrupted(uint message)
         => message is 0x001F or 0x0215; // WM_CANCELMODE, WM_CAPTURECHANGED
