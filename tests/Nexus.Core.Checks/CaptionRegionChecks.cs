@@ -21,6 +21,21 @@ internal static class CaptionRegionChecks
             "The Windows system-frame fallback must not be modified.");
         Check(!LiveResizeRegionPolicy.ShouldSuspend(true, true, false, false, true),
             "Repeated WM_SIZING events must not continuously reapply region updates.");
+        foreach (uint terminal in new uint[] { 0x0232, 0x001F, 0x0215 })
+        {
+            Check(LiveResizeRegionPolicy.ShouldRestore(terminal, true),
+                "All normal or cancelled sizing endings must restore rounded native window corners.");
+            Check(!LiveResizeRegionPolicy.ShouldRestore(terminal, false),
+                "Frames without a suspended clipping region must not recreate GDI regions.");
+        }
+        Check(!LiveResizeRegionPolicy.ShouldRestore(0x0214, true),
+            "Active WM_SIZING must not prematurely restore its stale clipping rectangle.");
+        Check(!LiveResizeRegionPolicy.ShouldRestore(0x0005, true),
+            "Intermediate WM_SIZE notifications must not end a live sizing gesture.");
+        Check(LiveResizeRegionPolicy.IsInterrupted(0x001F)
+            && LiveResizeRegionPolicy.IsInterrupted(0x0215)
+            && !LiveResizeRegionPolicy.IsInterrupted(0x0232),
+            "Cancellation-only signals must not be confused with a normal end-of-sizing event.");
 
         foreach (double scale in new[] { 1d, 1.25, 1.5, 2 })
         {
