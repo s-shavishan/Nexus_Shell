@@ -54,11 +54,25 @@ The actual dock HWND already calls `WindowMaterial.Apply` to manage acrylic atta
 - `MenuBarWindow.ApplyAppearance` reuses the paint-retention helper to avoid duplicate border-brush writes after `WindowMaterial.Apply`.
 - Portable Core checks verify unchanged/changed/unavailable geometry and preserved no-activation behavior.
 
+### Stage 7 — Coalesce native acrylic state bursts without dropping controller changes
+
+- `WindowMaterial` now gives every native `LiquidGlassBackdrop` attachment its own `GlassStateDispatchGate`. Multiple StateChanged events that arrive before the next WinUI callback read the **latest** state in one retained frame update.
+- The per-controller gate prevents stale queued notifications from the previous attachment from suppressing a replacement controller's first frame update. The existing `GlassAttachmentGate` still rejects any late update from an obsolete/disposed backdrop.
+- Rejected or throwing dispatcher admission, stale callbacks, UI mutation exceptions and diagnostic failures all release the gate. Status/failure callbacks retain their existing independent safety paths.
+- New portable `GlassStateDispatchChecks` tests 1,000 notifications with one queued repaint, 500-style controller lifecycle coverage through the existing dispatcher tests, replacement, reentrancy, queue failures and recovery.
+- Avoid quantitative FPS claims without ETW and compositor frame-time evidence; this reduces avoidable UI callback work, not proven native GPU rendering latency.
+
+### Stage 8 — Retain dock indicator animations across unchanged presence
+
+- `DockMotionController.SetIndicator` now uses `DockIndicatorUpdatePolicy`: a real presence change animates with retained compositor templates when allowed; a stable state does nothing rather than reassigning scale, opacity and center point.
+- An in-flight animation continues when the state is unchanged; turning off animation, unloading a control, disabling effects or changing presence still applies the correct static final state. Dispose, detach and global motion-reset clear tracked animation state.
+- Portable dock checks cover animation vs settle decisions and accessibility/reduced-effects changes. Test actual minimize/restore cues in the Windows preview before accepting this change.
+
 ## Required AppVeyor validation
 
 1. Build this **exact branch head SHA**, not the already-green P2.2 revision.
 2. Core and Runtime suites pass, including native `NativeChromeChecks`; WinUI XAML generation, publish and packaging pass.
-3. WinUI native probe passes `glass-quality-selection-and-fallback`, `glass-retained-paint` and the retained-motion tests. Record headless skips separately.
+3. The Core runner executes `GlassStateDispatchChecks`, `DockExperienceChecks` and the existing glass dispatch tests; WinUI native probe passes `glass-quality-selection-and-fallback`, `glass-retained-paint` and the retained-motion tests. Record headless skips separately.
 4. Follow any errors to their actual source and fix the development branch. Do not merge on an older CI result.
 
 ## Your Windows acceptance checklist
@@ -68,6 +82,7 @@ The actual dock HWND already calls `WindowMaterial.Apply` to manage acrylic atta
 - Resize the dock/menu bar with multiple pinned/running icons; maximize/minimize a normal app; test full-screen video/game and automatic dock reveal.
 - Cycle Ultra → Balanced → Essential → Solid and Clear/Balanced/Frosted material styles. Confirm text stays legible, Solid stays opaque and unsupported acrylic has a readable fallback.
 - Repeat at 100%, 125%, 150% and (if available) 200% scaling, including a secondary display with a negative virtual-screen origin. Test both High Contrast and Reduced Effects.
+- Rapidly minimize/restore apps with the floating dock. Verify indicators still animate once on real state changes, settle in Reduced Effects and never stick mid-transition.
 - Observe CPU/GPU usage and perceived lag; collect optional Nexus-Shell-UI ETW plus DWM frame-time evidence before making **quantitative** performance claims.
 - Keep the exact branch build artifacts, probe log, failure stages and any screenshots of visual defects. Report affected GPU/OS/DPI if a problem persists.
 
