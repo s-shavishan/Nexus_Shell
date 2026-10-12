@@ -272,7 +272,11 @@ internal sealed class TaskbarView : Grid
             bool transitioned = item.Presence != presence;
             bool initialized = item.Presence is not null; item.Presence = valid ? presence : null; item.NewlyOpened = false;
             if (cue != DockMotionCue.None) { if (item.Icon.IsLoaded && _dockMotion is not null) { _dockMotion.Play(item.Icon, cue); item.PendingCue = DockMotionCue.None; } else item.PendingCue = cue; }
-            if (_dockMotion is not null && transitioned) { item.Indicator.Width = 22; item.Indicator.Opacity = 1; _dockMotion.SetIndicator(item.Indicator, presence, initialized); }
+            if (_dockMotion is not null && transitioned)
+            {
+                SetIndicatorLayout(item.Indicator, 22, 1);
+                _dockMotion.SetIndicator(item.Indicator, presence, initialized);
+            }
             if (item.State == state && item.Button.IsEnabled == valid && item.PreviewsEnabled == _environment.Session.State.DockPreviews) continue;
             item.State = state;
             if (item.Button.IsEnabled != valid) item.Button.IsEnabled = valid;
@@ -282,16 +286,24 @@ internal sealed class TaskbarView : Grid
             var marker = _environment.Theme.Brush(active ? "NexusAccent" : "NexusMuted");
             if (!ReferenceEquals(item.Indicator.Background, marker)) item.Indicator.Background = marker;
             // Indicator brush already reflects the active state above.
-            if (_dockMotion is null) { item.Indicator.Width = active ? 22 : minimized ? 5 : 10; item.Indicator.Opacity = minimized ? .45 : 1; }
+            if (_dockMotion is null) SetIndicatorLayout(item.Indicator, active ? 22 : minimized ? 5 : 10, minimized ? .45 : 1);
             string action = minimized ? "Restore " : active ? "Minimize " : "Switch to ";
             ToolTipService.SetToolTip(item.Button, _environment.Session.State.DockPreviews ? null : action + item.Window.Title);
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(item.Button, action + item.Window.Title);
         }
     }
+    private static void SetIndicatorLayout(Border indicator, double width, double opacity)
+    {
+        // Presence animation is compositor-owned; WinUI should not remeasure an
+        // underline whose reserved layout slot and opacity are unchanged.
+        if (indicator.Width != width) indicator.Width = width;
+        if (indicator.Opacity != opacity) indicator.Opacity = opacity;
+    }
+
     private void PrepareMotion(DockItem item)
     {
         if (_dockMotion is null) return;
-        item.Indicator.Width = 22; item.Indicator.Opacity = 1;
+        SetIndicatorLayout(item.Indicator, 22, 1);
         _dockMotion.SetIndicator(item.Indicator, item.Presence ?? DockPresence.Running, false);
         _dockMotion.Play(item.Icon, item.PendingCue); item.PendingCue = DockMotionCue.None;
     }
