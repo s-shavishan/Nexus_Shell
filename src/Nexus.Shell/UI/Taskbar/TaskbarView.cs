@@ -361,10 +361,9 @@ internal sealed class TaskbarView : Grid
                 _clockButton.UnregisterPropertyChangedCallback(UIElement.VisibilityProperty, clock);
                 _desktopButton.UnregisterPropertyChangedCallback(UIElement.VisibilityProperty, desktop);
                 _date.UnregisterPropertyChangedCallback(UIElement.VisibilityProperty, date);
-                SetAvailableWidth(PreferredWidthDip);
             }
         }
-        finally { _environment.Session.State.CompactDock = original; ApplyDensity(); }
+        finally { _environment.Session.State.CompactDock = original; ApplyDensity(); SetAvailableWidth(PreferredWidthDip); }
     }
     private void ApplyFrameCorners()
     {
