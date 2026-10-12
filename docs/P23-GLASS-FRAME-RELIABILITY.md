@@ -1,0 +1,51 @@
+# Nexus Shell P2.3 — Liquid Glass & Native Frame Responsiveness
+
+Branch: `feat/p23-glass-frame-reliability`  
+Base: `0c8bfb59339ec265a0ddfe36d570e557d2db6bba` (squashed P2.2 PR #21)  
+Status: **IN DEVELOPMENT / HOLD MERGE**. Windows compilation, CI and pixel-level acceptance are required.
+
+## Engineering findings and implemented stages
+
+### Stage 1 — Prevent an unnecessary synchronous GDI repaint during live sizing
+
+- Existing `WindowChrome` already temporarily releases stale native rounded clips on `WM_SIZING`, and restores the clip on `WM_EXITSIZEMOVE`, `WM_CANCELMODE` or `WM_CAPTURECHANGED`.
+- Previously the *release* used `SetWindowRgn(hwnd, null, redraw: true)`. A forced paint while the HWND is resizing can create extra invalidation and potentially visible edge flicker. It now uses `redraw: false`; the subsequent native sizing geometry messages still repaint the surface, and restoring the **final** rounded clip still uses `redraw: true`.
+- `LiveResizeRegionPolicy` documents the two redraw modes; Core checks assert the policy. Native `NativeChromeChecks` exercises all three terminal paths with its own Win32 HWND, checking that the clip is suspended and restored with the intended paint flags.
+- Dock custom clips, system-frame fallback, noninteractive resizes, HWND ownership and standard WinUI rendering remain unchanged.
+- **Caveat:** A GDI region test proves state/lifecycle, not absence of a black outline or dropped frames on a particular GPU. User visual testing and ETW/DWM capture remain necessary.
+
+### Stage 2 — Retain the Liquid Glass XAML bevel
+
+- `GlassDecorations.Apply` retains a single non-interactive rim and its last effective edge brush, inset radius, opacity and visibility.
+- Repeated calls with unchanged palette, quality and radius do not rewrite XAML dependency properties, invalidate layout or reconstruct the rim visual.
+- `GlassRimAppearance` preserves stronger Ultra highlights, Balanced highlights and the Solid/Essential/High Contrast/Reduced Effects fallback semantics. Core tests cover all quality and accessibility combinations.
+- WinUI `UiResourceProbe` applies the current effective material quality **100 times per quality tier** and fails if any unnecessary rim dependency-property writes occur.
+- Palette/quality changes and XAML CornerRadius change notifications still repaint when the appearance **actually** changes.
+
+### Stage 3 — Retain solid/transparent window material paint
+
+- `GlassPaintRetention` avoids assigning the same background brush, border brush or requested XAML element theme repeatedly.
+- `WindowMaterial` uses the retained update path for initial opaque attach paint, Active-state paint, fallback and reapply paths. The per-HWND native acrylic controller remains owned by the window; controller creation, failure callbacks, attachment generation and theme/power fallback rules are unchanged.
+- `UiResourceProbe` registers real WinUI Background and BorderBrush property-change callbacks, runs 100 repeated material updates in a stable opaque tier and rejects spurious dependency-property writes.
+- The solid fallback remains fully opaque for Solid/Essential and unavailable native-backdrop states; repeated no-op material calls do not take over foreground input.
+
+## Required AppVeyor validation
+
+1. Build this **exact branch head SHA**, not the already-green P2.2 revision.
+2. Core and Runtime suites pass, including native `NativeChromeChecks`; WinUI XAML generation, publish and packaging pass.
+3. WinUI native probe passes `glass-quality-selection-and-fallback`, `glass-retained-paint` and the retained-motion tests. Record headless skips separately.
+4. Follow any errors to their actual source and fix the development branch. Do not merge on an older CI result.
+
+## Your Windows acceptance checklist
+
+- Run Nexus Shell as a **preview**, preserving the working desktop and a way to restart Explorer; do not change the default shell until validated.
+- Drag/resize Files and at least two other Nexus windows 20 times; cancel with Escape and switch focus during a drag. Confirm rounded corners restore, no persistent black outlines, native resize edges still work, and the UI doesn't freeze.
+- Resize the dock/menu bar with multiple pinned/running icons; maximize/minimize a normal app; test full-screen video/game and automatic dock reveal.
+- Cycle Ultra → Balanced → Essential → Solid and Clear/Balanced/Frosted material styles. Confirm text stays legible, Solid stays opaque and unsupported acrylic has a readable fallback.
+- Repeat at 100%, 125%, 150% and (if available) 200% scaling, including a secondary display with a negative virtual-screen origin. Test both High Contrast and Reduced Effects.
+- Observe CPU/GPU usage and perceived lag; collect optional Nexus-Shell-UI ETW plus DWM frame-time evidence before making **quantitative** performance claims.
+- Keep the exact branch build artifacts, probe log, failure stages and any screenshots of visual defects. Report affected GPU/OS/DPI if a problem persists.
+
+## Merge policy
+
+No P2.3 PR or merge until the changes accumulate into a meaningful integrated batch, AppVeyor is green for the exact revision, and you report Windows preview acceptance. Keep `main` untouched; fixes will be committed on this branch.
