@@ -1,0 +1,9 @@
+git checkout -qf f85777c436f050e020aa07361990d126fb5b98e3
+PASS: production NCCALCSIZE pixel preservation and Windows-frame fallback (own native fixture).
+PASS: actual named-pipe requests, role rejection, protocol mismatch, frame limits, disconnect cancellation, and 40 concurrent health requests.
+PASS: actual Windows job cleanup kills the assigned worker and preserves its external child.
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+Exported 8 production templates for native WinUI validation.
+The native UI check failed with exit code 1. See the build logs and Nexus log.

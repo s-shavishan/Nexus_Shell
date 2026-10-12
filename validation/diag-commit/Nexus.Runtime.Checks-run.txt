@@ -1,0 +1,14 @@
+PASS: 21 material/protocol checks; strict typed edits, legacy defaults, isolated appearance reads, durable profiles, normalization and icon-anchor round trips.
+PASS: 273 Phase 02 search assertions; scope, literal queries, bounded Unicode IPC parsing, cancellation, engine failure and Core routing.
+SKIP: Everything WM_COPYDATA transport checks require Windows.
+PASS: 8 Phase 01 state-writer assertions; rejected-save recovery, immutable queued snapshots and production Core rejection/conflict routing.
+PASS: durable revisions, profile writer lease, failed writes, legacy migration, lost acknowledgements, and recovery-copy discovery.
+PASS: 30 simulated isolated picker crashes, browser reuse, cancellation, readiness/heartbeat timeouts, process bounds, and restart cooldown.
+PASS: 98 settings assertions; allowlist, stale epochs, timeouts, cancellation, bounded final intents, routes, persistence and x64 native layouts. Hardware calls require Windows VM acceptance.
+PASS: 122 Control Center checks; peer/window authorization, sole-writer preferences, ordered hide/reopen, lost acknowledgments, cancelled actions, heartbeat/startup recovery, cooldown, termination failure and repeated crashes.
+PASS: 18 panel wake checks; revisions, compact presentation, cancellation, admission, heartbeat, shutdown and independent motion.
+PASS: production stream connection, framed state commit, role rejection, disconnect cancellation, empty-probe handling, and invalid/truncated frame rejection (OS transport replaced).
+SKIP: actual named-pipe tests explicitly disabled for this restricted test environment.
+SKIP: Windows job cleanup and external-app breakaway require Windows.
+SKIP: native settings reads and HWND ownership require Windows.
+PASS: 101 runtime assertions; durable state, uncertain-save reconciliation, caller cancellation, and simulated Files recovery. Native checks skipped: True.

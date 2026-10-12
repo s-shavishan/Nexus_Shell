@@ -1,0 +1,1 @@
+PASS: production verifier preserves failure, prints stage/HRESULT and probe-only log, and retains both artifacts (mock process; native WinUI not executed).

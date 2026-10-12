@@ -1,0 +1,107 @@
+{
+  "repository": "https://github.com/s-shavishan/Nexus_Shell",
+  "base": "f85777c436f050e020aa07361990d126fb5b98e3",
+  "head": "0647e4c14d31eb396cf655e7bc333524f5dedbc4",
+  "branch": "codex/p0-interaction-validation",
+  "commits": [
+    "f30e20d649aa751c45f3ec560187c9ba96747992",
+    "0647e4c14d31eb396cf655e7bc333524f5dedbc4"
+  ],
+  "tree": "72dd01d15ec54e387e55c5a5fe2d8f6c13b25f56",
+  "expected_tree": "72dd01d15ec54e387e55c5a5fe2d8f6c13b25f56",
+  "source_files": [
+    {
+      "path": "appveyor.yml",
+      "base_sha256": "1a06683bb9cc1b4852fd80c6741cfc3213d61c03428cf3c524c0b81f2aeca26f",
+      "final_sha256": "ba5591de368a5e485d3896d727a49d644e3a1566381fa774524c65a8d1cf16ef"
+    },
+    {
+      "path": "docs/APPVEYOR-P0-PREFLIGHT.md",
+      "base_sha256": null,
+      "final_sha256": "4d6c6c08f7caf05c1a3180075623f46eb623f6772d41623d69a2fa9647b19609"
+    },
+    {
+      "path": "docs/NATIVE-INPUT-PROBE.md",
+      "base_sha256": null,
+      "final_sha256": "311363ffe616b0864880be0d2214892cf7c58d6eec1f4647a8619fafb1de4a7d"
+    },
+    {
+      "path": "scripts/build.ps1",
+      "base_sha256": "0eab0c6387397fb4a5d2041d0c1c4b67567987b7905dad8432acfda09e497fe0",
+      "final_sha256": "740a02f984348787644d686e1720299b629e6618f9734cb6bd65d87c42a01fda"
+    },
+    {
+      "path": "scripts/test-native-ui-diagnostics.ps1",
+      "base_sha256": null,
+      "final_sha256": "ff5dec5ed0e7d486a1d05d3edb208e30854fb5103b82ad63725569fdaa53f81b"
+    },
+    {
+      "path": "scripts/verify-native-input.ps1",
+      "base_sha256": null,
+      "final_sha256": "6c0af0c247c7fa3a84dc8112e5971023f881b59b4604efe243f4e9f5dcd63e10"
+    },
+    {
+      "path": "scripts/verify-native-ui.ps1",
+      "base_sha256": "f34d39f9737491fbb81a2a0194a993c39a459a45ddba79d1812b6979b2a331c1",
+      "final_sha256": "dae7e68feecfb6ff99d6d7fede4ef8fe6226a8535a18de273fda96d8b22fe2c2"
+    },
+    {
+      "path": "src/Nexus.Shell/App.xaml.cs",
+      "base_sha256": "17b8ee9b8413a66afd1a2806f672d08671987d3ddfe65f738cf98c0f6326ae0e",
+      "final_sha256": "2e57ca828589c1520d6898328d6f0d909d8096541755cc84e3a8a015da21a5fc"
+    },
+    {
+      "path": "src/Nexus.Shell/Interop/InputProbeDriver.cs",
+      "base_sha256": null,
+      "final_sha256": "68e31932fe02b7d3981753c51570acbaf55480771ea4aa814ec26c075b95016c"
+    },
+    {
+      "path": "src/Nexus.Shell/Services/InputProbeOptions.cs",
+      "base_sha256": null,
+      "final_sha256": "0e235a773d582aff9a563775d158feb59d66e7956d6b3b88b932aa762449dacc"
+    },
+    {
+      "path": "src/Nexus.Shell/Services/Log.cs",
+      "base_sha256": "7198e7e814613247a839cb370c57fc1d87b3a95412886718710340aad32e5a8c",
+      "final_sha256": "d9fa9442cdc4245c134c141abcd6d6492d79d680c835e4b3358d7c967db690b3"
+    },
+    {
+      "path": "src/Nexus.Shell/UI/NativeCaptionProbe.cs",
+      "base_sha256": "180787ce3b1b3843d5c1a3d3b6415b5c22189737be3a7ebf19b54b2592f06050",
+      "final_sha256": "53f6d60ef6f72286dc9c20432791b935aae4852575b6ebb2698092bd9a06f2c9"
+    },
+    {
+      "path": "src/Nexus.Shell/UI/NativeProbeLayout.cs",
+      "base_sha256": null,
+      "final_sha256": "678ab6fa5120da2120c833e8c560c02a57861e2d15c4949fdda1e34844528bfc"
+    },
+    {
+      "path": "src/Nexus.Shell/UI/UiInteractionProbe.cs",
+      "base_sha256": null,
+      "final_sha256": "e3c1b5ead5f5f9c57554fa5be8c59ceca77939deb6483f602822d117926ee597"
+    },
+    {
+      "path": "src/Nexus.Shell/UI/UiResourceProbe.cs",
+      "base_sha256": "b3b5ce443f9cc79a98697a745db90801a604514dd5a70cd2aa0f23d26f36f0fc",
+      "final_sha256": "e794a65803e8fb658bf12409da6f766bb7d26573192d97474d5222789ee0d54c"
+    },
+    {
+      "path": "tests/Nexus.Core.Checks/InputProbeChecks.cs",
+      "base_sha256": null,
+      "final_sha256": "001055322e28a751df08629c583dea4f25c555dd8be110e0a1edb1d69e15bf06"
+    },
+    {
+      "path": "tests/Nexus.Core.Checks/Nexus.Core.Checks.csproj",
+      "base_sha256": "85a7d83e9d75e3052ebb51a439ea205c5f77133ef764779ff5f215b795eed2b7",
+      "final_sha256": "d1c0f78ea28624ba903346effacaf186994cfe1a9668fb96f9aae0d982ea83b5"
+    },
+    {
+      "path": "tests/Nexus.Core.Checks/Program.cs",
+      "base_sha256": "f61f62d18b76597e3a9b91d7d92aa0932714056ab888e5d7fdd4ce0f23710e5d",
+      "final_sha256": "c4bce01b2c55ba42e32d2ad6b21641c3c2d500a534189e7e9e5102193daeb92f"
+    }
+  ],
+  "windows_validation": "Supplied AppVeyor baseline compile/suites passed; preflight failed. New native build/input execution pending.",
+  "remote_publication": "Blocked: Git credentials unavailable, GitHub branch creation HTTP 403.",
+  "appveyor_input_log_sha256": "aae8d9f33b6b1e423b3fa73a0ed33c2fd399ea1a848fc263cf8e1f6f04df8588"
+}
