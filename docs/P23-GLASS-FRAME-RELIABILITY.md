@@ -93,6 +93,19 @@ The actual dock HWND already calls `WindowMaterial.Apply` to manage acrylic atta
 - New native `VerifyRetainedAppearance` fixture watches actual WinUI clock and launcher foreground properties during 100 repeated dock appearance updates.
 - Real foreground/minimize/restore and theme changes still cause the necessary visual state change. Performance gains remain unquantified until Windows profiling.
 
+### Stage 13 — Live resize notification burst containment
+
+- During a native sizing gesture, the rounded GDI region is deliberately suspended. Previously every subsequent `WM_SIZE`, `WM_WINDOWPOSCHANGED` and `WM_DPICHANGED` still entered `WindowChrome.Refresh()` despite `RefreshCore` rejecting these requests. `LiveResizeRegionPolicy.ShouldRefreshNative` now skips the needless reconciliation entirely until the finishing/cancellation callback restores the rounded clip.
+- Programmatic resizing, DPI changes outside active sizing, native fullscreen changes and dock custom clipping still reconcile immediately.
+- Portable geometry tests assert the three intermediate events are skipped only during active sizing. Native `NativeChromeChecks` sends **120 WM_SIZE notifications per sizing gesture** across `WM_EXITSIZEMOVE`, `WM_CANCELMODE` and `WM_CAPTURECHANGED`, confirming no redundant GDI refresh requests and final repaint recovery.
+- This removes unnecessary work; it does **not** prove that hardware-specific black resize artifacts are eliminated.
+
+### Stage 14 — Retained dock indicator layout
+
+- Application activation/minimize/restore still sets the requested dock indicator state and plays compositor-owned cue animations. The underline's WinUI width/opacity now change only when the desired static values differ.
+- `TaskbarView.VerifyRetainedIndicatorLayout` runs **100 stable indicator updates** against real WinUI dependency properties and requires zero writes; changed states must still update both width and opacity.
+- The test is included in the Windows native UI preflight. Physical dock interactions, animation completion timing, multi-monitor DPI and accessibility transitions still need user acceptance.
+
 ## Required AppVeyor validation
 
 1. Build this **exact branch head SHA**, not the already-green P2.2 revision.
