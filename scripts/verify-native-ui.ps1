@@ -19,7 +19,9 @@ function Show-ProbeDiagnostics {
         Get-Content $probeLog -Tail 80 | Write-Host
     }
 }
+# Never attribute an earlier probe's log to the current verification attempt.
 if (Test-Path $report) { Remove-Item $report -Force }
+if (Test-Path $probeLog) { Remove-Item $probeLog -Force }
 New-Item (Split-Path $report -Parent) -ItemType Directory -Force | Out-Null
 if (-not [Environment]::UserInteractive) {
     if (-not $AllowHeadlessSkip) { throw 'Run the native UI check in an interactive Windows desktop session.' }

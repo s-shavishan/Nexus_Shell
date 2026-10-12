@@ -43,14 +43,15 @@ internal static class NativeCaptionProbe
                 native.Resize(new SizeInt32(size.Width, size.Height)); await NativeProbeLayout.WaitAsync(root, native); caption.Refresh();
                 if (caption.UsesSystemFrame) throw new InvalidOperationException("The caption API probe used the Windows title-bar fallback.");
                 var registered = source.GetRegionRects(NonClientRegionKind.Caption);
-                if (registered.Length == 0) throw new InvalidOperationException("No native drag region reached the WinUI input source.");
+                if (registered is null || registered.Length == 0) throw new InvalidOperationException("No native drag region reached the WinUI input source.");
                 double scale = root.XamlRoot.RasterizationScale;
                 if (Math.Abs(root.ActualWidth * scale - native.Size.Width) > 2 || Math.Abs(root.ActualHeight * scale - native.Size.Height) > 2)
                     throw new InvalidOperationException("The XAML caption probe has not reached the current native window size.");
                 foreach (var button in new[] { controls, search })
                 {
                     var bounds = button.TransformToVisual(root).TransformBounds(new Rect(0, 0, button.ActualWidth, button.ActualHeight));
-                    var excluded = CaptionRegionLayout.ToPixels(bounds.X, bounds.Y, bounds.Width, bounds.Height, scale, true)!.Value;
+                    var excluded = CaptionRegionLayout.ToPixels(bounds.X, bounds.Y, bounds.Width, bounds.Height, scale, true)
+                        ?? throw new InvalidOperationException("An interactive caption control has invalid measured bounds.");
                     foreach (var r in registered)
                         if (r.X < excluded.Right && (long)r.X + r.Width > excluded.X && r.Y < excluded.Bottom && (long)r.Y + r.Height > excluded.Y)
                             throw new InvalidOperationException("A native drag region overlaps an interactive control.");
