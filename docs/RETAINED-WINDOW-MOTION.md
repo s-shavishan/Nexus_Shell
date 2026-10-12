@@ -1,6 +1,7 @@
 # Retained window and dock motion
 
-Baseline: `99c51824f3e0e4a98f26a67eacb1d6b1fd43a443` (native C#/WinUI 3 Nexus Shell).
+Baseline: `487c73f71a834c34f01783a8736d6c39aee427e1` (native C#/WinUI 3 Nexus Shell).
+Includes merged PRs #14–#16 and the removal of the GitHub Actions build route.
 
 ## Source evidence and change
 
@@ -38,12 +39,22 @@ confirmed cause of black resize regions.
 | `src/Nexus.Shell/UI/NativeWindowMotionProbe.cs` | Exercise production resources on an actual test-owned WinUI visual; preserve the resize/close regression. |
 | `docs/RETAINED-WINDOW-MOTION.md` | Record evidence, validation, risks and rollback. |
 | `scripts/validate-source.py` | Validate the active AppVeyor route after main removed the optional GitHub Actions workflow; retain native-check and artifact-version guards. |
+| `src/Nexus.Shell/UI/Taskbar/TaskbarView.cs` | Apply density when compact mode changes even if pin/window identities are unchanged; retain the no-op fast path. |
+| `src/Nexus.Shell/UI/UiResourceProbe.cs` | Mount the real dock view and check compact/normal sizing, retained buttons and no-op width writes. |
 
 Main removed `.github/workflows/build-windows.yml` in `99c5182`. The integrated
 source check initially failed with `FileNotFoundError` because its CI checks
 still required that deleted file. AppVeyor now remains mandatory; a GitHub
 workflow, if present, still receives its original build, packaging, permissions,
 runner, artifact-version and native-test checks.
+
+PR #14 also introduced an unchanged-window/pin fast path. Its early return
+skipped `ApplyDensity` after a compact-mode preference change. The desktop's
+appearance key does not include compact mode, and its separate dock positioning
+step only updates the available width; existing button/icon sizes could remain
+large inside the smaller reservation. The fast path now compares the last
+successfully applied compact mode before skipping density. Ordinary unchanged
+snapshots still avoid XAML sizing work.
 
 ## Validation
 
@@ -59,6 +70,9 @@ The existing native UI preflight now checks:
   hides execute exactly three actions.
 - Disposal during a pending hide prevents a late action and clears retained
   resources. Repeated disposal does not recreate resources.
+- The real dock view switches normal/compact/normal with unchanged pin/window
+  snapshots: buttons and icons take their production sizes, existing buttons
+  remain retained, and twenty unchanged refreshes cause no button-width writes.
 
 Fixture actions only increment counters. The fixture never starts a desktop,
 replaces Explorer, injects input or changes user settings.
