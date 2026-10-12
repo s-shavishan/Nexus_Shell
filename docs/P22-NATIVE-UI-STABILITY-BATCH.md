@@ -2,7 +2,7 @@
 
 Development branch: `feat/p22-native-ui-stability-batch`  
 Baseline: `bd0c53a305920dc3854da3c6bedb270b3ce694d2` (merged P2.1 PR #19).  
-Status: **development checkpoint; do not merge or release yet**.
+Status: **integration candidate; do not merge or release until a green exact-revision AppVeyor Windows build**.
 
 ## Source findings and implemented changes
 
@@ -91,9 +91,26 @@ An accepted `DispatcherQueue` work item can execute after a WinUI window has beg
 - New portable `NativeUiDispatchChecks` covers coalescing, reentrant dispatch, logging failures and **500** failed callbacks. Expanded `WindowEventPipelineChecks` covers rejected foreground events and 500 failing deliveries.
 - The 80 ms dock timer now passes its sampled foreground HWND to `TaskbarView.RefreshWindowStates`, avoiding an extra native foreground read on a changed-foreground tick.
 
-### Integration with parallel Liquid Glass work
+### Integration with merged Liquid Glass quality work
 
-Draft PR #20 (`codex/glass-quality-policy`) is a separate appearance/runtime upgrade based on the current `main`. P2.2 deliberately does **not** reimplement glass-quality tiers or edit its new runtime protocol, power-policy, state model, or backdrop classes. Both branches currently touch `UiResourceProbe.cs` **and** `DesktopEnvironment.cs`: the final integrator must retain glass-quality appearance/policy updates, P2.2's WinEvent dispatch recovery, and **both** glass-quality and pinned-icon probe checks after rebasing/merging. Do not merge either branch merely to clear a conflict without running the consolidated Windows checks.
+PR #20 (`codex/glass-quality-policy`) merged into `main` as `016bfeb95dff378f385f9746c36915f08716e93f`. It is now integrated into this development branch by merge commit `4b175bd739eb83f9d1abe6de28b89e382d465bd0` with both parents preserved. The merge retained all 27 PR #20 files while combining the two overlapping sources:
+
+- `DesktopEnvironment.cs`: current glass-quality theme application, quality tracking and appearance state coexist with P2.2's safe native WinEvent dispatch error reporter.
+- `UiResourceProbe.cs`: native proof of all four requested glass-quality tiers and solid fallback **plus** the pinned-icon refresh probe and 20 unchanged dock polls.
+
+The full PR #20 Glass Quality runtime/persistence/accessibility work remains untouched. A source-level merge is **not a Windows build result**: run both Core and Runtime check suites and the native probe on the exact integration revision. Do not merge into `main` on the basis of GitHub's conflict-free comparison alone.
+
+## Merge authorization
+
+Only mark this batch READY TO MERGE if all of the following are documented for the **same final commit SHA**:
+
+1. AppVeyor passes Core checks, Runtime checks, native diagnostic fixture, complete Windows MSBuild/XAML compile and package generation (not merely `pending` or a build for older `main`).
+2. The WinUI native `UiResourceProbe` passes including retained dock icon identities, caption/transition checks, Glass Quality tiers and opaque fallback. If hosted AppVeyor is noninteractive and skips a portion, record the skipped coverage and do **not** call it passed.
+3. No merge conflicts or lost functionality from PR #20; check the glass-quality runtime protocol/setting and native `WindowEventDispatchGate` protection and both `UiResourceProbe` sections.
+4. Restore/minimize, dock auto-hide, appbar reservation, mixed DPI, monitor changes, High Contrast and acrylic fallback have an interactive native validation plan; complete the essential smoke test before assigning the final READY TO MERGE verdict.
+5. The complete source is reviewed for build warnings/errors and any failed/canceled CI jobs have been resolved. No auto-merge.
+
+Until these are demonstrated, status remains **HOLD — DO NOT MERGE**.
 
 ## Safety boundaries
 
