@@ -32,6 +32,26 @@ internal static class DockExperienceChecks
         Check(cues.SequenceEqual(new[] { DockMotionCue.Minimize, DockMotionCue.None, DockMotionCue.Restore, DockMotionCue.Activate }),
             "A rapid state sequence must settle to the current state without duplicate minimize cues.");
 
+        // Idle ABN_POSCHANGED callbacks must not close a hover card when its
+        // real anchor/work-area geometry hasn't changed.
+        var initial = new DockPlacementSnapshot(
+            new(-950, 900, 500, 70), new(-1200, 890, 1920, 90),
+            new(-1200, -100, 1920, 1080), new(-1200, -100, 1920, 1080), true);
+        Check(DockPlacementPolicy.RequiresPreviewDismissal(null, initial),
+            "Initial placement should invalidate a potentially stale preview.");
+        Check(!DockPlacementPolicy.RequiresPreviewDismissal(initial, initial),
+            "Repeated appbar or appearance notifications with unchanged geometry must preserve hover previews.");
+        Check(DockPlacementPolicy.RequiresPreviewDismissal(initial, initial with { Bounds = initial.Bounds with { X = -940 } }),
+            "An actual floating dock move must invalidate its preview anchor.");
+        Check(DockPlacementPolicy.RequiresPreviewDismissal(initial, initial with { Reservation = initial.Reservation with { Height = 80 } }),
+            "Reservation changes must invalidate the preview's interaction corridor.");
+        Check(DockPlacementPolicy.RequiresPreviewDismissal(initial, initial with { WorkArea = initial.WorkArea with { Height = 1000 } }),
+            "Work-area changes must refresh the preview's placement.");
+        Check(DockPlacementPolicy.RequiresPreviewDismissal(initial, initial with { Monitor = new(0, 0, 2560, 1440) }),
+            "Moving the dock between monitors must dismiss stale preview geometry.");
+        Check(DockPlacementPolicy.RequiresPreviewDismissal(initial, initial with { Floating = false }),
+            "Changing from floating to attached dock must dismiss the old hover preview.");
+
         var anchor = new ShellRect(-950, 850, 48, 52); var preview = new ShellRect(-1100, 570, 336, 268);
         Check(DockPreviewPolicy.InInteractionArea(anchor, preview, -930, 870)
             && DockPreviewPolicy.InInteractionArea(anchor, preview, -1000, 700)
