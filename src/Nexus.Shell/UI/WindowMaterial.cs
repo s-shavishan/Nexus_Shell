@@ -37,12 +37,12 @@ internal sealed class WindowMaterial
         try
         {
             if (glass && !Microsoft.UI.Composition.SystemBackdrops.DesktopAcrylicController.IsSupported()) { glass = false; _failed = true; }
-            frame.RequestedTheme = theme.ElementTheme;
+            GlassPaintRetention.Theme(frame, theme.ElementTheme);
             if (glass != _enabled)
             {
                 // Keep a fully painted base while the native target attaches or
                 // detaches. Translucent paint is safe only after Active is reported.
-                frame.Background = theme.Material(role, false);
+                GlassPaintRetention.Background(frame, theme.Material(role, false));
                 _backdrop = glass ? new LiquidGlassBackdrop(role, WinRT.Interop.WindowNative.GetWindowHandle(window)) : null;
                 _attachment.Attach(_backdrop);
                 _backdrop?.SetAppearance(GlassRecipe.For(theme.Palette, role, state.GlassStyle), theme.Palette.IsLight);
@@ -58,7 +58,7 @@ internal sealed class WindowMaterial
                         // Keep the palette readable even when native detach failed.
                         if (_latestTheme is { } currentTheme && _latestState is { } currentState)
                         {
-                            frame.Background = currentTheme.Material(_latestRole, false);
+                            GlassPaintRetention.Background(frame, currentTheme.Material(_latestRole, false));
                             GlassDecorations.Apply(frame, currentTheme, "Solid");
                             UpdateStatus(currentTheme, currentState, _latestRole);
                         }
@@ -70,7 +70,7 @@ internal sealed class WindowMaterial
                     () =>
                     {
                         if (_latestTheme is not { } currentTheme || _latestState is not { } currentState) return;
-                        frame.Background = currentTheme.Material(_latestRole, current.State == "Active");
+                        GlassPaintRetention.Background(frame, currentTheme.Material(_latestRole, current.State == "Active"));
                         GlassDecorations.Apply(frame, currentTheme, currentTheme.ResolveQuality(currentState.NativeGlass,
                             currentState.ReducedEffects, fallback: current.State is "Fallback" or "HighContrast").Effective);
                         UpdateStatus(currentTheme, currentState, _latestRole);
@@ -80,8 +80,8 @@ internal sealed class WindowMaterial
                 UiTrace.Surface(glass ? "backdrop-attached" : "backdrop-detached", role, WinRT.Interop.WindowNative.GetWindowHandle(window), value: _backdrop?.TraceId ?? 0);
             }
             _backdrop?.SetAppearance(GlassRecipe.For(theme.Palette, role, state.GlassStyle), theme.Palette.IsLight);
-            frame.Background = theme.Material(role, glass && _backdrop?.State == "Active");
-            frame.BorderBrush = theme.Edge;
+            GlassPaintRetention.Background(frame, theme.Material(role, glass && _backdrop?.State == "Active"));
+            GlassPaintRetention.Edge(frame, theme.Edge);
             GlassDecorations.Apply(frame, theme, theme.ResolveQuality(state.NativeGlass, state.ReducedEffects,
                 _failed, _backdrop?.State is "Fallback" or "HighContrast").Effective);
             UpdateStatus(theme, state, role);
@@ -89,7 +89,7 @@ internal sealed class WindowMaterial
         catch (Exception ex)
         {
             _failed = true; _enabled = false; _attachment.Attach(null); _backdrop = null;
-            try { frame.Background = theme.Material(role, false); window.SystemBackdrop = null; } catch (Exception error) { Log.Write("Window glass fallback cleanup failed", error); }
+            try { GlassPaintRetention.Background(frame, theme.Material(role, false)); window.SystemBackdrop = null; } catch (Exception error) { Log.Write("Window glass fallback cleanup failed", error); }
             Log.Write("Window material unavailable; using the palette fallback", ex);
             try { GlassDecorations.Apply(frame, theme, "Solid"); }
             catch (Exception cleanup) { Log.Write("Window glass decoration fallback failed", cleanup); }
