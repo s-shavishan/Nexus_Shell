@@ -79,6 +79,7 @@ public sealed class StateStore
             state.PinnedApps ??= [];
             state.RecentApps = state.RememberRecentItems ? RecentApplications.Normalize(state.RecentApps) : [];
             state.GlassStyle = GlassStyle.Normalize(state.GlassStyle);
+            state.GlassQuality = GlassQuality.Normalize(state.GlassQuality);
             SavedWindowLayouts.Normalize(state);
             DesktopOrganization.Normalize(state);
             state.Activity ??= [];

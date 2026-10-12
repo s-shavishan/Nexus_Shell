@@ -33,6 +33,7 @@ public sealed class ShellState
     public string Wallpaper { get; set; } = "Midnight";
     public bool NativeGlass { get; set; } = true;
     public string GlassStyle { get; set; } = Services.GlassStyle.Default;
+    public string GlassQuality { get; set; } = Services.GlassQuality.Default;
     public bool ClipboardShelf { get; set; }
     public List<SavedWindowLayout> WindowLayouts { get; set; } = [];
     public List<AppCollection> AppCollections { get; set; } = [];
@@ -92,7 +93,7 @@ public sealed class ShellState
         ExploreSpaces = [.. ExploreSpaces], ActiveExploreSpaceId = ActiveExploreSpaceId,
         ExploreSelectedItemId = ExploreSelectedItemId, ExploreView = ExploreView,
         ExploreQuery = ExploreQuery, ExploreCollection = ExploreCollection, ExploreFavoritesOnly = ExploreFavoritesOnly,
-        NativeGlass = NativeGlass, GlassStyle = GlassStyle, DesktopLayout = DesktopLayout, KeepAvailable = KeepAvailable,
+        NativeGlass = NativeGlass, GlassStyle = GlassStyle, GlassQuality = GlassQuality, DesktopLayout = DesktopLayout, KeepAvailable = KeepAvailable,
         ClipboardShelf = ClipboardShelf, WindowLayouts = WindowLayouts.Select(layout => layout with { Windows = [.. layout.Windows] }).ToList(),
         AppCollections = AppCollections.Select(group => group with { Targets = [.. group.Targets] }).ToList(),
         HiddenAppTargets = [.. HiddenAppTargets], LaunchpadOrder = LaunchpadOrder, Places = [.. Places],

@@ -147,6 +147,12 @@ public sealed partial class MainWindow
         { if (_syncingPersonalization || !_ready || material.SelectedItem is not string style) return; _state.GlassStyle = style; ApplyEffects(); SaveState(); };
         _personalizationSync.Add(() => material.SelectedItem = _state.GlassStyle); interfacePanel.Children.Add(material);
         interfacePanel.Children.Add(Text("Balanced · Clear · Frosted. Adjust the material live; no new build or restart is needed.", 12, true));
+        var quality = new ComboBox { Header = "Glass quality", ItemsSource = GlassQuality.Choices, SelectedItem = _state.GlassQuality, HorizontalAlignment = HorizontalAlignment.Stretch };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(quality, "Glass quality");
+        quality.SelectionChanged += (_, _) =>
+        { if (_syncingPersonalization || !_ready || quality.SelectedItem is not string choice) return; _state.GlassQuality = choice; ApplyEffects(); SaveState(); };
+        _personalizationSync.Add(() => quality.SelectedItem = _state.GlassQuality); interfacePanel.Children.Add(quality);
+        interfacePanel.Children.Add(Text("Ultra · Balanced · Essential · Solid. Your choice is kept when Windows temporarily lowers the effective quality.", 12, true));
         interfacePanel.Children.Add(PersonalizeToggle("Interface animations", () => _state.SurfaceAnimations, v => _state.SurfaceAnimations = v,
             "Short, smooth motion", "Immediate interaction; glass stays enabled"));
         interfacePanel.Children.Add(PersonalizeToggle("Reduced effects", () => _state.ReducedEffects, v => _state.ReducedEffects = v));

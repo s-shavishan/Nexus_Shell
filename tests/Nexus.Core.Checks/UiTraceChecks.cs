@@ -31,9 +31,16 @@ internal static class UiTraceChecks
             || (int)work.Payload[3]! != Environment.CurrentManagedThreadId || (int)work.Payload[4]! != 24
             || (double)work.Payload[5]! < 0 || (long)work.Payload[6]! < 256)
             throw new Exception("UI work tracing lost its owner, item count, duration or actual allocation payload.");
+        UiTrace.Quality("Dock", new("Ultra", "Solid", "Windows backdrop fallback"));
+        var quality = listener.Records.Last();
+        if (quality.EventId != 4 || quality.Payload?.Count != 5 || (string)quality.Payload![0]! != "Dock"
+            || (string)quality.Payload[1]! != "Ultra" || (string)quality.Payload[2]! != "Solid"
+            || (string)quality.Payload[3]! != "Windows backdrop fallback" || (int)quality.Payload[4]! != Environment.ProcessId)
+            throw new Exception("Quality diagnostics lost the requested/effective tier or owner.");
         listener.DisableEvents(UiTrace.Source);
         int before = listener.Records.Count;
         UiTrace.Surface("native-size", "Files", new IntPtr(123), 900, 600);
+        UiTrace.Quality("Dock", new("Ultra", "Solid", "Windows backdrop fallback"));
         if (listener.Records.Count != before) throw new Exception("Disabled UI diagnostics must stop recording events.");
         // Warm the disabled path before measuring its per-call cost.
         for (int i = 0; i < 10; i++) { using var scope = UiTrace.Measure("disabled", "Probe"); }

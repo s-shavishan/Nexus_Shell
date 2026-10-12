@@ -56,7 +56,7 @@ internal sealed class ControlCenterEnvironment
         bool changed = Snapshot?.Preferences != snapshot.Preferences; bool moved = Snapshot?.Desired.Monitor != snapshot.Desired.Monitor;
         Snapshot = snapshot; _revision = snapshot.Revision; snapshot.Preferences.Apply(State);
         if (_hidePending is { } hiding && (snapshot.Desired.Sequence != hiding || !snapshot.Desired.Visible)) _hidePending = null;
-        changed |= Theme.Apply(State.Wallpaper, State.ReducedEffects, State.GlassStyle);
+        changed |= Theme.Apply(State.Wallpaper, State.ReducedEffects, State.GlassStyle, State.GlassQuality);
         if (changed) { _window?.ApplyAppearance(); _window?.RefreshPreferences(); }
         if (_window is null) return;
         if (moved) _window.Position();

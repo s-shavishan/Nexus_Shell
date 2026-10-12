@@ -44,6 +44,7 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     private TextBlock? _brightnessLabel;
     private TextBlock? _glassStatus;
     private ComboBox? _glassStyle;
+    private ComboBox? _glassQuality;
     internal Func<string>? MaterialStatus;
     private ComboBox? _wallpaper;
     private string _section = "Sound", _signature = "";
@@ -127,14 +128,13 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     internal void RefreshGlassStatus()
     {
         if (_disposed) return;
-        if (_glassStatus is not null) _glassStatus.Text = _environment.Theme.HighContrast ? "High contrast uses your Windows system colors."
-            : !_environment.Theme.Transparency ? "Windows transparency is off. Nexus uses solid surfaces until it is enabled."
-            : _environment.State.ReducedEffects ? "Reduced effects uses solid surfaces. Turn it off to allow glass."
-            : !_environment.State.NativeGlass ? "Glass is disabled in Nexus."
-            : MaterialStatus?.Invoke() ?? "Glass is preparing for this surface.";
+        if (_glassStatus is null) return;
+        var quality = _environment.Theme.ResolveQuality(_environment.State.NativeGlass, _environment.State.ReducedEffects);
+        _glassStatus.Text = MaterialStatus?.Invoke()
+            ?? $"{quality.Effective} quality · requested {quality.Requested}. {quality.Reason}.";
     }
     internal void RefreshPreferences()
-    { if (_disposed) return; _syncing = true; try { foreach (var (toggle, read) in _preferences) if (toggle.IsEnabled) toggle.IsOn = read(); if (_wallpaper is { IsEnabled: true }) _wallpaper.SelectedItem = _environment.State.Wallpaper; if (_glassStyle is { IsEnabled: true }) _glassStyle.SelectedItem = _environment.State.GlassStyle; } finally { _syncing = false; } }
+    { if (_disposed) return; _syncing = true; try { foreach (var (toggle, read) in _preferences) if (toggle.IsEnabled) toggle.IsOn = read(); if (_wallpaper is { IsEnabled: true }) _wallpaper.SelectedItem = _environment.State.Wallpaper; if (_glassStyle is { IsEnabled: true }) _glassStyle.SelectedItem = _environment.State.GlassStyle; if (_glassQuality is { IsEnabled: true }) _glassQuality.SelectedItem = _environment.State.GlassQuality; } finally { _syncing = false; } }
     internal void Open(string? section = null, bool compact = false)
     {
         if (_disposed) return; _compact = compact; _open = true; _poll.Start();
@@ -370,6 +370,17 @@ internal sealed class QuickSettingsView : Grid, IDisposable
             finally { if (!_disposed) { glassStyle.IsEnabled = true; RefreshPreferences(); } }
         }; appearance.Children.Add(glassStyle);
         appearance.Children.Add(Label("Balanced keeps text clear. Clear reveals more background. Frosted softens it. Changes apply without restarting.", 12, true));
+        var quality = _glassQuality = new ComboBox { Header = "Glass quality", ItemsSource = GlassQuality.Choices, SelectedItem = state.GlassQuality, HorizontalAlignment = HorizontalAlignment.Stretch };
+        AutomationProperties.SetName(quality, "Glass quality");
+        quality.SelectionChanged += async (_, _) =>
+        {
+            if (_syncing || !_open || _disposed || !quality.IsEnabled || !ReferenceEquals(quality, _glassQuality) || quality.SelectedItem is not string choice) return;
+            long generation = _session.Capture(); quality.IsEnabled = false;
+            try { await _environment.SetPreferenceAsync(DesktopPreference.GlassQuality, value: choice); }
+            catch (Exception error) { if (!_disposed && _session.Accepts(generation, "Desktop")) ShowError(error.Message); }
+            finally { if (!_disposed) { quality.IsEnabled = true; RefreshPreferences(); } }
+        }; appearance.Children.Add(quality);
+        appearance.Children.Add(Label("Ultra adds stronger edge lighting. Balanced keeps native glass. Essential uses light palette layers. Solid removes optical details. Windows can temporarily lower quality.", 12, true));
         _glassStatus = Label("", 12, true); appearance.Children.Add(_glassStatus);
         Preference(appearance, "Interface animations", DesktopPreference.Animations, () => state.SurfaceAnimations);
         appearance.Children.Add(Label("Turn animations off for immediate interactions while keeping glass enabled.", 12, true));

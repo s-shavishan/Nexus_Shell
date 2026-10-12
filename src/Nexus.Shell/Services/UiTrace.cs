@@ -31,6 +31,14 @@ internal sealed class UiTrace : EventSource
     [Event(3, Level = EventLevel.Informational)]
     public void WorkEvent(string stage, string role, int processId, int threadId, int items, double durationMs, long allocatedBytes)
         => WriteEvent(3, stage, role, processId, threadId, items, durationMs, allocatedBytes);
+    [NonEvent]
+    internal static void Quality(string role, GlassQualityDecision decision)
+    {
+        if (Source.IsEnabled()) Source.QualityEvent(role, decision.Requested, decision.Effective, decision.Reason, Environment.ProcessId);
+    }
+    [Event(4, Level = EventLevel.Informational)]
+    public void QualityEvent(string role, string requested, string effective, string reason, int processId)
+        => WriteEvent(4, role, requested, effective, reason, processId);
 
     // Synchronous work only. Disabled tracing has no stopwatch, allocations,
     // timers or disk writes. A cross-thread disposal marks allocation unknown.

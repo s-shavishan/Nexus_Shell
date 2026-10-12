@@ -57,9 +57,10 @@ internal sealed class FilesEnvironment
     }
     private void Apply(AppearanceSettings settings)
     {
-        bool changed = State.Wallpaper != settings.Wallpaper || State.NativeGlass != settings.NativeGlass || State.ReducedEffects != settings.ReducedEffects || State.SurfaceAnimations != settings.Animations || State.GlassStyle != settings.GlassStyle;
+        bool changed = State.Wallpaper != settings.Wallpaper || State.NativeGlass != settings.NativeGlass || State.ReducedEffects != settings.ReducedEffects || State.SurfaceAnimations != settings.Animations || State.GlassStyle != settings.GlassStyle || State.GlassQuality != settings.GlassQuality;
         State.Wallpaper = settings.Wallpaper; State.NativeGlass = settings.NativeGlass; State.ReducedEffects = settings.ReducedEffects; State.SurfaceAnimations = settings.Animations; State.GlassStyle = GlassStyle.Normalize(settings.GlassStyle);
-        changed |= Theme.Apply(settings.Wallpaper, settings.ReducedEffects, State.GlassStyle);
+        State.GlassQuality = GlassQuality.Normalize(settings.GlassQuality);
+        changed |= Theme.Apply(settings.Wallpaper, settings.ReducedEffects, State.GlassStyle, State.GlassQuality);
         if (changed) _window?.ApplyAppearance();
     }
     private async void Pulse(object? sender, object args)

@@ -13,21 +13,32 @@ internal sealed class ShellTheme
     public bool Simple { get; private set; }
     public bool Transparency { get; private set; } = true;
     public string GlassStyle { get; private set; } = Services.GlassStyle.Default;
+    public string RequestedQuality { get; private set; } = GlassQuality.Default;
+    public GlassQualityDecision Quality { get; private set; } = new(GlassQuality.Default, GlassQuality.Default, "Selected");
+    private bool _systemAnimations = true;
+    private (bool BackdropSupported, bool RemoteSession, bool EnergySaver) _systemPolicy;
     private Windows.UI.ViewManagement.UISettings? _settings;
     private readonly Dictionary<string, Brush> _surfaces = [];
     public ElementTheme ElementTheme => HighContrast ? ElementTheme.Default : Palette.IsLight ? ElementTheme.Light : ElementTheme.Dark;
-    public bool Apply(string mood, bool simple = false, string glassStyle = Services.GlassStyle.Default)
+    public bool Apply(string mood, bool simple = false, string glassStyle = Services.GlassStyle.Default, string quality = GlassQuality.Default)
     {
         bool contrast = HighContrast, animations = Animations, transparency = Transparency;
         if (NativeMethods.TryGetHighContrast(out bool value)) contrast = value;
-        if (NativeMethods.TryGetAnimationsEnabled(out bool animation)) Animations = animation;
+        if (NativeMethods.TryGetAnimationsEnabled(out bool animation)) _systemAnimations = animation;
         try { _settings ??= new(); transparency = _settings.AdvancedEffectsEnabled; } catch { }
         var palette = AuraPalette.For(mood);
         glassStyle = Services.GlassStyle.Normalize(glassStyle);
-        bool changed = palette.Name != Palette.Name || contrast != HighContrast || animations != Animations || transparency != Transparency || simple != Simple || GlassStyle != glassStyle || !_initialized;
+        quality = GlassQuality.Normalize(quality);
+        _systemPolicy = GlassSystemPolicy.Read();
+        var decision = GlassQualityPolicy.Resolve(quality, new(true, simple, contrast, transparency,
+            _systemPolicy.BackdropSupported, _systemPolicy.RemoteSession, _systemPolicy.EnergySaver));
+        bool minimal = simple || decision.Effective == "Solid";
+        Animations = _systemAnimations && decision.Motion;
+        bool changed = palette.Name != Palette.Name || contrast != HighContrast || animations != Animations || transparency != Transparency || minimal != Simple || GlassStyle != glassStyle || Quality != decision || !_initialized;
         if (palette.Name != Palette.Name || GlassStyle != glassStyle || !_initialized) _surfaces.Clear();
         GlassStyle = glassStyle;
-        Palette = palette; HighContrast = contrast; Simple = simple; Transparency = transparency;
+        RequestedQuality = quality; Quality = decision;
+        Palette = palette; HighContrast = contrast; Simple = minimal; Transparency = transparency;
         if (!changed) return false;
         var resources = Application.Current.Resources;
         foreach (var token in palette.Tokens)
@@ -40,17 +51,20 @@ internal sealed class ShellTheme
         void UpdateAction(ResourceDictionary dictionary)
         {
             if (dictionary.ContainsKey("NexusAction") && dictionary["NexusAction"] is LinearGradientBrush brush)
-            { brush.GradientStops[0].Color = Color(palette.Accent); brush.GradientStops[1].Color = Color(simple ? palette.Accent : palette.AccentEnd); }
+            { brush.GradientStops[0].Color = Color(palette.Accent); brush.GradientStops[1].Color = Color(minimal ? palette.Accent : palette.AccentEnd); }
         }
         UpdateAction(resources);
         foreach (string name in new[] { "Light", "Dark" }) UpdateAction((ResourceDictionary)resources.ThemeDictionaries[name]);
         _initialized = true; return true;
     }
     private bool _initialized;
+    public GlassQualityDecision ResolveQuality(bool nativeGlass, bool reducedEffects, bool failed = false, bool fallback = false)
+        => GlassQualityPolicy.Resolve(RequestedQuality, new(nativeGlass, reducedEffects, HighContrast, Transparency,
+            _systemPolicy.BackdropSupported, _systemPolicy.RemoteSession, _systemPolicy.EnergySaver, failed, fallback));
     public Brush Brush(string key) => (Brush)((ResourceDictionary)Application.Current.Resources.ThemeDictionaries[HighContrast ? "HighContrast" : "Dark"])[key];
     public Brush Glass(string role)
     {
-        if (HighContrast || Simple) return Brush(role == "Frame" ? "NexusPanel" : "NexusSidebar");
+        if (HighContrast || Simple || !Quality.NativeBackdrop) return Material(role, false);
         string key = "glass:" + role;
         if (_surfaces.TryGetValue(key, out var cached)) return cached;
         var recipe = GlassRecipe.For(Palette, role, GlassStyle);
@@ -64,7 +78,7 @@ internal sealed class ShellTheme
     public Brush Material(string role, bool glass)
     {
         if (HighContrast) return Brush(role == "Frame" ? "NexusPanel" : "NexusSidebar");
-        if (glass && !Simple && Transparency) return Glass(role);
+        if (glass && !Simple && Transparency && Quality.NativeBackdrop) return Glass(role);
         string key = "opaque:" + role;
         if (_surfaces.TryGetValue(key, out var cached)) return cached;
         string color = role == "Card" ? Palette.Card : role == "Input" ? Palette.Tokens["NexusInput"] : Palette.Panel;
@@ -74,7 +88,7 @@ internal sealed class ShellTheme
     {
         get
         {
-            if (HighContrast || Simple) return Brush("NexusBorder");
+            if (HighContrast || Simple || !Quality.EdgeLighting) return Brush("NexusBorder");
             const string key = "edge";
             if (_surfaces.TryGetValue(key, out var cached)) return cached;
             var edge = Gradient(Palette.IsLight ? "A0FFFFFF" : "4AC6D9F7", Palette.IsLight ? "24313B52" : "1A5E739C");

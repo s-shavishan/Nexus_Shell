@@ -8,7 +8,7 @@ namespace Nexus.Shell.UI;
 internal static class GlassDecorations
 {
     private static readonly ConditionalWeakTable<Border, Border> Rims = new();
-    internal static void Apply(Border frame, ShellTheme theme)
+    internal static void Apply(Border frame, ShellTheme theme, string? effectiveQuality = null)
     {
         if (!Rims.TryGetValue(frame, out var rim))
         {
@@ -22,7 +22,9 @@ internal static class GlassDecorations
         }
         rim.CornerRadius = Inset(frame.CornerRadius);
         rim.BorderBrush = theme.Edge;
-        rim.Visibility = theme.HighContrast || theme.Simple ? Visibility.Collapsed : Visibility.Visible;
+        string quality = effectiveQuality ?? theme.Quality.Effective;
+        rim.Opacity = quality == "Ultra" ? .85 : .65;
+        rim.Visibility = theme.HighContrast || theme.Simple || quality is "Essential" or "Solid" ? Visibility.Collapsed : Visibility.Visible;
     }
     private static CornerRadius Inset(CornerRadius corners) => new(Math.Max(0, corners.TopLeft - 1), Math.Max(0, corners.TopRight - 1),
         Math.Max(0, corners.BottomRight - 1), Math.Max(0, corners.BottomLeft - 1));

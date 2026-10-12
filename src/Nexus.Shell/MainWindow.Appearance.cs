@@ -16,7 +16,7 @@ public sealed partial class MainWindow
     private void ApplyAuraPalette()
     {
         var theme = _environment.Theme;
-        theme.Apply(_state.Wallpaper, _state.ReducedEffects, _state.GlassStyle);
+        theme.Apply(_state.Wallpaper, _state.ReducedEffects, _state.GlassStyle, _state.GlassQuality);
         _highContrast = theme.HighContrast; _animationsEnabled = theme.Animations;
         DesktopRoot.RequestedTheme = theme.ElementTheme;
         var palette = theme.Palette;
@@ -29,7 +29,7 @@ public sealed partial class MainWindow
     }
     private void ConfigureAuraGlass(AuraPalette palette)
     {
-        bool requested = _state.NativeGlass && !_state.ReducedEffects && !_highContrast && _environment.Theme.Transparency;
+        bool requested = _environment.Theme.ResolveQuality(_state.NativeGlass, _state.ReducedEffects).NativeBackdrop;
         if (_glassRequested != requested) { _glassRequested = requested; _glassUnavailable = false; }
         if (!requested || _glassUnavailable)
         { DesktopRoot.Background = _highContrast ? Resource("NexusPanel") : _solidPanel; if (_auraGlass is not null) SystemBackdrop = null; _auraGlass = null; return; }
@@ -54,8 +54,11 @@ public sealed partial class MainWindow
     }
     private void ApplyAuraSurfaces(bool simple)
     {
-        bool glass = _auraGlass?.State == "Active" && !simple;
         var theme = _environment.Theme;
+        var quality = theme.ResolveQuality(_state.NativeGlass, _state.ReducedEffects, _glassUnavailable,
+            _auraGlass?.State is "Fallback" or "HighContrast");
+        simple |= quality.Effective == "Solid";
+        bool glass = quality.NativeBackdrop && _auraGlass?.State == "Active" && !simple;
         Brush panel = glass ? theme.Glass("Panel") : _highContrast ? Resource("NexusPanel") : _solidPanel;
         HomeBorder.Background = ControlPanel.Background = CommandPanel.Background = panel;
         DesktopRoot.Background = glass ? theme.Glass("Frame") : _highContrast ? Resource("NexusPanel") : _solidPanel;
@@ -63,14 +66,16 @@ public sealed partial class MainWindow
         WindowChrome.Background = WindowFooter.Background = glass ? theme.Glass("Frame") : _highContrast ? Resource("NexusPanel") : _solidPanel;
         HeroCard.Background = _highContrast ? Resource("NexusCard") : simple ? _solidCard : theme.Surface("Hero");
         ApplyOverviewAppearance(); UpdateNavigation();
-        GlassStatus.Text = _highContrast ? "High contrast uses Windows system colors."
+        string detail = _highContrast ? "High contrast uses Windows system colors."
             : !_environment.Theme.Transparency ? "Windows transparency is off. Nexus uses solid surfaces."
             : _state.ReducedEffects ? "Reduced effects is using solid surfaces."
             : _glassUnavailable ? "Solid fallback · native glass is unavailable on this system."
             : !_state.NativeGlass ? "Enable glass for Nexus windows and desktop controls."
             : _auraGlass?.State == "Active" ? $"{_state.GlassStyle} glass · Windows reports acrylic active."
             : _auraGlass?.State is "Fallback" or "HighContrast" ? "Windows reports a solid backdrop fallback. Check graphics, transparency and power settings."
+            : quality.Effective is "Essential" or "Solid" ? quality.Reason == "Selected" ? "Selected palette quality." : quality.Reason + "."
             : "Glass is preparing for this surface.";
+        GlassStatus.Text = $"{quality.Effective} quality · requested {quality.Requested}. " + detail;
     }
     private void UpdateNavigation()
     {
