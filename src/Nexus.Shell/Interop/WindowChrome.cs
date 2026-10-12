@@ -43,6 +43,8 @@ internal sealed class WindowChrome : IDisposable
     private int _sizeEvents, _regionUpdates;
     internal int RegionRefreshRequests { get; private set; }
     internal bool RegionDecorationsEnabled => _regionsEnabled;
+    internal bool? LastRegionRedraw { get; private set; }
+    internal bool LiveResizeSuspended => _liveSizeUnclipped;
     internal WindowChrome(IntPtr handle, bool resizable = false, bool customClip = false, Action? tuck = null, int minimumWidth = 480, int minimumHeight = 360, Action<bool>? stateChanged = null, Action? minimizeRequested = null, Action? closeRequested = null, string role = "Window")
     {
         _role = role;
@@ -140,7 +142,8 @@ internal sealed class WindowChrome : IDisposable
             IntPtr region = clear ? IntPtr.Zero : CreateRoundRectRgn(rectangle.X, rectangle.Y, rectangle.Right + 1, rectangle.Bottom + 1, diameter, diameter);
             if (!clear && region == IntPtr.Zero) throw new Win32Exception("Could not create the rounded Nexus window.");
             // SetWindowRgn transfers ownership to Windows only after success.
-            if (SetWindowRgn(_handle, region, true) == 0)
+            LastRegionRedraw = LiveResizeRegionPolicy.RedrawAfterRestore;
+            if (SetWindowRgn(_handle, region, LiveResizeRegionPolicy.RedrawAfterRestore) == 0)
             { int error = Marshal.GetLastWin32Error(); if (region != IntPtr.Zero) DeleteObject(region); throw new Win32Exception(error, "Could not round the Nexus window."); }
             _applied = shape;
             if (_interactiveResize) _regionUpdates++;
@@ -170,7 +173,10 @@ internal sealed class WindowChrome : IDisposable
                     // Stop clipping to a stale rectangle while WM_SIZING changes
                     // HWND dimensions. Recreate rounded corners once sizing ends.
                     if (SetWindowRgn(_handle, IntPtr.Zero, LiveResizeRegionPolicy.RedrawWhileSuspending) != 0)
-                    { _liveSizeUnclipped = true; _applied = null; Trace("region-live-sizing"); }
+                    {
+                        LastRegionRedraw = LiveResizeRegionPolicy.RedrawWhileSuspending;
+                        _liveSizeUnclipped = true; _applied = null; Trace("region-live-sizing");
+                    }
                 }
                 if (message == 0x0231)
                 {
