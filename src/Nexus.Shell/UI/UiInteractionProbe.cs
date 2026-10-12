@@ -78,8 +78,10 @@ internal static class UiInteractionProbe
                 if (caption.UsesSystemFrame) throw new InvalidOperationException("The production caption adapter entered fallback; this run cannot certify native regions.");
                 if (Math.Abs(root.ActualWidth * scale - native.Size.Width) > 2 || Math.Abs(root.ActualHeight * scale - native.Size.Height) > 2)
                     throw new InvalidOperationException("The fixture's native/XAML size has not converged.");
-                var region = InputNonClientPointerSource.GetForWindowId(native.Id).GetRegionRects(NonClientRegionKind.Caption)
-                    .OrderByDescending(r => (long)r.Width * r.Height).FirstOrDefault();
+                var regions = InputNonClientPointerSource.GetForWindowId(native.Id).GetRegionRects(NonClientRegionKind.Caption);
+                if (regions is null || regions.Length == 0)
+                    throw new InvalidOperationException("No native caption region is registered for the input experiment.");
+                var region = regions.OrderByDescending(r => (long)r.Width * r.Height).First();
                 if (region.Width < 16 || region.Height < 12) throw new InvalidOperationException("No usable production caption region is registered.");
                 int kind = i % 6; bool move = kind is 1 or 2 or 3;
                 int localX = region.X + region.Width / 2, localY = region.Y + region.Height / 2;
