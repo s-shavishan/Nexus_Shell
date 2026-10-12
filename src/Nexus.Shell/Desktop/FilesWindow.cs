@@ -55,8 +55,7 @@ internal sealed class FilesWindow : Window
         if (NativeWindow.Presenter is OverlappedPresenter overlapped) overlapped.SetBorderAndTitleBar(false, false);
         _transition = new(_surface, () => environment.Theme.Animations && !environment.Theme.HighContrast && environment.State.SurfaceAnimations && !environment.State.ReducedEffects);
         _chrome = new(Handle, resizable: true, stateChanged: maximized => { _surface.CornerRadius = new CornerRadius(maximized || environment.Theme.HighContrast ? 0 : 14); _surface.BorderThickness = new Thickness(maximized ? 0 : 1); }, minimizeRequested: Minimize, closeRequested: RequestClose, role: "Files");
-        _chrome.Restored += _transition.Restore;
-        _chrome.Resized += _transition.Restore;
+        _transition.BindRestore(_chrome);
         _caption = new(NativeWindow, _chrome, dragArea);
         _motion = new(_surface, () => environment.Theme.Animations && !environment.Theme.HighContrast && environment.State.SurfaceAnimations && !environment.State.ReducedEffects);
         var work = ShellLayerInterop.Monitor(Handle).Work.Bounds; double scale = ShellLayerInterop.Scale(Handle);

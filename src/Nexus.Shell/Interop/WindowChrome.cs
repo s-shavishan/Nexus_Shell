@@ -28,7 +28,6 @@ internal sealed class WindowChrome : IDisposable
     private readonly Action? _closeRequested;
     private bool _wasMinimized;
     internal event Action? Restored;
-    internal event Action? Resized;
     private bool? _maximized;
     internal bool IsAttached => _maximized == true;
     private readonly ShellLayerInterop.SubclassProc _callback;
@@ -42,7 +41,6 @@ internal sealed class WindowChrome : IDisposable
     private readonly string _role;
     private long _moveStarted;
     private int _sizeEvents, _regionUpdates;
-    private (int Width, int Height)? _size;
     internal WindowChrome(IntPtr handle, bool resizable = false, bool customClip = false, Action? tuck = null, int minimumWidth = 480, int minimumHeight = 360, Action<bool>? stateChanged = null, Action? minimizeRequested = null, Action? closeRequested = null, string role = "Window")
     {
         _role = role;
@@ -175,12 +173,6 @@ internal sealed class WindowChrome : IDisposable
         }
         if (!_disposed && message == 0x0005) { bool minimized = wp.ToUInt64() == 1; bool restoring = _wasMinimized && !minimized; _wasMinimized = minimized; if (restoring) Restored?.Invoke(); }
         if (!_disposed && message is 0x0005 or 0x0047 or 0x02E0) Refresh();
-        if (!_disposed && _resizable && message == 0x0005 && wp.ToUInt64() != 1 && GetWindowRect(window, out var current))
-        {
-            var size = (current.Right - current.Left, current.Bottom - current.Top);
-            bool changed = _size is { } previous && previous != size; _size = size;
-            if (changed && !_interactiveResize && !_wasMinimized) Resized?.Invoke();
-        }
         return result;
     }
     public void Dispose()
