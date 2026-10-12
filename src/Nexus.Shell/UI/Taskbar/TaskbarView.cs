@@ -343,6 +343,31 @@ internal sealed class TaskbarView : Grid
         if (_reportedWidth != width) { _reportedWidth = width; PreferredWidthChanged?.Invoke(); }
         _appliedCompactDock = compact;
     }
+    internal void VerifyRetainedIndicatorLayout()
+    {
+        var indicator = new Border { Width = 22, Opacity = 1 };
+        int writes = 0;
+        long width = indicator.RegisterPropertyChangedCallback(FrameworkElement.WidthProperty, (_, _) => writes++);
+        long opacity = indicator.RegisterPropertyChangedCallback(UIElement.OpacityProperty, (_, _) => writes++);
+        try
+        {
+            for (int i = 0; i < 100; i++) SetIndicatorLayout(indicator, 22, 1);
+            if (writes != 0)
+                throw new InvalidOperationException("Unchanged dock indicators triggered repeated WinUI layout writes.");
+            SetIndicatorLayout(indicator, 10, .45);
+            if (indicator.Width != 10 || indicator.Opacity != .45 || writes != 2)
+                throw new InvalidOperationException("A real dock indicator size and opacity transition was suppressed.");
+            SetIndicatorLayout(indicator, 22, 1);
+            if (writes != 4)
+                throw new InvalidOperationException("Restoring dock indicator geometry did not update both properties.");
+        }
+        finally
+        {
+            indicator.UnregisterPropertyChangedCallback(FrameworkElement.WidthProperty, width);
+            indicator.UnregisterPropertyChangedCallback(UIElement.OpacityProperty, opacity);
+        }
+    }
+
     internal void VerifyRetainedAppearance()
     {
         ApplyAppearance();
