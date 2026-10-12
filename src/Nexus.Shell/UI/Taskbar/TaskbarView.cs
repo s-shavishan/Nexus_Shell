@@ -439,7 +439,8 @@ internal sealed class TaskbarView : Grid
     internal void ApplyAppearance()
     {
         if (_released) return;
-        var theme = _environment.Theme; RequestedTheme = theme.ElementTheme;
+        var theme = _environment.Theme;
+        if (RequestedTheme != theme.ElementTheme) RequestedTheme = theme.ElementTheme;
         // In isolation (native resource probe) render a readable solid dock.
         // In the real dock, WindowMaterial owns both material and fallback.
         if (!MaterialOwnedByWindow) GlassPaintRetention.Background(_frame, theme.Material("Dock", false));
