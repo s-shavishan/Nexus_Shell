@@ -248,7 +248,8 @@ internal sealed class WindowChrome : IDisposable
             _liveSizeUnclipped = false;
             Refresh();
         }
-        if (!_disposed && message is 0x0005 or 0x0047 or 0x02E0) Refresh();
+        if (!_disposed && LiveResizeRegionPolicy.ShouldRefreshNative(message, _liveSizeUnclipped))
+            Refresh();
         return result;
     }
     public void Dispose()
