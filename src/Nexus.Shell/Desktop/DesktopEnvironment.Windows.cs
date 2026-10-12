@@ -9,13 +9,21 @@ internal sealed partial class DesktopEnvironment
     private readonly MaximizedWindowReconciler _maximizedLayout = new();
     private readonly WindowPlacementCommands _placements = new();
     internal bool CanUndoWindowPlacement => _placements.CanUndo;
+    private readonly ForegroundLookupCache<RunningWindow> _foregroundLookup = new();
     internal RunningWindow? ActiveWindow { get; private set; }
     internal bool ActiveWindowMaximized { get; private set; }
     internal event Action? ActiveWindowChanged;
     internal void ObserveForeground(IntPtr foreground)
     {
         if (IsStopping || NativeMethods.IsOwnToolWindow(foreground) || IsControlCenterWindow(foreground)) return;
-        var window = DockWindows().FirstOrDefault(item => item.Handle == foreground && NativeMethods.OwnsWindow(item));
+        // Keep a stable native identity while the HWND and enumerated task
+        // snapshot are unchanged. Internal Nexus utility windows are resolved
+        // afresh because they can change without the external window snapshot.
+        var window = _foregroundLookup.Resolve(
+            foreground, _windows,
+            () => DockWindows().FirstOrDefault(item => item.Handle == foreground && NativeMethods.OwnsWindow(item)),
+            previous => previous.ProcessId != Environment.ProcessId && NativeMethods.OwnsWindow(previous),
+            safeEmpty: foreground == IntPtr.Zero || foreground == Desktop.Handle);
         bool maximized = window is not null && NativeMethods.IsZoomed(window.Handle);
         if (window == ActiveWindow && maximized == ActiveWindowMaximized) return;
         ActiveWindow = window; ActiveWindowMaximized = maximized; ActiveWindowChanged?.Invoke();
