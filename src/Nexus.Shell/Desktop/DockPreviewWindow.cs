@@ -35,6 +35,7 @@ internal sealed class DockPreviewWindow : Window
     private readonly FontIcon _maximizeIcon;
     private MotionController? _motion;
     private WindowThumbnail? _thumbnail;
+    private readonly DockThumbnailRetry _thumbnailRetry = new();
     private RunningWindow? _window;
     private ShellRect _anchor, _bounds;
     private long? _leaveSince;
@@ -97,7 +98,7 @@ internal sealed class DockPreviewWindow : Window
     internal void Show(RunningWindow window, ShellRect anchor, bool keyboard)
     {
         if (_closed || !NativeMethods.OwnsWindow(window)) return;
-        ReleaseThumbnail(); _window = window; _anchor = anchor; _keyboardOpen = keyboard; _leaveSince = null; _state = null;
+        ReleaseThumbnail(); _thumbnailRetry.Reset(); _window = window; _anchor = anchor; _keyboardOpen = keyboard; _leaveSince = null; _state = null;
         _title.Text = window.Title; _detail.Text = window.ProcessId == Environment.ProcessId ? "Nexus" : window.ProcessName;
         AutomationProperties.SetName(_viewport, "Switch to " + window.Title);
         if (_header.Children.Count > 1) _header.Children.RemoveAt(1);
@@ -137,26 +138,49 @@ internal sealed class DockPreviewWindow : Window
         bool minimized = valid && (NativeMethods.IsMinimized(target.Handle) || !NativeMethods.Visible(target.Handle));
         bool maximized = valid && NativeMethods.IsZoomed(target.Handle);
         bool cloaked = valid && NativeMethods.IsCloaked(target.Handle);
-        var state = (valid, minimized, cloaked, maximized, _environment.Session.State.ReducedEffects, _environment.Theme.HighContrast);
-        if (_state == state) return; _state = state;
-        _restore.IsEnabled = _viewport.IsEnabled = _close.IsEnabled = valid;
-        _minimize.IsEnabled = valid && !minimized; _maximize.IsEnabled = valid;
-        if (_maximized != maximized)
-        { _maximized = maximized; _maximizeIcon.Glyph = maximized ? "\uE923" : "\uE922"; string name = maximized ? "Restore window size" : "Maximize window"; AutomationProperties.SetName(_maximize, name); ToolTipService.SetToolTip(_maximize, name); }
-        if (minimized || !valid || cloaked || _environment.Session.State.ReducedEffects || _environment.Theme.HighContrast)
-            ReleaseThumbnail();
-        else if (DockPreviewPolicy.ShouldAttachThumbnail(IsOpen, valid, minimized, cloaked,
-                     _environment.Session.State.ReducedEffects || _environment.Theme.HighContrast, _thumbnail is not null))
+        bool fast = _environment.Session.State.ReducedEffects;
+        bool contrast = _environment.Theme.HighContrast;
+        var state = (valid, minimized, cloaked, maximized, fast, contrast);
+        if (_state != state)
         {
-            try
+            _state = state;
+            _restore.IsEnabled = _viewport.IsEnabled = _close.IsEnabled = valid;
+            _minimize.IsEnabled = valid && !minimized; _maximize.IsEnabled = valid;
+            if (_maximized != maximized)
             {
-                _thumbnail = WindowThumbnail.TryCreate(_handle, target);
-                UpdateThumbnail();
+                _maximized = maximized; _maximizeIcon.Glyph = maximized ? "\uE923" : "\uE922";
+                string name = maximized ? "Restore window size" : "Maximize window";
+                AutomationProperties.SetName(_maximize, name); ToolTipService.SetToolTip(_maximize, name);
             }
-            catch (Exception ex) { ReleaseThumbnail(); Log.Write("Live window preview unavailable", ex); }
+            _status.Text = minimized ? "Minimized · restore to see the window"
+                : fast ? "Fast mode · window card" : "Click the preview to switch";
         }
-        _status.Text = minimized ? "Minimized · restore to see the window"
-            : _environment.Session.State.ReducedEffects ? "Fast mode · window card" : "Click the preview to switch";
+
+        // Even if the window state did not change, a temporary DWM failure
+        // must not strand the live preview in static fallback indefinitely.
+        bool eligible = IsOpen && valid && !minimized && !cloaked && !fast && !contrast;
+        if (!eligible)
+        {
+            if (_thumbnail is not null) ReleaseThumbnail();
+            _thumbnailRetry.Reset();
+            return;
+        }
+        if (!DockPreviewPolicy.ShouldAttachThumbnail(IsOpen, valid, minimized, cloaked, fast || contrast, _thumbnail is not null))
+        {
+            _thumbnailRetry.Reset();
+            return;
+        }
+        if (!_thumbnailRetry.ShouldAttempt(true, _thumbnail is not null, Environment.TickCount64)) return;
+        try
+        {
+            _thumbnail = WindowThumbnail.TryCreate(_handle, target);
+            if (_thumbnail is not null)
+            {
+                UpdateThumbnail();
+                if (_thumbnail is not null) _thumbnailRetry.Reset();
+            }
+        }
+        catch (Exception ex) { ReleaseThumbnail(); Log.Write("Live window preview unavailable", ex); }
     }
     internal void UpdatePointer(bool fullscreen)
     {
@@ -181,7 +205,7 @@ internal sealed class DockPreviewWindow : Window
     internal void Hide()
     {
         if (_closed || !IsOpen) return; IsOpen = _keyboardOpen = false; _leaveSince = null;
-        ReleaseThumbnail(); _motion?.SetEnabled(false); _native.Hide();
+        ReleaseThumbnail(); _thumbnailRetry.Reset(); _motion?.SetEnabled(false); _native.Hide();
     }
     internal void ApplyAppearance()
     {
