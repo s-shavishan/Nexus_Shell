@@ -97,6 +97,16 @@ internal static class DockExperienceChecks
         Check(!attached.Fullscreen && attached.Attached,
             "Edge-aligned application geometry should attach the menu bar without hiding the dock.");
 
+        foreach (var presence in Enum.GetValues<DockPresence>())
+        {
+            Check(!DockIndicatorUpdatePolicy.ShouldTransition(false, null, presence)
+                && !DockIndicatorUpdatePolicy.ShouldTransition(false, DockPresence.Active, presence),
+                "An invalid or expired dock HWND must not replay native indicator transitions.");
+            Check(DockIndicatorUpdatePolicy.ShouldTransition(true, null, presence),
+                "A newly valid dock HWND must reconcile initial indicator appearance.");
+            Check(!DockIndicatorUpdatePolicy.ShouldTransition(true, presence, presence),
+                "An unchanged valid dock presence must not restart its compositor animation.");
+        }
         Check(DockIndicatorUpdatePolicy.Decide(false, false, true, true, true) == DockIndicatorUpdate.None,
             "Stable dock presence must not restart compositor animation or rewrite indicator state.");
         Check(DockIndicatorUpdatePolicy.Decide(true, false, true, true, true) == DockIndicatorUpdate.Animate,
