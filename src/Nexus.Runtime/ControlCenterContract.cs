@@ -3,17 +3,18 @@ using Nexus.Shell.Services;
 
 namespace Nexus.Runtime;
 
-public enum DesktopPreference { Wallpaper, NativeGlass, ReducedEffects, FloatingDock, CompactDock, WindowPreviews, Clock24Hour, ClockWidget, SpaceWidget, QuietAlerts, Animations, GlassStyle }
+public enum DesktopPreference { Wallpaper, NativeGlass, ReducedEffects, FloatingDock, CompactDock, WindowPreviews, Clock24Hour, ClockWidget, SpaceWidget, QuietAlerts, Animations, GlassStyle, GlassQuality }
 public sealed record ControlCenterPreferences(string Wallpaper, bool NativeGlass, bool ReducedEffects, bool FloatingDock, bool CompactDock,
-    bool WindowPreviews, bool Clock24Hour, bool ClockWidget, bool SpaceWidget, bool QuietAlerts, bool Animations = true, string GlassStyle = Nexus.Shell.Services.GlassStyle.Default)
+    bool WindowPreviews, bool Clock24Hour, bool ClockWidget, bool SpaceWidget, bool QuietAlerts, bool Animations = true, string GlassStyle = Nexus.Shell.Services.GlassStyle.Default, string GlassQuality = Nexus.Shell.Services.GlassQuality.Default)
 {
     public static ControlCenterPreferences From(ShellState state) => new(state.Wallpaper, state.NativeGlass, state.ReducedEffects, state.FloatingTaskbar,
-        state.CompactDock, state.DockPreviews, state.Clock24Hour, state.ShowClockWidget, state.ShowSpaceWidget, state.QuietNotifications, state.SurfaceAnimations, state.GlassStyle);
+        state.CompactDock, state.DockPreviews, state.Clock24Hour, state.ShowClockWidget, state.ShowSpaceWidget, state.QuietNotifications, state.SurfaceAnimations, state.GlassStyle, state.GlassQuality);
     public void Apply(ShellState state)
     {
         state.Wallpaper = Wallpaper; state.NativeGlass = NativeGlass; state.ReducedEffects = ReducedEffects; state.FloatingTaskbar = FloatingDock;
         state.CompactDock = CompactDock; state.DockPreviews = WindowPreviews; state.Clock24Hour = Clock24Hour;
         state.ShowClockWidget = ClockWidget; state.ShowSpaceWidget = SpaceWidget; state.QuietNotifications = QuietAlerts; state.SurfaceAnimations = Animations; state.GlassStyle = Nexus.Shell.Services.GlassStyle.Normalize(GlassStyle);
+        state.GlassQuality = Nexus.Shell.Services.GlassQuality.Normalize(GlassQuality);
     }
     public static void Set(ShellState state, PanelAction command)
     {
@@ -24,6 +25,7 @@ public sealed record ControlCenterPreferences(string Wallpaper, bool NativeGlass
         {
             case DesktopPreference.Wallpaper: state.Wallpaper = command.Value!; break;
             case DesktopPreference.GlassStyle: state.GlassStyle = command.Value!; break;
+            case DesktopPreference.GlassQuality: state.GlassQuality = command.Value!; break;
             case DesktopPreference.NativeGlass: state.NativeGlass = value; break;
             case DesktopPreference.ReducedEffects: state.ReducedEffects = value; break;
             case DesktopPreference.FloatingDock: state.FloatingTaskbar = value; break;
@@ -46,6 +48,7 @@ public sealed record ControlCenterPreferences(string Wallpaper, bool NativeGlass
             {
                 DesktopPreference.Wallpaper => command.Enabled is null && command.Value is not null && AuraPalette.Moods.Contains(command.Value),
                 DesktopPreference.GlassStyle => command.Enabled is null && command.Value is not null && Nexus.Shell.Services.GlassStyle.Choices.Contains(command.Value),
+                DesktopPreference.GlassQuality => command.Enabled is null && command.Value is not null && Nexus.Shell.Services.GlassQuality.Choices.Contains(command.Value),
                 _ => command.Enabled is not null && command.Value is null
             };
             if (!valid) throw new RuntimeFailure("panel-preference", "The desktop preference has an invalid value.");

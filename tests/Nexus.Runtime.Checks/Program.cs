@@ -33,6 +33,7 @@ internal static class RuntimeChecks
     internal static async Task RunAsync(bool noNativeIpc)
     {
         GlassPreferenceChecks.Run();
+        GlassQualityChecks.Run();
         await SearchChecks.RunAsync();
         await WindowsSearchChecks.RunAsync();
         await StateWriterStabilityChecks.RunAsync();
