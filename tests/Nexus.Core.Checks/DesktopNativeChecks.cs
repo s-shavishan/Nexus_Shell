@@ -69,6 +69,9 @@ internal static class DesktopNativeChecks
                 throw new Exception("Dock minimize, toggle, maximize and close must reject stale process identities.");
             var layouts = new WindowLayouts();
             if (!GetWindowRect(window, out var original)) throw new Exception("The native window bounds could not be read.");
+            if (!NativeMethods.GetWindowRect(window, out var actualDesktopBounds)
+                || DesktopSurfacePositionPolicy.RequiresMove(true, actualDesktopBounds.Bounds, actualDesktopBounds.Bounds))
+                throw new Exception("A correctly positioned real HWND must skip redundant native MoveAndResize.");
             bool rejected = false;
             try { layouts.Arrange([new RunningWindow(window, "Wrong process", "test", Environment.ProcessId + 1)], "Columns"); }
             catch (InvalidOperationException) { rejected = true; }
