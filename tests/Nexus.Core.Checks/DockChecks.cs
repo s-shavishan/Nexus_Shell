@@ -1,5 +1,6 @@
 using Nexus.Shell.Models;
 using Nexus.Shell.Services;
+using Nexus.Shell.Interop;
 
 internal static class DockChecks
 {
@@ -22,6 +23,15 @@ internal static class DockChecks
         dock.Reconcile([replacement, replacement, new(IntPtr.Zero, "Invalid", "app", 100), new(new IntPtr(999), "Invalid owner", "app")]);
         Check(dock.Windows.SequenceEqual(new[] { replacement }), "Closed, duplicate and invalid identities must not leave ghost buttons.");
         dock.Reconcile([]); Check(dock.Windows.Count == 0, "Closing every app must clear the running dock.");
+
+        Check(NativeMethods.DockWindowEligibleVisibility(true, false),
+            "Normal visible app windows must remain in the dock.");
+        Check(NativeMethods.DockWindowEligibleVisibility(true, true),
+            "Visible minimized app windows must remain in the dock.");
+        Check(NativeMethods.DockWindowEligibleVisibility(false, true),
+            "An iconic app that temporarily clears WS_VISIBLE must retain its dock entry.");
+        Check(!NativeMethods.DockWindowEligibleVisibility(false, false),
+            "Ordinary hidden non-iconic app windows must not be added to the dock.");
 
         // A rejected DispatcherQueue.TryEnqueue used to strand the dock's
         // reposition flag permanently, blocking later width/position changes.
