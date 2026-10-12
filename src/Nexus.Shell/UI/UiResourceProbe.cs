@@ -79,6 +79,9 @@ internal static class UiResourceProbe
             stage = "retained-launchpad-rendering";
             launchpad.VerifyRetainedRendering();
             checks.Add("Twenty unchanged Launchpad renders retain item source and page-control identities");
+            stage = "retained-dock-appearance";
+            dock.VerifyRetainedAppearance();
+            checks.Add("100 native dock appearance refreshes preserve launcher and clock brushes");
             stage = "retained-dock-density";
             dock.VerifyRetainedDensity();
             checks.Add("Production dock: compact/normal changes update actual icon geometry; twenty unchanged snapshots retain buttons and avoid width writes");
