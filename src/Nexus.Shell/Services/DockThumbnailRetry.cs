@@ -7,6 +7,7 @@ internal sealed class DockThumbnailRetry
 {
     internal const int MaxDelayMilliseconds = 4000;
     private long _nextAttempt;
+    private long _lastObserved;
     private int _failures;
     private bool _waiting;
 
@@ -17,7 +18,11 @@ internal sealed class DockThumbnailRetry
             Reset();
             return false;
         }
-        if (_waiting && now >= 0 && now < _nextAttempt) return false;
+        // A restarted clock/invalidated time origin must never lock the card
+        // out until an obsolete absolute deadline is reached.
+        if (_waiting && now < _lastObserved) Reset();
+        _lastObserved = now;
+        if (_waiting && now < _nextAttempt) return false;
         int delay = Math.Min(MaxDelayMilliseconds, 250 << Math.Min(_failures, 4));
         _failures = Math.Min(_failures + 1, 5);
         _waiting = true;
@@ -29,6 +34,7 @@ internal sealed class DockThumbnailRetry
     {
         _waiting = false;
         _nextAttempt = 0;
+        _lastObserved = 0;
         _failures = 0;
     }
 }
