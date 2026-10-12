@@ -154,6 +154,25 @@ internal static class UiResourceProbe
                     throw new InvalidOperationException("Unchanged Liquid Glass bevel styling triggered repeated XAML dependency-property writes.");
             }
             checks.Add("Four requested glass qualities; native surface retains the user's selection and palette tiers detach backdrop with an opaque base");
+            stage = "glass-retained-paint";
+            // Ensure a stable solid/glass-fallback material doesn't keep
+            // invalidating the WinUI render tree from identical brush writes.
+            int backgroundWrites = 0, borderWrites = 0;
+            long bgToken = frame.RegisterPropertyChangedCallback(Border.BackgroundProperty, (_, _) => backgroundWrites++);
+            long edgeToken = frame.RegisterPropertyChangedCallback(Border.BorderBrushProperty, (_, _) => borderWrites++);
+            try
+            {
+                for (int i = 0; i < 100; i++) material.Apply(window, frame, environment);
+                if (backgroundWrites != 0 || borderWrites != 0)
+                    throw new InvalidOperationException(
+                        $"Stable glass frame repainted XAML brushes on repeated appearance updates: background={backgroundWrites}, edge={borderWrites}.");
+            }
+            finally
+            {
+                frame.UnregisterPropertyChangedCallback(Border.BackgroundProperty, bgToken);
+                frame.UnregisterPropertyChangedCallback(Border.BorderBrushProperty, edgeToken);
+            }
+            checks.Add("100 native WinUI material refreshes preserve retained frame background/edge brushes without layout-invalidating writes");
             session.State.NativeGlass = false; material.Apply(window, frame, environment); frame.UpdateLayout();
             checks.Add("Native glass detach and opaque palette path");
         }
