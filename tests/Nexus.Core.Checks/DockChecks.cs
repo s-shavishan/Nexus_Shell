@@ -56,6 +56,19 @@ internal static class DockChecks
         work.Dequeue()(); work.Dequeue()();
         Check(positions == 5 && work.Count == 0, "Reentrant dock reposition updates must settle without lost or duplicate callbacks.");
 
+        // Avoid a permanent 80 ms native polling loop when the dock is idle,
+        // but keep the original edge-reveal latency during maximized windows.
+        Check(DockRefreshCadence.Interval(true, false, false) == DockRefreshCadence.IdleMilliseconds,
+            "A visible floating dock should not poll the native foreground at interactive speed.");
+        Check(DockRefreshCadence.Interval(false, false, false) == DockRefreshCadence.IdleMilliseconds
+            && DockRefreshCadence.Interval(false, true, false) == DockRefreshCadence.IdleMilliseconds,
+            "Edge-mode docks without interactions should use the relaxed fallback interval.");
+        Check(DockRefreshCadence.Interval(true, true, false) == DockRefreshCadence.ActiveMilliseconds,
+            "Floating dock edge reveal must retain its responsive 80 ms polling.");
+        Check(DockRefreshCadence.Interval(true, false, true) == DockRefreshCadence.ActiveMilliseconds
+            && DockRefreshCadence.Interval(false, false, true) == DockRefreshCadence.ActiveMilliseconds,
+            "Open dock previews, menus and other interactions require fast native pointer sampling.");
+
         var visibility = new DockVisibility();
         Check(visibility.Update(true, false, false, false, false, 0), "Floating dock must be visible on the desktop.");
         Check(!visibility.Update(true, true, false, false, false, 1), "A maximized app must hide the floating dock.");

@@ -107,10 +107,15 @@ internal sealed class TaskbarWindow : Window, IDisposable
             _environment.SetDesktopFullscreen(fullscreen || (!_environment.IsManagedDesktop && (maximized || attached)));
             _environment.SetMenuBarAttached(attached);
             _environment.UpdateDockPreviewPointer(fullscreen);
+            bool floating = _environment.Session.State.FloatingTaskbar;
+            bool interacting = _environment.DockInteraction || View.ContextMenuOpen;
+            int pollingMs = DockRefreshCadence.Interval(floating, maximized || attached, interacting);
+            var interval = TimeSpan.FromMilliseconds(pollingMs);
+            if (_visibilityTimer.Interval != interval) _visibilityTimer.Interval = interval;
             var revealArea = _environment.IsManagedDesktop ? monitor : _registration.WorkArea;
             bool pointer = NativeMethods.GetCursorPos(out var point) && DockVisibility.InRevealArea(revealArea, BarBounds, point.X, point.Y, _shown, ShellLayerInterop.Scale(Handle));
-            bool show = !_arranging && _visibility.Update(_environment.Session.State.FloatingTaskbar, maximized || attached, fullscreen,
-                _environment.DockInteraction || View.ContextMenuOpen, pointer, Environment.TickCount64);
+            bool show = !_arranging && _visibility.Update(floating, maximized || attached, fullscreen,
+                interacting, pointer, Environment.TickCount64);
             // Hide/show only on transitions. Native Show Desktop can hide this
             // tool window independently, so recover visibility when needed.
             if (show && (!_shown || !NativeMethods.Visible(Handle)))
