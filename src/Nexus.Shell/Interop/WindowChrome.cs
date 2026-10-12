@@ -169,7 +169,7 @@ internal sealed class WindowChrome : IDisposable
                 {
                     // Stop clipping to a stale rectangle while WM_SIZING changes
                     // HWND dimensions. Recreate rounded corners once sizing ends.
-                    if (SetWindowRgn(_handle, IntPtr.Zero, true) != 0)
+                    if (SetWindowRgn(_handle, IntPtr.Zero, LiveResizeRegionPolicy.RedrawWhileSuspending) != 0)
                     { _liveSizeUnclipped = true; _applied = null; Trace("region-live-sizing"); }
                 }
                 if (message == 0x0231)
