@@ -60,6 +60,24 @@ internal static class DockExperienceChecks
             && !DockPreviewPolicy.InInteractionArea(anchor, preview, -1000, 540), "Unrelated desktop areas must not keep a preview open.");
         Check(!DockPreviewPolicy.Contains(anchor, anchor.Right, anchor.Y) && !DockPreviewPolicy.Contains(default, 0, 0),
             "The hover delay must require a real, non-empty icon hit area.");
+        // A live preview can remain open while its target is minimized, cloaked,
+        // restored or moved between virtual desktops. Reattach DWM once only
+        // when the app becomes drawable, with accessibility fallbacks intact.
+        Check(DockPreviewPolicy.ShouldAttachThumbnail(true, true, false, false, false, false),
+            "An open, drawable restored window should regain a live DWM thumbnail.");
+        Check(!DockPreviewPolicy.ShouldAttachThumbnail(true, true, false, false, false, true),
+            "A still-attached thumbnail must not be registered twice.");
+        Check(!DockPreviewPolicy.ShouldAttachThumbnail(true, true, true, false, false, false),
+            "Minimized apps must retain the readable static preview card.");
+        Check(!DockPreviewPolicy.ShouldAttachThumbnail(true, true, false, true, false, false),
+            "Cloaked virtual-desktop windows must not have a live preview.");
+        Check(!DockPreviewPolicy.ShouldAttachThumbnail(true, false, false, false, false, false),
+            "Closed/reused HWND identities must never acquire a DWM relationship.");
+        Check(!DockPreviewPolicy.ShouldAttachThumbnail(false, true, false, false, false, false),
+            "Hidden preview surfaces must not hold a live thumbnail.");
+        Check(!DockPreviewPolicy.ShouldAttachThumbnail(true, true, false, false, true, false),
+            "Reduced-effects or high-contrast display must stay on the static preview fallback.");
+
         var viewport = new ShellRect(14, 58, 308, 130);
         foreach (var (width, height) in new[] { (1920, 1080), (1080, 1920), (1, 10000), (10000, 1), (1, 1) })
         {
