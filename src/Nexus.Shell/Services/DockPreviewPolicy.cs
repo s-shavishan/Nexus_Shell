@@ -6,6 +6,10 @@ public static class DockPreviewPolicy
 {
     public const int HoverDelayMilliseconds = 280;
     public const int LeaveDelayMilliseconds = 240;
+    // An open card may transition from minimized/cloaked to visible without
+    // being reopened. Restore its DWM relationship only on that transition.
+    public static bool ShouldAttachThumbnail(bool open, bool valid, bool minimized, bool cloaked, bool fastMode, bool attached)
+        => open && valid && !minimized && !cloaked && !fastMode && !attached;
     public static bool Contains(ShellRect rectangle, int x, int y) => rectangle.Width > 0 && rectangle.Height > 0
         && x >= rectangle.X && x < rectangle.Right && y >= rectangle.Y && y < rectangle.Bottom;
     public static bool InInteractionArea(ShellRect anchor, ShellRect preview, int x, int y)
