@@ -351,6 +351,28 @@ internal sealed class TaskbarView : Grid
             }
             finally { button.UnregisterPropertyChangedCallback(WidthProperty, token); }
 
+            // Even a changed running-window snapshot may call ApplyDensity.
+            // Stable item sizes and the separator must not invalidate layout.
+            int densityWrites = 0, widthNotifications = 0;
+            Action notifyWidth = () => widthNotifications++;
+            PreferredWidthChanged += notifyWidth;
+            long iconSize = icon.RegisterPropertyChangedCallback(WidthProperty, (_, _) => densityWrites++);
+            long buttonSize = button.RegisterPropertyChangedCallback(HeightProperty, (_, _) => densityWrites++);
+            long separatorVisibility = _separator.RegisterPropertyChangedCallback(UIElement.VisibilityProperty, (_, _) => densityWrites++);
+            try
+            {
+                for (int i = 0; i < 100; i++) ApplyDensity();
+                if (densityWrites != 0 || widthNotifications != 0)
+                    throw new InvalidOperationException("Stable dock density rewrote item geometry or emitted spurious width changes.");
+            }
+            finally
+            {
+                icon.UnregisterPropertyChangedCallback(WidthProperty, iconSize);
+                button.UnregisterPropertyChangedCallback(HeightProperty, buttonSize);
+                _separator.UnregisterPropertyChangedCallback(UIElement.VisibilityProperty, separatorVisibility);
+                PreferredWidthChanged -= notifyWidth;
+            }
+
             SetAvailableWidth(700);
             int frameWrites = 0;
             long corner = _frame.RegisterPropertyChangedCallback(Border.CornerRadiusProperty, (_, _) => frameWrites++);
