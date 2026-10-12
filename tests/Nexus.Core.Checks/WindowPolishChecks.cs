@@ -7,6 +7,15 @@ internal static class WindowPolishChecks
     {
         int count = 0;
         void Check(bool value, string message) { count++; if (!value) throw new Exception(message); }
+        Check(WindowExitPolicy.AcceptRestore(false, false),
+            "A restore notification should cancel an in-flight minimize animation.");
+        Check(!WindowExitPolicy.AcceptRestore(false, true),
+            "An accepted Close action must not be lost to a later native restore message.");
+        Check(!WindowExitPolicy.AcceptRestore(true, false),
+            "Disposed window motion must reject stale restore callbacks.");
+        Check(!WindowExitPolicy.AcceptRestore(true, true),
+            "Disposed closing frames must not restart compositor animations.");
+
         var work = new ShellRect(0, 38, 1920, 1042);
         Check(MaximizedWindowLayout.Repair(new(-8, -8, 1936, 1056), new(0, 0, 1920, 1040), work, 1)
             == new ShellRect(-8, 30, 1936, 1058), "Correct the hidden caption and old bottom gap while retaining native resize borders.");
