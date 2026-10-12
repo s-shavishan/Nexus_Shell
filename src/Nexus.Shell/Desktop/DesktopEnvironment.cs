@@ -35,7 +35,8 @@ internal sealed partial class DesktopEnvironment
     private readonly NexusDesktopToggle _desktopToggle = new();
     private WindowEventObserver? _windowEvents;
     private readonly DispatcherTimer _windowRefreshTimer = new() { Interval = TimeSpan.FromMilliseconds(50) };
-    private bool _windowEventQueued, _foregroundChanged, _windowRefreshPending;
+    private readonly WindowEventDispatchGate _windowEventGate = new();
+    private bool _windowRefreshPending;
     private EventWaitHandle? _pulse;
     private Process? _host;
     private bool _sessionDialog;
@@ -238,7 +239,11 @@ internal sealed partial class DesktopEnvironment
         if (_refreshing) return; _refreshing = true; _windowRefreshPending = false;
         try
         {
-            var windows = await Task.Run(() => NativeMethods.RunningWindows(Desktop.Handle));
+            var windows = await Task.Run(() =>
+            {
+                using var measurement = UiTrace.Measure("dock-enumerate", "Dock");
+                return NativeMethods.RunningWindows(Desktop.Handle);
+            });
             // A new event during enumeration schedules another pass instead of
             // being lost behind the old _refreshing early return.
             if (!IsStopping)
@@ -262,17 +267,16 @@ internal sealed partial class DesktopEnvironment
         // Observe native minimize/restore of Nexus content windows too, while
         // ignoring our tool windows and popups to avoid self-refresh loops.
         if (NativeMethods.WindowProcessId(change.Window) == Environment.ProcessId && !IsOwnAppWindow(change.Window)) return;
-        _foregroundChanged |= change.IsForeground;
-        if (_windowEventQueued) return; _windowEventQueued = true;
-        if (!Desktop.DispatcherQueue.TryEnqueue(() =>
-        {
-            _windowEventQueued = false; if (IsStopping) return;
-            bool foregroundChanged = _foregroundChanged; _foregroundChanged = false;
-            if (foregroundChanged && ShellLayerInterop.IsExplorerDesktopWindow(NativeMethods.GetForegroundWindow())) Desktop.ShowSurface();
-            Taskbar.View.RefreshWindowStates(); Taskbar.RefreshVisibility();
-            // Fixed coalescing window, not a sliding debounce that can starve.
-            if (!_windowRefreshTimer.IsEnabled) _windowRefreshTimer.Start();
-        })) _windowEventQueued = false;
+        _windowEventGate.Request(change.IsForeground,
+            callback => Desktop.DispatcherQueue.TryEnqueue(() => callback()),
+            foregroundChanged =>
+            {
+                if (IsStopping) return;
+                if (foregroundChanged && ShellLayerInterop.IsExplorerDesktopWindow(NativeMethods.GetForegroundWindow())) Desktop.ShowSurface();
+                Taskbar.View.RefreshWindowStates(); Taskbar.RefreshVisibility();
+                // Fixed coalescing window, not a sliding debounce that can starve.
+                if (!_windowRefreshTimer.IsEnabled) _windowRefreshTimer.Start();
+            });
     }
     private IReadOnlyList<RunningWindow> DockWindows()
     {

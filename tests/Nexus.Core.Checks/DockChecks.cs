@@ -9,20 +9,25 @@ internal static class DockChecks
     {
         var dock = new DockWindowSet();
         var windows = Enumerable.Range(1, 130).Select(i => new RunningWindow(new IntPtr(i), "App " + i, "app", i + 100)).ToArray();
-        dock.Reconcile(windows);
+        Check(dock.Reconcile(windows), "New app identities must change the dock snapshot.");
         Check(dock.Windows.Count == 130, "All windows must remain accessible beyond the old 20/80-window limits.");
-        dock.Reconcile(windows.Reverse().ToArray());
+        Check(!dock.Reconcile(windows.Reverse().ToArray()),
+            "Z-order-only changes must not trigger layout reconciliation.");
         Check(dock.Windows.SequenceEqual(windows), "Foreground/z-order changes must not move dock buttons.");
         var renamed = windows[30] with { Title = "Renamed document" };
-        dock.Reconcile(windows.Select(w => w.Handle == renamed.Handle ? renamed : w).ToArray());
+        Check(dock.Reconcile(windows.Select(w => w.Handle == renamed.Handle ? renamed : w).ToArray()),
+            "Window title changes must invalidate the dock button metadata.");
         Check(dock.Windows[30] == renamed, "A title update must change its existing entry without moving it.");
         var replacement = windows[0] with { ProcessId = 9000, Title = "New owner" };
-        dock.Reconcile([replacement, .. windows.Skip(1)]);
+        Check(dock.Reconcile([replacement, .. windows.Skip(1)]),
+            "PID changes on a reused HWND must count as lifecycle changes.");
         Check(dock.Windows.Count == 130 && dock.Windows[^1] == replacement && !dock.Windows.Contains(windows[0]),
             "Reused HWNDs must remove the previous process and append a new identity.");
         dock.Reconcile([replacement, replacement, new(IntPtr.Zero, "Invalid", "app", 100), new(new IntPtr(999), "Invalid owner", "app")]);
         Check(dock.Windows.SequenceEqual(new[] { replacement }), "Closed, duplicate and invalid identities must not leave ghost buttons.");
-        dock.Reconcile([]); Check(dock.Windows.Count == 0, "Closing every app must clear the running dock.");
+        Check(dock.Reconcile([]), "Closing remaining windows must invalidate the dock snapshot.");
+        Check(!dock.Reconcile([]), "An unchanged empty dock must skip repeated layout work.");
+        Check(dock.Windows.Count == 0, "Closing every app must clear the running dock.");
 
         Check(NativeMethods.DockWindowEligibleVisibility(true, false),
             "Normal visible app windows must remain in the dock.");
