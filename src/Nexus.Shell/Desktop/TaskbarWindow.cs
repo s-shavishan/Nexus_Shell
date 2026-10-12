@@ -121,12 +121,14 @@ internal sealed class TaskbarWindow : Window, IDisposable
             // exactly the same native geometry snapshot.
             ShellLayerInterop.Rect rect = default;
             bool hasBounds = sameMonitor && NativeMethods.GetWindowRect(foreground, out rect);
-            bool fullscreen = hasBounds
-                && DockFullscreenPolicy.IsFullscreen(rect.Bounds, monitor, maximized, NativeMethods.WindowStyle(foreground));
-            // Preview does not own Explorer's work area. Avoid covering a
-            // maximized application's native title controls in that mode.
-            bool attached = hasBounds && !NativeMethods.IsMinimized(foreground)
-                && MenuBarLayout.Attached(rect.Bounds, monitorInfo.Work.Bounds, maximized, scale);
+            // Preview must not cover maximized title controls or borderless
+            // fullscreen applications. Both decisions use the same HWND bounds.
+            var presentation = DockForegroundGeometryPolicy.Classify(
+                hasBounds, rect.Bounds, monitor, monitorInfo.Work.Bounds,
+                maximized, hasBounds && NativeMethods.IsMinimized(foreground),
+                hasBounds ? NativeMethods.WindowStyle(foreground) : 0, scale);
+            bool fullscreen = presentation.Fullscreen;
+            bool attached = presentation.Attached;
             if (_applicationMonitor != monitor) { _applicationMonitor = monitor; _applicationState = default; }
             bool overlay = foreground != _environment.Desktop.Handle && (NativeMethods.IsOwnToolWindow(foreground) || _environment.IsControlCenterWindow(foreground));
             if (overlay) (maximized, fullscreen, attached) = _applicationState;
