@@ -16,7 +16,8 @@ internal sealed class DesktopWindow : Window, IDisposable
     internal DesktopSurface Surface { get; }
     private readonly DesktopLayerHook _hook;
     private readonly WindowChrome _chrome;
-    private bool _positionQueued, _disposed;
+    private readonly CoalescedUiDispatch _positionDispatch = new();
+    private bool _disposed;
     internal DesktopWindow(DesktopEnvironment environment)
     {
         Surface = new(environment); Content = Surface;
@@ -35,8 +36,10 @@ internal sealed class DesktopWindow : Window, IDisposable
     internal void ShowSurface() { if (_disposed) return; NativeWindow.Show(false); ShellLayerInterop.AnchorDesktop(Handle); }
     private void QueuePosition()
     {
-        if (_positionQueued || _disposed) return; _positionQueued = true;
-        DispatcherQueue.TryEnqueue(() => { _positionQueued = false; if (!_disposed) Position(); });
+        if (_disposed) return;
+        _positionDispatch.Request(
+            callback => DispatcherQueue.TryEnqueue(() => callback()),
+            () => { if (!_disposed) Position(); });
     }
     private void Position()
     { var b = ShellLayerInterop.Monitor(Handle).Monitor.Bounds; NativeWindow.MoveAndResize(new RectInt32(b.X, b.Y, b.Width, b.Height)); ShellLayerInterop.AnchorDesktop(Handle); }
