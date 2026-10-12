@@ -274,7 +274,9 @@ internal sealed class TaskbarView : Grid
             if (cue != DockMotionCue.None) { if (item.Icon.IsLoaded && _dockMotion is not null) { _dockMotion.Play(item.Icon, cue); item.PendingCue = DockMotionCue.None; } else item.PendingCue = cue; }
             if (_dockMotion is not null && transitioned) { item.Indicator.Width = 22; item.Indicator.Opacity = 1; _dockMotion.SetIndicator(item.Indicator, presence, initialized); }
             if (item.State == state && item.Button.IsEnabled == valid && item.PreviewsEnabled == _environment.Session.State.DockPreviews) continue;
-            item.State = state; item.Button.IsEnabled = valid; item.PreviewsEnabled = _environment.Session.State.DockPreviews;
+            item.State = state;
+            if (item.Button.IsEnabled != valid) item.Button.IsEnabled = valid;
+            item.PreviewsEnabled = _environment.Session.State.DockPreviews;
         item.Button.Background = active ? _environment.Theme.Brush("NexusSelection") : _transparent;
             item.Indicator.Background = _environment.Theme.Brush(active ? "NexusAccent" : "NexusMuted");
             // Indicator brush already reflects the active state above.
