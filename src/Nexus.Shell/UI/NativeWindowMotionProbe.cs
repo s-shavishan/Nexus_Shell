@@ -76,9 +76,15 @@ internal static class NativeWindowMotionProbe
                 await hide.WaitAsync(TimeSpan.FromSeconds(2));
                 if (hides != 0) throw new InvalidOperationException("Restore did not cancel a pending dock hide action.");
             }
-            for (int i = 0; i < 3; i++) await dockTransition.MinimizeAsync(() => hides++).WaitAsync(TimeSpan.FromSeconds(2));
-            if (hides != 3 || dockTransition.AnimationSetCreations != 2 || dockTransition.RetainedAnimationSetCount != 2)
-                throw new InvalidOperationException("Repeated dock hides/restores rebuilt resources or lost native actions.");
+            for (int i = 0; i < 3; i++)
+            {
+                await dockTransition.MinimizeAsync(() => hides++).WaitAsync(TimeSpan.FromSeconds(2));
+                if (hides != i + 1 || dockTransition.AnimationSetCreations != 2 || dockTransition.RetainedAnimationSetCount != 2)
+                    throw new InvalidOperationException(
+                        $"Dock hide #{i + 1} did not preserve action ownership or cached templates: " +
+                        $"nativeActions={hides}, animationSetCreations={dockTransition.AnimationSetCreations}, " +
+                        $"retainedSets={dockTransition.RetainedAnimationSetCount} (expected {i + 1}/2/2).");
+            }
             var pendingHide = dockTransition.MinimizeAsync(() => hides++);
             dockTransition.Dispose();
             await pendingHide.WaitAsync(TimeSpan.FromSeconds(2));
