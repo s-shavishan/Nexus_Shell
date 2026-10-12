@@ -192,5 +192,8 @@ internal sealed class DockPreviewWindow : Window
         foreach (var button in new[] { _restore, _minimize, _maximize, _close }) { button.Background = theme.Brush("NexusCard"); button.Foreground = theme.Brush("NexusText"); }
         _chrome.SetCorners(theme.HighContrast, 18);
         _motion?.SetEnabled(theme.Animations && !theme.HighContrast && _environment.Session.State.SurfaceAnimations && !_environment.Session.State.ReducedEffects);
+        // An already-visible card must switch immediately between a DWM
+        // relationship and an accessible solid fallback on preference changes.
+        if (IsOpen && NativeMethods.Visible(_handle)) RefreshState();
     }
 }
