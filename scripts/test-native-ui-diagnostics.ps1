@@ -15,7 +15,7 @@ try {
         param($FilePath, $ArgumentList, [switch]$PassThru)
         $diagnosticReport = $ArgumentList[-1].Trim('"')
         [IO.File]::WriteAllText($diagnosticReport, '{"Status":"FAIL","Templates":8,"FailureDetails":[{"Stage":"native-caption-registration-and-layout","HResult":"0x80004005","Message":"fixture failure"}]}')
-        [IO.File]::WriteAllText(($diagnosticReport + '.log'), 'probe-only restricted error details')
+        if (-not $script:suppressProbeLog) { [IO.File]::WriteAllText(($diagnosticReport + '.log'), 'probe-only restricted error details') }
         $process = [pscustomobject]@{ ExitCode = 1 }
         $process | Add-Member ScriptMethod WaitForExit { param($timeout) return $true }
         $process | Add-Member ScriptMethod Dispose { }
@@ -30,7 +30,19 @@ try {
         if (-not $output.Contains($expected)) { throw "The failure output omitted: $expected" }
     }
     if (-not (Test-Path $script:fixtureReport) -or -not (Test-Path ($script:fixtureReport + '.log'))) { throw 'Probe evidence must remain available for artifact collection.' }
-    Write-Host 'PASS: production verifier preserves failure, prints stage/HRESULT and probe-only log, and retains both artifacts (mock process; native WinUI not executed).'
+    # A second failing run must not reuse a log left by the first invocation.
+    $script:suppressProbeLog = $true
+    $staleMarker = 'STALE-PROBE-LOG-MUST-NOT-APPEAR'
+    [IO.File]::WriteAllText(($script:fixtureReport + '.log'), $staleMarker)
+    $secondCapture = Join-Path $temporary 'second-captured.txt'
+    $secondFailure = $null
+    try { & (Join-Path $PSScriptRoot 'verify-native-ui.ps1') -PublishDirectory $temporary -ReportFile $script:fixtureReport *> $secondCapture }
+    catch { $secondFailure = $_.Exception.Message }
+    if (-not $secondFailure -or $secondFailure -notlike '*exit code 1*') { throw 'A subsequent native UI failure must remain a failure.' }
+    if ((Get-Content $secondCapture -Raw).Contains($staleMarker)) { throw 'The verifier printed diagnostics from a previous run.' }
+    if (Test-Path ($script:fixtureReport + '.log')) { throw 'The verifier retained the previous run''s stale log.' }
+    if (-not (Test-Path $script:fixtureReport)) { throw 'The current failure report was not retained.' }
+    Write-Host 'PASS: production verifier preserves failures, prints current stage/HRESULT and probe-only logs, retains evidence, and clears stale logs on rerun (mock process; native WinUI not executed).'
 } finally {
     $env:OS = $savedOS
     Remove-Item $temporary -Recurse -Force
