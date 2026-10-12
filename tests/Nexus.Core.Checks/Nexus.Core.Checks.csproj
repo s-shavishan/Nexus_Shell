@@ -10,6 +10,7 @@
     <ProjectReference Include="../../src/Nexus.Runtime/Nexus.Runtime.csproj" />
     <Compile Include="../../src/Nexus.Shell/Services/CaptionRegionLayout.cs" Link="CaptionRegionLayout.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/LiveResizeRegionPolicy.cs" Link="LiveResizeRegionPolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/ChromeAppearancePolicy.cs" Link="ChromeAppearancePolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/InputProbeOptions.cs" Link="InputProbeOptions.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/InputProbeDriver.cs" Link="InputProbeDriver.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/UiTrace.cs" Link="UiTrace.cs" />
@@ -39,7 +40,10 @@
     <Compile Include="../../src/Nexus.Shell/Services/DockPlacementSnapshot.cs" Link="DockPlacementSnapshot.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/WindowExitPolicy.cs" Link="WindowExitPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/ForegroundRepairCadence.cs" Link="ForegroundRepairCadence.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/ForegroundLookupCache.cs" Link="ForegroundLookupCache.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DockFullscreenPolicy.cs" Link="DockFullscreenPolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/DockForegroundGeometryPolicy.cs" Link="DockForegroundGeometryPolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/DockFrameLayoutPolicy.cs" Link="DockFrameLayoutPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DockMotionPolicy.cs" Link="DockMotionPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DockPreviewPolicy.cs" Link="DockPreviewPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DockThumbnailRetry.cs" Link="DockThumbnailRetry.cs" />
@@ -62,6 +66,7 @@
     <Compile Include="../../src/Nexus.Shell/Interop/DesktopWorkArea.cs" Link="DesktopWorkArea.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DesktopWorkAreaReservation.cs" Link="DesktopWorkAreaReservation.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DesktopVisuals.cs" Link="DesktopVisuals.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/DesktopSurfacePositionPolicy.cs" Link="DesktopSurfacePositionPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/BrightnessScale.cs" Link="BrightnessScale.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/ShellSession.cs" Link="ShellSession.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DesktopLayout.cs" Link="DesktopLayout.cs" />

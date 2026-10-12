@@ -55,6 +55,16 @@ internal sealed class WindowTransition(FrameworkElement surface, Func<bool> enab
             animations.Start(visual); batch.End();
             await completed.Task.WaitAsync(TimeSpan.FromMilliseconds(220));
         }
+        catch (TimeoutException)
+        {
+            // A WinUI compositor batch can finish rendering without delivering
+            // its Completed notification within our bounded UI wait (notably
+            // on unattended CI desktops). The animation templates remain valid:
+            // release them only for genuine compositor/start failures, not a
+            // missed completion event. The native action still runs below.
+            if (!_disposed && generation == _generation)
+                Services.UiTrace.Surface("motion-batch-timeout", dock ? "Dock" : "Window", IntPtr.Zero);
+        }
         catch (Exception error)
         {
             if (!_disposed && generation == _generation) ReleaseAnimations();

@@ -70,6 +70,55 @@ internal static class DockExperienceChecks
         Check(DockPlacementPolicy.RequiresDesktopRelayout(initial, initial with { Scale = 1.25 }),
             "DPI changes must recompute native work-area geometry even with identical pixel rectangles.");
 
+        var screen = new ShellRect(0, 0, 1920, 1080);
+        var work = new ShellRect(0, 38, 1920, 1042);
+        var ordinary = DockForegroundGeometryPolicy.Classify(
+            true, new ShellRect(400, 220, 800, 600), screen, work, false, false, 0x00C00000, 1);
+        Check(!ordinary.Fullscreen && !ordinary.Attached,
+            "Normal resizable windows should not change the floating dock or attached menu bar.");
+        var captioned = DockForegroundGeometryPolicy.Classify(
+            true, new ShellRect(-8, -8, 1936, 1096), screen, work, true, false, 0x00C00000, 1);
+        Check(!captioned.Fullscreen && captioned.Attached,
+            "Maximized captioned windows must retain native title actions and dock edge reveal.");
+        var borderless = DockForegroundGeometryPolicy.Classify(
+            true, screen, screen, work, true, false, 0, 1);
+        Check(borderless.Fullscreen && borderless.Attached,
+            "A borderless maximized game should be suppressed as fullscreen.");
+        var unavailable = DockForegroundGeometryPolicy.Classify(
+            false, screen, screen, work, true, false, 0, 1);
+        Check(!unavailable.Fullscreen && !unavailable.Attached,
+            "An unavailable or cross-monitor foreground rect must not trigger fullscreen mode.");
+        var minimized = DockForegroundGeometryPolicy.Classify(
+            true, screen, screen, work, true, true, 0, 1);
+        Check(minimized.Fullscreen && !minimized.Attached,
+            "Native minimized status must prevent attached-menu placement from a stale rect.");
+        var attached = DockForegroundGeometryPolicy.Classify(
+            true, work, screen, work, false, false, 0x00C00000, 1.25);
+        Check(!attached.Fullscreen && attached.Attached,
+            "Edge-aligned application geometry should attach the menu bar without hiding the dock.");
+
+        var frame = new DockFrameGeometry(
+            new(-1020, 922, 480, 60), new(-1200, 910, 1920, 78), 1.25, true, false);
+        Check(DockFrameLayoutPolicy.RequiresLayout(null, frame),
+            "The initial dock frame must always be measured and clipped.");
+        Check(!DockFrameLayoutPolicy.RequiresLayout(frame, frame),
+            "No-op ABN_POSCHANGED notifications must not rewrite dock frame properties.");
+        Check(DockFrameLayoutPolicy.Clip(frame) == new ShellRect(180, 12, 480, 60)
+            && DockFrameLayoutPolicy.CornerRadius(frame) == 22,
+            "Negative monitor origins must produce a local native clip with floating corners.");
+        Check(DockFrameLayoutPolicy.RequiresLayout(frame, frame with { Bounds = frame.Bounds with { Width = 520 } }),
+            "Changed pin count and dock width must resize and clip the frame.");
+        Check(DockFrameLayoutPolicy.RequiresLayout(frame, frame with { Reservation = frame.Reservation with { Y = 900 } }),
+            "Changes in the HWND reservation must recalculate the frame offset.");
+        Check(DockFrameLayoutPolicy.RequiresLayout(frame, frame with { Scale = 1.5 }),
+            "DPI changes must reapply logical dimensions even at identical pixel bounds.");
+        Check(DockFrameLayoutPolicy.RequiresLayout(frame, frame with { Floating = false })
+            && DockFrameLayoutPolicy.CornerRadius(frame with { Floating = false }) == 0,
+            "Attached mode must remove floating native corners.");
+        Check(DockFrameLayoutPolicy.RequiresLayout(frame, frame with { HighContrast = true })
+            && DockFrameLayoutPolicy.CornerRadius(frame with { HighContrast = true }) == 0,
+            "High Contrast must restore square system-safe corners without requiring a geometry change.");
+
         var anchor = new ShellRect(-950, 850, 48, 52); var preview = new ShellRect(-1100, 570, 336, 268);
         Check(DockPreviewPolicy.InInteractionArea(anchor, preview, -930, 870)
             && DockPreviewPolicy.InInteractionArea(anchor, preview, -1000, 700)

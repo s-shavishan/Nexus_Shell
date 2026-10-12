@@ -41,6 +41,7 @@ internal sealed class DockPreviewWindow : Window
     private long? _leaveSince;
     private (bool Valid, bool Minimized, bool Cloaked, bool Maximized, bool Fast, bool Contrast)? _state;
     private bool _keyboardOpen, _closed, _maximized;
+    private string _iconKey = "";
     internal bool IsOpen { get; private set; }
 
     internal DockPreviewWindow(DesktopEnvironment environment)
@@ -102,7 +103,8 @@ internal sealed class DockPreviewWindow : Window
         _title.Text = window.Title; _detail.Text = window.ProcessId == Environment.ProcessId ? "Nexus" : window.ProcessName;
         AutomationProperties.SetName(_viewport, "Switch to " + window.Title);
         if (_header.Children.Count > 1) _header.Children.RemoveAt(1);
-        string icon = window.ProcessId == Environment.ProcessId ? window.Title == "Sections" ? "Apps" : "Files" : NexusIcons.ForProcess(window.ProcessName);
+        string icon = IconFor(window);
+        _iconKey = icon;
         _header.Children.Add(NexusIcons.Image(icon, 28)); _fallback.Children.Clear(); _fallback.Children.Add(NexusIcons.Image(icon, 48));
         _bounds = DesktopLayout.PreviewBounds(ShellLayerInterop.Monitor(_environment.Taskbar.Handle).Monitor.Bounds,
             _environment.Taskbar.BarBounds, anchor, ShellLayerInterop.Scale(_environment.Taskbar.Handle));
@@ -203,13 +205,31 @@ internal sealed class DockPreviewWindow : Window
         if (inside) _leaveSince = null;
         else { _leaveSince ??= Environment.TickCount64; if (Environment.TickCount64 - _leaveSince.Value >= DockPreviewPolicy.LeaveDelayMilliseconds) Hide(); }
     }
+    private static string IconFor(RunningWindow window)
+        => window.ProcessId == Environment.ProcessId
+            ? window.Title == "Sections" ? "Apps" : "Files"
+            : NexusIcons.ForProcess(window.ProcessName);
+
     internal void RefreshWindows(IReadOnlyList<RunningWindow> windows)
     {
         if (!IsOpen || _window is null) return;
         var current = windows.FirstOrDefault(w => DockWindowIdentity.Of(w) == DockWindowIdentity.Of(_window));
         if (current is null) { Hide(); return; }
         if (current == _window) return;
-        _window = current; _title.Text = current.Title; AutomationProperties.SetName(_viewport, "Switch to " + current.Title);
+        _window = current;
+        _title.Text = current.Title;
+        _detail.Text = current.ProcessId == Environment.ProcessId ? "Nexus" : current.ProcessName;
+        AutomationProperties.SetName(_viewport, "Switch to " + current.Title);
+        string icon = IconFor(current);
+        if (icon != _iconKey)
+        {
+            _iconKey = icon;
+            if (_header.Children.Count > 1) _header.Children.RemoveAt(1);
+            _header.Children.Add(NexusIcons.Image(icon, 28));
+            _fallback.Children.Clear();
+            _fallback.Children.Add(NexusIcons.Image(icon, 48));
+        }
+        RefreshState();
     }
     private void ReleaseThumbnail()
     { _thumbnail?.Dispose(); _thumbnail = null; _fallback.Visibility = Visibility.Visible; }

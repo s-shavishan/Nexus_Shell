@@ -79,6 +79,9 @@ internal static class UiResourceProbe
             stage = "retained-dock-density";
             dock.VerifyRetainedDensity();
             checks.Add("Production dock: compact/normal changes update actual icon geometry; twenty unchanged snapshots retain buttons and avoid width writes");
+            stage = "pinned-dock-icon-refresh";
+            dock.VerifyPinnedIconRefresh();
+            checks.Add("Explicit catalog refresh recreates pinned icon controls; ordinary dock polls retain refreshed buttons");
             stage = "native-caption-registration-and-layout";
             checks.Add(await NativeCaptionProbe.RunAsync());
             stage = "native-resize-motion-and-close";

@@ -9,6 +9,24 @@ internal static class CaptionRegionChecks
         static bool Contains(ShellRect r, int x, int y) => x >= r.X && x < r.Right && y >= r.Y && y < r.Bottom;
         static bool Overlaps(ShellRect a, ShellRect b) => a.X < b.Right && a.Right > b.X && a.Y < b.Bottom && a.Bottom > b.Y;
 
+        Check(ChromeAppearancePolicy.Radius(22) == 22
+            && ChromeAppearancePolicy.Radius(-10) == 0
+            && ChromeAppearancePolicy.Radius(400) == ChromeAppearancePolicy.MaxRadiusDip,
+            "Native corner radii must be clamped to finite supported DIP bounds.");
+        foreach (double invalid in new[] { double.NaN, double.PositiveInfinity, double.NegativeInfinity })
+            Check(ChromeAppearancePolicy.Radius(invalid) == 0,
+                "Invalid animation/theme corner radii must never reach GDI.");
+        Check(ChromeAppearancePolicy.Radius(22, highContrast: true) == 0,
+            "High Contrast must use square system-safe corners.");
+        var identicalClip = new ShellRect(-20, 4, 500, 72);
+        Check(!ChromeAppearancePolicy.ClipChanged(identicalClip, identicalClip, 22, 22)
+            && !ChromeAppearancePolicy.CornersChanged(22, 22),
+            "Identical native decoration settings must not request another rounded region.");
+        Check(ChromeAppearancePolicy.ClipChanged(null, identicalClip, 22, 22)
+            && ChromeAppearancePolicy.ClipChanged(identicalClip, identicalClip with { Width = 520 }, 22, 22)
+            && ChromeAppearancePolicy.ClipChanged(identicalClip, identicalClip, 22, 0),
+            "Initial, geometry and accessibility changes must refresh native regions.");
+
         Check(LiveResizeRegionPolicy.ShouldSuspend(true, true, false, false, false),
             "User sizing of a normal resizable window must release its stale rounded clip.");
         Check(!LiveResizeRegionPolicy.ShouldSuspend(false, true, false, false, false),

@@ -26,6 +26,7 @@ internal sealed class TaskbarWindow : Window, IDisposable
     private bool _disposed, _shown = true, _arranging, _visibilityReported;
     private IntPtr _lastForeground;
     private DockPlacementSnapshot? _lastPlacement;
+    private DockFrameGeometry? _lastFrame;
     internal TaskbarWindow(DesktopEnvironment environment)
     {
         _environment = environment; View = new(environment);
@@ -48,8 +49,8 @@ internal sealed class TaskbarWindow : Window, IDisposable
         {
             if (_disposed) return;
             var foreground = NativeMethods.ForegroundTaskWindow();
-            if (foreground != _lastForeground) { _lastForeground = foreground; View.RefreshWindowStates(); }
-            RefreshVisibility();
+            if (foreground != _lastForeground) { _lastForeground = foreground; View.RefreshWindowStates(foreground); }
+            RefreshVisibility(foreground);
         };
         _visibilityTimer.Start();
         Closed += (_, _) => { Dispose(); if (!environment.IsStopping) environment.Shutdown(); };
@@ -68,12 +69,18 @@ internal sealed class TaskbarWindow : Window, IDisposable
             _environment.HideDockPreview();
         _lastPlacement = placement;
         _chrome.Trace("dock-position", bar.Width, bar.Height);
-        View.Width = bar.Width / scale; View.Height = bar.Height / scale;
-        View.HorizontalAlignment = HorizontalAlignment.Left; View.VerticalAlignment = VerticalAlignment.Top;
-        View.Margin = new Thickness((bar.X - reservation.X) / scale, (bar.Y - reservation.Y) / scale, 0, 0);
-        View.SetAvailableWidth(bar.Width / scale);
-        _chrome.SetClip(new ShellRect(bar.X - reservation.X, bar.Y - reservation.Y, bar.Width, bar.Height),
-            _environment.Session.State.FloatingTaskbar && !_environment.Theme.HighContrast ? 22 : 0);
+        var frame = new DockFrameGeometry(bar, reservation, scale,
+            _environment.Session.State.FloatingTaskbar, _environment.Theme.HighContrast);
+        if (DockFrameLayoutPolicy.RequiresLayout(_lastFrame, frame))
+        {
+            using var measurement = UiTrace.Measure("dock-frame-layout", "Dock");
+            View.Width = bar.Width / scale; View.Height = bar.Height / scale;
+            View.HorizontalAlignment = HorizontalAlignment.Left; View.VerticalAlignment = VerticalAlignment.Top;
+            View.Margin = new Thickness((bar.X - reservation.X) / scale, (bar.Y - reservation.Y) / scale, 0, 0);
+            View.SetAvailableWidth(bar.Width / scale);
+            _chrome.SetClip(DockFrameLayoutPolicy.Clip(frame), DockFrameLayoutPolicy.CornerRadius(frame));
+            _lastFrame = frame;
+        }
         if (relayout)
         {
             using var measurement = UiTrace.Measure("dock-desktop-relayout", "Dock");
@@ -88,16 +95,19 @@ internal sealed class TaskbarWindow : Window, IDisposable
         if (_disposed) return;
         _positionDispatch.Request(
             callback => DispatcherQueue.TryEnqueue(() => callback()),
-            () => { if (!_disposed) Position(); });
+            () => { if (!_disposed) Position(); },
+            error => Log.Write("Dock reposition dispatch failed; a later native notification can retry", error));
     }
     internal void ShowBar() { Position(); RefreshVisibility(); }
-    internal void RefreshVisibility()
+    internal void RefreshVisibility(IntPtr? observedForeground = null)
     {
         if (_disposed) return;
         try
         {
-            var monitor = ShellLayerInterop.Monitor(Handle).Monitor.Bounds;
-            var foreground = NativeMethods.ForegroundTaskWindow();
+            var monitorInfo = ShellLayerInterop.Monitor(Handle);
+            var monitor = monitorInfo.Monitor.Bounds;
+            double scale = ShellLayerInterop.Scale(Handle);
+            var foreground = observedForeground ?? NativeMethods.ForegroundTaskWindow();
             _environment.ObserveForeground(foreground);
             bool application = foreground != IntPtr.Zero && foreground != Handle && foreground != _environment.Desktop.Handle
                 && !ShellLayerInterop.IsExplorerDesktopWindow(foreground);
@@ -106,13 +116,20 @@ internal sealed class TaskbarWindow : Window, IDisposable
             // The event-driven window reconciliation still runs immediately.
             // Only throttle this extra check from the 80 ms visibility poll.
             if (_foregroundRepairCadence.ShouldSample(foreground, maximized, Environment.TickCount64))
-                _environment.ReconcileForeground(monitor, _registration.WorkArea, ShellLayerInterop.Scale(Handle));
-            bool fullscreen = sameMonitor && NativeMethods.GetWindowRect(foreground, out var rect)
-                && DockFullscreenPolicy.IsFullscreen(rect.Bounds, monitor, maximized, NativeMethods.WindowStyle(foreground));
-            // Preview does not own Explorer's work area. Avoid covering a
-            // maximized application's native title controls in that mode.
-            bool attached = sameMonitor && !NativeMethods.IsMinimized(foreground) && NativeMethods.GetWindowRect(foreground, out var appBounds)
-                && MenuBarLayout.Attached(appBounds.Bounds, ShellLayerInterop.Monitor(Handle).Work.Bounds, maximized, ShellLayerInterop.Scale(Handle));
+                _environment.ReconcileForeground(monitor, _registration.WorkArea, scale);
+            // Query the foreground rectangle just once per visibility tick.
+            // Both fullscreen classification and title-control avoidance use
+            // exactly the same native geometry snapshot.
+            ShellLayerInterop.Rect rect = default;
+            bool hasBounds = sameMonitor && NativeMethods.GetWindowRect(foreground, out rect);
+            // Preview must not cover maximized title controls or borderless
+            // fullscreen applications. Both decisions use the same HWND bounds.
+            var presentation = DockForegroundGeometryPolicy.Classify(
+                hasBounds, rect.Bounds, monitor, monitorInfo.Work.Bounds,
+                maximized, hasBounds && NativeMethods.IsMinimized(foreground),
+                hasBounds ? NativeMethods.WindowStyle(foreground) : 0, scale);
+            bool fullscreen = presentation.Fullscreen;
+            bool attached = presentation.Attached;
             if (_applicationMonitor != monitor) { _applicationMonitor = monitor; _applicationState = default; }
             bool overlay = foreground != _environment.Desktop.Handle && (NativeMethods.IsOwnToolWindow(foreground) || _environment.IsControlCenterWindow(foreground));
             if (overlay) (maximized, fullscreen, attached) = _applicationState;
@@ -126,7 +143,7 @@ internal sealed class TaskbarWindow : Window, IDisposable
             var interval = TimeSpan.FromMilliseconds(pollingMs);
             if (_visibilityTimer.Interval != interval) _visibilityTimer.Interval = interval;
             var revealArea = _environment.IsManagedDesktop ? monitor : _registration.WorkArea;
-            bool pointer = NativeMethods.GetCursorPos(out var point) && DockVisibility.InRevealArea(revealArea, BarBounds, point.X, point.Y, _shown, ShellLayerInterop.Scale(Handle));
+            bool pointer = NativeMethods.GetCursorPos(out var point) && DockVisibility.InRevealArea(revealArea, BarBounds, point.X, point.Y, _shown, scale);
             bool show = !_arranging && _visibility.Update(floating, maximized || attached, fullscreen,
                 interacting, pointer, Environment.TickCount64);
             // Hide/show only on transitions. Native Show Desktop can hide this

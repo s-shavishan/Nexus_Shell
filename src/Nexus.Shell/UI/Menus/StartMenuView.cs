@@ -211,7 +211,11 @@ internal sealed class StartMenuView : Grid, IDisposable
             if (epoch != _epoch || _environment.IsStopping || !_open || _disposed) return;
             _catalog.Update(_environment.Session.State.PinnedApps, discovered);
             Render();
-            if (admission.Force) _subtitle.Text = "Installed apps refreshed.";
+            if (admission.Force)
+            {
+                _environment.Taskbar?.View.RefreshPinnedAppIcons();
+                _subtitle.Text = "Installed apps refreshed.";
+            }
         }
         catch (OperationCanceledException) { }
         catch (Exception error) { if (_open && !_disposed) _environment.Report("Launchpad could not refresh installed apps", error); }

@@ -8,10 +8,18 @@ public sealed class WindowEventDispatchGate
     private readonly object _gate = new();
     private bool _queued, _foreground;
 
-    public bool Request(bool foreground, Func<Action, bool> enqueue, Action<bool> deliver)
+    public bool Request(bool foreground, Func<Action, bool> enqueue, Action<bool> deliver, Action<Exception>? report = null)
     {
         ArgumentNullException.ThrowIfNull(enqueue);
         ArgumentNullException.ThrowIfNull(deliver);
+
+        void Report(Exception error)
+        {
+            if (report is null) throw error;
+            try { report(error); }
+            catch { /* Error reporting cannot crash a native event bridge. */ }
+        }
+
         lock (_gate)
         {
             _foreground |= foreground;
@@ -29,15 +37,18 @@ public sealed class WindowEventDispatchGate
                     _foreground = false;
                     _queued = false;
                 }
-                deliver(sawForeground);
+                try { deliver(sawForeground); }
+                catch (Exception error) { Report(error); }
             })) return true;
             lock (_gate) _queued = false;
             return false;
         }
-        catch
+        catch (Exception error)
         {
             lock (_gate) _queued = false;
-            throw;
+            if (report is null) throw;
+            Report(error);
+            return false;
         }
     }
 }

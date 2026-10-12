@@ -59,6 +59,55 @@ internal static class WindowEventPipelineChecks
         queued!();
         Check(dispatches == 1 && foregroundBatches == 1, "A concurrent burst must retain its foreground signal.");
 
+        var safeEvents = new WindowEventDispatchGate();
+        var safeQueue = new Queue<Action>();
+        var nativeErrors = new List<string>();
+        bool SafeEnqueue(Action callback) { safeQueue.Enqueue(callback); return true; }
+        int deliveredSafe = 0;
+        Check(safeEvents.Request(true, SafeEnqueue,
+            _ => throw new InvalidOperationException("WinUI view closed"),
+            error => nativeErrors.Add(error.Message)),
+            "A native foreground notification may queue before WinUI closes.");
+        safeQueue.Dequeue()();
+        Check(nativeErrors.SequenceEqual(["WinUI view closed"]),
+            "A delayed WinEvent UI failure must be contained and diagnosed.");
+        Check(safeEvents.Request(false, SafeEnqueue,
+            sawForeground => { if (!sawForeground) deliveredSafe++; },
+            error => nativeErrors.Add(error.Message)),
+            "The event gate must recover after its consumer throws.");
+        safeQueue.Dequeue()();
+        Check(deliveredSafe == 1,
+            "A later ordinary lifecycle event must be delivered after the failed UI callback.");
+        Check(!safeEvents.Request(true,
+            _ => throw new InvalidOperationException("queue unavailable"),
+            _ => deliveredSafe++,
+            error => nativeErrors.Add(error.Message)),
+            "A throwing WinUI queue must fail admission without crashing the native observer.");
+        Check(nativeErrors[^1] == "queue unavailable",
+            "Rejected foreground dispatch must remain observable.");
+        Check(safeEvents.Request(false, SafeEnqueue,
+            foreground => { if (foreground) deliveredSafe++; },
+            error => nativeErrors.Add(error.Message)),
+            "Foreground priority must survive a contained enqueue failure.");
+        safeQueue.Dequeue()();
+        Check(deliveredSafe == 2, "Retried foreground event must preserve its high-priority state.");
+
+        Check(safeEvents.Request(false, SafeEnqueue,
+            _ => throw new InvalidOperationException("observer failed"),
+            _ => throw new IOException("log writer failed")),
+            "Diagnostics failures must not turn handled UI callbacks into native hook crashes.");
+        safeQueue.Dequeue()();
+        for (int i = 0; i < 500; i++)
+        {
+            Check(safeEvents.Request(false, SafeEnqueue,
+                _ => throw new InvalidOperationException("stale window"),
+                error => nativeErrors.Add(error.Message)),
+                "Repeated stale native callbacks must not strand the event dispatch gate.");
+            safeQueue.Dequeue()();
+        }
+        Check(safeQueue.Count == 0 && nativeErrors.Count == 502,
+            "Contained callbacks must release the native-event queue for every subsequent generation.");
+
         int lookupCount = 0;
         (int Session, string Name)? Resolve(int pid)
         {
