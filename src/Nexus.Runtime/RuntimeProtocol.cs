@@ -35,7 +35,7 @@ public sealed record FilesCommand(Guid OperationId, string? Folder);
 public sealed record FilesReady(Guid OperationId, long Window);
 public sealed record FilesCompletion(Guid OperationId, string[] Paths);
 public sealed record FilesResult(int ProcessId, long Window, string[] Paths);
-public sealed record AppearanceSettings(string Wallpaper, bool NativeGlass, bool ReducedEffects, bool Animations = true, string GlassStyle = Nexus.Shell.Services.GlassStyle.Default);
+public sealed record AppearanceSettings(string Wallpaper, bool NativeGlass, bool ReducedEffects, bool Animations = true, string GlassStyle = Nexus.Shell.Services.GlassStyle.Default, string GlassQuality = Nexus.Shell.Services.GlassQuality.Default);
 public sealed record RuntimeHealth(int CoreProcessId, long Revision, int FilesProcesses, Guid IssueId, string Issue);
 
 public sealed class RuntimeFailure(string code, string message) : Exception(message)

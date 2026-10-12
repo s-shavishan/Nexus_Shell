@@ -127,6 +127,23 @@ internal static class UiResourceProbe
             await Task.Delay(200);
             materialStatus = material.Status;
             checks.Add("Three palette dictionaries and all three material profiles");
+            stage = "glass-quality-selection-and-fallback";
+            foreach (string quality in GlassQuality.Choices)
+            {
+                session.State.GlassQuality = quality;
+                environment.Theme.Apply(session.State.Wallpaper, glassStyle: session.State.GlassStyle, quality: quality);
+                material.Apply(window, frame, environment); frame.UpdateLayout();
+                if (material.Quality.Requested != quality || session.State.GlassQuality != quality)
+                    throw new InvalidOperationException("Native material policy rewrote or lost the requested quality.");
+                if (quality is "Essential" or "Solid")
+                {
+                    if (window.SystemBackdrop is not null || frame.Background is not Microsoft.UI.Xaml.Media.SolidColorBrush { Color.A: 255 })
+                        throw new InvalidOperationException("A palette tier retained a native backdrop or translucent base.");
+                }
+                if (!material.Status.Contains("requested " + quality))
+                    throw new InvalidOperationException("The surface did not disclose requested and effective quality.");
+            }
+            checks.Add("Four requested glass qualities; native surface retains the user's selection and palette tiers detach backdrop with an opaque base");
             session.State.NativeGlass = false; material.Apply(window, frame, environment); frame.UpdateLayout();
             checks.Add("Native glass detach and opaque palette path");
         }

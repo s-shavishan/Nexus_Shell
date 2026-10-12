@@ -45,7 +45,7 @@ internal sealed partial class DesktopEnvironment
     private bool _usageTracking;
     private bool? _compact;
     private bool? _floating;
-    private (string, bool, bool, bool, bool, bool, bool, string, string)? _appearance;
+    private (string, bool, bool, bool, bool, bool, bool, string, string, GlassQualityDecision)? _appearance;
     private MenuWindow? _menu;
     private NotificationWindow? _notifications;
     private MenuBarWindow? _topBar;
@@ -85,7 +85,7 @@ internal sealed partial class DesktopEnvironment
             { Session.State.PinnedApps = AppCatalog.Defaults(); Session.State.CatalogInitialized = true; _dirty = true; }
             for (int i = 0; i < Session.State.PinnedApps.Count; i++)
                 if (IsExplorer(Session.State.PinnedApps[i].Target)) { Session.State.PinnedApps[i] = Session.State.PinnedApps[i] with { Target = "nexus:files" }; _dirty = true; }
-            Theme.Apply(Session.State.Wallpaper, Session.State.ReducedEffects, Session.State.GlassStyle);
+            Theme.Apply(Session.State.Wallpaper, Session.State.ReducedEffects, Session.State.GlassStyle, Session.State.GlassQuality);
             Desktop = new(this); progress?.Invoke(StartupStep.Desktop);
             Taskbar = new(this);
             _topBar = new(this);
@@ -153,8 +153,8 @@ internal sealed partial class DesktopEnvironment
     internal void RefreshAppearance()
     {
         if (IsStopping || Desktop is null) return;
-        Theme.Apply(Session.State.Wallpaper, Session.State.ReducedEffects, Session.State.GlassStyle);
-        var appearance = (Theme.Palette.Name, Theme.HighContrast, Theme.Animations, Theme.Transparency, Session.State.ReducedEffects, Session.State.NativeGlass, Session.State.SurfaceAnimations, Session.State.GlassStyle, Session.State.DisplayName);
+        Theme.Apply(Session.State.Wallpaper, Session.State.ReducedEffects, Session.State.GlassStyle, Session.State.GlassQuality);
+        var appearance = (Theme.Palette.Name, Theme.HighContrast, Theme.Animations, Theme.Transparency, Session.State.ReducedEffects, Session.State.NativeGlass, Session.State.SurfaceAnimations, Session.State.GlassStyle, Session.State.DisplayName, Theme.Quality);
         if (_appearance == appearance) return;
         _appearance = appearance; HideDockPreview(); Desktop.Surface.ApplyAppearance();
         Taskbar?.ApplyAppearance(); _menu?.ApplyAppearance(this);
