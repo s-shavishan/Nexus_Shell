@@ -10,6 +10,7 @@ build_script:
   - ps: dotnet run --project .\tests\Nexus.Core.Checks\Nexus.Core.Checks.csproj --configuration Release
   - ps: dotnet run --project .\tests\Nexus.Runtime.Checks\Nexus.Runtime.Checks.csproj --configuration Release
   - ps: .\scripts\test-update.ps1
+  - ps: .\scripts\test-native-ui-diagnostics.ps1
   - ps: .\scripts\build.ps1 -UseMSBuild
   - ps: .\scripts\package.ps1
 
