@@ -51,6 +51,24 @@ internal static class DockExperienceChecks
             "Moving the dock between monitors must dismiss stale preview geometry.");
         Check(DockPlacementPolicy.RequiresPreviewDismissal(initial, initial with { Floating = false }),
             "Changing from floating to attached dock must dismiss the old hover preview.");
+        Check(DockPlacementPolicy.RequiresPreviewDismissal(initial, initial with { Scale = 1.25 }),
+            "DPI changes must invalidate preview anchor measurements even with unchanged pixel bounds.");
+        Check(DockPlacementPolicy.RequiresDesktopRelayout(null, initial),
+            "Initial dock positioning must reconcile the native monitor and desktop work area.");
+        Check(!DockPlacementPolicy.RequiresDesktopRelayout(initial, initial),
+            "No-op position notifications must not repeat global maximized-window and panel layout.");
+        Check(!DockPlacementPolicy.RequiresDesktopRelayout(initial, initial with { Bounds = initial.Bounds with { Width = 450 } }),
+            "Dock width animation or pin count changes must not reposition unrelated desktop windows.");
+        Check(DockPlacementPolicy.RequiresDesktopRelayout(initial, initial with { Reservation = initial.Reservation with { Height = 80 } }),
+            "Reservation height changes require desktop-wide reconciliation.");
+        Check(DockPlacementPolicy.RequiresDesktopRelayout(initial, initial with { WorkArea = initial.WorkArea with { Height = 1000 } }),
+            "Work-area adjustments must trigger native maximized-window repair.");
+        Check(DockPlacementPolicy.RequiresDesktopRelayout(initial, initial with { Monitor = new(0, 0, 2560, 1440) }),
+            "Changed monitor topology must reflow desktop panels.");
+        Check(DockPlacementPolicy.RequiresDesktopRelayout(initial, initial with { Floating = false }),
+            "Attached/floating transitions must recompute all work-area-dependent geometry.");
+        Check(DockPlacementPolicy.RequiresDesktopRelayout(initial, initial with { Scale = 1.25 }),
+            "DPI changes must recompute native work-area geometry even with identical pixel rectangles.");
 
         var anchor = new ShellRect(-950, 850, 48, 52); var preview = new ShellRect(-1100, 570, 336, 268);
         Check(DockPreviewPolicy.InInteractionArea(anchor, preview, -930, 870)
@@ -77,6 +95,33 @@ internal static class DockExperienceChecks
             "Hidden preview surfaces must not hold a live thumbnail.");
         Check(!DockPreviewPolicy.ShouldAttachThumbnail(true, true, false, false, true, false),
             "Reduced-effects or high-contrast display must stay on the static preview fallback.");
+
+        // Transient DWM registration failure must retry without a tight 80 ms
+        // native loop. Delays cap at 4s and reset when the card is unavailable.
+        var retry = new DockThumbnailRetry();
+        Check(retry.ShouldAttempt(true, false, 0), "First DWM thumbnail registration should be immediate.");
+        Check(!retry.ShouldAttempt(true, false, 80) && !retry.ShouldAttempt(true, false, 249),
+            "Repeated foreground ticks should not hot-loop a failed DWM registration.");
+        Check(retry.ShouldAttempt(true, false, 250) && !retry.ShouldAttempt(true, false, 749),
+            "First retry must wait for the 250 ms backoff.");
+        Check(retry.ShouldAttempt(true, false, 750) && !retry.ShouldAttempt(true, false, 1749),
+            "Second retry should back off for 500 ms.");
+        Check(retry.ShouldAttempt(true, false, 1750) && !retry.ShouldAttempt(true, false, 3749),
+            "Subsequent DWM failures should back off for 1 second.");
+        Check(retry.ShouldAttempt(true, false, 3750) && !retry.ShouldAttempt(true, false, 7749),
+            "Backoff should grow to the bounded 4-second maximum.");
+        Check(retry.ShouldAttempt(true, false, 7750) && !retry.ShouldAttempt(true, false, 11749),
+            "Repeated failures should retain the 4-second cap.");
+        Check(retry.ShouldAttempt(true, true, 7751) == false && retry.ShouldAttempt(true, false, 7752),
+            "Successful attachment must reset retries for a later DWM disconnect.");
+        Check(!retry.ShouldAttempt(false, false, 7753) && retry.ShouldAttempt(true, false, 7754),
+            "Minimize, cloaking, High Contrast and closing must reset the retry gate.");
+        Check(retry.ShouldAttempt(true, false, 1),
+            "A monotonic-clock rollback must allow recovery rather than permanently stalling.");
+        retry.Reset();
+        Check(retry.ShouldAttempt(true, false, long.MaxValue - 10)
+            && !retry.ShouldAttempt(true, false, long.MaxValue - 5),
+            "Deadline calculation must never overflow long ticks.");
 
         var viewport = new ShellRect(14, 58, 308, 130);
         foreach (var (width, height) in new[] { (1920, 1080), (1080, 1920), (1, 10000), (10000, 1), (1, 1) })

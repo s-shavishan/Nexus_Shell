@@ -8,10 +8,21 @@ internal readonly record struct DockPlacementSnapshot(
     ShellRect Reservation,
     ShellRect WorkArea,
     ShellRect Monitor,
-    bool Floating);
+    bool Floating,
+    double Scale = 1);
 
 internal static class DockPlacementPolicy
 {
     internal static bool RequiresPreviewDismissal(DockPlacementSnapshot? previous, DockPlacementSnapshot current)
         => previous is null || previous.Value != current;
+
+    // Width-only changes affect the dock anchor, not system work areas.
+    // Avoid expensive maximized-window repair and panel placement on no-ops.
+    internal static bool RequiresDesktopRelayout(DockPlacementSnapshot? previous, DockPlacementSnapshot current)
+        => previous is null
+            || previous.Value.Monitor != current.Monitor
+            || previous.Value.WorkArea != current.WorkArea
+            || previous.Value.Reservation != current.Reservation
+            || previous.Value.Floating != current.Floating
+            || previous.Value.Scale != current.Scale;
 }

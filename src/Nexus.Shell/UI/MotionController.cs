@@ -69,7 +69,15 @@ public sealed class MotionController : IDisposable
     public void SetEnabled(bool value)
     {
         if (_disposed) return;
-        _enabled = value && _usable;
+        bool next = value && _usable;
+        if (_enabled == next)
+        {
+            // Preserve the old input-safety behavior even when the visual
+            // reset is unnecessary (e.g., repeated reduced-motion updates).
+            if (!next) { _overTargets.Clear(); _pressedTargets.Clear(); }
+            return;
+        }
+        _enabled = next;
         if (!_enabled) { _overTargets.Clear(); _pressedTargets.Clear(); ResetAll(); }
     }
 
