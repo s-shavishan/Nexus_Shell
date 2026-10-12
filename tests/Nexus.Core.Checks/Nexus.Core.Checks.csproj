@@ -48,6 +48,7 @@
     <Compile Include="../../src/Nexus.Shell/Services/DockForegroundGeometryPolicy.cs" Link="DockForegroundGeometryPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DockFrameLayoutPolicy.cs" Link="DockFrameLayoutPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DockMotionPolicy.cs" Link="DockMotionPolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/DockIndicatorUpdatePolicy.cs" Link="DockIndicatorUpdatePolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DockPreviewPolicy.cs" Link="DockPreviewPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DockThumbnailRetry.cs" Link="DockThumbnailRetry.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/WindowThumbnail.cs" Link="WindowThumbnail.cs" />
