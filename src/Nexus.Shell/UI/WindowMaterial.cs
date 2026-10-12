@@ -64,7 +64,12 @@ internal sealed class WindowMaterial
                         }
                     },
                     error => Log.Write("Glass failure callback could not update the solid fallback", error));
-                if (_backdrop is { } current) current.StateChanged += () => GlassUiDispatch.TryPost(
+                if (_backdrop is { } current)
+                {
+                    // The queued callback always reads the latest controller
+                    // state. Collapse a burst into one safe frame update.
+                    var stateUpdates = new GlassStateDispatchGate();
+                    current.StateChanged += () => stateUpdates.Request(
                     action => frame.DispatcherQueue.TryEnqueue(() => action()),
                     () => _attachment.IsCurrent(current),
                     () =>
@@ -76,6 +81,7 @@ internal sealed class WindowMaterial
                         UpdateStatus(currentTheme, currentState, _latestRole);
                     },
                     error => Log.Write("Glass state callback could not update the surface", error));
+                }
                 window.SystemBackdrop = _backdrop; _enabled = glass;
                 UiTrace.Surface(glass ? "backdrop-attached" : "backdrop-detached", role, WinRT.Interop.WindowNative.GetWindowHandle(window), value: _backdrop?.TraceId ?? 0);
             }
