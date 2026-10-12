@@ -15,7 +15,12 @@ try {
         param($FilePath, $ArgumentList, [switch]$PassThru)
         $diagnosticReport = $ArgumentList[-1].Trim('"')
         [IO.File]::WriteAllText($diagnosticReport, '{"Status":"FAIL","Templates":8,"FailureDetails":[{"Stage":"native-caption-registration-and-layout","HResult":"0x80004005","Message":"fixture failure"}]}')
-        if (-not $script:suppressProbeLog) { [IO.File]::WriteAllText(($diagnosticReport + '.log'), 'probe-only restricted error details') }
+        # The mock is invoked from another script scope; use a fixture-local marker
+        # instead of $script: state, which can resolve in the verifier's scope.
+        $secondRun = Join-Path (Split-Path $diagnosticReport -Parent) 'skip-probe-log-on-second-run.marker'
+        if (-not (Test-Path $secondRun -PathType Leaf)) {
+            [IO.File]::WriteAllText(($diagnosticReport + '.log'), 'probe-only restricted error details')
+        }
         $process = [pscustomobject]@{ ExitCode = 1 }
         $process | Add-Member ScriptMethod WaitForExit { param($timeout) return $true }
         $process | Add-Member ScriptMethod Dispose { }
@@ -31,7 +36,9 @@ try {
     }
     if (-not (Test-Path $script:fixtureReport) -or -not (Test-Path ($script:fixtureReport + '.log'))) { throw 'Probe evidence must remain available for artifact collection.' }
     # A second failing run must not reuse a log left by the first invocation.
-    $script:suppressProbeLog = $true
+    # Explicitly tell the mocked process not to write a log on this run;
+    # verify-native-ui.ps1 must delete the previous log before launching it.
+    [IO.File]::WriteAllText((Join-Path $temporary 'skip-probe-log-on-second-run.marker'), 'fixture-only second run')
     $staleMarker = 'STALE-PROBE-LOG-MUST-NOT-APPEAR'
     [IO.File]::WriteAllText(($script:fixtureReport + '.log'), $staleMarker)
     $secondCapture = Join-Path $temporary 'second-captured.txt'
