@@ -336,6 +336,33 @@ internal sealed class TaskbarView : Grid
                     throw new InvalidOperationException("The dock did not restore normal geometry after compact mode.");
             }
             finally { button.UnregisterPropertyChangedCallback(WidthProperty, token); }
+
+            SetAvailableWidth(700);
+            int frameWrites = 0;
+            long corner = _frame.RegisterPropertyChangedCallback(Border.CornerRadiusProperty, (_, _) => frameWrites++);
+            long overview = _overview.RegisterPropertyChangedCallback(UIElement.VisibilityProperty, (_, _) => frameWrites++);
+            long clock = _clockButton.RegisterPropertyChangedCallback(UIElement.VisibilityProperty, (_, _) => frameWrites++);
+            long desktop = _desktopButton.RegisterPropertyChangedCallback(UIElement.VisibilityProperty, (_, _) => frameWrites++);
+            long date = _date.RegisterPropertyChangedCallback(UIElement.VisibilityProperty, (_, _) => frameWrites++);
+            try
+            {
+                for (int i = 0; i < 100; i++) SetAvailableWidth(700);
+                if (frameWrites != 0)
+                    throw new InvalidOperationException("Unchanged floating dock geometry rewrote frame corners or responsive control visibility.");
+                SetAvailableWidth(400);
+                SetAvailableWidth(700);
+                if (frameWrites == 0)
+                    throw new InvalidOperationException("Real dock width changes failed to reconcile native responsive controls.");
+            }
+            finally
+            {
+                _frame.UnregisterPropertyChangedCallback(Border.CornerRadiusProperty, corner);
+                _overview.UnregisterPropertyChangedCallback(UIElement.VisibilityProperty, overview);
+                _clockButton.UnregisterPropertyChangedCallback(UIElement.VisibilityProperty, clock);
+                _desktopButton.UnregisterPropertyChangedCallback(UIElement.VisibilityProperty, desktop);
+                _date.UnregisterPropertyChangedCallback(UIElement.VisibilityProperty, date);
+                SetAvailableWidth(PreferredWidthDip);
+            }
         }
         finally { _environment.Session.State.CompactDock = original; ApplyDensity(); }
     }
