@@ -276,7 +276,8 @@ internal sealed partial class DesktopEnvironment
                 Taskbar.View.RefreshWindowStates(); Taskbar.RefreshVisibility();
                 // Fixed coalescing window, not a sliding debounce that can starve.
                 if (!_windowRefreshTimer.IsEnabled) _windowRefreshTimer.Start();
-            });
+            },
+            error => Log.Write("Native window event UI dispatch failed; periodic reconciliation remains active", error));
     }
     private IReadOnlyList<RunningWindow> DockWindows()
     {
