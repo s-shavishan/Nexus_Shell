@@ -100,6 +100,17 @@ PR #20 (`codex/glass-quality-policy`) merged into `main` as `016bfeb95dff378f385
 
 The full PR #20 Glass Quality runtime/persistence/accessibility work remains untouched. A source-level merge is **not a Windows build result**: run both Core and Runtime check suites and the native probe on the exact integration revision. Do not merge into `main` on the basis of GitHub's conflict-free comparison alone.
 
+### K. CI-discovered compositor completion timeout (branch + PR build fix)
+
+AppVeyor runs for commit `9ba337f` both completed the portable Core and Runtime suites and produced a successful native x64 WinUI/MSBuild publish with 0 warnings and 0 compilation errors. Both then failed the **same** native preflight stage: `native-resize-motion-and-close` (`NativeWindowMotionProbe.cs`). Their per-probe log contained `System.TimeoutException` at `WindowTransition.ExitAsync` just before the dock-retained-animation count assertion failed.
+
+**Root cause:** the old generic exception path called `ReleaseAnimations()` even when only `Task.WaitAsync(220 ms)` timed out while awaiting the compositor `CompositionScopedBatch.Completed` event. On unattended/headless Windows sessions, that event can be late; releasing otherwise valid animation templates forces later dock hides to allocate new templates and fails the retention invariant.
+
+- `WindowTransition.ExitAsync` now distinguishes a compositor **completion timeout** from an actual animation setup/start failure. On a timeout, emit an opt-in `motion-batch-timeout` trace without synchronous file logging or discarding cached resource sets. The normal bounded native command still runs exactly once, subject to generation/disposal guards.
+- Genuine compositor errors continue to release retained templates and use the native fallback path.
+- `NativeWindowMotionProbe` preserves its strict `2` retained resource-set and native action assertions. The assertion now identifies the failing hide cycle, expected/actual native action count and retained resource counts to diagnose a future failure.
+- **Neither build is green**: rerun branch and PR checks at the new commit before lifting HOLD. A successful build/publish without the native preflight is insufficient.
+
 ## Merge authorization
 
 Only mark this batch READY TO MERGE if all of the following are documented for the **same final commit SHA**:
