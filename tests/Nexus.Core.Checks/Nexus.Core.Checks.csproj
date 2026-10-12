@@ -10,6 +10,7 @@
     <ProjectReference Include="../../src/Nexus.Runtime/Nexus.Runtime.csproj" />
     <Compile Include="../../src/Nexus.Shell/Services/CaptionRegionLayout.cs" Link="CaptionRegionLayout.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/LiveResizeRegionPolicy.cs" Link="LiveResizeRegionPolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/MenuBarNativePlacement.cs" Link="MenuBarNativePlacement.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/ChromeAppearancePolicy.cs" Link="ChromeAppearancePolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/InputProbeOptions.cs" Link="InputProbeOptions.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/InputProbeDriver.cs" Link="InputProbeDriver.cs" />
