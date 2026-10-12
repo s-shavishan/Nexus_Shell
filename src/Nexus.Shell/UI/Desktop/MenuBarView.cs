@@ -150,6 +150,7 @@ internal sealed class MenuBarView : Grid, IDisposable
         {
             _clock.UnregisterPropertyChangedCallback(TextBlock.TextProperty, clock);
             _activeTitle.UnregisterPropertyChangedCallback(TextBlock.TextProperty, title);
+            Refresh(); // Restore the live clock after the fixed-time fixture.
         }
     }
     public void Dispose() { if (_disposed) return; _disposed = true; _timer.Stop(); _environment.Notifications.Changed -= QueueRefresh; _environment.ActiveWindowChanged -= QueueRefresh; }
