@@ -7,6 +7,12 @@ internal static class LiveResizeRegionPolicy
 {
     internal static bool ShouldSuspend(bool interactive, bool resizable, bool customClip, bool systemFrame, bool suspended)
         => interactive && resizable && !customClip && !systemFrame && !suspended;
+    // WM_SIZING is itself followed by native size/expose processing. Avoid
+    // forcing another synchronous repaint merely to remove an obsolete GDI
+    // clipping region. The final rounded region still requests a repaint.
+    internal const bool RedrawWhileSuspending = false;
+    internal const bool RedrawAfterRestore = true;
+
     internal static bool IsInterrupted(uint message)
         => message is 0x001F or 0x0215; // WM_CANCELMODE, WM_CAPTURECHANGED
 
