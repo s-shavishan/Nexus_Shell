@@ -55,6 +55,20 @@ The native desktop layer previously sent `AppWindow.MoveAndResize` on every moni
 - New `DesktopSurfacePositionPolicy` is compiled into portable Core checks. Windows `DesktopNativeChecks` also verifies the no-op behavior against its own real Win32 test HWND.
 - Opt-in `desktop-native-resize` ETW work timing records actual native desktop resize operations; no background polling or new disk writes.
 
+### G. Retain foreground selection across frequent dock visibility polls
+
+The visibility timer can run every 80 ms while the dock is being interacted with. `DesktopEnvironment.ObserveForeground` previously rebuilt a new running-window candidate list and searched that list on **every tick**, even when the OS foreground HWND and underlying `_windows` enumeration had not changed.
+
+- New `ForegroundLookupCache<T>` memoizes the selected foreground identity only for an unchanged `_windows` snapshot and HWND, and only while the selected external application's native HWND/process ownership remains valid.
+- When a native enumeration publishes a new list, or the foreground HWND changes, full discovery runs again. Nexus-owned utility windows bypass positive caching because their internal registry can change independently of the external window snapshot.
+- Unrecognized application HWNDs are **not** negatively cached, so an app which registers after the first poll is discovered promptly. Only known empty/desktop foreground states may use a safe empty cache.
+- Cached selection does not suppress reading `IsZoomed`; existing maximized state changes and `ActiveWindowChanged` continue to propagate.
+- Portable checks use 1,500 stable polls, new snapshot publications, HWND/process reuse, negative-cache and thrown-discovery recovery. This measures a policy outcome, not a claimed FPS improvement.
+
+### Integration with parallel Liquid Glass work
+
+Draft PR #20 (`codex/glass-quality-policy`) is a separate appearance/runtime upgrade based on the current `main`. P2.2 deliberately does **not** reimplement glass-quality tiers or edit its new runtime protocol, power-policy, state model, or backdrop classes. Both branches currently touch `UiResourceProbe.cs`: the final integrator must retain **both** glass-quality probe checks and P2.2's pinned-icon regression probe after rebasing/merging. Do not merge either branch merely to clear a conflict without running the consolidated Windows checks.
+
 ## Safety boundaries
 
 - Do **not** modify Windows Explorer integration, shell installation/registration, work-area ownership, input hooks, native privileges or elevation, application execution, data persistence or file-provider behavior.
