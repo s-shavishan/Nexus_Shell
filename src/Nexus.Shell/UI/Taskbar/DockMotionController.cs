@@ -52,7 +52,10 @@ internal sealed class DockMotionController : IDisposable
     }
     internal void SetEnabled(bool enabled)
     {
-        if (_disposed) return; _enabled = enabled && _usable;
+        if (_disposed) return;
+        bool next = enabled && _usable;
+        if (_enabled == next) return;
+        _enabled = next;
         if (!_enabled) ResetAll();
     }
     internal void Play(FrameworkElement icon, DockMotionCue cue)
