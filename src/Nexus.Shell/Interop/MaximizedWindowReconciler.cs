@@ -27,6 +27,12 @@ internal sealed class MaximizedWindowReconciler
         // ASYNCWINDOWPOS | NOZORDER | NOACTIVATE | NOOWNERZORDER. No minimize /
         // restore cycle, style patch, focus transfer or synchronous foreign call.
         bool accepted = ShellLayerInterop.SetWindowPos(window.Handle, IntPtr.Zero, next.X, next.Y, next.Width, next.Height, 0x4214);
-        Log.Write($"Maximized layout {(accepted ? "queued" : "refused")}: hwnd={window.Handle.ToInt64()} pid={window.ProcessId} work={work.X},{work.Y},{work.Width},{work.Height}");
+        // Normal accepted repairs are frequent enough during native work-area
+        // transitions that filesystem logging adds avoidable UI-thread stalls.
+        // ETW is disabled by default and emits no user-facing window metadata.
+        UiTrace.Surface(accepted ? "maximized-repair-queued" : "maximized-repair-refused",
+            "WorkArea", window.Handle, next.Width, next.Height);
+        if (!accepted)
+            Log.Write($"Maximized layout request refused: hwnd={window.Handle.ToInt64()} pid={window.ProcessId} work={work.X},{work.Y},{work.Width},{work.Height}");
     }
 }
