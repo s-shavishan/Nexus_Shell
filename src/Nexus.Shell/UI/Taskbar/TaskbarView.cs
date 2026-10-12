@@ -331,6 +331,25 @@ internal sealed class TaskbarView : Grid
         if (_reportedWidth != width) { _reportedWidth = width; PreferredWidthChanged?.Invoke(); }
         _appliedCompactDock = compact;
     }
+    internal void VerifyRetainedAppearance()
+    {
+        ApplyAppearance();
+        int writes = 0;
+        long clock = _time.RegisterPropertyChangedCallback(TextBlock.ForegroundProperty, (_, _) => writes++);
+        long launcher = _start.RegisterPropertyChangedCallback(Control.ForegroundProperty, (_, _) => writes++);
+        try
+        {
+            for (int i = 0; i < 100; i++) ApplyAppearance();
+            if (writes != 0)
+                throw new InvalidOperationException("Stable dock appearance rewrote clock or launcher brushes.");
+        }
+        finally
+        {
+            _time.UnregisterPropertyChangedCallback(TextBlock.ForegroundProperty, clock);
+            _start.UnregisterPropertyChangedCallback(Control.ForegroundProperty, launcher);
+        }
+    }
+
     internal void VerifyRetainedDensity()
     {
         bool original = _environment.Session.State.CompactDock;
