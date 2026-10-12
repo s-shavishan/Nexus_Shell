@@ -38,7 +38,7 @@ internal sealed class DockPreviewWindow : Window
     private RunningWindow? _window;
     private ShellRect _anchor, _bounds;
     private long? _leaveSince;
-    private (bool Valid, bool Minimized, bool Cloaked, bool Maximized, bool Fast)? _state;
+    private (bool Valid, bool Minimized, bool Cloaked, bool Maximized, bool Fast, bool Contrast)? _state;
     private bool _keyboardOpen, _closed, _maximized;
     internal bool IsOpen { get; private set; }
 
@@ -137,7 +137,7 @@ internal sealed class DockPreviewWindow : Window
         bool minimized = valid && (NativeMethods.IsMinimized(_window.Handle) || !NativeMethods.Visible(_window.Handle));
         bool maximized = valid && NativeMethods.IsZoomed(_window.Handle);
         bool cloaked = valid && NativeMethods.IsCloaked(_window.Handle);
-        var state = (valid, minimized, cloaked, maximized, _environment.Session.State.ReducedEffects);
+        var state = (valid, minimized, cloaked, maximized, _environment.Session.State.ReducedEffects, _environment.Theme.HighContrast);
         if (_state == state) return; _state = state;
         _restore.IsEnabled = _viewport.IsEnabled = _close.IsEnabled = valid;
         _minimize.IsEnabled = valid && !minimized; _maximize.IsEnabled = valid;
