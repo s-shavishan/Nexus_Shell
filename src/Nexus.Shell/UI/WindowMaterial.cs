@@ -53,7 +53,9 @@ internal sealed class WindowMaterial
                     {
                         if (!_attachment.DetachFailed(source)) return;
                         _failed = true; _enabled = false; _backdrop = null;
-                        window.SystemBackdrop = null;
+                        try { window.SystemBackdrop = null; }
+                        catch (Exception error) { Log.Write("Glass native target could not detach", error); }
+                        // Keep the palette readable even when native detach failed.
                         if (_latestTheme is { } currentTheme && _latestState is { } currentState)
                         {
                             frame.Background = currentTheme.Material(_latestRole, false);
