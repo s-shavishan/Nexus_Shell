@@ -48,42 +48,48 @@ internal static class NativeChromeChecks
             if (restores != 3 || survivingRestoreObservers != 1 || !chrome.RegionDecorationsEnabled)
                 throw new Exception("A throwing restore subscriber lost native notifications or disabled decoration.");
             // Exercise the exact native component against this test-owned HWND.
-            // No-op appearance changes must not even enter GDI region refresh.
+            // SetWindowRgn and DWM can synchronously send extra position/size
+            // notifications. Count all region requests, not just direct setter
+            // calls: a real change must increase the count, but need not add
+            // exactly one. An identical setting must add zero by itself.
             int requests = chrome.RegionRefreshRequests;
+            void ExpectUnchanged(string failure)
+            {
+                if (chrome.RegionRefreshRequests != requests)
+                    throw new Exception(failure
+                        + $" (before={requests}, after={chrome.RegionRefreshRequests}).");
+            }
+            void ExpectChanged(string failure)
+            {
+                int observed = chrome.RegionRefreshRequests;
+                if (observed <= requests)
+                    throw new Exception(failure + $" (before={requests}, after={observed}).");
+                requests = observed;
+            }
+
             chrome.SetCorners(false, 14);
-            if (chrome.RegionRefreshRequests != requests)
-                throw new Exception("An unchanged window radius requested another GDI region update.");
+            ExpectUnchanged("An unchanged window radius requested another GDI region update.");
             chrome.SetCorners(false, 18);
-            if (chrome.RegionRefreshRequests != ++requests)
-                throw new Exception("A real corner change did not request native reconciliation.");
+            ExpectChanged("A real corner change did not request native reconciliation.");
             chrome.SetCorners(false, 18);
-            if (chrome.RegionRefreshRequests != requests)
-                throw new Exception("Repeated appearance settings unnecessarily refreshed the native region.");
+            ExpectUnchanged("Repeated appearance settings unnecessarily refreshed the native region.");
             var bounds = new ShellRect(0, 0, 240, 160);
             chrome.SetClip(bounds, 22);
-            if (chrome.RegionRefreshRequests != ++requests)
-                throw new Exception("An initial custom clip must update native geometry.");
+            ExpectChanged("An initial custom clip must update native geometry.");
             chrome.SetClip(bounds, 22);
-            if (chrome.RegionRefreshRequests != requests)
-                throw new Exception("Identical clipping settings triggered repeated GDI work.");
+            ExpectUnchanged("Identical clipping settings triggered repeated GDI work.");
             chrome.SetClip(bounds with { Width = 220 }, 22);
-            if (chrome.RegionRefreshRequests != ++requests)
-                throw new Exception("Changed frame geometry must refresh native clipping.");
+            ExpectChanged("Changed frame geometry must refresh native clipping.");
             chrome.SetCorners(true);
-            if (chrome.RegionRefreshRequests != ++requests)
-                throw new Exception("High Contrast must remove rounded native regions.");
+            ExpectChanged("High Contrast must remove rounded native regions.");
             chrome.SetCorners(true);
-            if (chrome.RegionRefreshRequests != requests)
-                throw new Exception("Repeated High Contrast appearance should not refresh an unchanged region.");
+            ExpectUnchanged("Repeated High Contrast appearance should not refresh an unchanged region.");
             chrome.SetFullscreen(true);
-            if (chrome.RegionRefreshRequests != ++requests)
-                throw new Exception("A fullscreen transition must reconcile the native window.");
+            ExpectChanged("A fullscreen transition must reconcile the native window.");
             chrome.SetFullscreen(true);
-            if (chrome.RegionRefreshRequests != requests)
-                throw new Exception("Repeated fullscreen appearance should not refresh native regions.");
+            ExpectUnchanged("Repeated fullscreen appearance should not refresh native regions.");
             chrome.SetFullscreen(false);
-            if (chrome.RegionRefreshRequests != ++requests)
-                throw new Exception("Returning to windowed mode must recover normal native clipping.");
+            ExpectChanged("Returning to windowed mode must recover normal native clipping.");
 
             chrome.UseSystemFrame();
             Marshal.StructureToPtr(original, data, false);
