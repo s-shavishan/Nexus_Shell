@@ -6,6 +6,7 @@ using System.Text.Json;
 DesktopModeChecks.Run();
 DesktopUiChecks.Run();
 LaunchpadCacheChecks.Run();
+WindowEventPipelineChecks.Run();
 
 static void Check(bool condition, string message)
 {
