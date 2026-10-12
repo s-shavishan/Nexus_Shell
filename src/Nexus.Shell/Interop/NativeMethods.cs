@@ -142,6 +142,16 @@ internal static class NativeMethods
         return unchecked((uint)Environment.TickCount - input.Tick) / 1000.0;
     }
 
+    // Hiding a top-level HWND is not the same as closing it. Some applications
+    // clear WS_VISIBLE while their window remains iconic (minimized); the dock
+    // must preserve those entries so users can restore them.
+    internal static bool DockWindowEligibleVisibility(bool visible, bool iconic) => visible || iconic;
+    internal static bool HasDockPresence(IntPtr window)
+    {
+        bool visible = IsWindowVisible(window);
+        return DockWindowEligibleVisibility(visible, !visible && IsIconic(window));
+    }
+
     internal static IReadOnlyList<RunningWindow> RunningWindows(IntPtr ownHandle)
     {
         var result = new List<RunningWindow>();
@@ -149,7 +159,7 @@ internal static class NativeMethods
         int session = ownProcess.SessionId;
         EnumWindows((window, _) =>
         {
-            if (window == ownHandle || !IsWindowVisible(window)) return true;
+            if (window == ownHandle || !HasDockPresence(window)) return true;
             if (DwmGetWindowAttribute(window, 14, out uint cloaked, 4) == 0 && cloaked != 0) return true; // DWMWA_CLOAKED
             long style = GetWindowLongPtr(window, -20).ToInt64();
             if ((style & 0x80) != 0) return true; // WS_EX_TOOLWINDOW
