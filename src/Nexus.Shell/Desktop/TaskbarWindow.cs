@@ -26,6 +26,7 @@ internal sealed class TaskbarWindow : Window, IDisposable
     private bool _disposed, _shown = true, _arranging, _visibilityReported;
     private IntPtr _lastForeground;
     private DockPlacementSnapshot? _lastPlacement;
+    private DockFrameGeometry? _lastFrame;
     internal TaskbarWindow(DesktopEnvironment environment)
     {
         _environment = environment; View = new(environment);
@@ -68,12 +69,18 @@ internal sealed class TaskbarWindow : Window, IDisposable
             _environment.HideDockPreview();
         _lastPlacement = placement;
         _chrome.Trace("dock-position", bar.Width, bar.Height);
-        View.Width = bar.Width / scale; View.Height = bar.Height / scale;
-        View.HorizontalAlignment = HorizontalAlignment.Left; View.VerticalAlignment = VerticalAlignment.Top;
-        View.Margin = new Thickness((bar.X - reservation.X) / scale, (bar.Y - reservation.Y) / scale, 0, 0);
-        View.SetAvailableWidth(bar.Width / scale);
-        _chrome.SetClip(new ShellRect(bar.X - reservation.X, bar.Y - reservation.Y, bar.Width, bar.Height),
-            _environment.Session.State.FloatingTaskbar && !_environment.Theme.HighContrast ? 22 : 0);
+        var frame = new DockFrameGeometry(bar, reservation, scale,
+            _environment.Session.State.FloatingTaskbar, _environment.Theme.HighContrast);
+        if (DockFrameLayoutPolicy.RequiresLayout(_lastFrame, frame))
+        {
+            using var measurement = UiTrace.Measure("dock-frame-layout", "Dock");
+            View.Width = bar.Width / scale; View.Height = bar.Height / scale;
+            View.HorizontalAlignment = HorizontalAlignment.Left; View.VerticalAlignment = VerticalAlignment.Top;
+            View.Margin = new Thickness((bar.X - reservation.X) / scale, (bar.Y - reservation.Y) / scale, 0, 0);
+            View.SetAvailableWidth(bar.Width / scale);
+            _chrome.SetClip(DockFrameLayoutPolicy.Clip(frame), DockFrameLayoutPolicy.CornerRadius(frame));
+            _lastFrame = frame;
+        }
         if (relayout)
         {
             using var measurement = UiTrace.Measure("dock-desktop-relayout", "Dock");
