@@ -29,6 +29,13 @@ Status: **IN DEVELOPMENT / HOLD MERGE**. Windows compilation, CI and pixel-level
 - `UiResourceProbe` registers real WinUI Background and BorderBrush property-change callbacks, runs 100 repeated material updates in a stable opaque tier and rejects spurious dependency-property writes.
 - The solid fallback remains fully opaque for Solid/Essential and unavailable native-backdrop states; repeated no-op material calls do not take over foreground input.
 
+### Stage 4 — Avoid redundant responsive dock chrome layout
+
+- `TaskbarView.SetAvailableWidth` previously set its native floating-frame corner radius and four control visibility properties on every call, regardless of whether dock width or mode actually changed.
+- Frame corners and the four layout thresholds are now written only when their values differ. Launchpad remains available at all widths; the 440/480/600/620 DIP behavior and floating-clock policy are unchanged.
+- `ApplyAppearance` shares the same retained corner update path, preserving square corners in High Contrast.
+- The existing native `VerifyRetainedDensity` WinUI fixture now asserts **100** identical dock-width updates cause zero frame/visibility dependency-property writes; switching across thresholds must still cause appropriate writes and restore the original layout.
+
 ## Required AppVeyor validation
 
 1. Build this **exact branch head SHA**, not the already-green P2.2 revision.
