@@ -339,14 +339,26 @@ internal sealed class TaskbarView : Grid
         }
         finally { _environment.Session.State.CompactDock = original; ApplyDensity(); }
     }
+    private void ApplyFrameCorners()
+    {
+        var corners = new CornerRadius(_environment.Session.State.FloatingTaskbar && !_environment.Theme.HighContrast ? 22 : 0);
+        if (!_frame.CornerRadius.Equals(corners)) _frame.CornerRadius = corners;
+    }
+
     internal void SetAvailableWidth(double widthDip)
     {
-        _frame.CornerRadius = new CornerRadius(_environment.Session.State.FloatingTaskbar && !_environment.Theme.HighContrast ? 22 : 0);
-        // Keep Launchpad reachable; Control Center lives in the menu bar.
-        _overview.Visibility = widthDip < 440 ? Visibility.Collapsed : Visibility.Visible;
-        _clockButton.Visibility = widthDip < 480 || _environment.Session.State.FloatingTaskbar ? Visibility.Collapsed : Visibility.Visible;
-        _desktopButton.Visibility = widthDip < 600 ? Visibility.Collapsed : Visibility.Visible;
-        _date.Visibility = widthDip < 620 ? Visibility.Collapsed : Visibility.Visible;
+        ApplyFrameCorners();
+        // Each visibility assignment can invalidate XAML measure/arrange.
+        // Preserve reachability while avoiding writes for a stable dock frame.
+        static void SetVisible(UIElement element, bool visible)
+        {
+            var next = visible ? Visibility.Visible : Visibility.Collapsed;
+            if (element.Visibility != next) element.Visibility = next;
+        }
+        SetVisible(_overview, widthDip >= 440);
+        SetVisible(_clockButton, widthDip >= 480 && !_environment.Session.State.FloatingTaskbar);
+        SetVisible(_desktopButton, widthDip >= 600);
+        SetVisible(_date, widthDip >= 620);
     }
     internal void RefreshClock()
     {
@@ -365,7 +377,7 @@ internal sealed class TaskbarView : Grid
         _frame.Background = theme.Material("Dock", _environment.Session.State.NativeGlass);
         bool motionEnabled = !theme.HighContrast && theme.Animations && _environment.Session.State.SurfaceAnimations && !_environment.Session.State.ReducedEffects;
         _motion?.SetEnabled(motionEnabled); _dockMotion?.SetEnabled(motionEnabled);
-        _frame.CornerRadius = new CornerRadius(_environment.Session.State.FloatingTaskbar && !theme.HighContrast ? 22 : 0);
+        ApplyFrameCorners();
         _frame.BorderBrush = theme.Edge; _frame.BorderThickness = new Thickness(1);
         _separator.Background = theme.Brush("NexusBorder"); _time.Foreground = theme.Brush("NexusText"); _date.Foreground = theme.Brush("NexusMuted");
         _clockButton.Background = theme.Brush("NexusSelection");
