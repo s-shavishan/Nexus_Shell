@@ -21,7 +21,8 @@ internal sealed class TaskbarWindow : Window, IDisposable
     private readonly UI.WindowTransition _transition;
     private readonly DispatcherTimer _visibilityTimer = new() { Interval = TimeSpan.FromMilliseconds(80) };
     private readonly DockVisibility _visibility = new();
-    private bool _queued, _disposed, _shown = true, _arranging, _visibilityReported;
+    private readonly CoalescedUiDispatch _positionDispatch = new();
+    private bool _disposed, _shown = true, _arranging, _visibilityReported;
     private IntPtr _lastForeground;
     internal TaskbarWindow(DesktopEnvironment environment)
     {
@@ -73,7 +74,12 @@ internal sealed class TaskbarWindow : Window, IDisposable
         RefreshVisibility();
     }
     private void QueuePosition()
-    { if (_queued || _disposed) return; _queued = true; DispatcherQueue.TryEnqueue(() => { _queued = false; Position(); }); }
+    {
+        if (_disposed) return;
+        _positionDispatch.Request(
+            callback => DispatcherQueue.TryEnqueue(() => callback()),
+            () => { if (!_disposed) Position(); });
+    }
     internal void ShowBar() { Position(); RefreshVisibility(); }
     internal void RefreshVisibility()
     {

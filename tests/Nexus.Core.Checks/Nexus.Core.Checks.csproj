@@ -34,6 +34,7 @@
     <Compile Include="../../src/Nexus.Shell/Services/DockPreviewPolicy.cs" Link="DockPreviewPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/WindowThumbnail.cs" Link="WindowThumbnail.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DockWindowSet.cs" Link="DockWindowSet.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/CoalescedUiDispatch.cs" Link="CoalescedUiDispatch.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/WindowEventObserver.cs" Link="WindowEventObserver.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DesktopShellPolicy.cs" Link="DesktopShellPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DesktopShellRegistration.cs" Link="DesktopShellRegistration.cs" />
