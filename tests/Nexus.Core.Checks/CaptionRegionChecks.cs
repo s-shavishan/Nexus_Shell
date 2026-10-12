@@ -9,6 +9,19 @@ internal static class CaptionRegionChecks
         static bool Contains(ShellRect r, int x, int y) => x >= r.X && x < r.Right && y >= r.Y && y < r.Bottom;
         static bool Overlaps(ShellRect a, ShellRect b) => a.X < b.Right && a.Right > b.X && a.Y < b.Bottom && a.Bottom > b.Y;
 
+        Check(LiveResizeRegionPolicy.ShouldSuspend(true, true, false, false, false),
+            "User sizing of a normal resizable window must release its stale rounded clip.");
+        Check(!LiveResizeRegionPolicy.ShouldSuspend(false, true, false, false, false),
+            "Ordinary programmatic resizes must preserve the native clip.");
+        Check(!LiveResizeRegionPolicy.ShouldSuspend(true, false, false, false, false),
+            "Non-resizable windows must not lose their native decoration.");
+        Check(!LiveResizeRegionPolicy.ShouldSuspend(true, true, true, false, false),
+            "The custom-clipped dock must never clear its clipping region during sizing.");
+        Check(!LiveResizeRegionPolicy.ShouldSuspend(true, true, false, true, false),
+            "The Windows system-frame fallback must not be modified.");
+        Check(!LiveResizeRegionPolicy.ShouldSuspend(true, true, false, false, true),
+            "Repeated WM_SIZING events must not continuously reapply region updates.");
+
         foreach (double scale in new[] { 1d, 1.25, 1.5, 2 })
         {
             var client = CaptionRegionLayout.ToPixels(0, 0, 800, 600, scale)!.Value;
