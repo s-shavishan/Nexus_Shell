@@ -1,13 +1,12 @@
 namespace Nexus.Shell.Services;
 
-// Native acrylic controllers may send multiple state notifications before WinUI
-// processes its dispatcher queue. The callback reads the controller's latest
-// state, so only one queued frame update per attachment is required.
-// Each WindowMaterial attachment owns its own gate: replacing a backdrop does
-// not let an obsolete queued update suppress the next controller's repaint.
+// One pending UI repaint per native acrylic attachment. The system backdrop
+// controller can raise events on multiple threads; use an admission ticket so
+// stale completion/error paths never release a newer queued frame update.
 internal sealed class GlassStateDispatchGate
 {
-    private int _pending;
+    private int _pendingTicket;
+    private int _nextTicket;
 
     internal bool Request(
         Func<Action, bool> enqueue,
@@ -20,25 +19,28 @@ internal sealed class GlassStateDispatchGate
         ArgumentNullException.ThrowIfNull(update);
         ArgumentNullException.ThrowIfNull(report);
 
-        // Win32/WinRT notifications are not guaranteed to arrive on the XAML
-        // thread. Only the winner may enqueue a frame update.
-        if (Interlocked.CompareExchange(ref _pending, 1, 0) != 0) return false;
+        int ticket = Interlocked.Increment(ref _nextTicket);
+        if (ticket == 0) ticket = Interlocked.Increment(ref _nextTicket);
+        if (Interlocked.CompareExchange(ref _pendingTicket, ticket, 0) != 0) return false;
+
+        void Release() => Interlocked.CompareExchange(ref _pendingTicket, 0, ticket);
+
         bool accepted = GlassUiDispatch.TryPost(
             enqueue,
             () =>
             {
-                // Clear before evaluating the generation and updating XAML:
-                // exceptions and reentrant notifications must not strand us.
-                Interlocked.Exchange(ref _pending, 0);
+                // Release *this* admission before running user callbacks so
+                // reentrant native state transitions can schedule new work.
+                Release();
                 return current();
             },
             update,
             error =>
             {
-                Interlocked.Exchange(ref _pending, 0);
+                Release();
                 report(error);
             });
-        if (!accepted) Interlocked.Exchange(ref _pending, 0);
+        if (!accepted) Release();
         return accepted;
     }
 }
