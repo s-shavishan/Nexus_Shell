@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using Nexus.Shell.Interop;
+using Nexus.Shell.Services;
 
 internal static class NativeChromeChecks
 {
