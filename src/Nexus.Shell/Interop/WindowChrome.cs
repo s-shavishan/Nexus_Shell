@@ -26,7 +26,7 @@ internal sealed class WindowChrome : IDisposable
     private readonly Action<bool>? _stateChanged;
     private readonly Action? _minimizeRequested;
     private readonly Action? _closeRequested;
-    private bool _wasMinimized;
+    private bool _wasMinimized, _restoreObserverReported, _stateObserverReported;
     internal event Action? Restored;
     private bool? _maximized;
     internal bool IsAttached => _maximized == true;
@@ -57,6 +57,31 @@ internal sealed class WindowChrome : IDisposable
         Trace("chrome-created");
     }
     internal void Trace(string stage, int width = 0, int height = 0, int value = 0) => UiTrace.Surface(stage, _role, _handle, width, height, value);
+    private void NotifyRestored()
+    {
+        if (Restored is not { } listeners) return;
+        foreach (Action listener in listeners.GetInvocationList())
+        {
+            try { listener(); }
+            catch (Exception error)
+            {
+                if (_restoreObserverReported) continue;
+                _restoreObserverReported = true;
+                Log.Write("A native window restore observer failed; remaining observers will continue", error);
+            }
+        }
+    }
+    private void NotifyAttached(bool attached)
+    {
+        if (_stateChanged is null) return;
+        try { _stateChanged(attached); }
+        catch (Exception error)
+        {
+            if (_stateObserverReported) return;
+            _stateObserverReported = true;
+            Log.Write("A native window state observer failed; frame decoration remains available", error);
+        }
+    }
     internal void SetCorners(bool highContrast, double radiusDip = 14)
     {
         double radius = ChromeAppearancePolicy.Radius(radiusDip, highContrast);
@@ -100,7 +125,7 @@ internal sealed class WindowChrome : IDisposable
         int width = window.Right - window.Left, height = window.Bottom - window.Top;
         if (width <= 0 || height <= 0 || (_customClip && _clip is null)) return;
         bool clear = !_customClip && (_fullscreen || MenuBarLayout.Attached(window.Bounds, ShellLayerInterop.Monitor(_handle).Work.Bounds, IsZoomed(_handle), ShellLayerInterop.Scale(_handle)));
-        if (_maximized != clear) { _maximized = clear; _stateChanged?.Invoke(clear); }
+        if (_maximized != clear) { _maximized = clear; NotifyAttached(clear); }
         var rectangle = _clip ?? new ShellRect(0, 0, width, height);
         int diameter = (int)Math.Round(Math.Min(_radius * ShellLayerInterop.Scale(_handle) * 2, Math.Min(rectangle.Width, rectangle.Height)));
         var shape = (rectangle, diameter, clear);
@@ -135,7 +160,7 @@ internal sealed class WindowChrome : IDisposable
             if (!_disposed)
             {
                 if (message == NativeMethods.NexusMinimizeMessage && _minimizeRequested is not null) { _minimizeRequested(); return IntPtr.Zero; }
-                if (message == NativeMethods.NexusRestoreMessage) { Restored?.Invoke(); return IntPtr.Zero; }
+                if (message == NativeMethods.NexusRestoreMessage) { NotifyRestored(); return IntPtr.Zero; }
                 if (message == 0x0214 && LiveResizeRegionPolicy.ShouldSuspend(_interactiveResize, _resizable, _customClip, _systemFrame, _liveSizeUnclipped))
                 {
                     // Stop clipping to a stale rectangle while WM_SIZING changes
@@ -207,7 +232,7 @@ internal sealed class WindowChrome : IDisposable
             long packed = lp.ToInt64();
             Trace("native-size", (int)(packed & 0xFFFF), (int)((packed >> 16) & 0xFFFF), (int)wp.ToUInt64());
         }
-        if (!_disposed && message == 0x0005) { bool minimized = wp.ToUInt64() == 1; bool restoring = _wasMinimized && !minimized; _wasMinimized = minimized; if (restoring) Restored?.Invoke(); }
+        if (!_disposed && message == 0x0005) { bool minimized = wp.ToUInt64() == 1; bool restoring = _wasMinimized && !minimized; _wasMinimized = minimized; if (restoring) NotifyRestored(); }
         if (!_disposed && LiveResizeRegionPolicy.ShouldRestore(message, _liveSizeUnclipped))
         {
             _liveSizeUnclipped = false;
