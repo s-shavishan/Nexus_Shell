@@ -52,6 +52,16 @@ internal static class CaptionRegionChecks
             "Active WM_SIZING must not prematurely restore its stale clipping rectangle.");
         Check(!LiveResizeRegionPolicy.ShouldRestore(0x0005, true),
             "Intermediate WM_SIZE notifications must not end a live sizing gesture.");
+        foreach (uint nativeEvent in new uint[] { 0x0005, 0x0047, 0x02E0 })
+        {
+            Check(!LiveResizeRegionPolicy.ShouldRefreshNative(nativeEvent, true),
+                "Live sizing must suppress intermediate native clip updates.");
+            Check(LiveResizeRegionPolicy.ShouldRefreshNative(nativeEvent, false),
+                "Programmatic size, window positioning and DPI changes must reconcile native clipping.");
+        }
+        Check(!LiveResizeRegionPolicy.ShouldRefreshNative(0x0232, false),
+            "WM_EXITSIZEMOVE must use the one explicit final-clip restoration.");
+
         Check(LiveResizeRegionPolicy.IsInterrupted(0x001F)
             && LiveResizeRegionPolicy.IsInterrupted(0x0215)
             && !LiveResizeRegionPolicy.IsInterrupted(0x0232),
