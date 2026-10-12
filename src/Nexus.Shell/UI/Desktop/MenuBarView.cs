@@ -71,6 +71,20 @@ internal sealed class MenuBarView : Grid, IDisposable
             Refresh();
         };
     }
+    private static void SetVisible(UIElement element, bool visible)
+    {
+        var next = visible ? Visibility.Visible : Visibility.Collapsed;
+        if (element.Visibility != next) element.Visibility = next;
+    }
+    private static void SetText(TextBlock label, string value)
+    {
+        if (label.Text != value) label.Text = value;
+    }
+    private static void SetName(DependencyObject element, string value)
+    {
+        if (Microsoft.UI.Xaml.Automation.AutomationProperties.GetName(element) != value)
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(element, value);
+    }
     private Button Basic(object content, string name)
     {
         var button = new Button { Content = content, FontSize = 12, MinHeight = 28, Height = 28, CornerRadius = new CornerRadius(6), Padding = new Thickness(8, 0, 8, 0), Style = (Style)Application.Current.Resources["QuietButton"] };
