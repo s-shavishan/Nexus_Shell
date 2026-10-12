@@ -118,6 +118,21 @@ internal sealed class MenuBarView : Grid, IDisposable
         SetName(_notification, unread + " unread Nexus notifications");
     }
     internal void ApplyAppearance()
-    { RequestedTheme = _environment.Theme.ElementTheme; foreach (var button in _buttons) button.Foreground = _environment.Theme.Brush("NexusText"); foreach (var line in _controls.Children.OfType<Border>()) line.Background = _environment.Theme.Brush("NexusText"); foreach (var dot in _controls.Children.OfType<Ellipse>()) dot.Fill = _environment.Theme.Brush("NexusText"); _clock.Foreground = _environment.Theme.Brush("NexusText"); _badge.Foreground = _environment.Theme.Brush("NexusAccent"); Refresh(); }
+    {
+        if (_disposed) return;
+        var theme = _environment.Theme;
+        if (RequestedTheme != theme.ElementTheme) RequestedTheme = theme.ElementTheme;
+        var foreground = theme.Brush("NexusText");
+        foreach (var button in _buttons)
+            if (!ReferenceEquals(button.Foreground, foreground)) button.Foreground = foreground;
+        foreach (var line in _controls.Children.OfType<Border>())
+            if (!ReferenceEquals(line.Background, foreground)) line.Background = foreground;
+        foreach (var dot in _controls.Children.OfType<Ellipse>())
+            if (!ReferenceEquals(dot.Fill, foreground)) dot.Fill = foreground;
+        if (!ReferenceEquals(_clock.Foreground, foreground)) _clock.Foreground = foreground;
+        var accent = theme.Brush("NexusAccent");
+        if (!ReferenceEquals(_badge.Foreground, accent)) _badge.Foreground = accent;
+        Refresh();
+    }
     public void Dispose() { if (_disposed) return; _disposed = true; _timer.Stop(); _environment.Notifications.Changed -= QueueRefresh; _environment.ActiveWindowChanged -= QueueRefresh; }
 }
