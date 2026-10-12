@@ -7,7 +7,7 @@ namespace Nexus.Shell.Services;
 // not let an obsolete queued update suppress the next controller's repaint.
 internal sealed class GlassStateDispatchGate
 {
-    private bool _pending;
+    private int _pending;
 
     internal bool Request(
         Func<Action, bool> enqueue,
@@ -20,25 +20,25 @@ internal sealed class GlassStateDispatchGate
         ArgumentNullException.ThrowIfNull(update);
         ArgumentNullException.ThrowIfNull(report);
 
-        if (_pending) return false;
-
-        _pending = true;
+        // Win32/WinRT notifications are not guaranteed to arrive on the XAML
+        // thread. Only the winner may enqueue a frame update.
+        if (Interlocked.CompareExchange(ref _pending, 1, 0) != 0) return false;
         bool accepted = GlassUiDispatch.TryPost(
             enqueue,
             () =>
             {
                 // Clear before evaluating the generation and updating XAML:
                 // exceptions and reentrant notifications must not strand us.
-                _pending = false;
+                Interlocked.Exchange(ref _pending, 0);
                 return current();
             },
             update,
             error =>
             {
-                _pending = false;
+                Interlocked.Exchange(ref _pending, 0);
                 report(error);
             });
-        if (!accepted) _pending = false;
+        if (!accepted) Interlocked.Exchange(ref _pending, 0);
         return accepted;
     }
 }
