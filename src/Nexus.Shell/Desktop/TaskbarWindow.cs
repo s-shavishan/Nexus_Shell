@@ -95,7 +95,8 @@ internal sealed class TaskbarWindow : Window, IDisposable
         if (_disposed) return;
         _positionDispatch.Request(
             callback => DispatcherQueue.TryEnqueue(() => callback()),
-            () => { if (!_disposed) Position(); });
+            () => { if (!_disposed) Position(); },
+            error => Log.Write("Dock reposition dispatch failed; a later native notification can retry", error));
     }
     internal void ShowBar() { Position(); RefreshVisibility(); }
     internal void RefreshVisibility(IntPtr? observedForeground = null)
