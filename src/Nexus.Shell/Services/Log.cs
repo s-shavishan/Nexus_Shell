@@ -6,14 +6,28 @@ namespace Nexus.Shell.Services;
 public static class Log
 {
     private static readonly object Gate = new();
+    private static readonly string? ProbePath = FindProbePath();
+    private static string? FindProbePath()
+    {
+        var args = Environment.GetCommandLineArgs();
+        if (!args.Any(a => a is "--verify-ui" or "--verify-input")) return null;
+        try
+        {
+            int index = Array.IndexOf(args, "--report");
+            string report = index >= 0 && index + 1 < args.Length ? args[index + 1]
+                : Path.Combine(AppContext.BaseDirectory, args.Contains("--verify-input") ? "Nexus.Input-Check.json" : "Nexus.UI-Check.json");
+            return Path.GetFullPath(report) + ".log";
+        }
+        catch { return Path.Combine(AppContext.BaseDirectory, "Nexus.Probe.log"); }
+    }
     public static void Write(string message, Exception? error = null)
     {
         lock (Gate)
         {
             try
             {
-                Directory.CreateDirectory(StateStore.DirectoryPath);
-                var path = Path.Combine(StateStore.DirectoryPath, "nexus.log");
+                var path = ProbePath ?? Path.Combine(StateStore.DirectoryPath, "nexus.log");
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
                 if (File.Exists(path) && new FileInfo(path).Length > 2 * 1024 * 1024) File.Move(path, path + ".previous", true);
                 File.AppendAllText(path, $"{DateTimeOffset.Now:O} {message}{Describe(error)}{Environment.NewLine}");
             }

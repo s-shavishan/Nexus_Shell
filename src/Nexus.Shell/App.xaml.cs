@@ -20,6 +20,7 @@ public partial class App : Application
         {
             Log.Write("Unhandled UI exception; native message: " + args.Message, args.Exception);
             if (Environment.GetCommandLineArgs().Contains("--verify-ui")) { args.Handled = true; UI.UiResourceProbe.Fail(args.Exception); }
+            else if (Environment.GetCommandLineArgs().Contains("--verify-input")) { args.Handled = true; UI.UiInteractionProbe.Fail(args.Exception); }
         };
         AppDomain.CurrentDomain.UnhandledException += (_, args) => Log.Write("Unhandled process exception", args.ExceptionObject as Exception);
         TaskScheduler.UnobservedTaskException += (_, args) => Log.Write("Unobserved task exception", args.Exception);
@@ -33,7 +34,7 @@ public partial class App : Application
         try { InitializeComponent(); }
         catch (Exception ex)
         {
-            ReportStartupFailure("loading App.xaml resources", ex, showDialog: !Environment.GetCommandLineArgs().Contains("--verify-ui"));
+            ReportStartupFailure("loading App.xaml resources", ex, showDialog: !Environment.GetCommandLineArgs().Any(a => a is "--verify-ui" or "--verify-input"));
             throw;
         }
     }
@@ -41,6 +42,14 @@ public partial class App : Application
     protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
         var command = Environment.GetCommandLineArgs();
+        if (command.Contains("--verify-input"))
+        {
+            int index = Array.IndexOf(command, "--report");
+            string report = index >= 0 && index + 1 < command.Length ? command[index + 1] : Path.Combine(AppContext.BaseDirectory, "Nexus.Input-Check.json");
+            try { await UI.UiInteractionProbe.RunAsync(report, command); Environment.ExitCode = 0; }
+            catch (Exception error) { Log.Write("Interactive input experiment failed", error); Environment.ExitCode = 1; }
+            Exit(); return;
+        }
         if (command.Contains("--verify-ui"))
         {
             int index = Array.IndexOf(command, "--report");

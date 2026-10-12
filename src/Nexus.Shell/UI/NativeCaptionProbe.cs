@@ -40,7 +40,7 @@ internal static class NativeCaptionProbe
             var source = InputNonClientPointerSource.GetForWindowId(native.Id);
             foreach (var size in new[] { (Width: 800, Height: 540), (Width: 480, Height: 360) })
             {
-                native.Resize(new SizeInt32(size.Width, size.Height)); await Task.Delay(80); root.UpdateLayout(); caption.Refresh();
+                native.Resize(new SizeInt32(size.Width, size.Height)); await NativeProbeLayout.WaitAsync(root, native); caption.Refresh();
                 if (caption.UsesSystemFrame) throw new InvalidOperationException("The caption API probe used the Windows title-bar fallback.");
                 var registered = source.GetRegionRects(NonClientRegionKind.Caption);
                 if (registered.Length == 0) throw new InvalidOperationException("No native drag region reached the WinUI input source.");

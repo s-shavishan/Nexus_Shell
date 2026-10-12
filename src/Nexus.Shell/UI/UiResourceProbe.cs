@@ -29,6 +29,8 @@ internal static class UiResourceProbe
         int parsed = 0;
         var checks = new List<string>();
         var failures = new List<string>();
+        var failureDetails = new List<object>();
+        string stage = "template-manifest";
         string materialStatus = "not observed";
         var core = new CoreProcessSession();
         try
@@ -39,6 +41,7 @@ internal static class UiResourceProbe
             if (manifest.FormatVersion != 1 || manifest.Templates.Length is < 1 or > 128) throw new InvalidDataException("The template manifest is unsupported.");
             foreach (var template in manifest.Templates)
             {
+                stage = "template: " + template.Source;
                 if (template.Xml.Length > 256 * 1024) throw new InvalidDataException("A UI template is too large.");
                 var loaded = XamlReader.Load(template.Xml);
                 if (loaded is not FrameworkTemplate) throw new InvalidDataException("The UI check requires framework templates: " + template.Source);
@@ -46,6 +49,7 @@ internal static class UiResourceProbe
                 parsed++;
             }
             checks.Add("Native parsing of " + parsed + " production templates and DataTemplate instantiation");
+            stage = "production-surface-construction";
             var session = new ShellSession(initialState: new ShellState { CatalogInitialized = true, PinnedApps = [], RecentApps = [],
                 AppCollections = [new(Guid.NewGuid().ToString("N"), "Everyday tools", ["nexus:files", "nexus:notes"])],
                 Places = [new(Guid.NewGuid().ToString("N"), "Preview favorite", @"C:\Example")] }, persist: _ => Task.CompletedTask);
@@ -60,11 +64,14 @@ internal static class UiResourceProbe
             _loaded = new(TaskCreationOptions.RunContinuationsAsynchronously);
             frame.Loaded += (_, _) => _loaded?.TrySetResult();
             window.Activate();
+            stage = "production-surface-layout";
             await _loaded.Task.WaitAsync(TimeSpan.FromSeconds(15));
             frame.UpdateLayout();
             if (launchpad.ActualWidth <= 0 || menu.ActualHeight <= 0) throw new InvalidOperationException("The production surfaces did not lay out.");
             checks.Add("Production menu bar and populated Launchpad layout");
+            stage = "native-caption-registration-and-layout";
             checks.Add(await NativeCaptionProbe.RunAsync());
+            stage = "desktop-panel-construction-and-layout";
             var board = new SwitcherWindow(environment); board.PopulateValidation(); panels.Add(board);
             environment.Clipboard.SetEnabled(true); environment.Clipboard.Add("Native construction check — session memory only.", DateTimeOffset.Now);
             var clipboard = new ClipboardShelfWindow(environment); panels.Add(clipboard);
@@ -84,6 +91,7 @@ internal static class UiResourceProbe
             }
             environment.Clipboard.Clear();
             checks.Add("Production window board with cards, clipboard shelf, session status, Places, Search with file/command rows and desktop-shortcuts panels at two native window sizes");
+            stage = "notification-construction-and-layout";
             for (int i = 0; i < 25; i++) environment.Notifications.Publish("Construction sample " + i, "Temporary native UI fixture; no history is persisted.", i % 3 == 0 ? NoticeKind.Warning : NoticeKind.Information);
             notifications = new NotificationWindow(environment);
             foreach (var size in new[] { (Width: 440, Height: 700), (Width: 380, Height: 540) })
@@ -92,6 +100,7 @@ internal static class UiResourceProbe
                 if (notifications.ValidationRoot.ActualWidth <= 0 || notifications.ValidationRoot.ActualHeight <= 0) throw new InvalidOperationException("The notification panel did not lay out.");
             }
             notifications.Hide(); checks.Add("Production notification filters, search, paged alert cards and actions at two native sizes");
+            stage = "material-and-palette-transitions";
             // Exercise native resource dictionaries/material replacement, not a
             // mock HTML preview. A graphics-policy fallback is a valid outcome.
             foreach (string mood in new[] { "Midnight", "Solstice", "Opal" })
@@ -109,7 +118,12 @@ internal static class UiResourceProbe
             session.State.NativeGlass = false; material.Apply(window, frame, environment); frame.UpdateLayout();
             checks.Add("Native glass detach and opaque palette path");
         }
-        catch (Exception error) { failures.Add(error.GetType().Name + ": " + error.Message); }
+        catch (Exception error)
+        {
+            failures.Add(error.GetType().Name + ": " + error.Message);
+            failureDetails.Add(new { Stage = stage, Type = error.GetType().FullName, error.Message, HResult = $"0x{error.HResult:X8}", Exception = error.ToString() });
+            Log.Write("Native UI probe failed at " + stage, error);
+        }
         finally
         {
             _loaded = null; menu?.Dispose(); launchpad?.Dispose();
@@ -120,7 +134,7 @@ internal static class UiResourceProbe
         }
         while (Errors.TryDequeue(out var error)) failures.Add(error);
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(reportPath))!);
-        File.WriteAllText(reportPath, JsonSerializer.Serialize(new { Status = failures.Count == 0 ? "PASS" : "FAIL", Templates = parsed, Checks = checks, Failures = failures, Material = materialStatus,
+        File.WriteAllText(reportPath, JsonSerializer.Serialize(new { Status = failures.Count == 0 ? "PASS" : "FAIL", Templates = parsed, Checks = checks, Failures = failures, FailureDetails = failureDetails, LastStage = stage, Material = materialStatus,
             Limitations = "This is a native construction/layout check. It does not certify pixel appearance, hardware behavior or sustained performance." }, new JsonSerializerOptions { WriteIndented = true }));
         if (failures.Count > 0) throw new InvalidOperationException("Native UI checks failed. See " + reportPath);
     }

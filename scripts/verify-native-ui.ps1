@@ -8,6 +8,17 @@ $ErrorActionPreference = 'Stop'
 if ($env:OS -ne 'Windows_NT') { throw 'The native WinUI check must run on Windows.' }
 $exe = Join-Path ([IO.Path]::GetFullPath($PublishDirectory)) 'Nexus.Shell.exe'
 $report = [IO.Path]::GetFullPath($ReportFile)
+$probeLog = $report + '.log'
+function Show-ProbeDiagnostics {
+    if (Test-Path $report -PathType Leaf) {
+        Write-Host "Native UI report: $report"
+        if ((Get-Item $report).Length -le 1MB) { Get-Content $report -Raw | Write-Host }
+    }
+    if (Test-Path $probeLog -PathType Leaf) {
+        Write-Host "Native probe log (last 80 lines): $probeLog"
+        Get-Content $probeLog -Tail 80 | Write-Host
+    }
+}
 if (Test-Path $report) { Remove-Item $report -Force }
 New-Item (Split-Path $report -Parent) -ItemType Directory -Force | Out-Null
 if (-not [Environment]::UserInteractive) {
@@ -24,4 +35,7 @@ try {
     $result = Get-Content $report -Raw | ConvertFrom-Json
     if ($result.Status -ne 'PASS' -or $result.Templates -lt 1) { throw "The native UI report failed: $report" }
     Write-Host "Native WinUI template and surface checks passed: $report" -ForegroundColor Green
+} catch {
+    try { Show-ProbeDiagnostics } catch { Write-Warning "Could not read native probe diagnostics: $_" }
+    throw
 } finally { $probe.Dispose() }

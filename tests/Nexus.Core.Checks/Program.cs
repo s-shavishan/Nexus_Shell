@@ -274,6 +274,7 @@ await UIReliabilityChecks.RunAsync();
 ResponsiveUiChecks.Run();
 WindowPolishChecks.Run();
 CaptionRegionChecks.Run();
+        InputProbeChecks.Run();
 UiTraceChecks.Run();
 DesktopCommandChecks.Run();
 EverydayDesktopChecks.Run();
