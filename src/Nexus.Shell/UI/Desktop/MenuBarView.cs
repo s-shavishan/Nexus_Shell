@@ -64,9 +64,10 @@ internal sealed class MenuBarView : Grid, IDisposable
         SizeChanged += (_, _) =>
         {
             int shown = ActualWidth < 480 ? 1 : ActualWidth < 950 ? 2 : int.MaxValue;
-            foreach (var (button, i) in left.Children.OfType<Button>().Select((button, i) => (button, i))) button.Visibility = i < shown ? Visibility.Visible : Visibility.Collapsed;
-            foreach (var button in right.Children.OfType<Button>().Take(2)) button.Visibility = ActualWidth < 650 ? Visibility.Collapsed : Visibility.Visible;
-            bluetooth.Visibility = display.Visibility = ActualWidth < 900 ? Visibility.Collapsed : Visibility.Visible;
+            foreach (var (button, i) in left.Children.OfType<Button>().Select((button, i) => (button, i))) SetVisible(button, i < shown);
+            foreach (var button in right.Children.OfType<Button>().Take(2)) SetVisible(button, ActualWidth >= 650);
+            SetVisible(bluetooth, ActualWidth >= 900);
+            SetVisible(display, ActualWidth >= 900);
             Refresh();
         };
     }
