@@ -37,6 +37,15 @@ An explicit Launchpad catalog refresh already invalidated completed `AppIconCach
 
 `DockPreviewWindow.RefreshWindows()` updated the title and accessibility label but could leave stale process details, fallback icon or button state. It now updates the process detail, replaces the fallback icon if its icon identity truly changed, and reconciles valid/minimized/window-controls after metadata changes. The DWM thumbnail itself retains its existing independently managed lifetime.
 
+### E. Guard native window-chrome settings and invalid radii
+
+`WindowChrome.SetCorners`, `SetFullscreen` and `SetClip` formerly entered the Win32 region-refresh path for identical appearance values. This is especially wasteful during repeated palette and accessibility application. `ChromeAppearancePolicy` now normalizes NaN, infinity, negative and excessive corner radii before they reach GDI and recognizes no-op setter requests.
+
+- Retain the same native `WM_SIZE`, `WM_DPICHANGED` and interactive resize reconciliation paths, including clipping recovery after `WM_CANCELMODE` and capture loss. No XAML layout or focus change.
+- Skip identical explicit frame settings but refresh immediately when the radius, fullscreen mode or clip rectangle changes. High Contrast uses square corners.
+- Add opt-in `RegionRefreshRequests` diagnostic counter on the native chrome instance. A test-owned Win32 fixture asserts that repeated settings do not invoke a redundant refresh, while true changes do.
+- Extend portable Core tests for fractional/invalid corner inputs, clip equality, and accessibility transitions.
+
 ## Safety boundaries
 
 - Do **not** modify Windows Explorer integration, shell installation/registration, work-area ownership, input hooks, native privileges or elevation, application execution, data persistence or file-provider behavior.
@@ -46,7 +55,7 @@ An explicit Launchpad catalog refresh already invalidated completed `AppIconCach
 
 ## Verification gates before a PR
 
-1. Run source validation and portable Core/Runtime checks against the **final branch SHA**.
+1. Run source validation and portable Core/Runtime checks against the **final branch SHA** (including `ChromeAppearancePolicy` and `NativeChromeChecks`).
 2. Windows AppVeyor compile/XAML generation, native `UiResourceProbe`, native desktop diagnostics, package/publish and rollback paths must succeed on that exact SHA; an older green main or a pending/cancelled status does not establish a pass.
 3. In a Windows 10 test session and Windows 11 where available, exercise 20 minimize/restore cycles, appbar notifications, keyboard and dock preview actions, maximized/browser-borderless fullscreen switching.
 4. Toggle compact vs normal dock, floating vs attached, High Contrast, transparency and Reduced Effects; move across negative-origin and fractional-DPI monitors. Compare actual desktop bounds and icon geometry.
