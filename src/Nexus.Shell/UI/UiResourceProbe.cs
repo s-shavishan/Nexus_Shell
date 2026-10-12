@@ -71,6 +71,8 @@ internal static class UiResourceProbe
             checks.Add("Production menu bar and populated Launchpad layout");
             stage = "native-caption-registration-and-layout";
             checks.Add(await NativeCaptionProbe.RunAsync());
+            stage = "native-resize-motion-and-close";
+            checks.Add(await NativeWindowMotionProbe.RunAsync());
             stage = "desktop-panel-construction-and-layout";
             var board = new SwitcherWindow(environment); board.PopulateValidation(); panels.Add(board);
             environment.Clipboard.SetEnabled(true); environment.Clipboard.Add("Native construction check — session memory only.", DateTimeOffset.Now);

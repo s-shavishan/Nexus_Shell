@@ -56,11 +56,11 @@ internal static class NativeCaptionProbe
                             throw new InvalidOperationException("A native drag region overlaps an interactive control.");
                 }
                 enabled = false; caption.Refresh();
-                if (source.GetRegionRects(NonClientRegionKind.Caption).Length != 0) throw new InvalidOperationException("Disabling caption input left a stale region.");
+                if ((source.GetRegionRects(NonClientRegionKind.Caption)?.Length ?? 0) != 0) throw new InvalidOperationException("Disabling caption input left a stale region.");
                 enabled = true; caption.Refresh();
             }
             caption.Dispose(); caption = null;
-            if (source.GetRegionRects(NonClientRegionKind.Caption).Length != 0) throw new InvalidOperationException("Closing the caption owner left native regions attached.");
+            if ((source.GetRegionRects(NonClientRegionKind.Caption)?.Length ?? 0) != 0) throw new InvalidOperationException("Closing the caption owner left native regions attached.");
             return "Production native caption adapter: WinUI registration at two sizes, control exclusion, disable/re-enable and disposal (physical input still requires acceptance)";
         }
         finally { root.Loaded -= onLoaded; caption?.Dispose(); chrome?.Dispose(); window.Close(); }

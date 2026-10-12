@@ -3,18 +3,27 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Hosting;
 using System.Numerics;
+using Nexus.Shell.Interop;
 
 namespace Nexus.Shell.UI;
 
-// Input stays responsive. A newer restore/maximize/close cancels an older
-// minimize before its native command can run; completion has a bounded wait.
+// Input stays responsive. Native restore can cancel a pending exit before its
+// native command runs; completion has a bounded wait.
 internal sealed class WindowTransition(FrameworkElement surface, Func<bool> enabled, bool dock = false) : IDisposable
 {
     private int _generation;
     private bool _disposed;
+    private WindowChrome? _chrome;
     private readonly FrameworkElement _content = surface is Border { Child: FrameworkElement child } ? child : surface;
     internal bool IsMinimizing { get; private set; }
     internal bool IsClosing { get; private set; }
+    // Bounds changes must not replay restore motion or cancel a pending close.
+    internal void BindRestore(WindowChrome chrome)
+    {
+        if (_disposed || ReferenceEquals(_chrome, chrome)) return;
+        if (_chrome is not null) _chrome.Restored -= Restore;
+        _chrome = chrome; _chrome.Restored += Restore;
+    }
     internal Task MinimizeAsync(Action minimize)
     {
         if (dock) return ExitAsync(minimize, false);
@@ -71,5 +80,11 @@ internal sealed class WindowTransition(FrameworkElement surface, Func<bool> enab
         catch { }
     }
     private static void ApplyNative(Action action) { try { action(); } catch (Exception error) { Services.Log.Write("Native minimize did not finish", error); } }
-    public void Dispose() { _disposed = true; ++_generation; IsMinimizing = IsClosing = false; Reset(); }
+    public void Dispose()
+    {
+        if (_disposed) return;
+        if (_chrome is not null) _chrome.Restored -= Restore;
+        _chrome = null; _disposed = true; ++_generation;
+        IsMinimizing = IsClosing = false; Reset();
+    }
 }

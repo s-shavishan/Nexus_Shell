@@ -73,8 +73,7 @@ public sealed partial class MainWindow : Window
             if (_appWindow.Presenter is OverlappedPresenter presenter) presenter.SetBorderAndTitleBar(false, false);
             _windowTransition = new(DesktopRoot, () => _environment.Theme.Animations && _state.SurfaceAnimations && !_highContrast && !_state.ReducedEffects);
             _chrome = new(_handle, resizable: true, stateChanged: maximized => { DesktopRoot.CornerRadius = new CornerRadius(maximized || _highContrast ? 0 : 14); DesktopRoot.BorderThickness = new Thickness(maximized ? 0 : 1); }, minimizeRequested: Minimize, closeRequested: RequestCloseSections, role: "Sections");
-            _chrome.Restored += _windowTransition.Restore;
-            _chrome.Resized += _windowTransition.Restore;
+            _windowTransition.BindRestore(_chrome);
             _caption = new(_appWindow, _chrome, SectionsDragArea, () => !_state.FullScreen, ChromeSearchButton);
             var icon = Path.Combine(AppContext.BaseDirectory, "Assets", "Nexus.ico");
             if (File.Exists(icon)) _appWindow.SetIcon(icon);
