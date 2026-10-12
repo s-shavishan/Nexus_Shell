@@ -113,6 +113,14 @@ The actual dock HWND already calls `WindowMaterial.Apply` to manage acrylic atta
 - `appveyor.yml` remains responsible for Core/Runtime checks, update and native diagnostics scripts, native WinUI/MSBuild publish and ZIP packaging. Only successful, exact-revision AppVeyor branch **and** PR builds, followed by Windows preview acceptance, can release the merge hold.
 - Older GitHub Actions red statuses are historical and irrelevant. They are **not** AppVeyor results and must not be interpreted as C# test or WinUI compilation failures.
 
+### Stage 16 — Retained native acrylic tint and safe bevel activation
+
+- `GlassTintRetention` tracks the recipe that has actually been written to a native `DesktopAcrylicController`. Unchanged tint and luminosity settings are not rewritten on ordinary material refreshes; partial failures are never marked as successfully applied.
+- `LiquidGlassBackdrop` resets that tint record when disposing/recreating the controller and forces a full reapplication when Windows changes its system backdrop configuration. This retains existing Windows high-contrast, theme and runtime fallback behavior.
+- `GlassRimStatePolicy` shows Ultra/Balanced decorative acrylic highlights only while Windows reports `Active`. The highlight stays hidden during `Pending`, `Detached`, `Unavailable`, `Fallback` and `HighContrast`; the persisted requested quality and status semantics are not modified.
+- Core checks cover tint first application, repeated equivalent recipes, an uncommitted partial failure, explicit force-refresh and reset, plus four quality tiers across all native controller states.
+- Windows acceptance should verify Ultra/Balanced material transitions, switching to Solid, and repeated toggles with system transparency disabled. Neither code review nor the portable policy tests proves visual quality or FPS improvements on target hardware.
+
 ## Required AppVeyor validation
 
 1. Build this **exact branch head SHA**, not the already-green P2.2 revision.
