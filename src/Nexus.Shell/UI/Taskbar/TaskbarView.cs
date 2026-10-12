@@ -453,8 +453,13 @@ internal sealed class TaskbarView : Grid
         if (!ReferenceEquals(_separator.Background, border)) _separator.Background = border;
         if (!ReferenceEquals(_time.Foreground, text)) _time.Foreground = text;
         if (!ReferenceEquals(_date.Foreground, muted)) _date.Foreground = muted;
-        _clockButton.Background = theme.Brush("NexusSelection");
-        foreach (var button in _iconButtons) { button.Background = _transparent; button.Foreground = theme.Brush("NexusText"); }
+        var selection = theme.Brush("NexusSelection");
+        if (!ReferenceEquals(_clockButton.Background, selection)) _clockButton.Background = selection;
+        foreach (var button in _iconButtons)
+        {
+            if (!ReferenceEquals(button.Background, _transparent)) button.Background = _transparent;
+            if (!ReferenceEquals(button.Foreground, text)) button.Foreground = text;
+        }
         foreach (var item in _items.Values) item.State = null;
         RefreshWindowStates();
         ApplyDensity(); RefreshClock();
