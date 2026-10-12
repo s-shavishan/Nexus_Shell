@@ -24,6 +24,7 @@
     <Compile Include="../../src/Nexus.Shell/Services/LaunchpadCatalogCache.cs" Link="LaunchpadCatalogCache.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/LaunchpadRefreshGate.cs" Link="LaunchpadRefreshGate.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/GlassRecipe.cs" Link="GlassRecipe.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/GlassAttachmentGate.cs" Link="GlassAttachmentGate.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/MaximizedWindowLayout.cs" Link="MaximizedWindowLayout.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/WindowPlacementPlan.cs" Link="WindowPlacementPlan.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/AppIconPolicy.cs" Link="AppIconPolicy.cs" />
