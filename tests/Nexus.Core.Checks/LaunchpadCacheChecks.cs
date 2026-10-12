@@ -8,6 +8,26 @@ internal static class LaunchpadCacheChecks
     {
         int checks = 0;
         void Check(bool condition, string message) { checks++; if (!condition) throw new Exception(message); }
+        // A slow initial scan must not discard an explicit Refresh click.
+        // Even a burst of repeated clicks should produce exactly one forced
+        // installed-app rescan after the current operation finishes.
+        var queue = new LaunchpadRefreshGate();
+        Check(queue.Request(false) == (true, false), "Initial catalog load must begin without forcing a new scan.");
+        for (int i = 0; i < 50; i++)
+            Check(queue.Request(true) == (false, false), "In-flight manual requests must not start concurrent scans.");
+        Check(queue.PendingForce, "An explicit installed-app refresh must survive while a scan runs.");
+        Check(queue.Complete(), "Completing the first scan must expose the pending manual refresh.");
+        Check(queue.Request(false) == (true, true), "The next catalog scan must force discovery even when called by the automatic completion path.");
+        Check(!queue.PendingForce && !queue.Complete(), "The queued manual request must run exactly once.");
+        Check(queue.Request(false) == (true, false) && !queue.Complete(), "Subsequent ordinary opens should reuse the cached catalog.");
+        Check(queue.Request(true) == (true, true) && !queue.Complete(), "Manual refresh should force an immediate scan when idle.");
+        Check(queue.Request(false) == (true, false), "A reopened Launchpad must begin a new logical request.");
+        Check(queue.Request(false) == (false, false), "A second open while scanning must coalesce instead of opening another scan.");
+        Check(!queue.Complete(), "An ordinary reopened request must not schedule unnecessary follow-up scans.");
+        bool invalidCompletion = false;
+        try { queue.Complete(); } catch (InvalidOperationException) { invalidCompletion = true; }
+        Check(invalidCompletion, "Refresh completion outside an admitted scan must fail visibly.");
+
         var builtin = new AppEntry("files", "Files", "nexus:files", "", "System");
         var apps = Enumerable.Range(0, 650).Select(i => new AppEntry("app" + i, "App " + i.ToString("D3"), "C:\\Apps\\" + i + ".exe", "", i % 2 == 0 ? "Utility" : "Game")).ToArray();
         var state = new ShellState { PinnedApps = [], RecentApps = [], HiddenAppTargets = [], AppCollections = [], LaunchpadOrder = "Name" };

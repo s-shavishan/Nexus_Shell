@@ -44,10 +44,11 @@ internal sealed class StartMenuView : Grid, IDisposable
     private readonly Button _refresh;
     private readonly DispatcherTimer _filterTimer = new() { Interval = TimeSpan.FromMilliseconds(45) };
     private readonly LaunchpadCatalogCache _catalog;
+    private readonly LaunchpadRefreshGate _refreshGate = new();
     private IReadOnlyList<AppEntry> _filtered = [];
     private (int Pages, int Page, bool HighContrast)? _indicatorKey;
     private int _page, _epoch, _renderVersion;
-    private bool _disposed, _open, _refreshing;
+    private bool _disposed, _open;
     private IReadOnlyList<AppEntry> _shown = [];
     private string _category = "All";
     internal StartMenuView(DesktopEnvironment environment)
@@ -193,13 +194,32 @@ internal sealed class StartMenuView : Grid, IDisposable
     }
     private async Task RefreshCatalogAsync(bool refresh = false)
     {
-        int epoch = _epoch; if (_refreshing || _disposed || !_open) return;
-        if (refresh) { AppIconCache.RetryFailures(); _shown = []; }
-        _refreshing = true; _refresh.IsEnabled = false;
-        try { var discovered = await _environment.GetCatalogAsync(refresh); if (epoch != _epoch || _environment.IsStopping || !_open || _disposed) return; _catalog.Update(_environment.Session.State.PinnedApps, discovered); Render(); }
+        int epoch = _epoch;
+        if (_disposed || !_open) return;
+        var admission = _refreshGate.Request(refresh);
+        if (!admission.Started)
+        {
+            if (refresh) _subtitle.Text = "Refresh queued after the current app scan.";
+            return;
+        }
+        if (admission.Force) { AppIconCache.RetryFailures(); _shown = []; }
+        // Leave Refresh enabled: a click during a scan queues one follow-up,
+        // not a concurrent shortcut enumeration or a lost user request.
+        try
+        {
+            var discovered = await _environment.GetCatalogAsync(admission.Force);
+            if (epoch != _epoch || _environment.IsStopping || !_open || _disposed) return;
+            _catalog.Update(_environment.Session.State.PinnedApps, discovered);
+            Render();
+            if (admission.Force) _subtitle.Text = "Installed apps refreshed.";
+        }
         catch (OperationCanceledException) { }
         catch (Exception error) { if (_open && !_disposed) _environment.Report("Launchpad could not refresh installed apps", error); }
-        finally { _refreshing = false; if (!_disposed) { _refresh.IsEnabled = true; if (_open && epoch != _epoch) _ = RefreshCatalogAsync(); } }
+        finally
+        {
+            bool pendingForce = _refreshGate.Complete();
+            if (!_disposed && _open && (epoch != _epoch || pendingForce)) _ = RefreshCatalogAsync();
+        }
     }
     internal void Hide() { ++_epoch; _open = false; _filterTimer.Stop(); }
     private void Render()
