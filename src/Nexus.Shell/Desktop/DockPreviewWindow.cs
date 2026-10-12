@@ -107,11 +107,6 @@ internal sealed class DockPreviewWindow : Window
             _environment.Taskbar.BarBounds, anchor, ShellLayerInterop.Scale(_environment.Taskbar.Handle));
         _native.MoveAndResize(new RectInt32(_bounds.X, _bounds.Y, _bounds.Width, _bounds.Height));
         IsOpen = true; ApplyAppearance(); _native.Show(false); RefreshState();
-        if (!_environment.Session.State.ReducedEffects && !_environment.Theme.HighContrast)
-        {
-            try { _thumbnail = WindowThumbnail.TryCreate(_handle, window); UpdateThumbnail(); }
-            catch (Exception ex) { ReleaseThumbnail(); Log.Write("Live window preview unavailable", ex); }
-        }
         if (_root.IsLoaded) Enter();
         if (keyboard) { Activate(); if (_root.IsLoaded) _restore.Focus(FocusState.Programmatic); }
     }
@@ -148,8 +143,20 @@ internal sealed class DockPreviewWindow : Window
         _minimize.IsEnabled = valid && !minimized; _maximize.IsEnabled = valid;
         if (_maximized != maximized)
         { _maximized = maximized; _maximizeIcon.Glyph = maximized ? "\uE923" : "\uE922"; string name = maximized ? "Restore window size" : "Maximize window"; AutomationProperties.SetName(_maximize, name); ToolTipService.SetToolTip(_maximize, name); }
-        if (minimized || !valid || cloaked) ReleaseThumbnail();
-        _status.Text = minimized ? "Minimized · restore to see the window" : _environment.Session.State.ReducedEffects ? "Fast mode · window card" : "Click the preview to switch";
+        if (minimized || !valid || cloaked || _environment.Session.State.ReducedEffects || _environment.Theme.HighContrast)
+            ReleaseThumbnail();
+        else if (DockPreviewPolicy.ShouldAttachThumbnail(IsOpen, valid, minimized, cloaked,
+                     _environment.Session.State.ReducedEffects || _environment.Theme.HighContrast, _thumbnail is not null))
+        {
+            try
+            {
+                _thumbnail = WindowThumbnail.TryCreate(_handle, _window);
+                UpdateThumbnail();
+            }
+            catch (Exception ex) { ReleaseThumbnail(); Log.Write("Live window preview unavailable", ex); }
+        }
+        _status.Text = minimized ? "Minimized · restore to see the window"
+            : _environment.Session.State.ReducedEffects ? "Fast mode · window card" : "Click the preview to switch";
     }
     internal void UpdatePointer(bool fullscreen)
     {
