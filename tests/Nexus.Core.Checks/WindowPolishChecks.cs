@@ -75,7 +75,7 @@ internal static class WindowPolishChecks
         foreach (bool simple in new[] { false, true })
         {
             var rim = GlassRimAppearance.For(quality, contrast, simple);
-            Check(rim.Visible == (!contrast && !simple && quality is "Ultra" or "Balanced"),
+            Check(rim.Visible == (!contrast && !simple && (quality is "Ultra" or "Balanced")),
                 "Only native glass quality without accessibility overrides should display a bevel.");
             Check(rim.Opacity == (quality == "Ultra" ? .85 : .65),
                 "The Ultra bevel must have the stronger opacity without changing fallback colors.");
