@@ -119,7 +119,8 @@ internal sealed class TaskbarWindow : Window, IDisposable
             // Query the foreground rectangle just once per visibility tick.
             // Both fullscreen classification and title-control avoidance use
             // exactly the same native geometry snapshot.
-            bool hasBounds = sameMonitor && NativeMethods.GetWindowRect(foreground, out var rect);
+            ShellLayerInterop.Rect rect = default;
+            bool hasBounds = sameMonitor && NativeMethods.GetWindowRect(foreground, out rect);
             bool fullscreen = hasBounds
                 && DockFullscreenPolicy.IsFullscreen(rect.Bounds, monitor, maximized, NativeMethods.WindowStyle(foreground));
             // Preview does not own Explorer's work area. Avoid covering a
