@@ -70,6 +70,20 @@ internal static class WindowPolishChecks
         }
         budget.Prune([1]); Check(budget.Admit(65, 100, work, 5000), "Pruning closed apps must free budget capacity.");
         Check(!budget.Admit(0, 100, work, 5000) && !budget.Admit(2, 0, work, 5000), "Invalid native identities must not consume retry capacity.");
+        foreach (string quality in GlassQuality.Choices)
+        foreach (bool contrast in new[] { false, true })
+        foreach (bool simple in new[] { false, true })
+        {
+            var rim = GlassRimAppearance.For(quality, contrast, simple);
+            Check(rim.Visible == (!contrast && !simple && quality is "Ultra" or "Balanced"),
+                "Only native glass quality without accessibility overrides should display a bevel.");
+            Check(rim.Opacity == (quality == "Ultra" ? .85 : .65),
+                "The Ultra bevel must have the stronger opacity without changing fallback colors.");
+        }
+        Check(!GlassRimAppearance.For(null, false, false).Visible
+            && !GlassRimAppearance.For("Essential", false, false).Visible,
+            "Unknown and essential/solid fallback tiers must not display decorative edge lighting.");
+
         foreach (string mood in AuraPalette.Moods)
         foreach (string style in GlassStyle.Choices)
         foreach (string role in new[] { "MenuBar", "Frame", "Dock" })
