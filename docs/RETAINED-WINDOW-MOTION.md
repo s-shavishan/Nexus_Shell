@@ -37,6 +37,13 @@ confirmed cause of black resize regions.
 | `src/Nexus.Shell/UI/WindowTransition.cs` | Retain per-surface animations; clean up on failure/disposal; expose native preflight creation/ownership counts. |
 | `src/Nexus.Shell/UI/NativeWindowMotionProbe.cs` | Exercise production resources on an actual test-owned WinUI visual; preserve the resize/close regression. |
 | `docs/RETAINED-WINDOW-MOTION.md` | Record evidence, validation, risks and rollback. |
+| `scripts/validate-source.py` | Validate the active AppVeyor route after main removed the optional GitHub Actions workflow; retain native-check and artifact-version guards. |
+
+Main removed `.github/workflows/build-windows.yml` in `99c5182`. The integrated
+source check initially failed with `FileNotFoundError` because its CI checks
+still required that deleted file. AppVeyor now remains mandatory; a GitHub
+workflow, if present, still receives its original build, packaging, permissions,
+runner, artifact-version and native-test checks.
 
 ## Validation
 
