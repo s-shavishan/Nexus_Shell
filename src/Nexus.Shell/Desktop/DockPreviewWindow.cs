@@ -132,11 +132,11 @@ internal sealed class DockPreviewWindow : Window
     }
     private void RefreshState()
     {
-        if (_window is null) return;
-        bool valid = NativeMethods.OwnsWindow(_window);
-        bool minimized = valid && (NativeMethods.IsMinimized(_window.Handle) || !NativeMethods.Visible(_window.Handle));
-        bool maximized = valid && NativeMethods.IsZoomed(_window.Handle);
-        bool cloaked = valid && NativeMethods.IsCloaked(_window.Handle);
+        if (_window is not { } target) return;
+        bool valid = NativeMethods.OwnsWindow(target);
+        bool minimized = valid && (NativeMethods.IsMinimized(target.Handle) || !NativeMethods.Visible(target.Handle));
+        bool maximized = valid && NativeMethods.IsZoomed(target.Handle);
+        bool cloaked = valid && NativeMethods.IsCloaked(target.Handle);
         var state = (valid, minimized, cloaked, maximized, _environment.Session.State.ReducedEffects, _environment.Theme.HighContrast);
         if (_state == state) return; _state = state;
         _restore.IsEnabled = _viewport.IsEnabled = _close.IsEnabled = valid;
@@ -150,7 +150,7 @@ internal sealed class DockPreviewWindow : Window
         {
             try
             {
-                _thumbnail = WindowThumbnail.TryCreate(_handle, _window);
+                _thumbnail = WindowThumbnail.TryCreate(_handle, target);
                 UpdateThumbnail();
             }
             catch (Exception ex) { ReleaseThumbnail(); Log.Write("Live window preview unavailable", ex); }
