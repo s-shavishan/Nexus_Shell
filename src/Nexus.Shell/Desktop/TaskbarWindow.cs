@@ -49,7 +49,7 @@ internal sealed class TaskbarWindow : Window, IDisposable
         {
             if (_disposed) return;
             var foreground = NativeMethods.ForegroundTaskWindow();
-            if (foreground != _lastForeground) { _lastForeground = foreground; View.RefreshWindowStates(); }
+            if (foreground != _lastForeground) { _lastForeground = foreground; View.RefreshWindowStates(foreground); }
             RefreshVisibility(foreground);
         };
         _visibilityTimer.Start();
