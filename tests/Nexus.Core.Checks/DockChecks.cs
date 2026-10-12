@@ -23,6 +23,39 @@ internal static class DockChecks
         Check(dock.Windows.SequenceEqual(new[] { replacement }), "Closed, duplicate and invalid identities must not leave ghost buttons.");
         dock.Reconcile([]); Check(dock.Windows.Count == 0, "Closing every app must clear the running dock.");
 
+        // A rejected DispatcherQueue.TryEnqueue used to strand the dock's
+        // reposition flag permanently, blocking later width/position changes.
+        var dispatch = new CoalescedUiDispatch();
+        var work = new Queue<Action>();
+        bool Enqueue(Action callback) { work.Enqueue(callback); return true; }
+        int positions = 0;
+        Check(dispatch.Request(Enqueue, () => positions++), "The first dock reposition request must be queued.");
+        Check(!dispatch.Request(Enqueue, () => positions += 100) && work.Count == 1,
+            "Rapid dock width changes must share one queued reposition.");
+        work.Dequeue()();
+        Check(positions == 1, "A coalesced reposition must execute exactly once.");
+        Check(!dispatch.Request(_ => false, () => positions += 100),
+            "A rejected dispatcher request must be reported as unscheduled.");
+        Check(dispatch.Request(Enqueue, () => positions++),
+            "A rejected enqueue must not block future dock reposition requests.");
+        work.Dequeue()();
+        Check(positions == 2, "The next accepted request must execute after rejection.");
+        bool dispatcherThrew = false;
+        try { dispatch.Request(_ => throw new InvalidOperationException("Dispatcher shut down"), () => positions++); }
+        catch (InvalidOperationException) { dispatcherThrew = true; }
+        Check(dispatcherThrew && dispatch.Request(Enqueue, () => positions++),
+            "A throwing dispatcher must not permanently poison the scheduling gate.");
+        work.Dequeue()();
+        Check(positions == 3, "Scheduling must recover from a throwing dispatcher.");
+        Check(dispatch.Request(Enqueue, () =>
+        {
+            positions++;
+            Check(dispatch.Request(Enqueue, () => positions++),
+                "The gate must release before invoking a reposition callback that schedules another pass.");
+        }), "A normal dock position update must enqueue.");
+        work.Dequeue()(); work.Dequeue()();
+        Check(positions == 5 && work.Count == 0, "Reentrant dock reposition updates must settle without lost or duplicate callbacks.");
+
         var visibility = new DockVisibility();
         Check(visibility.Update(true, false, false, false, false, 0), "Floating dock must be visible on the desktop.");
         Check(!visibility.Update(true, true, false, false, false, 1), "A maximized app must hide the floating dock.");
@@ -39,6 +72,6 @@ internal static class DockChecks
         Check(!DockVisibility.InRevealArea(monitor, bar, -1000, 890, false, 1), "A hidden dock must only reveal from the edge.");
         Check(DockVisibility.InRevealArea(monitor, bar, -1000, 890, true, 1), "The gap between the dock and edge must keep a revealed dock open.");
         Check(!DockVisibility.InRevealArea(monitor, bar, 1, 899, true, 1), "Another monitor must not reveal this dock.");
-        Console.WriteLine("PASS: dock identity, stable order, title changes, 130-window overflow, handle reuse, removal and auto-hide/reveal/fullscreen policy.");
+        Console.WriteLine("PASS: dock identity/order, 130-window overflow, handle reuse, coalesced reposition recovery and auto-hide/reveal/fullscreen policy.");
     }
 }
