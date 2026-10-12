@@ -126,6 +126,7 @@ internal sealed class TaskbarView : Grid
     internal void Refresh(IReadOnlyList<RunningWindow> windows)
     {
         if (_released) return;
+        using var work = UiTrace.Measure("dock-refresh", "Dock", windows.Count);
         var pins = _environment.Session.State.PinnedApps.ToArray();
         if (!_shownPins.SequenceEqual(pins))
         {

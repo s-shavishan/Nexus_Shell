@@ -76,7 +76,9 @@ internal sealed class WindowChrome : IDisposable
     }
     private void RefreshCore()
     {
-        if (_disposed || _systemFrame || _applying || !_regionsEnabled || _liveSizeUnclipped || IsIconic(_handle) || !GetWindowRect(_handle, out var window)) return;
+        if (_disposed || _systemFrame || _applying || !_regionsEnabled || _liveSizeUnclipped) return;
+        using var work = UiTrace.Measure("chrome-refresh", _role);
+        if (IsIconic(_handle) || !GetWindowRect(_handle, out var window)) return;
         int width = window.Right - window.Left, height = window.Bottom - window.Top;
         if (width <= 0 || height <= 0 || (_customClip && _clip is null)) return;
         bool clear = !_customClip && (_fullscreen || MenuBarLayout.Attached(window.Bounds, ShellLayerInterop.Monitor(_handle).Work.Bounds, IsZoomed(_handle), ShellLayerInterop.Scale(_handle)));
