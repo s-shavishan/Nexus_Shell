@@ -36,6 +36,24 @@ Status: **IN DEVELOPMENT / HOLD MERGE**. Windows compilation, CI and pixel-level
 - `ApplyAppearance` shares the same retained corner update path, preserving square corners in High Contrast.
 - The existing native `VerifyRetainedDensity` WinUI fixture now asserts **100** identical dock-width updates cause zero frame/visibility dependency-property writes; switching across thresholds must still cause appropriate writes and restore the original layout.
 
+### Stage 5 — Enforce one native dock material owner
+
+The actual dock HWND already calls `WindowMaterial.Apply` to manage acrylic attachment, controller failure and opaque fallback. However `TaskbarView.ApplyAppearance` independently wrote its frame background with a requested glass brush, irrespective of whether the *native* controller was still preparing or had fallen back. This could temporarily replace the solid fallback with an alpha gradient during visual/theme transitions.
+
+- `TaskbarWindow` marks the dock view as window-material-owned before attaching its backdrop. `TaskbarView` stops writing that frame's background or edge brush; only `WindowMaterial` controls actual acrylic vs solid paint.
+- A standalone `TaskbarView` (including native resource probes) renders with a fully opaque palette base, not a simulated translucent native backdrop.
+- The native `UiResourceProbe` checks that standalone fallback is opaque and that 100 repeated window-owned appearance refreshes do **not** overwrite the native material/background/border.
+- No changes to dock buttons, thumbnail previews, appbar ownership, system event hooks or theme preference persistence.
+
+### Stage 6 — Avoid unnecessary menu bar native repositioning
+
+`MenuBarWindow.Position` previously made a full `SetWindowPos` move-and-resize request even if the actual HWND had already reached the expected monitor rectangle. This could generate avoidable WM_WINDOWPOS/WM_SIZE callbacks and XAML invalidations during desktop/appbar events.
+
+- `MenuBarNativePlacement` reads current HWND geometry and sets `SWP_NOMOVE | SWP_NOSIZE` when it matches the desired native band. The operation still specifies `HWND_TOPMOST` and `SWP_NOACTIVATE` to preserve essential menu ordering and avoid focus theft.
+- Invalid/unreadable or changed HWND rectangles still trigger the full native move/resize path; external monitor moves remain recoverable.
+- `MenuBarWindow.ApplyAppearance` reuses the paint-retention helper to avoid duplicate border-brush writes after `WindowMaterial.Apply`.
+- Portable Core checks verify unchanged/changed/unavailable geometry and preserved no-activation behavior.
+
 ## Required AppVeyor validation
 
 1. Build this **exact branch head SHA**, not the already-green P2.2 revision.
