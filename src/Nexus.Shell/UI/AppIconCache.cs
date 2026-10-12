@@ -19,6 +19,7 @@ internal static class AppIconCache
     {
         foreach (var key in Cache.Where(entry => entry.Value.IsCompletedSuccessfully && entry.Value.Result is null).Select(entry => entry.Key).ToArray()) Cache.Remove(key);
     }
+    internal static void RefreshCompleted() => AppIconRefreshPolicy.EvictCompleted(Cache);
     internal static Task<ImageSource?> GetAsync(AppEntry app)
     {
         if (!AppIconPolicy.IsLocalFile(app.Target)) return Task.FromResult<ImageSource?>(null);
