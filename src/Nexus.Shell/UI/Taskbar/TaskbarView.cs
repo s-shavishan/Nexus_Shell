@@ -269,7 +269,7 @@ internal sealed class TaskbarView : Grid
             var state = (active, minimized);
             var presence = minimized ? DockPresence.Minimized : active ? DockPresence.Active : DockPresence.Running;
             var cue = valid ? DockMotionPolicy.Transition(item.Presence, presence, item.NewlyOpened) : DockMotionCue.None;
-            bool transitioned = item.Presence != presence;
+            bool transitioned = DockIndicatorUpdatePolicy.ShouldTransition(valid, item.Presence, presence);
             bool initialized = item.Presence is not null; item.Presence = valid ? presence : null; item.NewlyOpened = false;
             if (cue != DockMotionCue.None) { if (item.Icon.IsLoaded && _dockMotion is not null) { _dockMotion.Play(item.Icon, cue); item.PendingCue = DockMotionCue.None; } else item.PendingCue = cue; }
             if (_dockMotion is not null && transitioned)
