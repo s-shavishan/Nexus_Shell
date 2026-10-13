@@ -99,6 +99,40 @@ internal static class DockChecks
         Check(DockVisualRecoveryPolicy.RequiresVisualRebuild(true, 0, 0),
             "A failed empty-dock refresh must also reset potentially orphaned children.");
 
+        // Stage 13: a crashed WinUI render can leave exactly as many
+        // orphaned buttons as current windows. Compare identities, not only
+        // counts, and reject duplicate or missing dock entries.
+        var observed = new[] {
+            new RunningWindow(new IntPtr(91), "Editor", "editor", 701),
+            new RunningWindow(new IntPtr(92), "Browser", "browser", 702)
+        };
+        var observedKeys = observed.Select(DockWindowIdentity.Of).ToArray();
+        Check(DockVisualRecoveryPolicy.HasConsistentIdentities(observed, observedKeys),
+            "An exact dock identity set should not force expensive repair.");
+        Check(DockVisualRecoveryPolicy.HasConsistentIdentities(
+                observed.Reverse().ToArray(), observedKeys),
+            "A pure EnumWindows order change must not mark stable dock buttons as stale.");
+        Check(!DockVisualRecoveryPolicy.HasConsistentIdentities(observed,
+                [observedKeys[0], new DockWindowIdentity(new IntPtr(100), 703)]),
+            "Equal counts with a stale HWND must still trigger recovery.");
+        Check(!DockVisualRecoveryPolicy.HasConsistentIdentities(observed,
+                [observedKeys[0], new DockWindowIdentity(observed[1].Handle, 999)]),
+            "An equal-count reused HWND with the wrong PID must trigger recovery.");
+        Check(!DockVisualRecoveryPolicy.HasConsistentIdentities(observed,
+                [observedKeys[0], observedKeys[0]]),
+            "Duplicate dock item keys must never pass a reconciliation consistency check.");
+        Check(!DockVisualRecoveryPolicy.HasConsistentIdentities(observed,
+                [observedKeys[0]]),
+            "Missing dock buttons must be restored on the next scan.");
+        Check(!DockVisualRecoveryPolicy.HasConsistentIdentities(
+                [observed[0], observed[0]], [observedKeys[0], observedKeys[1]]),
+            "Duplicate expected window identities must fail instead of hiding malformed snapshots.");
+        Check(DockVisualRecoveryPolicy.HasConsistentIdentities(
+                [observed[0] with { Title = "Renamed Editor" }, observed[1]], observedKeys),
+            "A title-only update must keep the button identity stable; metadata is reconciled separately.");
+        Check(DockVisualRecoveryPolicy.HasConsistentIdentities([], Array.Empty<DockWindowIdentity>()),
+            "A genuinely empty dock is a consistent baseline, not a permanent recovery loop.");
+
         Check(NativeMethods.DockWindowEligibleVisibility(true, false),
             "Normal visible app windows must remain in the dock.");
         Check(NativeMethods.DockWindowEligibleVisibility(true, true),

@@ -140,3 +140,17 @@ The five-second desktop heartbeat calls `UpdateTaskbar` as a recovery guard. Whe
 - Portable tests cover idle heartbeat admission, overlapping heartbeat suppression, explicit structural follow-ups, and a 1,000-heartbeat burst while a scan remains in flight. Existing native event and shutdown timer policies remain unchanged.
 
 **Validation:** Source and regression checks were committed on the draft P2.4 branch. No .NET SDK compilation, AppVeyor run or interactive Windows desktop test was performed here.
+
+## Stage 13 — P2.4 integration-readiness: stale visual identity recovery
+
+The earlier partial-render fallback checked `_refreshIncomplete`, number of `DockItem` entries, and number of attached XAML child controls. That does not catch a wrong set of HWND/PID identities with the *same* number of buttons, a same-count child ordering error, or a prior manually requested refresh that was interrupted while the native snapshot remained unchanged.
+
+- `TaskbarView.NeedsRecovery` now checks the incomplete-render marker, compares expected `DockWindowSet` HWND/PID keys against live `_items`, and validates the WinUI children against those identities in retained lifecycle order.
+- `DesktopEnvironment.UpdateTaskbarCore` invokes `TaskbarView.Refresh` when `NeedsRecovery` is true even if native window enumeration and dock snapshot are unchanged. This also covers incomplete settings-triggered refreshes.
+- `DockVisualRecoveryPolicy.HasConsistentIdentities` keeps this decision pure/testable. The comparison is order-insensitive for `EnumWindows`, while the UI property independently validates the preserved dock child ordering. It handles missing/duplicate entries and same-HWND/different-PID reuse.
+- Portable checks cover unchanged identities, pure z-order changes, equal-count stale HWNDs/PIDs, duplicate expected/actual identities, missing buttons, renamed metadata and empty snapshots.
+- The main desktop continues its five-second recovery heartbeat and 50 ms native event coalescing; the new identity validation is only part of the periodic UI snapshot check.
+
+### Readiness conclusion
+
+Source-level integration and regression assertions are present in GitHub, but **P2.4 has not passed a .NET build, portable Core execution, AppVeyor compilation or real Windows desktop preview** in this session. GitHub's mergeability status checks Git history compatibility, not WinUI correctness or performance. Keep PR #23 a draft and let the project owner explicitly decide whether to validate and merge; do not represent it as release-ready.
