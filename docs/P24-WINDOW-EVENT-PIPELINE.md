@@ -113,3 +113,11 @@ The previous Stage 8 `RequiresDockRefresh` helper used the order-sensitive nativ
 - Portable regression assertions cover Alt+Tab reordering, duplicate identities, HWND/PID reuse, changed process metadata, destroyed app HWNDs and 180-window reversed enumeration.
 
 **Validation:** Source changes and regression assertions are committed; no .NET compilation, AppVeyor execution or Windows preview has been performed.
+
+## Stage 10 follow-up — Defensive identity validation and shutdown-safe HWND capture
+
+- The new dock comparator intentionally checks duplicate HWND/PID identities even when both operands are the same list instance. A reference-identity shortcut could otherwise incorrectly certify a malformed duplicate window collection as safe to retain.
+- `UpdateTaskbar` captures the desktop HWND before transferring enumeration to the worker thread; it no longer accesses the WinUI desktop object from that worker during shutdown.
+- Added a portable regression case for a reference-identical duplicated snapshot. The existing ordered native-window comparer retains its fast reference comparison, as it serves a distinct purpose.
+
+No .NET/WinUI build or AppVeyor tests were executed in this development batch.

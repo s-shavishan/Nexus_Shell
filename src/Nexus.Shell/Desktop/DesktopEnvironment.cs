@@ -262,10 +262,13 @@ internal sealed partial class DesktopEnvironment
         try
         {
             lifecycle = _dockLifecycle.BeginScan();
+            // Snapshot the HWND while the WinUI desktop still owns it. The
+            // worker must never access a Desktop instance already closing.
+            var desktopHandle = Desktop.Handle;
             var windows = await Task.Run(() =>
             {
                 using var measurement = UiTrace.Measure("dock-enumerate", "Dock");
-                return NativeMethods.RunningWindows(Desktop.Handle);
+                return NativeMethods.RunningWindows(desktopHandle);
             });
             if (!IsStopping)
             {

@@ -34,7 +34,8 @@ internal static class WindowListSnapshotPolicy
     {
         ArgumentNullException.ThrowIfNull(previous);
         ArgumentNullException.ThrowIfNull(next);
-        if (ReferenceEquals(previous, next)) return true;
+        // Do not short-circuit identical list references: even one list may
+        // contain duplicate HWND identities and needs a defensive rebuild.
         if (previous.Count != next.Count) return false;
 
         var byIdentity = new Dictionary<DockWindowIdentity, RunningWindow>(previous.Count);

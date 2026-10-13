@@ -396,6 +396,10 @@ internal static class WindowEventPipelineChecks
         Check(!WindowListSnapshotPolicy.RequiresDockRefresh(taskList,
                 taskList.Reverse().ToArray(), new HashSet<IntPtr>(), resetAll: false),
             "An Alt+Tab z-order change alone must not trigger dock reconciliation.");
+        var duplicateDockIdentities = new[] { taskList[0], taskList[0] };
+        Check(!WindowListSnapshotPolicy.EquivalentDockEntries(
+                duplicateDockIdentities, duplicateDockIdentities),
+            "Even reference-identical lists with duplicate HWNDs must not bypass identity checks.");
         Check(!WindowListSnapshotPolicy.EquivalentDockEntries(taskList,
                 [taskList[0], taskList[0]]),
             "Duplicate window identities must never be treated as an equivalent dock snapshot.");
