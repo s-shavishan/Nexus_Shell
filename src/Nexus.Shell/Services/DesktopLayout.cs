@@ -37,6 +37,22 @@ public static class DesktopLayout
         int height = Math.Min(Math.Max(1, work.Height - gap * 2), Math.Max(1, (int)Math.Round(heightDip * scale)));
         return new(work.X + (work.Width - width) / 2, work.Y + (work.Height - height) / 2, width, height);
     }
+    // Reference-style Spotlight opens as a compact top-centered launcher and
+    // expands only when the user searches. Both states fit actual monitor
+    // work areas including negative origins, scaling and taskbar reservations.
+    public static ShellRect SpotlightPanelBounds(ShellRect work, double scale, bool expanded)
+    {
+        scale = Scale(scale);
+        int gap = Math.Min(18, Math.Max(0, Math.Min(work.Width, work.Height) / 12));
+        int width = Math.Min(Math.Max(1, work.Width - gap * 2),
+            Math.Max(1, (int)Math.Round(760 * scale)));
+        int height = Math.Min(Math.Max(1, work.Height - gap * 2),
+            Math.Max(1, (int)Math.Round((expanded ? 630 : 260) * scale)));
+        int offset = Math.Max(gap, (int)Math.Round(56 * scale));
+        int y = Math.Clamp(work.Y + offset, work.Y, Math.Max(work.Y, work.Bottom - height));
+        return new(work.X + (work.Width - width) / 2, y, width, height);
+    }
+
     public static ShellRect QuickControlBounds(ShellRect monitor, double scale, string section)
         => PanelBounds(monitor, scale, section is "Network" or "Bluetooth" ? 440 : 410,
             section switch { "Sound" => 490, "Display" => 430, "Power" => 480, _ => 590 });

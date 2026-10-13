@@ -60,6 +60,22 @@ internal static class MidnightChecks
         check(history.BackTarget == "first" && history.Current == "second", "Checking a back target must not move history before folder I/O succeeds.");
         history.Back(); history.Visit("third"); check(!history.CanGoForward, "New folder navigation must truncate forward history.");
 
+        // The launcher must fit the same real, negatively offset monitors as
+        // the expanded search without ever stealing focus or going off screen.
+        foreach (var monitor in new[] { new ShellRect(0, 0, 1649, 928), new ShellRect(-2560, -140, 2560, 1440), new ShellRect(100, 200, 640, 480) })
+        foreach (var scale in new[] { 1d, 1.5, 2d, double.NaN })
+        {
+            var compact = DesktopLayout.SpotlightPanelBounds(monitor, scale, false);
+            var expanded = DesktopLayout.SpotlightPanelBounds(monitor, scale, true);
+            check(compact.Width > 0 && compact.Height > 0
+                && compact.X >= monitor.X && compact.Y >= monitor.Y
+                && compact.Right <= monitor.Right && compact.Bottom <= monitor.Bottom,
+                "Compact Spotlight must fit available desktop space.");
+            check(expanded.Width == compact.Width && expanded.Height >= compact.Height
+                && expanded.X >= monitor.X && expanded.Y >= monitor.Y
+                && expanded.Right <= monitor.Right && expanded.Bottom <= monitor.Bottom,
+                "Expanded search must keep the Spotlight width, stay on screen and grow only vertically.");
+        }
         var visibility = new DockVisibility();
         check(!visibility.Update(true, false, true, true, true, 1) && !visibility.Update(false, false, true, true, true, 2), "Fullscreen must take precedence over stale preview and context-menu interaction holds in both dock modes.");
         foreach (var monitor in new[] { new ShellRect(0, 0, 1920, 1080), new ShellRect(-2560, -140, 2560, 1440), new ShellRect(100, 200, 640, 480) })

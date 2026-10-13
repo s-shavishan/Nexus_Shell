@@ -27,11 +27,13 @@ internal sealed class SearchWindow : DesktopPanelWindow
     private readonly LatestWorkQueue _work = new();
     private readonly DispatcherTimer _debounce = new() { Interval = TimeSpan.FromMilliseconds(140) };
     private readonly List<Row> _rows = [];
+    private readonly List<UIElement> _expandedChrome = [];
+    private bool _expanded;
     private int _generation, _offset;
     private SearchReply? _reply;
     private bool _initializing = true, _validation;
     internal SearchWindow(DesktopEnvironment environment) : this(environment, new Grid { RowSpacing = 12 }) { }
-    private SearchWindow(DesktopEnvironment environment, Grid body) : base(environment, "Search", body, 790, 700, center: true, animateBody: false)
+    private SearchWindow(DesktopEnvironment environment, Grid body) : base(environment, "Search", body, 760, 630, center: true, animateBody: false)
     {
         foreach (bool flexible in new[] { false, false, false, false, true, false, false, false })
             body.RowDefinitions.Add(new() { Height = flexible ? new GridLength(1, GridUnitType.Star) : GridLength.Auto });
@@ -101,6 +103,14 @@ internal sealed class SearchWindow : DesktopPanelWindow
         foreach (var button in new[] { _open, _folder, _copy, _previous, _next }) actions.Children.Add(button);
         var actionScroll = new ScrollViewer { Content = actions, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled }; Grid.SetRow(actionScroll, 6); body.Children.Add(actionScroll);
         var footer = new StackPanel { Spacing = 5 }; footer.Children.Add(_hint); footer.Children.Add(_engine); Grid.SetRow(footer, 7); body.Children.Add(footer);
+        // This is a launcher until there is a query. Keep the result controls
+        // alive but out of measure/arrange so no native search dialog appears.
+        _expandedChrome.Add(filterScroll);
+        _expandedChrome.Add(_listFrame);
+        _expandedChrome.Add(_status);
+        _expandedChrome.Add(actionScroll);
+        _expandedChrome.Add(footer);
+        foreach (var element in _expandedChrome) element.Visibility = Visibility.Collapsed;
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_query, "Search names and desktop controls");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_category, "Result category");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_scope, "File search scope");
@@ -108,13 +118,14 @@ internal sealed class SearchWindow : DesktopPanelWindow
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetLiveSetting(_status, Microsoft.UI.Xaml.Automation.Peers.AutomationLiveSetting.Polite);
         _query.TextChanged += (_, _) =>
         {
-            // Empty Spotlight shows the familiar quick-launch strip. As soon
-            // as the user types, release that space to searchable results
-            // rather than forcing an extra scroll on smaller monitors.
-            var visibility = string.IsNullOrWhiteSpace(_query.Text)
-                ? Visibility.Visible : Visibility.Collapsed;
-            if (_launchFrame.Visibility != visibility) _launchFrame.Visibility = visibility;
-            Schedule();
+            SetExpanded(!string.IsNullOrWhiteSpace(_query.Text));
+            if (_expanded) Schedule();
+            else
+            {
+                // Prevent a pending indexed search from repainting the hidden
+                // results after the panel has returned to launcher mode.
+                ++_generation; _debounce.Stop(); _work.Cancel(); SetBusy(false);
+            }
         };
         _category.SelectionChanged += (_, _) => Schedule();
         _scope.SelectionChanged += (_, _) => Schedule();
@@ -135,6 +146,19 @@ internal sealed class SearchWindow : DesktopPanelWindow
         _debounce.Tick += (_, _) => { _debounce.Stop(); _ = SearchAsync(); };
         _initializing = false; ApplyAppearance(); RefreshActions();
     }
+    private void SetExpanded(bool expanded)
+    {
+        if (_expanded == expanded) return;
+        _expanded = expanded;
+        _launchFrame.Visibility = expanded ? Visibility.Collapsed : Visibility.Visible;
+        foreach (var child in _expandedChrome)
+            child.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
+        if (IsOpen) Reposition();
+    }
+
+    protected override ShellRect ResolveBounds(ShellRect work, ShellRect monitor, double scale)
+        => DesktopLayout.SpotlightPanelBounds(work, scale, _expanded);
+
     private void Shortcut(VirtualKey key, VirtualKeyModifiers modifiers, Action action)
     { var shortcut = new KeyboardAccelerator { Key = key, Modifiers = modifiers }; shortcut.Invoked += (_, args) => { action(); args.Handled = true; }; Root.KeyboardAccelerators.Add(shortcut); }
     private Flyout Setup()
@@ -256,7 +280,7 @@ internal sealed class SearchWindow : DesktopPanelWindow
     }
     internal void Show() => ShowPanel();
     protected override void OnShown()
-    { _query.Focus(FocusState.Programmatic); if (!_validation) Schedule(immediate: true); }
+    { _query.Focus(FocusState.Programmatic); if (!_validation && _expanded) Schedule(immediate: true); }
     protected override void OnHidden()
     {
         ++_generation; _debounce.Stop(); _work.Cancel(); SetBusy(false);
