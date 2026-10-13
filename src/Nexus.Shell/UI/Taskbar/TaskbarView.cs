@@ -167,7 +167,7 @@ internal sealed class TaskbarView : Grid
         }
     }
 
-    internal void Refresh(IReadOnlyList<RunningWindow> windows)
+    internal void Refresh(IReadOnlyList<RunningWindow> windows, IReadOnlySet<IntPtr>? destroyedHandles = null)
     {
         if (_released) return;
         using var work = UiTrace.Measure("dock-refresh", "Dock", windows.Count);
@@ -178,7 +178,7 @@ internal sealed class TaskbarView : Grid
             foreach (var button in _pins.Children.OfType<Button>()) { if (button.ContextFlyout is MenuFlyout menu) { menu.Hide(); _openContextMenus.Remove(menu); } _motion?.DetachHover(button); if (_pinImages.TryGetValue(button, out var icon)) _dockMotion?.Detach(icon); }
             _pinImages.Clear(); _pins.Children.Clear(); foreach (var pin in pins) _pins.Children.Add(PinButton(pin)); _shownPins = pins;
         }
-        bool windowsChanged = _windowSet.Reconcile(windows);
+        bool windowsChanged = _windowSet.Reconcile(windows, destroyedHandles);
         if (_baselineReconciled && !pinsChanged && !windowsChanged)
         {
             // A foreground/minimize change still needs state icons and actions,
@@ -189,7 +189,8 @@ internal sealed class TaskbarView : Grid
         }
         var live = _windowSet.Windows.Select(DockWindowIdentity.Of).ToHashSet();
         _environment.RefreshDockPreviewWindows(_windowSet.Windows);
-        foreach (var key in _items.Keys.Where(k => !live.Contains(k)).ToArray())
+        foreach (var key in _items.Keys.Where(k => !live.Contains(k)
+            || destroyedHandles?.Contains(k.Handle) == true).ToArray())
         {
             var removed = _items[key]; var button = removed.Button;
             if (ReferenceEquals(_hoverItem, removed)) CancelPreviewRequest();
@@ -269,53 +270,65 @@ internal sealed class TaskbarView : Grid
         { if (e.Key == VirtualKey.Down && _environment.CanShowDockPreview && TryGetAnchor(item.Button, out var anchor)) { CancelPreviewRequest(); _environment.ShowDockPreview(item.Window, anchor, true); e.Handled = true; } };
         _motion?.AttachHover(item.Button); return item;
     }
+    // Used for ordinary Alt+Tab/foreground transitions. The item dictionary
+    // is scanned in managed memory; only two HWNDs require native state probes.
+    internal void RefreshForegroundStates(IntPtr previous, IntPtr foreground)
+    {
+        if (_released) return;
+        foreach (var item in _items.Values)
+            if (DockStateRefreshPolicy.ShouldInspect(item.Window.Handle, previous, foreground))
+                RefreshWindowState(item, foreground);
+    }
+
     internal void RefreshWindowStates(IntPtr? observedForeground = null)
     {
         if (_released) return;
         var foreground = observedForeground ?? NativeMethods.ForegroundTaskWindow();
-        foreach (var item in _items.Values)
+        foreach (var item in _items.Values) RefreshWindowState(item, foreground);
+    }
+
+    private void RefreshWindowState(DockItem item, IntPtr foreground)
+    {
+        bool valid = NativeMethods.OwnsWindow(item.Window);
+        bool minimized = valid && (NativeMethods.IsMinimized(item.Window.Handle) || !NativeMethods.Visible(item.Window.Handle));
+        bool active = valid && !minimized && foreground == item.Window.Handle;
+        var state = (active, minimized);
+        var presence = minimized ? DockPresence.Minimized : active ? DockPresence.Active : DockPresence.Running;
+        var cue = valid ? DockMotionPolicy.Transition(item.Presence, presence, item.NewlyOpened) : DockMotionCue.None;
+        bool transitioned = DockIndicatorUpdatePolicy.ShouldTransition(valid, item.Presence, presence);
+        bool initialized = item.Presence is not null; item.Presence = valid ? presence : null; item.NewlyOpened = false;
+        if (!valid) item.PendingCue = DockMotionCue.None;
+        switch (DockCueDeliveryPolicy.Decide(cue, item.Icon.IsLoaded, item.EverLoaded, _dockMotion is not null))
         {
-            bool valid = NativeMethods.OwnsWindow(item.Window);
-            bool minimized = valid && (NativeMethods.IsMinimized(item.Window.Handle) || !NativeMethods.Visible(item.Window.Handle));
-            bool active = valid && !minimized && foreground == item.Window.Handle;
-            var state = (active, minimized);
-            var presence = minimized ? DockPresence.Minimized : active ? DockPresence.Active : DockPresence.Running;
-            var cue = valid ? DockMotionPolicy.Transition(item.Presence, presence, item.NewlyOpened) : DockMotionCue.None;
-            bool transitioned = DockIndicatorUpdatePolicy.ShouldTransition(valid, item.Presence, presence);
-            bool initialized = item.Presence is not null; item.Presence = valid ? presence : null; item.NewlyOpened = false;
-            if (!valid) item.PendingCue = DockMotionCue.None;
-            switch (DockCueDeliveryPolicy.Decide(cue, item.Icon.IsLoaded, item.EverLoaded, _dockMotion is not null))
-            {
-                case DockCueDelivery.Play:
-                    _dockMotion!.Play(item.Icon, cue);
-                    item.PendingCue = DockMotionCue.None;
-                    break;
-                case DockCueDelivery.BufferArrival:
-                    item.PendingCue = DockMotionCue.Arrive;
-                    break;
-                case DockCueDelivery.Discard:
-                    item.PendingCue = DockMotionCue.None;
-                    break;
-            }
-            if (_dockMotion is not null && transitioned)
-            {
-                SetIndicatorLayout(item.Indicator, 22, 1);
-                _dockMotion.SetIndicator(item.Indicator, presence, initialized);
-            }
-            if (item.State == state && item.Button.IsEnabled == valid && item.PreviewsEnabled == _environment.Session.State.DockPreviews) continue;
-            item.State = state;
-            if (item.Button.IsEnabled != valid) item.Button.IsEnabled = valid;
-            item.PreviewsEnabled = _environment.Session.State.DockPreviews;
-            var background = active ? _environment.Theme.Brush("NexusSelection") : _transparent;
-            if (!ReferenceEquals(item.Button.Background, background)) item.Button.Background = background;
-            var marker = _environment.Theme.Brush(active ? "NexusAccent" : "NexusMuted");
-            if (!ReferenceEquals(item.Indicator.Background, marker)) item.Indicator.Background = marker;
-            // Indicator brush already reflects the active state above.
-            if (_dockMotion is null) SetIndicatorLayout(item.Indicator, active ? 22 : minimized ? 5 : 10, minimized ? .45 : 1);
-            string action = minimized ? "Restore " : active ? "Minimize " : "Switch to ";
-            ToolTipService.SetToolTip(item.Button, _environment.Session.State.DockPreviews ? null : action + item.Window.Title);
-            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(item.Button, action + item.Window.Title);
+            case DockCueDelivery.Play:
+                _dockMotion!.Play(item.Icon, cue);
+                item.PendingCue = DockMotionCue.None;
+                break;
+            case DockCueDelivery.BufferArrival:
+                item.PendingCue = DockMotionCue.Arrive;
+                break;
+            case DockCueDelivery.Discard:
+                item.PendingCue = DockMotionCue.None;
+                break;
         }
+        if (_dockMotion is not null && transitioned)
+        {
+            SetIndicatorLayout(item.Indicator, 22, 1);
+            _dockMotion.SetIndicator(item.Indicator, presence, initialized);
+        }
+        if (item.State == state && item.Button.IsEnabled == valid && item.PreviewsEnabled == _environment.Session.State.DockPreviews) continue;
+        item.State = state;
+        if (item.Button.IsEnabled != valid) item.Button.IsEnabled = valid;
+        item.PreviewsEnabled = _environment.Session.State.DockPreviews;
+        var background = active ? _environment.Theme.Brush("NexusSelection") : _transparent;
+        if (!ReferenceEquals(item.Button.Background, background)) item.Button.Background = background;
+        var marker = _environment.Theme.Brush(active ? "NexusAccent" : "NexusMuted");
+        if (!ReferenceEquals(item.Indicator.Background, marker)) item.Indicator.Background = marker;
+        // Indicator brush already reflects the active state above.
+        if (_dockMotion is null) SetIndicatorLayout(item.Indicator, active ? 22 : minimized ? 5 : 10, minimized ? .45 : 1);
+        string action = minimized ? "Restore " : active ? "Minimize " : "Switch to ";
+        ToolTipService.SetToolTip(item.Button, _environment.Session.State.DockPreviews ? null : action + item.Window.Title);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(item.Button, action + item.Window.Title);
     }
     private static void SetIndicatorLayout(Border indicator, double width, double opacity)
     {

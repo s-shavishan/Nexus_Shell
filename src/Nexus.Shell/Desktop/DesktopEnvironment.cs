@@ -36,6 +36,9 @@ internal sealed partial class DesktopEnvironment
     private WindowEventObserver? _windowEvents;
     private readonly DispatcherTimer _windowRefreshTimer = new() { Interval = TimeSpan.FromMilliseconds(50) };
     private readonly WindowEventDispatchGate _windowEventGate = new();
+    // WinEvents can be delivered off-thread; capture destruction identities
+    // before the dispatcher coalesces their individual HWNDs.
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<IntPtr, byte> _destroyedDockHandles = new();
     private bool _windowRefreshPending;
     private EventWaitHandle? _pulse;
     private Process? _host;
@@ -254,9 +257,13 @@ internal sealed partial class DesktopEnvironment
                 // Foreground cache consumers can reuse their resolved HWND.
                 if (!WindowListSnapshotPolicy.Equivalent(_windows, windows)) _windows = windows;
                 var dockSnapshot = DockWindows();
-                if (!_dockSnapshotInitialized || !WindowListSnapshotPolicy.Equivalent(_lastDockSnapshot, dockSnapshot))
+                var destroyedHandles = new HashSet<IntPtr>();
+                foreach (var handle in _destroyedDockHandles.Keys)
+                    if (_destroyedDockHandles.TryRemove(handle, out _)) destroyedHandles.Add(handle);
+                if (!_dockSnapshotInitialized || destroyedHandles.Count > 0
+                    || !WindowListSnapshotPolicy.Equivalent(_lastDockSnapshot, dockSnapshot))
                 {
-                    Taskbar.View.Refresh(dockSnapshot);
+                    Taskbar.View.Refresh(dockSnapshot, destroyedHandles);
                     _lastDockSnapshot = dockSnapshot;
                     _dockSnapshotInitialized = true;
                 }
@@ -282,13 +289,20 @@ internal sealed partial class DesktopEnvironment
         // Observe native minimize/restore of Nexus content windows too, while
         // ignoring our tool windows and popups to avoid self-refresh loops.
         if (NativeMethods.WindowProcessId(change.Window) == Environment.ProcessId && !IsOwnAppWindow(change.Window)) return;
+        if (change.Kind == 0x8001) // EVENT_OBJECT_DESTROY
+        {
+            // Bounded tombstones: a replaced HWND/PID must not inherit its old
+            // button/animation when a destroy + create happens between scans.
+            if (_destroyedDockHandles.Count < 2048)
+                _destroyedDockHandles.TryAdd(change.Window, 0);
+        }
         _windowEventGate.Request(change.IsForeground, WindowEventScanPolicy.RequiresEnumeration(change.Kind),
             callback => Desktop.DispatcherQueue.TryEnqueue(() => callback()),
             (foregroundChanged, enumerate) =>
             {
                 if (IsStopping) return;
                 if (foregroundChanged && ShellLayerInterop.IsExplorerDesktopWindow(NativeMethods.GetForegroundWindow())) Desktop.ShowSurface();
-                var currentForeground = Taskbar.RefreshFromNativeEvent();
+                var currentForeground = Taskbar.RefreshFromNativeEvent(enumerate);
                 // Normal task switches need no EnumWindows pass. An unknown,
                 // eligible external foreground HWND may need recovery after
                 // a missed create/show notification.
