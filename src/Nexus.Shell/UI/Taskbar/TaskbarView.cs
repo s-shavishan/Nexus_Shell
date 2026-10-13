@@ -136,9 +136,28 @@ internal sealed class TaskbarView : Grid
         var host = new Grid(); host.Children.Add(icon);
         var button = new Button { Content = host, Tag = host, Style = (Style)Application.Current.Resources["DockButton"], Width = 48, Height = 52 };
         _pinImages.Add(button, icon); bool arrive = _baselineReconciled;
+        void PlayArrival()
+        {
+            if (!arrive || _released || _dockMotion is null || !icon.IsLoaded) return;
+            _dockMotion.Play(icon, DockMotionCue.Arrive);
+            arrive = false;
+        }
+        // The image may load after its button. Play the arrival once when
+        // both the visual and retained compositor controller are ready.
+        icon.Loaded += (_, _) => PlayArrival();
         button.Loaded += (_, _) =>
-        { if (_released) return; _motion?.AttachHover(button); _dockMotion?.Play(icon, arrive ? DockMotionCue.Arrive : DockMotionCue.None); arrive = false; };
-        button.Unloaded += (_, _) => _dockMotion?.Detach(icon);
+        {
+            if (_released) return;
+            _motion?.AttachHover(button);
+            PlayArrival();
+        };
+        button.Unloaded += (_, _) =>
+        {
+            // An unloaded pin is no longer newly arrived: never replay stale
+            // creation motion on later density/theme reparenting.
+            arrive = false;
+            _dockMotion?.Detach(icon);
+        };
         button.Click += (_, _) => { if (_environment.TryLaunch(app)) _dockMotion?.Play(icon, DockMotionCue.Launch); };
         var menu = new MenuFlyout(); var open = new MenuFlyoutItem { Text = "Open " + app.Name }; open.Click += (_, _) => { if (_environment.TryLaunch(app)) _dockMotion?.Play(icon, DockMotionCue.Launch); }; menu.Items.Add(open);
         var remove = new MenuFlyoutItem { Text = "Remove from dock" }; remove.Click += (_, _) =>
@@ -287,6 +306,22 @@ internal sealed class TaskbarView : Grid
         };
         menu.Closed += (_, _) => { _openContextMenus.Remove(menu); _environment.Taskbar.RefreshVisibility(); };
         item.Button.ContextFlyout = menu;
+        // The child indicator and the button can receive Loaded in either
+        // order. Settle on the indicator's own Loaded event so deferred
+        // compositor work cannot be lost when the parent loads first.
+        item.Indicator.Loaded += (_, _) =>
+        {
+            if (!_released && _dockMotion is not null)
+                _dockMotion.SetIndicator(item.Indicator, item.Presence ?? DockPresence.Running, false);
+        };
+        // Preserve an arrival cue when the button loads before its image.
+        // Never replay it after unload, when it has already become stale.
+        item.Icon.Loaded += (_, _) =>
+        {
+            if (_released || _dockMotion is null || item.PendingCue != DockMotionCue.Arrive) return;
+            _dockMotion.Play(item.Icon, DockMotionCue.Arrive);
+            item.PendingCue = DockMotionCue.None;
+        };
         item.Button.Loaded += (_, _) =>
         {
             if (_released) return;
@@ -403,8 +438,10 @@ internal sealed class TaskbarView : Grid
         SetIndicatorLayout(item.Indicator, 22, 1);
         _dockMotion.SetIndicator(item.Indicator, item.Presence ?? DockPresence.Running, false);
         if (item.PendingCue == DockMotionCue.Arrive && item.Icon.IsLoaded)
-            _dockMotion.Play(item.Icon, item.PendingCue);
-        item.PendingCue = DockMotionCue.None;
+        {
+            _dockMotion.Play(item.Icon, DockMotionCue.Arrive);
+            item.PendingCue = DockMotionCue.None;
+        }
     }
     internal void CancelPreviewRequest() { _hoverTimer.Stop(); _hoverItem = null; }
     private bool TryGetAnchor(Button button, out ShellRect anchor)

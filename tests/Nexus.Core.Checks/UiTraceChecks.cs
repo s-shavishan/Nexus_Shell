@@ -37,10 +37,30 @@ internal static class UiTraceChecks
             || (string)quality.Payload[1]! != "Ultra" || (string)quality.Payload[2]! != "Solid"
             || (string)quality.Payload[3]! != "Windows backdrop fallback" || (int)quality.Payload[4]! != Environment.ProcessId)
             throw new Exception("Quality diagnostics lost the requested/effective tier or owner.");
+        UiTrace.WindowDispatch(foreground: false, enumeration: false, discovery: false, geometry: true);
+        var geometry = listener.Records.Last();
+        if (geometry.EventId != 5 || geometry.Payload?.Count != 5
+            || (int)geometry.Payload![0]! != Environment.ProcessId
+            || (bool)geometry.Payload[1]! || (bool)geometry.Payload[2]!
+            || (bool)geometry.Payload[3]! || !(bool)geometry.Payload[4]!)
+            throw new Exception("The no-enumeration native event trace must retain its coalesced geometry-only classification.");
+        UiTrace.WindowDispatch(foreground: true, enumeration: true, discovery: false, geometry: false);
+        var structural = listener.Records.Last();
+        if (structural.EventId != 5 || structural.Payload?.Count != 5
+            || !(bool)structural.Payload![1]! || !(bool)structural.Payload[2]!
+            || (bool)structural.Payload[3]! || (bool)structural.Payload[4]!)
+            throw new Exception("The native event trace must retain foreground and structural invalidation independently.");
+        UiTrace.WindowDispatch(foreground: true, enumeration: false, discovery: true, geometry: false);
+        var fallback = listener.Records.Last();
+        if (fallback.EventId != 5 || fallback.Payload?.Count != 5
+            || !(bool)fallback.Payload![1]! || (bool)fallback.Payload[2]!
+            || !(bool)fallback.Payload[3]! || (bool)fallback.Payload[4]!)
+            throw new Exception("Missed-create foreground discovery must remain observable in the native event trace.");
         listener.DisableEvents(UiTrace.Source);
         int before = listener.Records.Count;
         UiTrace.Surface("native-size", "Files", new IntPtr(123), 900, 600);
         UiTrace.Quality("Dock", new("Ultra", "Solid", "Windows backdrop fallback"));
+        UiTrace.WindowDispatch(foreground: false, enumeration: false, discovery: false, geometry: true);
         if (listener.Records.Count != before) throw new Exception("Disabled UI diagnostics must stop recording events.");
         // Warm the disabled path before measuring its per-call cost.
         for (int i = 0; i < 10; i++) { using var scope = UiTrace.Measure("disabled", "Probe"); }

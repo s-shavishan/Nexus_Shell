@@ -350,17 +350,18 @@ internal sealed partial class DesktopEnvironment
             _dockLifecycle.RecordDestroy(change.Window);
         }
         _windowEventGate.Request(change.IsForeground, WindowEventScanPolicy.RequiresEnumeration(change.Kind),
+            change.Kind == WindowEventScanPolicy.MoveSizeEnd,
             callback => Desktop.DispatcherQueue.TryEnqueue(() => callback()),
-            (foregroundChanged, enumerate) =>
+            (foregroundChanged, enumerate, geometryChanged) =>
             {
                 if (IsStopping) return;
                 if (foregroundChanged && ShellLayerInterop.IsExplorerDesktopWindow(NativeMethods.GetForegroundWindow())) Desktop.ShowSurface();
-                var currentForeground = Taskbar.RefreshFromNativeEvent(enumerate);
+                var currentForeground = Taskbar.RefreshFromNativeEvent(enumerate, geometryChanged);
                 // Normal task switches need no EnumWindows pass. An unknown,
                 // eligible external foreground HWND may need recovery after
                 // a missed create/show notification.
                 bool unknown = DockForegroundDiscoveryPolicy.IsUnknownForeground(
-                    foregroundChanged, currentForeground, _windows);
+                    foregroundChanged || geometryChanged, currentForeground, _windows);
                 bool discover = false;
                 if (unknown && currentForeground != Desktop.Handle
                     && !ShellLayerInterop.IsExplorerDesktopWindow(currentForeground)
@@ -371,6 +372,7 @@ internal sealed partial class DesktopEnvironment
                         && NativeMethods.HasDockPresence(currentForeground)
                         && !NativeMethods.IsCloaked(currentForeground);
                 }
+                UiTrace.WindowDispatch(foregroundChanged, enumerate, discover, geometryChanged);
                 if ((enumerate || discover) && !_windowRefreshTimer.IsEnabled)
                     _windowRefreshTimer.Start();
             },

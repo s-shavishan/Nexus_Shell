@@ -154,13 +154,96 @@ internal static class WindowEventPipelineChecks
         Check(overlapObservations.SequenceEqual([false, true]) && overlapCallbacks.Count == 0,
             "The successor must retain foreground priority after inline completion and late refusal.");
 
-        // A foreground-only activation must never enumerate every open window.
-        // Other, including unexpected, native event kinds remain conservative.
+        // Neither foreground switching nor completing an interactive
+        // move/resize changes task-list membership by itself. Both still
+        // deliver an immediate UI callback for native geometry/visibility.
         Check(!WindowEventScanPolicy.RequiresEnumeration(0x0003),
             "Foreground activation should update the dock without a complete EnumWindows pass.");
-        foreach (uint kind in new uint[] { 0x000B, 0x0016, 0x0017, 0x8000, 0x8001, 0x8002, 0x8003, 0x800C, 0x8017, 0x8018, 0xDEAD })
+        Check(!WindowEventScanPolicy.RequiresEnumeration(0x000B),
+            "Move/resize completion should refresh geometry without enumerating every open window.");
+        foreach (uint kind in new uint[] { 0x0016, 0x0017, 0x8000, 0x8001, 0x8002, 0x8003, 0x800C, 0x8017, 0x8018, 0xDEAD })
             Check(WindowEventScanPolicy.RequiresEnumeration(kind),
-                "Structural and unknown events must retain a full task-list recovery scan.");
+                "Lifecycle, title, minimize and unknown events must retain full task-list recovery.");
+
+        var geometryBatch = new WindowEventDispatchGate();
+        var geometryQueue = new Queue<Action>();
+        var geometryResults = new List<(bool Foreground, bool Enumerate)>();
+        Check(geometryBatch.Request(false, WindowEventScanPolicy.RequiresEnumeration(0x000B),
+                action => { geometryQueue.Enqueue(action); return true; },
+                (foreground, enumerate) => geometryResults.Add((foreground, enumerate))),
+            "A completed window move must still enqueue an immediate UI refresh.");
+        for (int i = 0; i < 700; i++)
+            Check(!geometryBatch.Request(false, WindowEventScanPolicy.RequiresEnumeration(0x000B),
+                action => { geometryQueue.Enqueue(action); return true; },
+                (foreground, enumerate) => geometryResults.Add((foreground, enumerate))),
+                "Move/resize completion bursts must be coalesced into one delivery.");
+        Check(geometryQueue.Count == 1,
+            "Hundreds of redundant move/size notifications must not flood the dispatcher.");
+        geometryQueue.Dequeue()();
+        Check(geometryResults.SequenceEqual([(false, false)]),
+            "A pure geometry batch must not schedule a full window enumeration.");
+        Check(geometryBatch.Request(false, false,
+                action => { geometryQueue.Enqueue(action); return true; },
+                (foreground, enumerate) => geometryResults.Add((foreground, enumerate))),
+            "A subsequent geometry callback must be admitted.");
+        Check(!geometryBatch.Request(false, WindowEventScanPolicy.RequiresEnumeration(0x8001),
+                action => { geometryQueue.Enqueue(action); return true; },
+                (foreground, enumerate) => geometryResults.Add((foreground, enumerate))),
+            "A destroy event must coalesce with the pending geometry update.");
+        geometryQueue.Dequeue()();
+        Check(geometryResults[^1] == (false, true),
+            "Destroy events must upgrade an outstanding move/size batch to structural enumeration.");
+        Check(geometryBatch.Request(false, false,
+                action => { geometryQueue.Enqueue(action); return true; },
+                (foreground, enumerate) => geometryResults.Add((foreground, enumerate)))
+            && !geometryBatch.Request(true, false,
+                action => { geometryQueue.Enqueue(action); return true; },
+                (foreground, enumerate) => geometryResults.Add((foreground, enumerate))),
+            "Concurrent move/size and foreground notifications must coalesce.");
+        geometryQueue.Dequeue()();
+        Check(geometryResults[^1] == (true, false),
+            "Foreground observations must survive a geometry-only batch without forcing enumeration.");
+
+
+        // Real move/resize completion must remain observable independently
+        // of foreground and structural notifications inside the same gate.
+        var mixedGate = new WindowEventDispatchGate();
+        var mixedQueue = new Queue<Action>();
+        var mixed = new List<(bool Foreground, bool Enumerate, bool Geometry)>();
+        bool MixedEnqueue(Action action) { mixedQueue.Enqueue(action); return true; }
+        void MixedDeliver(bool foreground, bool enumerate, bool geometry)
+            => mixed.Add((foreground, enumerate, geometry));
+        Check(mixedGate.Request(false, false, true, MixedEnqueue, MixedDeliver),
+            "Move/size completion must schedule one geometry refresh.");
+        for (int i = 0; i < 1000; i++)
+            Check(!mixedGate.Request(false, false, true, MixedEnqueue, MixedDeliver),
+                "A 1000-event geometry burst must retain one pending UI callback.");
+        Check(!mixedGate.Request(true, false, false, MixedEnqueue, MixedDeliver)
+            && !mixedGate.Request(false, true, false, MixedEnqueue, MixedDeliver),
+            "Foreground and structural events must join the pending geometry batch.");
+        Check(mixedQueue.Count == 1, "Three independent native flags must share one delivery.");
+        mixedQueue.Dequeue()();
+        Check(mixed.SequenceEqual([(true, true, true)]),
+            "Coalesced geometry, selection and lifecycle invalidation must all survive.");
+        Check(mixedGate.Request(false, false, false, MixedEnqueue, MixedDeliver),
+            "After delivery an unchanged notification must be admitted normally.");
+        mixedQueue.Dequeue()();
+        Check(mixed[^1] == (false, false, false),
+            "Old geometry flags must not leak into later batches.");
+        Check(!mixedGate.Request(false, false, true, _ => false, MixedDeliver),
+            "A refused geometry enqueue must report failure.");
+        Check(mixedGate.Request(false, false, false, MixedEnqueue, MixedDeliver),
+            "A rejected dispatcher admission must allow a new ticket.");
+        mixedQueue.Dequeue()();
+        Check(mixed[^1] == (false, false, true),
+            "Geometry invalidation must survive a rejected WinUI enqueue.");
+        var inlineGate = new WindowEventDispatchGate();
+        var inline = new List<(bool Foreground, bool Enumerate, bool Geometry)>();
+        var inlineAccepted = inlineGate.Request(false, false, true,
+            callback => { callback(); return true; },
+            (f, e, g) => inline.Add((f, e, g)));
+        Check(inlineAccepted && inline.SequenceEqual([(false, false, true)]),
+            "Inline callbacks must atomically consume geometry flags and admit later batches.");
 
         var nativeBatch = new WindowEventDispatchGate();
         var nativeBatchQueue = new Queue<Action>();
@@ -214,7 +297,11 @@ internal static class WindowEventPipelineChecks
         Check(!DockForegroundDiscoveryPolicy.IsUnknownForeground(true, IntPtr.Zero, knownForeground),
             "Null foreground must not trigger an unknown-app scan.");
         Check(!DockForegroundDiscoveryPolicy.IsUnknownForeground(false, new IntPtr(103), knownForeground),
-            "Non-foreground events already have their own enumeration decision.");
+            "Ordinary non-foreground geometry-free events do not need a discovery pass.");
+        Check(!DockForegroundDiscoveryPolicy.IsUnknownForeground(true, new IntPtr(102), knownForeground),
+            "A move-size completion for an already-known app must remain scan-free.");
+        Check(DockForegroundDiscoveryPolicy.IsUnknownForeground(true, new IntPtr(103), knownForeground),
+            "A move-size completion must discover an unknown active HWND after a missed create event.");
         Check(!DockForegroundDiscoveryPolicy.IsUnknownForeground(true, new IntPtr(101), knownForeground),
             "Alt+Tab between known apps must remain enumeration-free.");
         Check(DockForegroundDiscoveryPolicy.IsUnknownForeground(true, new IntPtr(103), knownForeground),

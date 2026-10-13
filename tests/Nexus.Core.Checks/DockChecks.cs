@@ -241,6 +241,16 @@ internal static class DockChecks
         Check(!repair.ShouldSample(IntPtr.Zero, false, 1000)
             && repair.ShouldSample(nextWindow, true, 1001),
             "Foreground loss and reacquisition must resample even the same HWND.");
+        Check(!repair.ShouldSample(nextWindow, true, 1080),
+            "Ordinary pointer polling must still obey the foreground repair throttle.");
+        Check(repair.ShouldSample(nextWindow, true, 1081, force: true),
+            "A completed native move/resize must force prompt geometry repair.");
+        Check(!repair.ShouldSample(nextWindow, true, 1082)
+            && !repair.ShouldSample(nextWindow, true, 2080)
+            && repair.ShouldSample(nextWindow, true, 2081),
+            "A forced repair must restart the bounded one-second fallback window.");
+        Check(!repair.ShouldSample(IntPtr.Zero, false, 2082, force: true),
+            "A forced geometry repair with no foreground must not run native window reconciliation.");
 
         var visibility = new DockVisibility();
         Check(visibility.Update(true, false, false, false, false, 0), "Floating dock must be visible on the desktop.");
