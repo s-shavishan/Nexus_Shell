@@ -221,7 +221,11 @@ internal sealed partial class DesktopEnvironment
             Shutdown(DesktopExitCode.RestoreWindows); return;
         }
         CheckCore(); Notifications.RefreshDue();
-        RefreshAppearance(); Taskbar.View.RefreshClock(); UpdateTaskbar();
+        RefreshAppearance(); Taskbar.View.RefreshClock();
+        // A heartbeat already covered by an in-flight enumeration must not
+        // schedule an immediately redundant native scan. Real actions/events
+        // still request a successor if they arrive while one is running.
+        UpdateTaskbar(recoveryHeartbeat: true);
         if (!Session.State.UsageTracking) return;
         try
         {
@@ -246,11 +250,16 @@ internal sealed partial class DesktopEnvironment
         { if (!IsStopping && !_coreFailureReported) { _coreFailureReported = true; Report("Nexus Core is unavailable. The desktop remains open while recovery is attempted", ex); } }
         finally { _checkingCore = false; }
     }
-    internal async void UpdateTaskbar()
+    internal async void UpdateTaskbar(bool recoveryHeartbeat = false)
     {
         if (IsStopping || Taskbar is null) return;
-        _windowRefreshPending = true;
-        if (_refreshing) return;
+        var admission = WindowScanAdmissionPolicy.Decide(_refreshing, recoveryHeartbeat);
+        if (admission == WindowScanAdmission.QueueFollowUp)
+        {
+            _windowRefreshPending = true;
+            return;
+        }
+        if (admission == WindowScanAdmission.CoveredByActiveScan) return;
         _refreshing = true;
         _windowRefreshPending = false;
 
@@ -301,6 +310,11 @@ internal sealed partial class DesktopEnvironment
             if (lifecycle is { } started)
                 _dockLifecycle.CompleteScan(started, applied);
             _refreshing = false;
+            // A suspended desktop's async enumeration can return after
+            // Shutdown has stopped timers. Never mutate/rearm those timers
+            // or the failure counter once shutdown has started.
+            if (!IsStopping)
+            {
             int nextDelay = _windowScanBackoff.Complete(applied);
             // Failure must never inherit an already-armed fast timer. It
             // takes ownership of the next retry and applies backoff even if
@@ -315,6 +329,7 @@ internal sealed partial class DesktopEnvironment
             {
                 _windowRefreshTimer.Interval = TimeSpan.FromMilliseconds(nextDelay);
                 _windowRefreshTimer.Start();
+            }
             }
         }
     }
