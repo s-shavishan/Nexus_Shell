@@ -56,6 +56,8 @@ internal sealed partial class DesktopEnvironment
     private readonly CancellationTokenSource _cancel = new();
     private Task<List<AppEntry>>? _catalog;
     private IReadOnlyList<RunningWindow> _windows = [];
+    private IReadOnlyList<RunningWindow> _lastDockSnapshot = [];
+    private bool _dockSnapshotInitialized;
     private bool _refreshing, _saving, _dirty;
 
     internal DesktopEnvironment(ShellSession session, CoreProcessSession core, DesktopSessionMode mode = DesktopSessionMode.Preview, string? hostToken = null, int? hostPid = null)
@@ -248,7 +250,20 @@ internal sealed partial class DesktopEnvironment
             // being lost behind the old _refreshing early return.
             if (!IsStopping)
             {
-                _windows = windows; Taskbar.View.Refresh(DockWindows()); Taskbar.RefreshVisibility();
+                // Keep immutable snapshots stable on identical recovery scans.
+                // Foreground cache consumers can reuse their resolved HWND.
+                if (!WindowListSnapshotPolicy.Equivalent(_windows, windows)) _windows = windows;
+                var dockSnapshot = DockWindows();
+                if (!_dockSnapshotInitialized || !WindowListSnapshotPolicy.Equivalent(_lastDockSnapshot, dockSnapshot))
+                {
+                    Taskbar.View.Refresh(dockSnapshot);
+                    _lastDockSnapshot = dockSnapshot;
+                    _dockSnapshotInitialized = true;
+                }
+                else Taskbar.View.RefreshWindowStates();
+                Taskbar.RefreshVisibility();
+                // The window board also shows minimized and geometry state;
+                // its native refresh is intentionally independent of this gate.
                 _switcher?.RefreshOpen();
                 var monitor = ShellLayerInterop.Monitor(Taskbar.Handle);
                 ReconcileMaximizedWindows(monitor.Monitor.Bounds, monitor.Work.Bounds, ShellLayerInterop.Scale(Taskbar.Handle));
@@ -267,15 +282,17 @@ internal sealed partial class DesktopEnvironment
         // Observe native minimize/restore of Nexus content windows too, while
         // ignoring our tool windows and popups to avoid self-refresh loops.
         if (NativeMethods.WindowProcessId(change.Window) == Environment.ProcessId && !IsOwnAppWindow(change.Window)) return;
-        _windowEventGate.Request(change.IsForeground,
+        _windowEventGate.Request(change.IsForeground, WindowEventScanPolicy.RequiresEnumeration(change.Kind),
             callback => Desktop.DispatcherQueue.TryEnqueue(() => callback()),
-            foregroundChanged =>
+            (foregroundChanged, enumerate) =>
             {
                 if (IsStopping) return;
                 if (foregroundChanged && ShellLayerInterop.IsExplorerDesktopWindow(NativeMethods.GetForegroundWindow())) Desktop.ShowSurface();
                 Taskbar.View.RefreshWindowStates(); Taskbar.RefreshVisibility();
-                // Fixed coalescing window, not a sliding debounce that can starve.
-                if (!_windowRefreshTimer.IsEnabled) _windowRefreshTimer.Start();
+                // Foreground-only events update dock selection immediately
+                // without an expensive full process/window enumeration.
+                // Any coalesced structural event still schedules the scan.
+                if (enumerate && !_windowRefreshTimer.IsEnabled) _windowRefreshTimer.Start();
             },
             error => Log.Write("Native window event UI dispatch failed; periodic reconciliation remains active", error));
     }

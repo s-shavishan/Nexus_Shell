@@ -19,3 +19,18 @@ The project owner elected to skip AppVeyor and manual Windows-preview gates duri
 - Audit foreground/window enumeration scheduling and dock lifecycle transitions for redundant scans or missed updates.
 - Extend regression coverage before batching P2.4 into a single meaningful pull request.
 - Keep GitHub Actions out of the development workflow; AppVeyor remains the configured optional CI platform, not a merge requirement for this requested workflow.
+
+## Stage 2 — Distinguish foreground from structural window events
+
+- Pure `EVENT_SYSTEM_FOREGROUND` notifications update the selection/active indicator and dock visibility immediately **without** queuing the additional 50 ms `EnumWindows` scan. The existing five-second independent fallback enumeration remains intact for missed events.
+- Show/hide/create/destroy/title/cloak/minimize/move-end and unknown notifications still schedule full window enumeration. A new `WindowEventScanPolicy` keeps that distinction explicit and testable.
+- The native dispatch gate now coalesces two separate signals: foreground priority and structural enumeration. An incoming structural notification can never be lost just because it shares one dispatcher callback with a foreground event. Rejected queues retain both signals; ticket ownership from Stage 1 still rejects stale callbacks.
+
+## Stage 3 — Retain stable window enumeration results and dock renders
+
+- `WindowListSnapshotPolicy` compares the immutable `RunningWindow` records (including title and process identity) **in z-order**. Matching scans keep the previous snapshot reference so foreground lookup caching is not needlessly invalidated by the five-second recovery pass.
+- The latest complete dock snapshot is also retained. When it is identical to the previous snapshot, no redundant `TaskbarView.Refresh` lifecycle/pin reconciliation runs; the cheaper `RefreshWindowStates` still updates activation/minimize/restore cues and accessibility actions.
+- Window board refresh, foreground visibility, work-area/maximized-window repair and the recovery scan itself are **not** skipped by the dock-layout optimization.
+- Tests cover 800 coalesced foreground events, mixed foreground/structural batches, rejected-callback recovery, z-order differences, title updates, process-ID reuse and closed windows.
+
+As requested, these changes have **not** undergone AppVeyor compilation or a Windows visual preview in this session. Preserve the branch and consider the implementation unverified until a future build is available.

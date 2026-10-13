@@ -154,6 +154,79 @@ internal static class WindowEventPipelineChecks
         Check(overlapObservations.SequenceEqual([false, true]) && overlapCallbacks.Count == 0,
             "The successor must retain foreground priority after inline completion and late refusal.");
 
+        // A foreground-only activation must never enumerate every open window.
+        // Other, including unexpected, native event kinds remain conservative.
+        Check(!WindowEventScanPolicy.RequiresEnumeration(0x0003),
+            "Foreground activation should update the dock without a complete EnumWindows pass.");
+        foreach (uint kind in new uint[] { 0x000B, 0x0016, 0x0017, 0x8000, 0x8001, 0x8002, 0x8003, 0x800C, 0x8017, 0x8018, 0xDEAD })
+            Check(WindowEventScanPolicy.RequiresEnumeration(kind),
+                "Structural and unknown events must retain a full task-list recovery scan.");
+
+        var nativeBatch = new WindowEventDispatchGate();
+        var nativeBatchQueue = new Queue<Action>();
+        var nativeBatchResults = new List<(bool Foreground, bool Enumerate)>();
+        bool AddNative(Action callback) { nativeBatchQueue.Enqueue(callback); return true; }
+        void ReceiveNative(bool foreground, bool enumerate) => nativeBatchResults.Add((foreground, enumerate));
+        Check(nativeBatch.Request(true, false, AddNative, ReceiveNative),
+            "A foreground-only batch should be immediately admitted.");
+        for (int i = 0; i < 800; i++)
+            Check(!nativeBatch.Request(true, false, AddNative, ReceiveNative),
+                "Repeated task switches should not schedule duplicate UI work.");
+        Check(nativeBatchQueue.Count == 1,
+            "Foreground-only storms must retain exactly one queued callback.");
+        nativeBatchQueue.Dequeue()();
+        Check(nativeBatchResults.SequenceEqual([(true, false)]),
+            "A foreground-only storm must not request the structural enumeration.");
+
+        Check(nativeBatch.Request(true, false, AddNative, ReceiveNative),
+            "A subsequent activation must schedule a fresh selection update.");
+        Check(!nativeBatch.Request(false, true, AddNative, ReceiveNative),
+            "A structural event should coalesce with an active foreground batch.");
+        nativeBatchQueue.Dequeue()();
+        Check(nativeBatchResults[^1] == (true, true),
+            "Coalescing must preserve both foreground priority and structural invalidation.");
+        Check(nativeBatch.Request(false, true, AddNative, ReceiveNative),
+            "A structural-only batch must schedule its own reconciliation.");
+        nativeBatchQueue.Dequeue()();
+        Check(nativeBatchResults[^1] == (false, true),
+            "A structural-only native event must refresh the task list.");
+
+        var nativeRefusal = new WindowEventDispatchGate();
+        Action? oldNative = null;
+        var nativeRetries = new Queue<Action>();
+        var nativeRetriesSeen = new List<(bool Foreground, bool Enumerate)>();
+        void NativeRetry(bool foreground, bool enumerate) => nativeRetriesSeen.Add((foreground, enumerate));
+        Check(!nativeRefusal.Request(true, true,
+            callback => { oldNative = callback; return false; }, NativeRetry),
+            "A refused structural foreground batch must remain pending for a retry.");
+        Check(nativeRefusal.Request(false, false,
+            callback => { nativeRetries.Enqueue(callback); return true; }, NativeRetry),
+            "A later foreground-only request must rescue both invalidation flags.");
+        oldNative!();
+        nativeRetries.Dequeue()();
+        Check(nativeRetriesSeen.SequenceEqual([(true, true)]),
+            "Stale rejected events must not steal pending structural invalidation.");
+
+        var previousList = new[] {
+            new Nexus.Shell.Models.RunningWindow(new IntPtr(10), "Editor", "editor", 100),
+            new Nexus.Shell.Models.RunningWindow(new IntPtr(11), "Browser", "browser", 101)
+        };
+        Check(WindowListSnapshotPolicy.Equivalent(previousList, previousList),
+            "Identical references must preserve one snapshot identity.");
+        Check(WindowListSnapshotPolicy.Equivalent(previousList, previousList.ToArray()),
+            "Equivalent enumeration content must not invalidate the foreground lookup cache.");
+        Check(!WindowListSnapshotPolicy.Equivalent(previousList, previousList.Reverse().ToArray()),
+            "Z-order changes should still update the window board order.");
+        Check(!WindowListSnapshotPolicy.Equivalent(previousList,
+            [previousList[0] with { Title = "Editor — renamed" }, previousList[1]]),
+            "Title updates must refresh the dock metadata without changing HWND identity.");
+        Check(!WindowListSnapshotPolicy.Equivalent(previousList,
+            [previousList[0] with { ProcessId = 999 }, previousList[1]]),
+            "PID reuse must never be mistaken for an identical snapshot.");
+        Check(!WindowListSnapshotPolicy.Equivalent(previousList,
+            [previousList[0]]),
+            "Closed windows must invalidate the previous snapshot.");
+
         int lookupCount = 0;
         (int Session, string Name)? Resolve(int pid)
         {

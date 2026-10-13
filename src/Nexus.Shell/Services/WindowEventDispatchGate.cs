@@ -1,16 +1,24 @@
 namespace Nexus.Shell.Services;
 
-// Native WinEvent notifications can arrive concurrently. Keep only one queued
-// UI reconciliation, but never let a late enqueue failure or stale callback
-// release/deliver a different generation. A refused batch retains foreground
-// priority for the next successful dispatcher admission.
+// Concurrent native WinEvents share one UI delivery. Foreground priority and
+// structural window-list invalidation are independent: combining the two must
+// not lose a create/destroy/title change during a foreground burst. Per-ticket
+// ownership rejects late callbacks and never unlocks a successor.
 public sealed class WindowEventDispatchGate
 {
     private readonly object _gate = new();
     private long _nextTicket, _pendingTicket;
-    private bool _foreground;
+    private bool _foreground, _enumerate;
 
+    // Preserve the original entry point for callers that always need a scan.
     public bool Request(bool foreground, Func<Action, bool> enqueue, Action<bool> deliver, Action<Exception>? report = null)
+    {
+        ArgumentNullException.ThrowIfNull(deliver);
+        return Request(foreground, true, enqueue, (observed, _) => deliver(observed), report);
+    }
+
+    public bool Request(bool foreground, bool enumerate, Func<Action, bool> enqueue,
+        Action<bool, bool> deliver, Action<Exception>? report = null)
     {
         ArgumentNullException.ThrowIfNull(enqueue);
         ArgumentNullException.ThrowIfNull(deliver);
@@ -26,6 +34,7 @@ public sealed class WindowEventDispatchGate
         lock (_gate)
         {
             _foreground |= foreground;
+            _enumerate |= enumerate;
             if (_pendingTicket != 0) return false;
             ticket = unchecked(++_nextTicket);
             if (ticket == 0) ticket = unchecked(++_nextTicket);
@@ -44,17 +53,17 @@ public sealed class WindowEventDispatchGate
         {
             if (enqueue(() =>
             {
-                bool sawForeground;
+                bool sawForeground, needsEnumeration;
                 lock (_gate)
                 {
-                    // A queue may refuse admission after retaining a callback.
-                    // Such a stale callback must not consume a newer batch.
+                    // A refused enqueue may still invoke the callback later.
                     if (_pendingTicket != ticket) return;
                     sawForeground = _foreground;
-                    _foreground = false;
-                    _pendingTicket = 0; // Release before reentrant delivery.
+                    needsEnumeration = _enumerate;
+                    _foreground = _enumerate = false;
+                    _pendingTicket = 0; // Admit reentrant requests.
                 }
-                try { deliver(sawForeground); }
+                try { deliver(sawForeground, needsEnumeration); }
                 catch (Exception error) { Report(error); }
             })) return true;
 
@@ -63,7 +72,7 @@ public sealed class WindowEventDispatchGate
         }
         catch (Exception error)
         {
-            Release(); // Never release a newer ticket admitted inline.
+            Release(); // Cannot clear a newer admission.
             if (report is null) throw;
             Report(error);
             return false;
