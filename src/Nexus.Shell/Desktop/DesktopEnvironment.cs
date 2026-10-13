@@ -257,10 +257,11 @@ internal sealed partial class DesktopEnvironment
         // Begin before the worker scan, not after it. A destroyed HWND seen
         // during enumeration belongs to the following pass, never the result
         // that was just captured. Failure requeues this batch.
-        var lifecycle = _dockLifecycle.BeginScan();
+        DockLifecycleBatch? lifecycle = null;
         bool applied = false;
         try
         {
+            lifecycle = _dockLifecycle.BeginScan();
             var windows = await Task.Run(() =>
             {
                 using var measurement = UiTrace.Measure("dock-enumerate", "Dock");
@@ -272,12 +273,12 @@ internal sealed partial class DesktopEnvironment
                 var dockSnapshot = DockWindows();
                 // Overflow is rare; prefer a single full dock identity reset
                 // to dropping destroyed-window information silently.
-                IReadOnlySet<IntPtr> invalidated = lifecycle.ResetAll
+                IReadOnlySet<IntPtr> invalidated = lifecycle.Value.ResetAll
                     ? _lastDockSnapshot.Concat(dockSnapshot).Select(window => window.Handle).ToHashSet()
-                    : lifecycle.Destroyed;
+                    : lifecycle.Value.Destroyed;
                 if (!_dockSnapshotInitialized
                     || WindowListSnapshotPolicy.RequiresDockRefresh(
-                        _lastDockSnapshot, dockSnapshot, invalidated, lifecycle.ResetAll))
+                        _lastDockSnapshot, dockSnapshot, invalidated, lifecycle.Value.ResetAll))
                 {
                     Taskbar.View.Refresh(dockSnapshot, invalidated);
                     _lastDockSnapshot = dockSnapshot;
@@ -294,16 +295,24 @@ internal sealed partial class DesktopEnvironment
         catch (Exception ex) { Report("Could not refresh running windows", ex, false); }
         finally
         {
-            _dockLifecycle.CompleteScan(lifecycle, applied);
+            if (lifecycle is { } started)
+                _dockLifecycle.CompleteScan(started, applied);
             _refreshing = false;
             int nextDelay = _windowScanBackoff.Complete(applied);
-            _windowRefreshTimer.Interval = TimeSpan.FromMilliseconds(nextDelay);
-            // Retry even if enumeration failed before recording a destroy:
-            // a transient native/WinUI fault should not wait for the heartbeat.
-            // Repeated failures back off to the existing five-second cadence.
-            if (!IsStopping && (!applied || _windowRefreshPending || _dockLifecycle.HasPending)
-                && !_windowRefreshTimer.IsEnabled)
+            // Failure must never inherit an already-armed fast timer. It
+            // takes ownership of the next retry and applies backoff even if
+            // new WinEvents arrived during enumeration. A successful scan
+            // leaves an existing coalesced notification timer undisturbed.
+            var plan = WindowScanTimerPolicy.Decide(
+                IsStopping, applied, _windowRefreshPending || _dockLifecycle.HasPending,
+                _windowRefreshTimer.IsEnabled);
+            if (plan == WindowScanTimerAction.Restart)
+                _windowRefreshTimer.Stop();
+            if (plan is WindowScanTimerAction.Start or WindowScanTimerAction.Restart)
+            {
+                _windowRefreshTimer.Interval = TimeSpan.FromMilliseconds(nextDelay);
                 _windowRefreshTimer.Start();
+            }
         }
     }
     private void QueueWindowEvent(WindowEvent change)
