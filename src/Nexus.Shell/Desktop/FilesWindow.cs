@@ -32,29 +32,29 @@ internal sealed class FilesWindow : Window
     internal FilesWindow(FilesEnvironment environment, FileSelectionRequest request, string folder)
     {
         _environment = environment; View = new(environment, request, Complete);
-        _frame.RowDefinitions.Add(new() { Height = new GridLength(44) }); _frame.RowDefinitions.Add(new() { Height = new GridLength(1, GridUnitType.Star) });
+        _frame.RowDefinitions.Add(new() { Height = new GridLength(50) }); _frame.RowDefinitions.Add(new() { Height = new GridLength(1, GridUnitType.Star) });
         var chrome = _titleBar = new Grid { Padding = new Thickness(12, 0, 12, 0), BorderThickness = new Thickness(0, 0, 0, 1) }; chrome.ColumnDefinitions.Add(new() { Width = GridLength.Auto }); chrome.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) });
         var controls = new StackPanel { Orientation = Orientation.Horizontal };
         Button Control(string label, Windows.UI.Color color, Action action)
         {
-            var button = new Button { Content = new Ellipse { Width = 12, Height = 12, Fill = new SolidColorBrush(color) }, Width = 26, Height = 36, Padding = new Thickness(0), Style = (Style)Application.Current.Resources["QuietButton"] };
+            var button = new Button { Content = new Ellipse { Width = 13, Height = 13, Fill = new SolidColorBrush(color) }, Width = 28, Height = 38, Padding = new Thickness(0), Style = (Style)Application.Current.Resources["QuietButton"] };
             button.Click += (_, _) => action(); ToolTipService.SetToolTip(button, label); Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, label); return button;
         }
         controls.Children.Add(Control("Close", Windows.UI.Color.FromArgb(255, 255, 96, 88), RequestClose));
         controls.Children.Add(Control("Minimize", Windows.UI.Color.FromArgb(255, 255, 189, 45), Minimize));
         controls.Children.Add(Control("Maximize or restore", Windows.UI.Color.FromArgb(255, 40, 200, 64), ToggleMaximize)); chrome.Children.Add(controls);
-        _title = new TextBlock { Text = request.Title, FontSize = 13, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Left, Margin = new Thickness(28, 0, 0, 0), HorizontalAlignment = HorizontalAlignment.Stretch, TextTrimming = TextTrimming.CharacterEllipsis };
+        _title = new TextBlock { Text = request.Title, FontSize = 13.5, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Left, Margin = new Thickness(28, 0, 0, 0), HorizontalAlignment = HorizontalAlignment.Stretch, TextTrimming = TextTrimming.CharacterEllipsis };
         var dragArea = new Border { Child = _title, Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent) };
         Grid.SetColumn(dragArea, 1); chrome.Children.Add(dragArea);
         _frame.Children.Add(chrome); Grid.SetRow(View, 1); _frame.Children.Add(View);
-        _surface = new Border { Child = _frame, CornerRadius = new CornerRadius(14), BorderThickness = new Thickness(1) }; Content = _surface;
+        _surface = new Border { Child = _frame, CornerRadius = new CornerRadius(MidnightGlassMetrics.FrameRadius), BorderThickness = new Thickness(1) }; Content = _surface;
         Handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
         NativeWindow = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(Handle));
         NativeWindow.Title = request.Title + " · Nexus";
         if (request.Kind == FileSelectionKind.Browse) View.FolderChanged += title => { _title.Text = title; NativeWindow.Title = title + " · Nexus Files"; };
         if (NativeWindow.Presenter is OverlappedPresenter overlapped) overlapped.SetBorderAndTitleBar(false, false);
         _transition = new(_surface, () => environment.Theme.Animations && !environment.Theme.HighContrast && environment.State.SurfaceAnimations && !environment.State.ReducedEffects);
-        _chrome = new(Handle, resizable: true, stateChanged: maximized => { _surface.CornerRadius = new CornerRadius(maximized || environment.Theme.HighContrast ? 0 : 14); _surface.BorderThickness = new Thickness(maximized ? 0 : 1); }, minimizeRequested: Minimize, closeRequested: RequestClose, role: "Files");
+        _chrome = new(Handle, resizable: true, stateChanged: maximized => { _surface.CornerRadius = new CornerRadius(maximized || environment.Theme.HighContrast ? 0 : MidnightGlassMetrics.FrameRadius); _surface.BorderThickness = new Thickness(maximized ? 0 : 1); }, minimizeRequested: Minimize, closeRequested: RequestClose, role: "Files");
         _transition.BindRestore(_chrome);
         _caption = new(NativeWindow, _chrome, dragArea);
         _motion = new(_surface, () => environment.Theme.Animations && !environment.Theme.HighContrast && environment.State.SurfaceAnimations && !environment.State.ReducedEffects);
@@ -89,7 +89,7 @@ internal sealed class FilesWindow : Window
     {
         var theme = _environment.Theme;
         _frame.RequestedTheme = theme.ElementTheme; _frame.Background = null; _material.Apply(this, _surface, theme, _environment.State);
-        _surface.CornerRadius = new CornerRadius(theme.HighContrast || _chrome.IsAttached ? 0 : 14); _surface.BorderBrush = theme.Edge; _title.Foreground = theme.Brush("NexusText"); _titleBar.Background = theme.Material("MenuBar", _environment.State.NativeGlass); _titleBar.BorderBrush = theme.Edge;
+        _surface.CornerRadius = new CornerRadius(theme.HighContrast || _chrome.IsAttached ? 0 : MidnightGlassMetrics.FrameRadius); _surface.BorderBrush = theme.Edge; _title.Foreground = theme.Brush("NexusText"); _titleBar.Background = theme.Material("MenuBar", _environment.State.NativeGlass); _titleBar.BorderBrush = theme.Edge;
         _chrome.SetCorners(theme.HighContrast); _motion.Refresh(); View.ApplyAppearance();
     }
 }
