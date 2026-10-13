@@ -243,6 +243,75 @@ internal static class WindowEventPipelineChecks
             [previousList[0]]),
             "Closed windows must invalidate the previous snapshot.");
 
+        // Stage 7: lifecycle tombstones are bound to a scan BEFORE its worker
+        // begins enumeration. Notifications arriving mid-scan remain for the
+        // successor, and a failed scan must restore its original events.
+        var journal = new DockLifecycleJournal();
+        Check(!journal.HasPending, "An empty lifecycle journal must not request a scan.");
+        journal.RecordDestroy(IntPtr.Zero);
+        Check(!journal.HasPending, "Invalid handles must never enter the journal.");
+        journal.RecordDestroy(new IntPtr(41));
+        journal.RecordDestroy(new IntPtr(41));
+        var beforeScan = journal.BeginScan();
+        Check(beforeScan.Destroyed.Count == 1 && beforeScan.Destroyed.Contains(new IntPtr(41))
+            && !beforeScan.ResetAll && !journal.HasPending,
+            "A scan must own one snapshot of deduplicated pre-enumeration destroys.");
+        journal.RecordDestroy(new IntPtr(42));
+        Check(journal.HasPending,
+            "A destroy during enumeration must be retained for a later scan.");
+        Check(journal.CompleteScan(beforeScan, applied: true),
+            "Successful scan must release its lifecycle batch.");
+        Check(!journal.CompleteScan(beforeScan, applied: false),
+            "A stale completion must not restore or release a newer batch.");
+        var afterScan = journal.BeginScan();
+        Check(afterScan.Destroyed.SetEquals(new[] { new IntPtr(42) }),
+            "Successful reconciliation must consume only the old batch.");
+        journal.RecordDestroy(new IntPtr(43));
+        Check(journal.CompleteScan(afterScan, applied: false),
+            "Failed reconciliation must release its current batch for retry.");
+        var retry = journal.BeginScan();
+        Check(retry.Destroyed.SetEquals(new[] { new IntPtr(42), new IntPtr(43) }),
+            "Failed scan destroys and newer native events must both survive retry.");
+        Check(journal.CompleteScan(retry, applied: true) && !journal.HasPending,
+            "Successful retry must drain all known window destructions.");
+
+        journal.RecordDestroy(new IntPtr(44));
+        var inFlight = journal.BeginScan();
+        bool overlappingRejected = false;
+        try { journal.BeginScan(); }
+        catch (InvalidOperationException) { overlappingRejected = true; }
+        Check(overlappingRejected, "A second scan may not take ownership of an active batch.");
+        journal.RecordDestroy(new IntPtr(45));
+        Check(journal.CompleteScan(inFlight, applied: false),
+            "A failed active batch must remain recoverable after a refused overlap.");
+        var recovered = journal.BeginScan();
+        Check(recovered.Destroyed.SetEquals(new[] { new IntPtr(44), new IntPtr(45) }),
+            "Overlapping scan attempts must never discard concurrent destroy events.");
+        Check(journal.CompleteScan(recovered, applied: true), "Recovery must finish normally.");
+
+        var overflow = new DockLifecycleJournal();
+        for (int n = 1; n <= DockLifecycleJournal.MaxTrackedHandles + 1; n++)
+            overflow.RecordDestroy(new IntPtr(n));
+        var reset = overflow.BeginScan();
+        Check(reset.ResetAll && reset.Destroyed.Count == 0,
+            "Overflow must request a safe full dock identity rebuild, not drop tombstones silently.");
+        overflow.RecordDestroy(new IntPtr(90000));
+        Check(overflow.CompleteScan(reset, applied: false),
+            "Failed full rebuilds must remain eligible for retry.");
+        var resetRetry = overflow.BeginScan();
+        Check(resetRetry.ResetAll && resetRetry.Destroyed.Count == 0,
+            "Full-rebuild demand must survive scan failure and newer events.");
+        Check(overflow.CompleteScan(resetRetry, applied: true) && !overflow.HasPending,
+            "Successful full rebuild must release overflow mode.");
+
+        var parallelJournal = new DockLifecycleJournal();
+        Parallel.For(1, 1801, n => parallelJournal.RecordDestroy(new IntPtr(n)));
+        var parallelBatch = parallelJournal.BeginScan();
+        Check(!parallelBatch.ResetAll && parallelBatch.Destroyed.Count == 1800,
+            "Parallel native hooks must not lose or duplicate lifecycle tombstones.");
+        Check(parallelJournal.CompleteScan(parallelBatch, applied: true) && !parallelJournal.HasPending,
+            "A parallel event burst must settle after a successful scan.");
+
         int lookupCount = 0;
         (int Session, string Name)? Resolve(int pid)
         {

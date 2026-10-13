@@ -65,3 +65,15 @@ No AppVeyor run or Windows preview was performed by owner request. Static source
 - Portable Core regression checks now cover same-process close/reopen, unchanged order, rapid deletion/reinsertion, and two-HWND foreground selection.
 
 This stage has not undergone Windows compilation, AppVeyor execution, or desktop visual tests at owner request. Runtime frame-time improvement remains unmeasured.
+
+## Stage 7 — Async scan ownership, retry and bounded overflow
+
+The prior destroy-handle collection was drained **after** the worker returned from EnumWindows. Events that arrived during that worker's enumeration could therefore be consumed by an older window snapshot; if dock reconciliation then threw, the consumed identity information was lost.
+
+- `DockLifecycleJournal.BeginScan` atomically captures the deduplicated, pre-scan destroy events and starts a generation. Native destroy hooks keep writing to an independent pending set throughout enumeration and UI application.
+- `CompleteScan(batch, applied)` consumes successful generations only. Failure restores the batch alongside newer destroys, with ticket checking to reject late/double completions. Events arriving mid-scan prompt a follow-up scan even if a WinUI dispatcher callback is delayed.
+- Beyond 2,048 distinct pending handles, the journal requests a one-time complete dock identity reset rather than silently dropping an event. A failed reset keeps that demand pending for retry.
+- The coordinator retains the previous 50 ms event coalescing on successful scans; a failed scan that has pending lifecycle work retries at 500 ms, preventing a permanent rapid failure loop. The five-second independent recovery cycle and foreground-only lightweight path are preserved.
+- Portable checks cover mid-enumeration notifications, duplicate handles, failed rollback, stale completion, overlapping scan refusal, forced full-reset retry, and 1,800 parallel destroy notifications.
+
+**Status:** Production and portable-test source committed only; AppVeyor and native Windows preview remain skipped by request. These tests have not been executed in this session.
