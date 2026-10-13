@@ -97,6 +97,32 @@ internal static class DockExperienceChecks
         Check(!attached.Fullscreen && attached.Attached,
             "Edge-aligned application geometry should attach the menu bar without hiding the dock.");
 
+        foreach (var presence in Enum.GetValues<DockPresence>())
+        {
+            Check(!DockIndicatorUpdatePolicy.ShouldTransition(false, null, presence)
+                && !DockIndicatorUpdatePolicy.ShouldTransition(false, DockPresence.Active, presence),
+                "An invalid or expired dock HWND must not replay native indicator transitions.");
+            Check(DockIndicatorUpdatePolicy.ShouldTransition(true, null, presence),
+                "A newly valid dock HWND must reconcile initial indicator appearance.");
+            Check(!DockIndicatorUpdatePolicy.ShouldTransition(true, presence, presence),
+                "An unchanged valid dock presence must not restart its compositor animation.");
+        }
+        Check(DockIndicatorUpdatePolicy.Decide(false, false, true, true, true) == DockIndicatorUpdate.None,
+            "Stable dock presence must not restart compositor animation or rewrite indicator state.");
+        Check(DockIndicatorUpdatePolicy.Decide(true, false, true, true, true) == DockIndicatorUpdate.Animate,
+            "A live presence transition should use the retained compositor animation.");
+        Check(DockIndicatorUpdatePolicy.Decide(true, false, true, false, true) == DockIndicatorUpdate.Settle
+            && DockIndicatorUpdatePolicy.Decide(true, false, true, true, false) == DockIndicatorUpdate.Settle,
+            "Reduced motion and unloaded indicators must use safe static state.");
+        Check(DockIndicatorUpdatePolicy.Decide(false, true, true, true, true) == DockIndicatorUpdate.None,
+            "Repeated presence updates must let an active animation finish uninterrupted.");
+        Check(DockIndicatorUpdatePolicy.Decide(false, true, false, true, true) == DockIndicatorUpdate.Settle
+            && DockIndicatorUpdatePolicy.Decide(false, true, true, false, true) == DockIndicatorUpdate.Settle
+            && DockIndicatorUpdatePolicy.Decide(false, true, true, true, false) == DockIndicatorUpdate.Settle,
+            "A pending animation must settle when animations disable, accessibility changes or an icon unloads.");
+        Check(DockIndicatorUpdatePolicy.Decide(false, false, false, false, false) == DockIndicatorUpdate.None,
+            "Already-settled indicators must not repeatedly stop/set compositor animations.");
+
         var frame = new DockFrameGeometry(
             new(-1020, 922, 480, 60), new(-1200, 910, 1920, 78), 1.25, true, false);
         Check(DockFrameLayoutPolicy.RequiresLayout(null, frame),

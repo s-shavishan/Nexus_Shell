@@ -64,11 +64,26 @@ internal sealed class MenuBarView : Grid, IDisposable
         SizeChanged += (_, _) =>
         {
             int shown = ActualWidth < 480 ? 1 : ActualWidth < 950 ? 2 : int.MaxValue;
-            foreach (var (button, i) in left.Children.OfType<Button>().Select((button, i) => (button, i))) button.Visibility = i < shown ? Visibility.Visible : Visibility.Collapsed;
-            foreach (var button in right.Children.OfType<Button>().Take(2)) button.Visibility = ActualWidth < 650 ? Visibility.Collapsed : Visibility.Visible;
-            bluetooth.Visibility = display.Visibility = ActualWidth < 900 ? Visibility.Collapsed : Visibility.Visible;
+            foreach (var (button, i) in left.Children.OfType<Button>().Select((button, i) => (button, i))) SetVisible(button, i < shown);
+            foreach (var button in right.Children.OfType<Button>().Take(2)) SetVisible(button, ActualWidth >= 650);
+            SetVisible(bluetooth, ActualWidth >= 900);
+            SetVisible(display, ActualWidth >= 900);
             Refresh();
         };
+    }
+    private static void SetVisible(UIElement element, bool visible)
+    {
+        var next = visible ? Visibility.Visible : Visibility.Collapsed;
+        if (element.Visibility != next) element.Visibility = next;
+    }
+    private static void SetText(TextBlock label, string value)
+    {
+        if (label.Text != value) label.Text = value;
+    }
+    private static void SetName(DependencyObject element, string value)
+    {
+        if (Microsoft.UI.Xaml.Automation.AutomationProperties.GetName(element) != value)
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(element, value);
     }
     private Button Basic(object content, string name)
     {
@@ -80,22 +95,63 @@ internal sealed class MenuBarView : Grid, IDisposable
         if (_disposed || Interlocked.Exchange(ref _refreshQueued, 1) != 0) return;
         if (!DispatcherQueue.TryEnqueue(() => { Interlocked.Exchange(ref _refreshQueued, 0); if (!_disposed) Refresh(); })) Interlocked.Exchange(ref _refreshQueued, 0);
     }
-    internal void Refresh()
+    internal void Refresh(DateTime? clockOverride = null)
     {
         if (_disposed) return;
         var window = _environment.ActiveWindow;
-        _activeTitle.Text = window is null ? "Desktop" : window.Title;
+        SetText(_activeTitle, window is null ? "Desktop" : window.Title);
         string name = window is null ? "Nexus desktop menu" : "Window controls for " + window.Title;
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_activeApp, name); ToolTipService.SetToolTip(_activeApp, name);
-        _windowControls.Visibility = window is not null && ActualWidth >= 1050 ? Visibility.Visible : Visibility.Collapsed;
-        _minimize.IsEnabled = _maximize.IsEnabled = _close.IsEnabled = window is not null;
-        ((FontIcon)_maximize.Content).Glyph = _environment.ActiveWindowMaximized ? "\uE923" : "\uE922";
-        _clock.Text = DateTime.Now.ToString(DesktopPresentation.ClockFormat(ActualWidth < 650, _environment.Session.State.Clock24Hour));
-        int unread = _environment.Notifications.Unread; _badge.Text = unread > 0 ? (unread > 9 ? "9+" : unread.ToString()) : "";
-        _badge.Visibility = unread > 0 ? Visibility.Visible : Visibility.Collapsed;
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_notification, unread + " unread Nexus notifications");
+        SetName(_activeApp, name);
+        if (!Equals(ToolTipService.GetToolTip(_activeApp), name)) ToolTipService.SetToolTip(_activeApp, name);
+        SetVisible(_windowControls, window is not null && ActualWidth >= 1050);
+        bool hasWindow = window is not null;
+        if (_minimize.IsEnabled != hasWindow) _minimize.IsEnabled = hasWindow;
+        if (_maximize.IsEnabled != hasWindow) _maximize.IsEnabled = hasWindow;
+        if (_close.IsEnabled != hasWindow) _close.IsEnabled = hasWindow;
+        var icon = (FontIcon)_maximize.Content;
+        string glyph = _environment.ActiveWindowMaximized ? "\uE923" : "\uE922";
+        if (icon.Glyph != glyph) icon.Glyph = glyph;
+        SetText(_clock, (clockOverride ?? DateTime.Now).ToString(DesktopPresentation.ClockFormat(ActualWidth < 650, _environment.Session.State.Clock24Hour)));
+        int unread = _environment.Notifications.Unread;
+        SetText(_badge, unread > 0 ? (unread > 9 ? "9+" : unread.ToString()) : "");
+        SetVisible(_badge, unread > 0);
+        SetName(_notification, unread + " unread Nexus notifications");
     }
     internal void ApplyAppearance()
-    { RequestedTheme = _environment.Theme.ElementTheme; foreach (var button in _buttons) button.Foreground = _environment.Theme.Brush("NexusText"); foreach (var line in _controls.Children.OfType<Border>()) line.Background = _environment.Theme.Brush("NexusText"); foreach (var dot in _controls.Children.OfType<Ellipse>()) dot.Fill = _environment.Theme.Brush("NexusText"); _clock.Foreground = _environment.Theme.Brush("NexusText"); _badge.Foreground = _environment.Theme.Brush("NexusAccent"); Refresh(); }
+    {
+        if (_disposed) return;
+        var theme = _environment.Theme;
+        if (RequestedTheme != theme.ElementTheme) RequestedTheme = theme.ElementTheme;
+        var foreground = theme.Brush("NexusText");
+        foreach (var button in _buttons)
+            if (!ReferenceEquals(button.Foreground, foreground)) button.Foreground = foreground;
+        foreach (var line in _controls.Children.OfType<Border>())
+            if (!ReferenceEquals(line.Background, foreground)) line.Background = foreground;
+        foreach (var dot in _controls.Children.OfType<Ellipse>())
+            if (!ReferenceEquals(dot.Fill, foreground)) dot.Fill = foreground;
+        if (!ReferenceEquals(_clock.Foreground, foreground)) _clock.Foreground = foreground;
+        var accent = theme.Brush("NexusAccent");
+        if (!ReferenceEquals(_badge.Foreground, accent)) _badge.Foreground = accent;
+        Refresh();
+    }
+    internal void VerifyRetainedRefresh()
+    {
+        DateTime stable = new(2026, 10, 12, 12, 34, 0);
+        Refresh(stable);
+        int writes = 0;
+        long clock = _clock.RegisterPropertyChangedCallback(TextBlock.TextProperty, (_, _) => writes++);
+        long title = _activeTitle.RegisterPropertyChangedCallback(TextBlock.TextProperty, (_, _) => writes++);
+        try
+        {
+            for (int i = 0; i < 100; i++) Refresh(stable);
+            if (writes != 0) throw new InvalidOperationException("Stable menu bar poll invalidated title or clock layout.");
+        }
+        finally
+        {
+            _clock.UnregisterPropertyChangedCallback(TextBlock.TextProperty, clock);
+            _activeTitle.UnregisterPropertyChangedCallback(TextBlock.TextProperty, title);
+            Refresh(); // Restore the live clock after the fixed-time fixture.
+        }
+    }
     public void Dispose() { if (_disposed) return; _disposed = true; _timer.Stop(); _environment.Notifications.Changed -= QueueRefresh; _environment.ActiveWindowChanged -= QueueRefresh; }
 }

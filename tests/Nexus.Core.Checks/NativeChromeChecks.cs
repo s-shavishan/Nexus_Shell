@@ -91,6 +91,26 @@ internal static class NativeChromeChecks
             chrome.SetFullscreen(false);
             ExpectChanged("Returning to windowed mode must recover normal native clipping.");
 
+            // Interact only with the fixture HWND: a live sizing edge releases
+            // the old region without synchronous paint; completion/cancellation
+            // restores one rounded clip with normal repaint semantics.
+            foreach (uint finish in new uint[] { 0x0232, 0x001F, 0x0215 })
+            {
+                Marshal.StructureToPtr(original, data, false);
+                SendMessage(window, 0x0231, UIntPtr.Zero, IntPtr.Zero); // WM_ENTERSIZEMOVE
+                SendMessage(window, 0x0214, new UIntPtr(1), data);       // WM_SIZING
+                if (!chrome.LiveResizeSuspended || chrome.LastRegionRedraw != false)
+                    throw new Exception("Live native sizing must release stale clipping without a synchronous GDI repaint.");
+                int suspendedRequests = chrome.RegionRefreshRequests;
+                for (int frame = 0; frame < 120; frame++)
+                    SendMessage(window, 0x0005, UIntPtr.Zero, size); // WM_SIZE burst, test HWND
+                if (chrome.RegionRefreshRequests != suspendedRequests)
+                    throw new Exception("The sizing drag queued needless GDI clipping reconciliation during intermediate WM_SIZE notifications.");
+                SendMessage(window, finish, UIntPtr.Zero, IntPtr.Zero);
+                if (chrome.LiveResizeSuspended || chrome.LastRegionRedraw != true)
+                    throw new Exception($"Native sizing completion/cancellation {finish:X4} did not restore repainted clipping.");
+            }
+
             chrome.UseSystemFrame();
             Marshal.StructureToPtr(original, data, false);
             SendMessage(window, 0x0083, UIntPtr.Zero, data);

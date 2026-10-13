@@ -51,6 +51,9 @@ internal sealed class TaskbarView : Grid
     internal event Action? PreferredWidthChanged;
     internal double PreferredWidthDip => (_environment.Session.State.FloatingTaskbar ? 168 : 304) + (_pins.Children.Count + _windows.Children.Count) * (_environment.Session.State.CompactDock ? 44 : 52);
     internal Border Frame => _frame;
+    // The real HWND uses WindowMaterial to control native acrylic, opaque
+    // preparation and fallback. Its view must not repaint that same surface.
+    internal bool MaterialOwnedByWindow { get; set; }
     private MotionController? _motion;
     private DockMotionController? _dockMotion;
     internal TaskbarView(DesktopEnvironment environment)
@@ -266,25 +269,41 @@ internal sealed class TaskbarView : Grid
             var state = (active, minimized);
             var presence = minimized ? DockPresence.Minimized : active ? DockPresence.Active : DockPresence.Running;
             var cue = valid ? DockMotionPolicy.Transition(item.Presence, presence, item.NewlyOpened) : DockMotionCue.None;
-            bool transitioned = item.Presence != presence;
+            bool transitioned = DockIndicatorUpdatePolicy.ShouldTransition(valid, item.Presence, presence);
             bool initialized = item.Presence is not null; item.Presence = valid ? presence : null; item.NewlyOpened = false;
             if (cue != DockMotionCue.None) { if (item.Icon.IsLoaded && _dockMotion is not null) { _dockMotion.Play(item.Icon, cue); item.PendingCue = DockMotionCue.None; } else item.PendingCue = cue; }
-            if (_dockMotion is not null && transitioned) { item.Indicator.Width = 22; item.Indicator.Opacity = 1; _dockMotion.SetIndicator(item.Indicator, presence, initialized); }
+            if (_dockMotion is not null && transitioned)
+            {
+                SetIndicatorLayout(item.Indicator, 22, 1);
+                _dockMotion.SetIndicator(item.Indicator, presence, initialized);
+            }
             if (item.State == state && item.Button.IsEnabled == valid && item.PreviewsEnabled == _environment.Session.State.DockPreviews) continue;
-            item.State = state; item.Button.IsEnabled = valid; item.PreviewsEnabled = _environment.Session.State.DockPreviews;
-        item.Button.Background = active ? _environment.Theme.Brush("NexusSelection") : _transparent;
-            item.Indicator.Background = _environment.Theme.Brush(active ? "NexusAccent" : "NexusMuted");
-            if (active) item.Indicator.Background = _environment.Theme.Brush("NexusAccent");
-            if (_dockMotion is null) { item.Indicator.Width = active ? 22 : minimized ? 5 : 10; item.Indicator.Opacity = minimized ? .45 : 1; }
+            item.State = state;
+            if (item.Button.IsEnabled != valid) item.Button.IsEnabled = valid;
+            item.PreviewsEnabled = _environment.Session.State.DockPreviews;
+            var background = active ? _environment.Theme.Brush("NexusSelection") : _transparent;
+            if (!ReferenceEquals(item.Button.Background, background)) item.Button.Background = background;
+            var marker = _environment.Theme.Brush(active ? "NexusAccent" : "NexusMuted");
+            if (!ReferenceEquals(item.Indicator.Background, marker)) item.Indicator.Background = marker;
+            // Indicator brush already reflects the active state above.
+            if (_dockMotion is null) SetIndicatorLayout(item.Indicator, active ? 22 : minimized ? 5 : 10, minimized ? .45 : 1);
             string action = minimized ? "Restore " : active ? "Minimize " : "Switch to ";
             ToolTipService.SetToolTip(item.Button, _environment.Session.State.DockPreviews ? null : action + item.Window.Title);
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(item.Button, action + item.Window.Title);
         }
     }
+    private static void SetIndicatorLayout(Border indicator, double width, double opacity)
+    {
+        // Presence animation is compositor-owned; WinUI should not remeasure an
+        // underline whose reserved layout slot and opacity are unchanged.
+        if (indicator.Width != width) indicator.Width = width;
+        if (indicator.Opacity != opacity) indicator.Opacity = opacity;
+    }
+
     private void PrepareMotion(DockItem item)
     {
         if (_dockMotion is null) return;
-        item.Indicator.Width = 22; item.Indicator.Opacity = 1;
+        SetIndicatorLayout(item.Indicator, 22, 1);
         _dockMotion.SetIndicator(item.Indicator, item.Presence ?? DockPresence.Running, false);
         _dockMotion.Play(item.Icon, item.PendingCue); item.PendingCue = DockMotionCue.None;
     }
@@ -306,13 +325,68 @@ internal sealed class TaskbarView : Grid
     private void ApplyDensity()
     {
         bool compact = _environment.Session.State.CompactDock;
-        foreach (var button in _iconButtons.Concat(_pins.Children.OfType<Button>()).Concat(_windows.Children.OfType<Button>())) { button.Width = compact ? 40 : 48; button.Height = compact ? 44 : 52; if (button.Content is Image i) i.Width = i.Height = compact ? 30 : 36; }
-        foreach (var icon in _pinImages.Values.Concat(_items.Values.Select(i => i.Icon))) icon.Width = icon.Height = compact ? 30 : 40;
-        _separator.Visibility = _windows.Children.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+        static void Size(FrameworkElement target, double width, double height)
+        {
+            if (target.Width != width) target.Width = width;
+            if (target.Height != height) target.Height = height;
+        }
+        foreach (var button in _iconButtons.Concat(_pins.Children.OfType<Button>()).Concat(_windows.Children.OfType<Button>()))
+        {
+            Size(button, compact ? 40 : 48, compact ? 44 : 52);
+            if (button.Content is Image icon) Size(icon, compact ? 30 : 36, compact ? 30 : 36);
+        }
+        foreach (var icon in _pinImages.Values.Concat(_items.Values.Select(i => i.Icon)))
+            Size(icon, compact ? 30 : 40, compact ? 30 : 40);
+        var separator = _windows.Children.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+        if (_separator.Visibility != separator) _separator.Visibility = separator;
         double width = PreferredWidthDip;
         if (_reportedWidth != width) { _reportedWidth = width; PreferredWidthChanged?.Invoke(); }
         _appliedCompactDock = compact;
     }
+    internal void VerifyRetainedIndicatorLayout()
+    {
+        var indicator = new Border { Width = 22, Opacity = 1 };
+        int writes = 0;
+        long width = indicator.RegisterPropertyChangedCallback(FrameworkElement.WidthProperty, (_, _) => writes++);
+        long opacity = indicator.RegisterPropertyChangedCallback(UIElement.OpacityProperty, (_, _) => writes++);
+        try
+        {
+            for (int i = 0; i < 100; i++) SetIndicatorLayout(indicator, 22, 1);
+            if (writes != 0)
+                throw new InvalidOperationException("Unchanged dock indicators triggered repeated WinUI layout writes.");
+            SetIndicatorLayout(indicator, 10, .45);
+            if (indicator.Width != 10 || indicator.Opacity != .45 || writes != 2)
+                throw new InvalidOperationException("A real dock indicator size and opacity transition was suppressed.");
+            SetIndicatorLayout(indicator, 22, 1);
+            if (writes != 4)
+                throw new InvalidOperationException("Restoring dock indicator geometry did not update both properties.");
+        }
+        finally
+        {
+            indicator.UnregisterPropertyChangedCallback(FrameworkElement.WidthProperty, width);
+            indicator.UnregisterPropertyChangedCallback(UIElement.OpacityProperty, opacity);
+        }
+    }
+
+    internal void VerifyRetainedAppearance()
+    {
+        ApplyAppearance();
+        int writes = 0;
+        long clock = _time.RegisterPropertyChangedCallback(TextBlock.ForegroundProperty, (_, _) => writes++);
+        long launcher = _start.RegisterPropertyChangedCallback(Control.ForegroundProperty, (_, _) => writes++);
+        try
+        {
+            for (int i = 0; i < 100; i++) ApplyAppearance();
+            if (writes != 0)
+                throw new InvalidOperationException("Stable dock appearance rewrote clock or launcher brushes.");
+        }
+        finally
+        {
+            _time.UnregisterPropertyChangedCallback(TextBlock.ForegroundProperty, clock);
+            _start.UnregisterPropertyChangedCallback(Control.ForegroundProperty, launcher);
+        }
+    }
+
     internal void VerifyRetainedDensity()
     {
         bool original = _environment.Session.State.CompactDock;
@@ -336,17 +410,77 @@ internal sealed class TaskbarView : Grid
                     throw new InvalidOperationException("The dock did not restore normal geometry after compact mode.");
             }
             finally { button.UnregisterPropertyChangedCallback(WidthProperty, token); }
+
+            // Even a changed running-window snapshot may call ApplyDensity.
+            // Stable item sizes and the separator must not invalidate layout.
+            int densityWrites = 0, widthNotifications = 0;
+            Action notifyWidth = () => widthNotifications++;
+            PreferredWidthChanged += notifyWidth;
+            long iconSize = icon.RegisterPropertyChangedCallback(WidthProperty, (_, _) => densityWrites++);
+            long buttonSize = button.RegisterPropertyChangedCallback(HeightProperty, (_, _) => densityWrites++);
+            long separatorVisibility = _separator.RegisterPropertyChangedCallback(UIElement.VisibilityProperty, (_, _) => densityWrites++);
+            try
+            {
+                for (int i = 0; i < 100; i++) ApplyDensity();
+                if (densityWrites != 0 || widthNotifications != 0)
+                    throw new InvalidOperationException("Stable dock density rewrote item geometry or emitted spurious width changes.");
+            }
+            finally
+            {
+                icon.UnregisterPropertyChangedCallback(WidthProperty, iconSize);
+                button.UnregisterPropertyChangedCallback(HeightProperty, buttonSize);
+                _separator.UnregisterPropertyChangedCallback(UIElement.VisibilityProperty, separatorVisibility);
+                PreferredWidthChanged -= notifyWidth;
+            }
+
+            SetAvailableWidth(700);
+            int frameWrites = 0;
+            long corner = _frame.RegisterPropertyChangedCallback(Border.CornerRadiusProperty, (_, _) => frameWrites++);
+            long overview = _overview.RegisterPropertyChangedCallback(UIElement.VisibilityProperty, (_, _) => frameWrites++);
+            long clock = _clockButton.RegisterPropertyChangedCallback(UIElement.VisibilityProperty, (_, _) => frameWrites++);
+            long desktop = _desktopButton.RegisterPropertyChangedCallback(UIElement.VisibilityProperty, (_, _) => frameWrites++);
+            long date = _date.RegisterPropertyChangedCallback(UIElement.VisibilityProperty, (_, _) => frameWrites++);
+            try
+            {
+                for (int i = 0; i < 100; i++) SetAvailableWidth(700);
+                if (frameWrites != 0)
+                    throw new InvalidOperationException("Unchanged floating dock geometry rewrote frame corners or responsive control visibility.");
+                SetAvailableWidth(400);
+                SetAvailableWidth(700);
+                if (frameWrites == 0)
+                    throw new InvalidOperationException("Real dock width changes failed to reconcile native responsive controls.");
+            }
+            finally
+            {
+                _frame.UnregisterPropertyChangedCallback(Border.CornerRadiusProperty, corner);
+                _overview.UnregisterPropertyChangedCallback(UIElement.VisibilityProperty, overview);
+                _clockButton.UnregisterPropertyChangedCallback(UIElement.VisibilityProperty, clock);
+                _desktopButton.UnregisterPropertyChangedCallback(UIElement.VisibilityProperty, desktop);
+                _date.UnregisterPropertyChangedCallback(UIElement.VisibilityProperty, date);
+            }
         }
-        finally { _environment.Session.State.CompactDock = original; ApplyDensity(); }
+        finally { _environment.Session.State.CompactDock = original; ApplyDensity(); SetAvailableWidth(PreferredWidthDip); }
     }
+    private void ApplyFrameCorners()
+    {
+        var corners = new CornerRadius(_environment.Session.State.FloatingTaskbar && !_environment.Theme.HighContrast ? 22 : 0);
+        if (!_frame.CornerRadius.Equals(corners)) _frame.CornerRadius = corners;
+    }
+
     internal void SetAvailableWidth(double widthDip)
     {
-        _frame.CornerRadius = new CornerRadius(_environment.Session.State.FloatingTaskbar && !_environment.Theme.HighContrast ? 22 : 0);
-        // Keep Launchpad reachable; Control Center lives in the menu bar.
-        _overview.Visibility = widthDip < 440 ? Visibility.Collapsed : Visibility.Visible;
-        _clockButton.Visibility = widthDip < 480 || _environment.Session.State.FloatingTaskbar ? Visibility.Collapsed : Visibility.Visible;
-        _desktopButton.Visibility = widthDip < 600 ? Visibility.Collapsed : Visibility.Visible;
-        _date.Visibility = widthDip < 620 ? Visibility.Collapsed : Visibility.Visible;
+        ApplyFrameCorners();
+        // Each visibility assignment can invalidate XAML measure/arrange.
+        // Preserve reachability while avoiding writes for a stable dock frame.
+        static void SetVisible(UIElement element, bool visible)
+        {
+            var next = visible ? Visibility.Visible : Visibility.Collapsed;
+            if (element.Visibility != next) element.Visibility = next;
+        }
+        SetVisible(_overview, widthDip >= 440);
+        SetVisible(_clockButton, widthDip >= 480 && !_environment.Session.State.FloatingTaskbar);
+        SetVisible(_desktopButton, widthDip >= 600);
+        SetVisible(_date, widthDip >= 620);
     }
     internal void RefreshClock()
     {
@@ -361,15 +495,27 @@ internal sealed class TaskbarView : Grid
     internal void ApplyAppearance()
     {
         if (_released) return;
-        var theme = _environment.Theme; RequestedTheme = theme.ElementTheme;
-        _frame.Background = theme.Material("Dock", _environment.Session.State.NativeGlass);
+        var theme = _environment.Theme;
+        if (RequestedTheme != theme.ElementTheme) RequestedTheme = theme.ElementTheme;
+        // In isolation (native resource probe) render a readable solid dock.
+        // In the real dock, WindowMaterial owns both material and fallback.
+        if (!MaterialOwnedByWindow) GlassPaintRetention.Background(_frame, theme.Material("Dock", false));
         bool motionEnabled = !theme.HighContrast && theme.Animations && _environment.Session.State.SurfaceAnimations && !_environment.Session.State.ReducedEffects;
         _motion?.SetEnabled(motionEnabled); _dockMotion?.SetEnabled(motionEnabled);
-        _frame.CornerRadius = new CornerRadius(_environment.Session.State.FloatingTaskbar && !theme.HighContrast ? 22 : 0);
-        _frame.BorderBrush = theme.Edge; _frame.BorderThickness = new Thickness(1);
-        _separator.Background = theme.Brush("NexusBorder"); _time.Foreground = theme.Brush("NexusText"); _date.Foreground = theme.Brush("NexusMuted");
-        _clockButton.Background = theme.Brush("NexusSelection");
-        foreach (var button in _iconButtons) { button.Background = _transparent; button.Foreground = theme.Brush("NexusText"); }
+        ApplyFrameCorners();
+        if (!MaterialOwnedByWindow) GlassPaintRetention.Edge(_frame, theme.Edge);
+        if (!_frame.BorderThickness.Equals(new Thickness(1))) _frame.BorderThickness = new Thickness(1);
+        var border = theme.Brush("NexusBorder"); var text = theme.Brush("NexusText"); var muted = theme.Brush("NexusMuted");
+        if (!ReferenceEquals(_separator.Background, border)) _separator.Background = border;
+        if (!ReferenceEquals(_time.Foreground, text)) _time.Foreground = text;
+        if (!ReferenceEquals(_date.Foreground, muted)) _date.Foreground = muted;
+        var selection = theme.Brush("NexusSelection");
+        if (!ReferenceEquals(_clockButton.Background, selection)) _clockButton.Background = selection;
+        foreach (var button in _iconButtons)
+        {
+            if (!ReferenceEquals(button.Background, _transparent)) button.Background = _transparent;
+            if (!ReferenceEquals(button.Foreground, text)) button.Foreground = text;
+        }
         foreach (var item in _items.Values) item.State = null;
         RefreshWindowStates();
         ApplyDensity(); RefreshClock();

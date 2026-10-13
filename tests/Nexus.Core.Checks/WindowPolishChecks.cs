@@ -16,6 +16,16 @@ internal static class WindowPolishChecks
         Check(!WindowExitPolicy.AcceptRestore(true, true),
             "Disposed closing frames must not restart compositor animations.");
 
+        var menuBounds = new ShellRect(-1920, -220, 1920, 38);
+        uint unchangedMenu = MenuBarNativePlacement.Flags(true, menuBounds, menuBounds);
+        Check((unchangedMenu & (MenuBarNativePlacement.NoMove | MenuBarNativePlacement.NoSize))
+                == (MenuBarNativePlacement.NoMove | MenuBarNativePlacement.NoSize)
+            && (unchangedMenu & MenuBarNativePlacement.NoActivate) != 0,
+            "Repeated menu bar positioning must reassert topmost Z-order without moving, resizing or activating the HWND.");
+        uint monitorChange = MenuBarNativePlacement.Flags(true, menuBounds, new ShellRect(0, 0, 2560, 48));
+        Check(monitorChange == MenuBarNativePlacement.NoActivate
+            && MenuBarNativePlacement.Flags(false, menuBounds, menuBounds) == MenuBarNativePlacement.NoActivate,
+            "A changed or unreadable native monitor geometry must fully reposition the menu bar.");
         var desktop = new ShellRect(-1920, -220, 1920, 1080);
         Check(DesktopSurfacePositionPolicy.RequiresMove(false, default, desktop),
             "Desktop must initially acquire its monitor rectangle even if the native position query fails.");
@@ -70,6 +80,50 @@ internal static class WindowPolishChecks
         }
         budget.Prune([1]); Check(budget.Admit(65, 100, work, 5000), "Pruning closed apps must free budget capacity.");
         Check(!budget.Admit(0, 100, work, 5000) && !budget.Admit(2, 0, work, 5000), "Invalid native identities must not consume retry capacity.");
+        var tint = new GlassTintRetention();
+        var recipe = GlassRecipe.For(AuraPalette.For("Midnight"), "Dock", "Clear");
+        var secondRecipe = GlassRecipe.For(AuraPalette.For("Midnight"), "Dock", "Frosted");
+        Check(tint.RequiresApply(recipe), "A new native acrylic controller must receive its first tint.");
+        tint.Commit(recipe);
+        Check(!tint.RequiresApply(recipe)
+            && !tint.RequiresApply(recipe with { }),
+            "A stable acrylic recipe must not rewrite native tint and luminosity properties.");
+        Check(tint.RequiresApply(secondRecipe),
+            "A changed glass profile must reconfigure native controller tint.");
+        // A failed partial update does not commit an unverified recipe.
+        Check(tint.RequiresApply(secondRecipe),
+            "An uncommitted tint change must be retried rather than assumed applied.");
+        tint.Commit(secondRecipe);
+        Check(!tint.RequiresApply(secondRecipe) && tint.RequiresApply(secondRecipe, force: true),
+            "System configuration changes can explicitly reassert native tint even when the recipe is unchanged.");
+        tint.Reset();
+        Check(tint.RequiresApply(secondRecipe),
+            "Recreating an acrylic controller must reapply the tint from scratch.");
+
+        foreach (var requestedQuality in new[] { "Ultra", "Balanced", "Essential", "Solid" })
+        foreach (var nativeState in new string?[] { null, "Pending", "Detached", "Unavailable", "Fallback", "HighContrast", "Active" })
+        {
+            var rimQuality = GlassRimStatePolicy.AppearanceQuality(requestedQuality, nativeState);
+            Check(rimQuality == (nativeState == "Active" ? requestedQuality : "Solid"),
+                "Native glass highlight must remain hidden before activation, after detach and through fallback.");
+            if (nativeState == "Active")
+                Check(rimQuality == requestedQuality,
+                    "An active compositor must restore the selected quality without modifying the preference.");
+        }
+        foreach (string quality in GlassQuality.Choices)
+        foreach (bool contrast in new[] { false, true })
+        foreach (bool simple in new[] { false, true })
+        {
+            var rim = GlassRimAppearance.For(quality, contrast, simple);
+            Check(rim.Visible == (!contrast && !simple && (quality is "Ultra" or "Balanced")),
+                "Only native glass quality without accessibility overrides should display a bevel.");
+            Check(rim.Opacity == (quality == "Ultra" ? .85 : .65),
+                "The Ultra bevel must have the stronger opacity without changing fallback colors.");
+        }
+        Check(!GlassRimAppearance.For(null, false, false).Visible
+            && !GlassRimAppearance.For("Essential", false, false).Visible,
+            "Unknown and essential/solid fallback tiers must not display decorative edge lighting.");
+
         foreach (string mood in AuraPalette.Moods)
         foreach (string style in GlassStyle.Choices)
         foreach (string role in new[] { "MenuBar", "Frame", "Dock" })

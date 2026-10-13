@@ -11,6 +11,7 @@ ForegroundLookupChecks.Run();
 NativeUiDispatchChecks.Run();
 GlassAttachmentGateChecks.Run();
 GlassUiDispatchChecks.Run();
+GlassStateDispatchChecks.Run();
 
 static void Check(bool condition, string message)
 {

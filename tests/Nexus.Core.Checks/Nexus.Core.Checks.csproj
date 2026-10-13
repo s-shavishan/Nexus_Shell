@@ -10,6 +10,7 @@
     <ProjectReference Include="../../src/Nexus.Runtime/Nexus.Runtime.csproj" />
     <Compile Include="../../src/Nexus.Shell/Services/CaptionRegionLayout.cs" Link="CaptionRegionLayout.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/LiveResizeRegionPolicy.cs" Link="LiveResizeRegionPolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/MenuBarNativePlacement.cs" Link="MenuBarNativePlacement.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/ChromeAppearancePolicy.cs" Link="ChromeAppearancePolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/InputProbeOptions.cs" Link="InputProbeOptions.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/InputProbeDriver.cs" Link="InputProbeDriver.cs" />
@@ -25,8 +26,12 @@
     <Compile Include="../../src/Nexus.Shell/Services/LaunchpadCatalogCache.cs" Link="LaunchpadCatalogCache.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/LaunchpadRefreshGate.cs" Link="LaunchpadRefreshGate.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/GlassRecipe.cs" Link="GlassRecipe.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/GlassTintRetention.cs" Link="GlassTintRetention.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/GlassRimPolicy.cs" Link="GlassRimPolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/GlassRimStatePolicy.cs" Link="GlassRimStatePolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/GlassAttachmentGate.cs" Link="GlassAttachmentGate.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/GlassUiDispatch.cs" Link="GlassUiDispatch.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/GlassStateDispatchGate.cs" Link="GlassStateDispatchGate.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/MaximizedWindowLayout.cs" Link="MaximizedWindowLayout.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/WindowPlacementPlan.cs" Link="WindowPlacementPlan.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/AppIconPolicy.cs" Link="AppIconPolicy.cs" />
@@ -45,6 +50,7 @@
     <Compile Include="../../src/Nexus.Shell/Services/DockForegroundGeometryPolicy.cs" Link="DockForegroundGeometryPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DockFrameLayoutPolicy.cs" Link="DockFrameLayoutPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DockMotionPolicy.cs" Link="DockMotionPolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/DockIndicatorUpdatePolicy.cs" Link="DockIndicatorUpdatePolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DockPreviewPolicy.cs" Link="DockPreviewPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DockThumbnailRetry.cs" Link="DockThumbnailRetry.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/WindowThumbnail.cs" Link="WindowThumbnail.cs" />

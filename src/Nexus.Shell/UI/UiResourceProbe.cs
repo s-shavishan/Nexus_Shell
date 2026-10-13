@@ -73,12 +73,42 @@ internal static class UiResourceProbe
             frame.UpdateLayout();
             if (launchpad.ActualWidth <= 0 || menu.ActualHeight <= 0) throw new InvalidOperationException("The production surfaces did not lay out.");
             checks.Add("Production menu bar and populated Launchpad layout");
+            stage = "retained-menu-bar-refresh";
+            menu.VerifyRetainedRefresh();
+            checks.Add("100 unchanged menu bar refreshes retain native title and clock XAML properties");
             stage = "retained-launchpad-rendering";
             launchpad.VerifyRetainedRendering();
             checks.Add("Twenty unchanged Launchpad renders retain item source and page-control identities");
+            stage = "retained-dock-indicator-layout";
+            dock.VerifyRetainedIndicatorLayout();
+            checks.Add("100 unchanged dock indicator frames retain size/opacity, while real state changes repaint");
+            stage = "retained-dock-appearance";
+            dock.VerifyRetainedAppearance();
+            checks.Add("100 native dock appearance refreshes preserve launcher and clock brushes");
             stage = "retained-dock-density";
             dock.VerifyRetainedDensity();
             checks.Add("Production dock: compact/normal changes update actual icon geometry; twenty unchanged snapshots retain buttons and avoid width writes");
+            stage = "dock-material-ownership";
+            if (dock.Frame.Background is not Microsoft.UI.Xaml.Media.SolidColorBrush { Color.A: 255 })
+                throw new InvalidOperationException("A standalone dock requires a fully opaque material.");
+            dock.MaterialOwnedByWindow = true;
+            int dockPaintWrites = 0;
+            long dockBackgroundToken = dock.Frame.RegisterPropertyChangedCallback(Border.BackgroundProperty, (_, _) => dockPaintWrites++);
+            long dockBorderToken = dock.Frame.RegisterPropertyChangedCallback(Border.BorderBrushProperty, (_, _) => dockPaintWrites++);
+            try
+            {
+                for (int i = 0; i < 100; i++) dock.ApplyAppearance();
+                if (dockPaintWrites != 0)
+                    throw new InvalidOperationException("Dock view overwrote the window-owned native glass or solid fallback brushes.");
+            }
+            finally
+            {
+                dock.Frame.UnregisterPropertyChangedCallback(Border.BackgroundProperty, dockBackgroundToken);
+                dock.Frame.UnregisterPropertyChangedCallback(Border.BorderBrushProperty, dockBorderToken);
+                dock.MaterialOwnedByWindow = false;
+                dock.ApplyAppearance();
+            }
+            checks.Add("Standalone dock remains opaque; 100 window-owned appearance refreshes do not overwrite native fallback paints");
             stage = "pinned-dock-icon-refresh";
             dock.VerifyPinnedIconRefresh();
             checks.Add("Explicit catalog refresh recreates pinned icon controls; ordinary dock polls retain refreshed buttons");
@@ -145,8 +175,34 @@ internal static class UiResourceProbe
                 }
                 if (!material.Status.Contains("requested " + quality))
                     throw new InvalidOperationException("The surface did not disclose requested and effective quality.");
+                // Native XAML probe: quality and fallback must retain the same
+                // bevel element and must not rewrite identical properties.
+                int writes = GlassDecorations.PropertyWrites(frame);
+                for (int i = 0; i < 100; i++)
+                    GlassDecorations.Apply(frame, environment.Theme, material.Quality.Effective);
+                if (GlassDecorations.PropertyWrites(frame) != writes)
+                    throw new InvalidOperationException("Unchanged Liquid Glass bevel styling triggered repeated XAML dependency-property writes.");
             }
             checks.Add("Four requested glass qualities; native surface retains the user's selection and palette tiers detach backdrop with an opaque base");
+            stage = "glass-retained-paint";
+            // Ensure a stable solid/glass-fallback material doesn't keep
+            // invalidating the WinUI render tree from identical brush writes.
+            int backgroundWrites = 0, borderWrites = 0;
+            long bgToken = frame.RegisterPropertyChangedCallback(Border.BackgroundProperty, (_, _) => backgroundWrites++);
+            long edgeToken = frame.RegisterPropertyChangedCallback(Border.BorderBrushProperty, (_, _) => borderWrites++);
+            try
+            {
+                for (int i = 0; i < 100; i++) material.Apply(window, frame, environment);
+                if (backgroundWrites != 0 || borderWrites != 0)
+                    throw new InvalidOperationException(
+                        $"Stable glass frame repainted XAML brushes on repeated appearance updates: background={backgroundWrites}, edge={borderWrites}.");
+            }
+            finally
+            {
+                frame.UnregisterPropertyChangedCallback(Border.BackgroundProperty, bgToken);
+                frame.UnregisterPropertyChangedCallback(Border.BorderBrushProperty, edgeToken);
+            }
+            checks.Add("100 native WinUI material refreshes preserve retained frame background/edge brushes without layout-invalidating writes");
             session.State.NativeGlass = false; material.Apply(window, frame, environment); frame.UpdateLayout();
             checks.Add("Native glass detach and opaque palette path");
         }

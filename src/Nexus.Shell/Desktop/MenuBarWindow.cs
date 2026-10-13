@@ -40,7 +40,11 @@ internal sealed class MenuBarWindow : Window
         if (_closed) return;
         var monitor = ShellLayerInterop.Monitor(_environment.Desktop.Handle).Monitor.Bounds; double scale = ShellLayerInterop.Scale(_environment.Desktop.Handle);
         int height = Math.Min(monitor.Height, Math.Max(1, (int)Math.Round(DesktopLayout.MenuBarHeight * scale)));
-        ShellLayerInterop.SetWindowPos(_handle, ShellLayerInterop.Topmost, monitor.X, monitor.Y, monitor.Width, height, 0x0010);
+        var destination = new ShellRect(monitor.X, monitor.Y, monitor.Width, height);
+        bool hasCurrent = NativeMethods.GetWindowRect(_handle, out var current);
+        uint flags = MenuBarNativePlacement.Flags(hasCurrent, current.Bounds, destination);
+        ShellLayerInterop.SetWindowPos(_handle, ShellLayerInterop.Topmost,
+            destination.X, destination.Y, destination.Width, destination.Height, flags);
         var target = MenuBarLayout.Bounds(monitor, scale, _attached);
         var local = target with { X = target.X - monitor.X, Y = target.Y - monitor.Y };
         if (_bounds == local && _scale == scale) return;
@@ -88,5 +92,5 @@ internal sealed class MenuBarWindow : Window
         if (fullscreen && _visible) { ResetMotion(); if (_bounds is { } bounds) Clip(bounds); _window.Hide(); _visible = false; }
         else if (!fullscreen && (!_visible || !NativeMethods.Visible(_handle))) { _window.Show(false); _visible = true; }
     }
-    internal void ApplyAppearance() { if (_closed) return; _material.Apply(this, _frame, _environment, "MenuBar"); _frame.BorderBrush = _environment.Theme.Edge; _view.ApplyAppearance(); _bounds = null; Position(); }
+    internal void ApplyAppearance() { if (_closed) return; _material.Apply(this, _frame, _environment, "MenuBar"); GlassPaintRetention.Edge(_frame, _environment.Theme.Edge); _view.ApplyAppearance(); _bounds = null; Position(); }
 }
