@@ -22,6 +22,7 @@ internal sealed class SearchWindow : DesktopPanelWindow
     private readonly TextBlock _hint = new() { Text = "↑ ↓ select   ·   Enter open   ·   Ctrl+Enter open folder   ·   Ctrl+Shift+C copy path", FontSize = 11, TextWrapping = TextWrapping.Wrap };
     private readonly ProgressBar _progress = new() { IsIndeterminate = false, Height = 2, Visibility = Visibility.Collapsed };
     private readonly Border _listFrame = new() { CornerRadius = new CornerRadius(14), BorderThickness = new Thickness(1), Padding = new Thickness(5) };
+    private readonly Border _launchFrame = new() { BorderThickness = new Thickness(1), Padding = new Thickness(8, 10, 8, 10) };
     private readonly Button _open, _folder, _copy, _previous, _next;
     private readonly LatestWorkQueue _work = new();
     private readonly DispatcherTimer _debounce = new() { Interval = TimeSpan.FromMilliseconds(140) };
@@ -29,11 +30,60 @@ internal sealed class SearchWindow : DesktopPanelWindow
     private int _generation, _offset;
     private SearchReply? _reply;
     private bool _initializing = true, _validation;
-    internal SearchWindow(DesktopEnvironment environment) : this(environment, new Grid { RowSpacing = 10 }) { }
-    private SearchWindow(DesktopEnvironment environment, Grid body) : base(environment, "Search", body, 790, 660, center: true, animateBody: false)
+    internal SearchWindow(DesktopEnvironment environment) : this(environment, new Grid { RowSpacing = 12 }) { }
+    private SearchWindow(DesktopEnvironment environment, Grid body) : base(environment, "Search", body, 790, 700, center: true, animateBody: false)
     {
-        foreach (bool flexible in new[] { false, false, false, true, false, false, false }) body.RowDefinitions.Add(new() { Height = flexible ? new GridLength(1, GridUnitType.Star) : GridLength.Auto });
+        foreach (bool flexible in new[] { false, false, false, false, true, false, false, false })
+            body.RowDefinitions.Add(new() { Height = flexible ? new GridLength(1, GridUnitType.Star) : GridLength.Auto });
         body.Children.Add(_query);
+
+        // The reference's immediately accessible application strip belongs
+        // inside Spotlight, not in the search-results virtualized list.
+        // Each button calls the existing shell action; no second launcher or
+        // duplicate catalog/index is created.
+        var quickApps = new StackPanel
+        {
+            Orientation = Orientation.Horizontal, Spacing = 6,
+            HorizontalAlignment = HorizontalAlignment.Center
+        };
+        void QuickApp(string name, string icon, Action open)
+        {
+            var image = NexusIcons.Image(icon, 34);
+            var label = new TextBlock
+            {
+                Text = name, FontSize = 12,
+                TextAlignment = TextAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            };
+            var contents = new StackPanel { Spacing = 7, HorizontalAlignment = HorizontalAlignment.Center };
+            contents.Children.Add(image); contents.Children.Add(label);
+            var button = new Button
+            {
+                Content = contents, Width = 104, Height = 90,
+                CornerRadius = new CornerRadius(14),
+                Style = (Style)Application.Current.Resources["QuietButton"],
+                HorizontalContentAlignment = HorizontalAlignment.Center
+            };
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, "Open " + name);
+            ToolTipService.SetToolTip(button, "Open " + name);
+            button.Click += (_, _) => { Hide(); open(); };
+            quickApps.Children.Add(button);
+        }
+        QuickApp("Launchpad", "Launchpad", () => Environment.ShowMenu());
+        QuickApp("Files", "Files", () => Environment.ShowFiles());
+        QuickApp("Explore", "Explore", () => Environment.ShowSections("Explore"));
+        QuickApp("Notes", "Note", () => Environment.ShowSections("Study"));
+        QuickApp("Settings", "Settings", () => Environment.ShowQuickSettings());
+        QuickApp("Windows", "Windows", () => Environment.ShowWindowOverview());
+        _launchFrame.Child = new ScrollViewer
+        {
+            Content = quickApps,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            VerticalScrollMode = ScrollMode.Disabled
+        };
+        Grid.SetRow(_launchFrame, 1);
+        body.Children.Add(_launchFrame);
         var filters = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         foreach (var category in Enum.GetValues<SearchCategory>()) _category.Items.Add(new ComboBoxItem { Content = category == SearchCategory.All ? "All results" : category == SearchCategory.Code ? "Source code" : category.ToString(), Tag = category });
         _category.SelectedIndex = 0;
@@ -41,16 +91,16 @@ internal sealed class SearchWindow : DesktopPanelWindow
         _scope.Items.Add(new ComboBoxItem { Content = "Indexed drives", Tag = SearchScope.IndexedDrives }); _scope.SelectedIndex = 0;
         filters.Children.Add(_category); filters.Children.Add(_scope); filters.Children.Add(ActionButton("Refresh", () => Schedule(resetPage: false, immediate: true)));
         var setup = ActionButton("Engine setup", () => { }); setup.Flyout = Setup(); filters.Children.Add(setup);
-        var filterScroll = new ScrollViewer { Content = filters, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled }; Grid.SetRow(filterScroll, 1); body.Children.Add(filterScroll);
-        Grid.SetRow(_progress, 2); body.Children.Add(_progress);
-        _listFrame.Child = _results; Grid.SetRow(_listFrame, 3); body.Children.Add(_listFrame);
-        Grid.SetRow(_status, 4); body.Children.Add(_status);
+        var filterScroll = new ScrollViewer { Content = filters, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled }; Grid.SetRow(filterScroll, 2); body.Children.Add(filterScroll);
+        Grid.SetRow(_progress, 3); body.Children.Add(_progress);
+        _listFrame.Child = _results; Grid.SetRow(_listFrame, 4); body.Children.Add(_listFrame);
+        Grid.SetRow(_status, 5); body.Children.Add(_status);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
         _open = ActionButton("Open", OpenSelected); _folder = ActionButton("Open folder", RevealSelected); _copy = ActionButton("Copy path", () => _ = CopySelectedAsync());
         _previous = ActionButton("Previous", () => Page(-1)); _next = ActionButton("Next", () => Page(1));
         foreach (var button in new[] { _open, _folder, _copy, _previous, _next }) actions.Children.Add(button);
-        var actionScroll = new ScrollViewer { Content = actions, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled }; Grid.SetRow(actionScroll, 5); body.Children.Add(actionScroll);
-        var footer = new StackPanel { Spacing = 5 }; footer.Children.Add(_hint); footer.Children.Add(_engine); Grid.SetRow(footer, 6); body.Children.Add(footer);
+        var actionScroll = new ScrollViewer { Content = actions, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled }; Grid.SetRow(actionScroll, 6); body.Children.Add(actionScroll);
+        var footer = new StackPanel { Spacing = 5 }; footer.Children.Add(_hint); footer.Children.Add(_engine); Grid.SetRow(footer, 7); body.Children.Add(footer);
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_query, "Search names and desktop controls");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_category, "Result category");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_scope, "File search scope");
@@ -213,8 +263,13 @@ internal sealed class SearchWindow : DesktopPanelWindow
     {
         base.ApplyAppearance(); var theme = Environment.Theme;
         _query.Foreground = _results.Foreground = theme.Brush("NexusText"); _status.Foreground = _engine.Foreground = _hint.Foreground = theme.Brush("NexusMuted");
-        _query.Background = _listFrame.Background = theme.Material("Card", Environment.Session.State.NativeGlass); _query.BorderBrush = _listFrame.BorderBrush = theme.Edge;
-        _listFrame.CornerRadius = _query.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 14);
+        _query.Background = _listFrame.Background = theme.Material("Card", Environment.Session.State.NativeGlass);
+        _launchFrame.Background = MidnightGlassMetrics.ReferenceEnabled(theme.Palette, theme.HighContrast)
+            ? theme.Surface("Dock") : theme.Material("Card", Environment.Session.State.NativeGlass);
+        _query.BorderBrush = _listFrame.BorderBrush = _launchFrame.BorderBrush = theme.Edge;
+        _query.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : MidnightGlassMetrics.ControlRadius);
+        _launchFrame.CornerRadius = _listFrame.CornerRadius =
+            new CornerRadius(theme.HighContrast ? 0 : MidnightGlassMetrics.CardRadius);
         if (_rows.Count > 0) Render();
     }
 }

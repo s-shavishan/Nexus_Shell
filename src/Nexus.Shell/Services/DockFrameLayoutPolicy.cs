@@ -20,5 +20,5 @@ internal static class DockFrameLayoutPolicy
             frame.Bounds.Width, frame.Bounds.Height);
 
     internal static double CornerRadius(DockFrameGeometry frame)
-        => frame.Floating && !frame.HighContrast ? 22 : 0;
+        => frame.Floating && !frame.HighContrast ? MidnightGlassMetrics.DockRadius : 0;
 }

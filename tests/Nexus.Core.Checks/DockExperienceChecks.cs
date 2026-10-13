@@ -158,7 +158,7 @@ internal static class DockExperienceChecks
         Check(!DockFrameLayoutPolicy.RequiresLayout(frame, frame),
             "No-op ABN_POSCHANGED notifications must not rewrite dock frame properties.");
         Check(DockFrameLayoutPolicy.Clip(frame) == new ShellRect(180, 12, 480, 60)
-            && DockFrameLayoutPolicy.CornerRadius(frame) == 22,
+            && DockFrameLayoutPolicy.CornerRadius(frame) == MidnightGlassMetrics.DockRadius,
             "Negative monitor origins must produce a local native clip with floating corners.");
         Check(DockFrameLayoutPolicy.RequiresLayout(frame, frame with { Bounds = frame.Bounds with { Width = 520 } }),
             "Changed pin count and dock width must resize and clip the frame.");

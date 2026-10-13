@@ -28,7 +28,7 @@ internal sealed class QuickSettingsWindow : Window
         _environment = environment; _view = new(environment, environment.Hide);
         _view.MaterialStatus = () => _material.Status;
         _material.StatusChanged += _view.RefreshGlassStatus;
-        _frame = new Border { Child = _view, CornerRadius = new CornerRadius(16), BorderThickness = new Thickness(1) }; Content = _frame;
+        _frame = new Border { Child = _view, CornerRadius = new CornerRadius(MidnightGlassMetrics.FrameRadius), BorderThickness = new Thickness(1) }; Content = _frame;
         _handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
         _window = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(_handle));
         _window.Title = "Nexus Control Center"; WindowSwitcherPolicy.Request(() => _window.IsShownInSwitchers = false, error => Log.Write("Switcher API unavailable; using native tool-window styling", error));
@@ -61,8 +61,8 @@ internal sealed class QuickSettingsWindow : Window
     {
         var theme = _environment.Theme;
         _frame.RequestedTheme = theme.ElementTheme; _material.Apply(this, _frame, theme, _environment.State); _frame.BorderBrush = theme.Edge;
-        _frame.BorderThickness = new Thickness(1); _frame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 22);
-        _chrome.SetCorners(theme.HighContrast, 22); _motion.Refresh(); _view.ApplyAppearance();
+        _frame.BorderThickness = new Thickness(1); _frame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : MidnightGlassMetrics.FrameRadius);
+        _chrome.SetCorners(theme.HighContrast, MidnightGlassMetrics.FrameRadius); _motion.Refresh(); _view.ApplyAppearance();
     }
     internal void RefreshPreferences() => _view.RefreshPreferences();
 }
