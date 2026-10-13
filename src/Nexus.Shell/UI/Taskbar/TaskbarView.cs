@@ -316,7 +316,7 @@ internal sealed class TaskbarView : Grid
             SetIndicatorLayout(item.Indicator, 22, 1);
             _dockMotion.SetIndicator(item.Indicator, presence, initialized);
         }
-        if (item.State == state && item.Button.IsEnabled == valid && item.PreviewsEnabled == _environment.Session.State.DockPreviews) continue;
+        if (item.State == state && item.Button.IsEnabled == valid && item.PreviewsEnabled == _environment.Session.State.DockPreviews) return;
         item.State = state;
         if (item.Button.IsEnabled != valid) item.Button.IsEnabled = valid;
         item.PreviewsEnabled = _environment.Session.State.DockPreviews;
