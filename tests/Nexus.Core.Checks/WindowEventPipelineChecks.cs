@@ -297,7 +297,11 @@ internal static class WindowEventPipelineChecks
         Check(!DockForegroundDiscoveryPolicy.IsUnknownForeground(true, IntPtr.Zero, knownForeground),
             "Null foreground must not trigger an unknown-app scan.");
         Check(!DockForegroundDiscoveryPolicy.IsUnknownForeground(false, new IntPtr(103), knownForeground),
-            "Non-foreground events already have their own enumeration decision.");
+            "Ordinary non-foreground geometry-free events do not need a discovery pass.");
+        Check(!DockForegroundDiscoveryPolicy.IsUnknownForeground(true, new IntPtr(102), knownForeground),
+            "A move-size completion for an already-known app must remain scan-free.");
+        Check(DockForegroundDiscoveryPolicy.IsUnknownForeground(true, new IntPtr(103), knownForeground),
+            "A move-size completion must discover an unknown active HWND after a missed create event.");
         Check(!DockForegroundDiscoveryPolicy.IsUnknownForeground(true, new IntPtr(101), knownForeground),
             "Alt+Tab between known apps must remain enumeration-free.");
         Check(DockForegroundDiscoveryPolicy.IsUnknownForeground(true, new IntPtr(103), knownForeground),

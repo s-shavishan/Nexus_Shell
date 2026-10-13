@@ -3,14 +3,16 @@ using Nexus.Shell.Models;
 namespace Nexus.Shell.Services;
 
 // A missing foreground HWND may indicate that its creation/show WinEvent was
-// missed. Ordinary activation among already-listed apps never needs a scan.
+// missed. Examine it on activation OR after a completed move/resize so the
+// geometry fast path does not hide an otherwise missed create/show event.
+// Ordinary activation and move/resize among known apps remain scan-free.
 internal static class DockForegroundDiscoveryPolicy
 {
-    internal static bool IsUnknownForeground(bool foregroundChanged,
+    internal static bool IsUnknownForeground(bool shouldInspect,
         IntPtr foreground, IReadOnlyList<RunningWindow> knownWindows)
     {
         ArgumentNullException.ThrowIfNull(knownWindows);
-        if (!foregroundChanged || foreground == IntPtr.Zero) return false;
+        if (!shouldInspect || foreground == IntPtr.Zero) return false;
         return !knownWindows.Any(window => window.Handle == foreground);
     }
 }

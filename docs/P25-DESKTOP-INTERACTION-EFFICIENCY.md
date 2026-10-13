@@ -57,3 +57,9 @@ The first P2.5 change exposed a regression: `EVENT_SYSTEM_MOVESIZEEND` could ent
 - New portable tests cover a 1,000-event mixed burst, stale-flag cleanup, refused admission recovery, inline delivery and forced foreground repair cooldown.
 
 **CI guard:** app/WinUI native compile and P2.5 branch checks still require an actual AppVeyor run. The newly reported latest `main` status is green for the merged #26 baseline, but that is not proof of this branch.
+
+## Stage 4: Recovery for missed window creation during geometry-only delivery
+
+An event-only geometry fast path must not postpone recognition of an active window that was never added to the dock because its create/show WinEvent was missed. The existing unknown-foreground discovery policy is now consulted on **either** a foreground event **or** a completed move/resize event. It returns false for known HWNDs and invalid foreground values; the caller still performs native eligibility/ownership/cloaking checks before scheduling a task-list scan. All other non-foreground fast-path notifications are unchanged.
+
+Portable checks cover known and unknown HWNDs during move/size completion; the regular five-second recovery scan remains in place.

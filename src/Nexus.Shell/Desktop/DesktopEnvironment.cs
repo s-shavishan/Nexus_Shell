@@ -361,7 +361,7 @@ internal sealed partial class DesktopEnvironment
                 // eligible external foreground HWND may need recovery after
                 // a missed create/show notification.
                 bool unknown = DockForegroundDiscoveryPolicy.IsUnknownForeground(
-                    foregroundChanged, currentForeground, _windows);
+                    foregroundChanged || geometryChanged, currentForeground, _windows);
                 bool discover = false;
                 if (unknown && currentForeground != Desktop.Handle
                     && !ShellLayerInterop.IsExplorerDesktopWindow(currentForeground)
