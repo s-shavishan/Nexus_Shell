@@ -29,7 +29,7 @@ internal sealed class TaskbarView : Grid
     private readonly DispatcherTimer _hoverTimer = new() { Interval = TimeSpan.FromMilliseconds(DockPreviewPolicy.HoverDelayMilliseconds) };
     private readonly EventHandler<object> _hoverTick;
     private DockItem? _hoverItem;
-    private bool _baselineReconciled, _released;
+    private bool _baselineReconciled, _released, _refreshIncomplete;
     private bool? _appliedCompactDock;
     internal bool ContextMenuOpen => _openContextMenus.Count > 0;
     private sealed class DockItem
@@ -171,6 +171,11 @@ internal sealed class TaskbarView : Grid
     {
         if (_released) return;
         using var work = UiTrace.Measure("dock-refresh", "Dock", windows.Count);
+        // Reconcile may have failed after updating the retained DockWindowSet,
+        // but before completing the WinUI child list. A later identical native
+        // snapshot must not bypass the repair path.
+        bool recovering = _refreshIncomplete;
+        _refreshIncomplete = true;
         var pins = _environment.Session.State.PinnedApps.ToArray();
         bool pinsChanged = !_shownPins.SequenceEqual(pins);
         if (pinsChanged)
@@ -179,12 +184,15 @@ internal sealed class TaskbarView : Grid
             _pinImages.Clear(); _pins.Children.Clear(); foreach (var pin in pins) _pins.Children.Add(PinButton(pin)); _shownPins = pins;
         }
         bool windowsChanged = _windowSet.Reconcile(windows, destroyedHandles);
-        if (_baselineReconciled && !pinsChanged && !windowsChanged)
+        if (!DockVisualRecoveryPolicy.RequiresFullReconcile(
+                _baselineReconciled, pinsChanged, windowsChanged, recovering,
+                _windowSet.Windows.Count, _items.Count, _windows.Children.Count))
         {
-            // A foreground/minimize change still needs state icons and actions,
-            // but a stable snapshot does not need XAML layout reconciliation.
+            // A stable layout needs only a state update; a previous partial
+            // failure or missing visual forces a full recovery instead.
             RefreshWindowStates();
             if (_appliedCompactDock != _environment.Session.State.CompactDock) ApplyDensity();
+            _refreshIncomplete = false;
             return;
         }
         var live = _windowSet.Windows.Select(DockWindowIdentity.Of).ToHashSet();
@@ -206,8 +214,20 @@ internal sealed class TaskbarView : Grid
             }
             if (item.Window != window) { item.Window = window; item.State = null; }
         }
+        if (DockVisualRecoveryPolicy.RequiresVisualRebuild(
+                recovering, _windowSet.Windows.Count, _windows.Children.Count))
+        {
+            // Reattach the existing live controls in the exact retained order.
+            // This only runs following an interrupted refresh or a broken
+            // child count, not on normal foreground/window notifications.
+            CancelPreviewRequest();
+            _windows.Children.Clear();
+            foreach (var window in _windowSet.Windows)
+                _windows.Children.Add(_items[DockWindowIdentity.Of(window)].Button);
+        }
         RefreshWindowStates();
         ApplyDensity(); RefreshClock(); _baselineReconciled = true;
+        _refreshIncomplete = false;
     }
     private DockItem CreateWindowButton(RunningWindow window)
     {
