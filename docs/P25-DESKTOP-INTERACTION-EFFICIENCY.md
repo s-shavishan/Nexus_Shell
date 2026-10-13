@@ -76,3 +76,7 @@ No animation durations, easing curves, dock indicators, pointer hit regions, pre
 - The image's `Loaded` event now consumes an outstanding **first-arrival-only** cue; `PrepareMotion` no longer discards that cue simply because the image has not loaded at the time the parent button loads.
 - Button `Unloaded` still cancels pending cues and releases compositor resources, so reused/reparented visuals cannot replay stale minimize, restore or activation feedback.
 - Validate on real WinUI by opening 10+ applications in quick succession, toggling compact mode, removing/re-adding pinned icons and moving between reduced-effects and animated modes.
+
+### Pinned-app arrival consistency
+
+New pinned icons now use the same load-order-safe first-arrival behavior as native window icons: both the icon and button `Loaded` handlers can consume the one pending arrival, but only after the image is actually loaded and the dock motion controller exists. Unloading cancels the pending cue and detaches the compositor visual, preventing a removed/reparented pin from replaying its original entrance animation.
