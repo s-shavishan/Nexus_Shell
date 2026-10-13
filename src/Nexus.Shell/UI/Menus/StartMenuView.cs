@@ -11,7 +11,7 @@ using System.ComponentModel;
 
 namespace Nexus.Shell.UI.Menus;
 
-internal sealed class LaunchpadTile(AppEntry app) : INotifyPropertyChanged
+internal sealed class LaunchpadTile(AppEntry app, bool highContrast) : INotifyPropertyChanged
 {
     internal AppEntry App => app;
     public string Name => app.Name;
@@ -20,7 +20,9 @@ internal sealed class LaunchpadTile(AppEntry app) : INotifyPropertyChanged
     private Visibility _placeholder = LaunchpadArtworkPolicy.UsesNexusArtwork(app.Id)
         ? Visibility.Collapsed : Visibility.Visible;
     public string Monogram => LaunchpadArtworkPolicy.Monogram(app.Name);
-    public SolidColorBrush TileBrush { get; } = new(ShellTheme.Color(LaunchpadArtworkPolicy.Background(app.Name)));
+    public SolidColorBrush TileBrush { get; } = new(highContrast
+        ? Microsoft.UI.Colors.Transparent
+        : ShellTheme.Color(LaunchpadArtworkPolicy.Background(app.Name)));
     public Visibility PlaceholderVisibility { get => _placeholder; private set
         { if (_placeholder == value) return; _placeholder = value; PropertyChanged?.Invoke(this, new(nameof(PlaceholderVisibility))); } }
     public ImageSource? Icon
@@ -260,7 +262,7 @@ internal sealed class StartMenuView : Grid, IDisposable
         var shown = LaunchpadCatalog.Page(_filtered, _page);
         if (!_shown.SequenceEqual(shown))
         {
-            _shown = shown.ToArray(); var tiles = shown.Select(app => new LaunchpadTile(app)).ToArray(); _apps.ItemsSource = tiles;
+            _shown = shown.ToArray(); var tiles = shown.Select(app => new LaunchpadTile(app, _environment.Theme.HighContrast)).ToArray(); _apps.ItemsSource = tiles;
             _ = RefreshIconsAsync(tiles, ++_renderVersion);
         }
         _previous.IsEnabled = _page > 0; _next.IsEnabled = _page + 1 < pages;
