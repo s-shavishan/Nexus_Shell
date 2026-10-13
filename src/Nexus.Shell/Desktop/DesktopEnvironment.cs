@@ -225,7 +225,7 @@ internal sealed partial class DesktopEnvironment
         // A heartbeat already covered by an in-flight enumeration must not
         // schedule an immediately redundant native scan. Real actions/events
         // still request a successor if they arrive while one is running.
-        UpdateTaskbar(recoveryHeartbeat: true);
+        UpdateTaskbarCore(recoveryHeartbeat: true);
         if (!Session.State.UsageTracking) return;
         try
         {
@@ -250,7 +250,11 @@ internal sealed partial class DesktopEnvironment
         { if (!IsStopping && !_coreFailureReported) { _coreFailureReported = true; Report("Nexus Core is unavailable. The desktop remains open while recovery is attempted", ex); } }
         finally { _checkingCore = false; }
     }
-    internal async void UpdateTaskbar(bool recoveryHeartbeat = false)
+    // Preserve the original zero-argument API (including method-group use
+    // by other desktop components) while distinguishing recovery heartbeats.
+    internal void UpdateTaskbar() => UpdateTaskbarCore(recoveryHeartbeat: false);
+
+    private async void UpdateTaskbarCore(bool recoveryHeartbeat)
     {
         if (IsStopping || Taskbar is null) return;
         var admission = WindowScanAdmissionPolicy.Decide(_refreshing, recoveryHeartbeat);
@@ -315,21 +319,21 @@ internal sealed partial class DesktopEnvironment
             // or the failure counter once shutdown has started.
             if (!IsStopping)
             {
-            int nextDelay = _windowScanBackoff.Complete(applied);
-            // Failure must never inherit an already-armed fast timer. It
-            // takes ownership of the next retry and applies backoff even if
-            // new WinEvents arrived during enumeration. A successful scan
-            // leaves an existing coalesced notification timer undisturbed.
-            var plan = WindowScanTimerPolicy.Decide(
-                IsStopping, applied, _windowRefreshPending || _dockLifecycle.HasPending,
-                _windowRefreshTimer.IsEnabled);
-            if (plan == WindowScanTimerAction.Restart)
-                _windowRefreshTimer.Stop();
-            if (plan is WindowScanTimerAction.Start or WindowScanTimerAction.Restart)
-            {
-                _windowRefreshTimer.Interval = TimeSpan.FromMilliseconds(nextDelay);
-                _windowRefreshTimer.Start();
-            }
+                int nextDelay = _windowScanBackoff.Complete(applied);
+                // Failure must never inherit an already-armed fast timer. It
+                // takes ownership of the next retry and applies backoff even if
+                // new WinEvents arrived during enumeration. A successful scan
+                // leaves an existing coalesced notification timer undisturbed.
+                var plan = WindowScanTimerPolicy.Decide(
+                    IsStopping, applied, _windowRefreshPending || _dockLifecycle.HasPending,
+                    _windowRefreshTimer.IsEnabled);
+                if (plan == WindowScanTimerAction.Restart)
+                    _windowRefreshTimer.Stop();
+                if (plan is WindowScanTimerAction.Start or WindowScanTimerAction.Restart)
+                {
+                    _windowRefreshTimer.Interval = TimeSpan.FromMilliseconds(nextDelay);
+                    _windowRefreshTimer.Start();
+                }
             }
         }
     }
