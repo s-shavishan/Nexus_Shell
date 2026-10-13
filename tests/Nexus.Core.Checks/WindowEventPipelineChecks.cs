@@ -387,6 +387,32 @@ internal static class WindowEventPipelineChecks
                 taskList, taskList.ToArray(), new HashSet<IntPtr>(), resetAll: false),
             "Ordinary identical recovery scans must preserve retained dock layout.");
 
+        // Native EnumWindows follows z-order; dock entries intentionally do
+        // not. Pure Alt+Tab reordering should never rebuild XAML controls.
+        Check(WindowListSnapshotPolicy.EquivalentDockEntries(taskList, taskList.Reverse().ToArray()),
+            "Dock identity/content equivalence must ignore native z-order.");
+        Check(!WindowListSnapshotPolicy.Equivalent(taskList, taskList.Reverse().ToArray()),
+            "Window board native snapshot equivalence must remain z-order-sensitive.");
+        Check(!WindowListSnapshotPolicy.RequiresDockRefresh(taskList,
+                taskList.Reverse().ToArray(), new HashSet<IntPtr>(), resetAll: false),
+            "An Alt+Tab z-order change alone must not trigger dock reconciliation.");
+        Check(!WindowListSnapshotPolicy.EquivalentDockEntries(taskList,
+                [taskList[0], taskList[0]]),
+            "Duplicate window identities must never be treated as an equivalent dock snapshot.");
+        Check(!WindowListSnapshotPolicy.EquivalentDockEntries(taskList,
+                [taskList[0] with { ProcessId = 9999 }, taskList[1]]),
+            "A reused native HWND with a new PID must invalidate the dock snapshot.");
+        Check(!WindowListSnapshotPolicy.EquivalentDockEntries(taskList,
+                [taskList[0] with { ProcessName = "another-process" }, taskList[1]]),
+            "Process metadata changes must invalidate a retained dock entry.");
+        Check(WindowListSnapshotPolicy.RequiresDockRefresh(taskList,
+                taskList.Reverse().ToArray(), new HashSet<IntPtr> { taskList[0].Handle }, resetAll: false),
+            "A true destroyed HWND must still invalidate a dock entry regardless of z-order.");
+        var largeDock = Enumerable.Range(1, 180).Select(n =>
+            new Nexus.Shell.Models.RunningWindow(new IntPtr(n), "Tool " + n, "tool", 4000 + n)).ToArray();
+        Check(WindowListSnapshotPolicy.EquivalentDockEntries(largeDock, largeDock.Reverse().ToArray()),
+            "A large reordered native window set must retain equivalent dock lifecycle identities.");
+
         int lookupCount = 0;
         (int Session, string Name)? Resolve(int pid)
         {

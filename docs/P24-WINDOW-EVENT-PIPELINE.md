@@ -102,3 +102,14 @@ The scan's lifecycle admission is now inside the protected `try` with a nullable
 Portable checks cover exception recovery prerequisites, active-timer replacement after failure, success-with-pending work, idle no-op, and every stop-state combination.
 
 **Status:** Committed source and portable test assertions only; the installed environment has no .NET SDK and the owner chose not to run AppVeyor or a Windows preview. The phase is not build or runtime verified.
+
+## Stage 10 — Skip dock reconciliation on pure native z-order changes
+
+The previous Stage 8 `RequiresDockRefresh` helper used the order-sensitive native snapshot comparer. That behavior is correct for the window board, but each foreground activation changes `EnumWindows` z-order without changing the dock's retained lifecycle order. It still triggered `TaskbarView.Refresh` and its managed pin/window reconciliation on a structurally unchanged dock.
+
+- `EquivalentDockEntries` compares all dock entries by HWND and PID **and** immutable record metadata, ignoring their enumeration order. Duplicate identities fail closed instead of silently dropping an entry. This is O(n) with one short-lived dictionary.
+- `RequiresDockRefresh` uses the dock-specific comparator. Native window-board snapshots still use the original order-sensitive `Equivalent`, preserving fresh z-order and foreground lookup correctness.
+- Explicit destroy/recreate invalidation and full-reset overflow still force reconciliation. Any actual added, removed or renamed app/window also triggers reconciliation.
+- Portable regression assertions cover Alt+Tab reordering, duplicate identities, HWND/PID reuse, changed process metadata, destroyed app HWNDs and 180-window reversed enumeration.
+
+**Validation:** Source changes and regression assertions are committed; no .NET compilation, AppVeyor execution or Windows preview has been performed.
