@@ -69,3 +69,10 @@ Portable checks cover known and unknown HWNDs during move/size completion; the r
 `DockMotionController.SetIndicator` now defers compositor work for indicators that have not yet reached WinUI `Loaded`, or that were temporarily unloaded during dock visual recovery. It discards stale compositor presence/animation tracking for those controls, while the owning `DockItem` keeps its latest logical `Presence`. `TaskbarView.PrepareMotion`, called on `Loaded`, reapplies that latest presence immediately with a settled baseline rather than animating from an obsolete state. Detach/reset also avoids asking WinUI for compositor visuals after unload. This is designed to prevent one transient unloaded-control failure from disabling motion for the whole shell session.
 
 No animation durations, easing curves, dock indicators, pointer hit regions, preview behavior, accessibility policy or native window state transitions have changed. Windows acceptance must still check reduced-effects/high contrast, rapid app minimize/restore, dynamic pin changes, app deletion and dock unload/reload while animating.
+
+### Load-order guarantees for dock animation
+
+- `TaskbarView.CreateWindowButton` observes the indicator's own `Loaded` event to settle its compositor presence when parent/button load order differs. Existing button `Loaded` remains in place and does not duplicate motion thanks to `DockIndicatorUpdatePolicy`'s retained-state check.
+- The image's `Loaded` event now consumes an outstanding **first-arrival-only** cue; `PrepareMotion` no longer discards that cue simply because the image has not loaded at the time the parent button loads.
+- Button `Unloaded` still cancels pending cues and releases compositor resources, so reused/reparented visuals cannot replay stale minimize, restore or activation feedback.
+- Validate on real WinUI by opening 10+ applications in quick succession, toggling compact mode, removing/re-adding pinned icons and moving between reduced-effects and animated modes.

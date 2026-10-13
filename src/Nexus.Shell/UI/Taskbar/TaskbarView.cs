@@ -287,6 +287,22 @@ internal sealed class TaskbarView : Grid
         };
         menu.Closed += (_, _) => { _openContextMenus.Remove(menu); _environment.Taskbar.RefreshVisibility(); };
         item.Button.ContextFlyout = menu;
+        // The child indicator and the button can receive Loaded in either
+        // order. Settle on the indicator's own Loaded event so deferred
+        // compositor work cannot be lost when the parent loads first.
+        item.Indicator.Loaded += (_, _) =>
+        {
+            if (!_released && _dockMotion is not null)
+                _dockMotion.SetIndicator(item.Indicator, item.Presence ?? DockPresence.Running, false);
+        };
+        // Preserve an arrival cue when the button loads before its image.
+        // Never replay it after unload, when it has already become stale.
+        item.Icon.Loaded += (_, _) =>
+        {
+            if (_released || _dockMotion is null || item.PendingCue != DockMotionCue.Arrive) return;
+            _dockMotion.Play(item.Icon, DockMotionCue.Arrive);
+            item.PendingCue = DockMotionCue.None;
+        };
         item.Button.Loaded += (_, _) =>
         {
             if (_released) return;
@@ -403,8 +419,10 @@ internal sealed class TaskbarView : Grid
         SetIndicatorLayout(item.Indicator, 22, 1);
         _dockMotion.SetIndicator(item.Indicator, item.Presence ?? DockPresence.Running, false);
         if (item.PendingCue == DockMotionCue.Arrive && item.Icon.IsLoaded)
-            _dockMotion.Play(item.Icon, item.PendingCue);
-        item.PendingCue = DockMotionCue.None;
+        {
+            _dockMotion.Play(item.Icon, DockMotionCue.Arrive);
+            item.PendingCue = DockMotionCue.None;
+        }
     }
     internal void CancelPreviewRequest() { _hoverTimer.Stop(); _hoverItem = null; }
     private bool TryGetAnchor(Button button, out ShellRect anchor)
