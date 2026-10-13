@@ -128,10 +128,10 @@ internal static class WindowPolishChecks
         foreach (string style in GlassStyle.Choices)
         foreach (string role in new[] { "MenuBar", "Frame", "Dock" })
         {
-            var recipe = GlassRecipe.For(AuraPalette.For(mood), role, style);
-            Check(AuraColor.Parse(recipe.Fallback).A == 255 && AuraColor.Parse(recipe.Start).A < 128 && AuraColor.Parse(recipe.End).A < 128,
+            var profileRecipe = GlassRecipe.For(AuraPalette.For(mood), role, style);
+            Check(AuraColor.Parse(profileRecipe.Fallback).A == 255 && AuraColor.Parse(profileRecipe.Start).A < 128 && AuraColor.Parse(profileRecipe.End).A < 128,
                 "Every profile must retain translucent paint and an opaque native fallback.");
-            Check(recipe.Frosted == (style == "Frosted") && recipe.TintOpacity is > 0 and < 1 && recipe.LuminosityOpacity is > 0 and <= 1,
+            Check(profileRecipe.Frosted == (style == "Frosted") && profileRecipe.TintOpacity is > 0 and < 1 && profileRecipe.LuminosityOpacity is > 0 and <= 1,
                 "All profiles must carry finite native composition parameters and the correct acrylic kind.");
         }
         Console.WriteLine($"PASS: {count} window/glass checks; caption-gap repair geometry, placement tiling, icon anchors, bounded retries across large desktops and all material profiles.");
