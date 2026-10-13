@@ -41,6 +41,7 @@
     <Compile Include="../../src/Nexus.Shell/Services/NotesWorkspace.cs" Link="NotesWorkspace.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/FilePresentation.cs" Link="FilePresentation.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DockVisibility.cs" Link="DockVisibility.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/DockVisibilityTransitionPolicy.cs" Link="DockVisibilityTransitionPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DockRefreshCadence.cs" Link="DockRefreshCadence.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DockPlacementSnapshot.cs" Link="DockPlacementSnapshot.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/WindowExitPolicy.cs" Link="WindowExitPolicy.cs" />

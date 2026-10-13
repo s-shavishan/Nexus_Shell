@@ -71,6 +71,34 @@ internal static class DockChecks
         work.Dequeue()(); work.Dequeue()();
         Check(positions == 5 && work.Count == 0, "Reentrant dock reposition updates must settle without lost or duplicate callbacks.");
 
+        // A logical hide can outlive the compositor animation that owns it.
+        Check(DockVisibilityTransitionPolicy.Decide(false, true, true, false, false)
+                == DockVisibilityAction.AnimateHide,
+            "A visible dock leaving its reveal corridor should animate once.");
+        Check(DockVisibilityTransitionPolicy.Decide(false, false, true, true, false)
+                == DockVisibilityAction.None,
+            "An in-flight hide must not cause another hide on an 80 ms poll.");
+        Check(DockVisibilityTransitionPolicy.Decide(false, false, true, false, false)
+                == DockVisibilityAction.HideImmediately,
+            "External native visibility must be corrected while the dock is logically hidden.");
+        Check(DockVisibilityTransitionPolicy.Decide(false, false, true, true, true)
+                == DockVisibilityAction.HideImmediately,
+            "Fullscreen must interrupt animation and hide the dock immediately.");
+        Check(DockVisibilityTransitionPolicy.Decide(true, false, true, true, false)
+                == DockVisibilityAction.Show,
+            "Edge reveal must cancel a pending hide and restore the dock.");
+        Check(DockVisibilityTransitionPolicy.Decide(true, true, false, false, false)
+                == DockVisibilityAction.Show,
+            "A native-hidden dock must be restored when it is required onscreen.");
+        Check(DockVisibilityTransitionPolicy.Decide(true, true, true, false, false)
+                == DockVisibilityAction.None
+            && DockVisibilityTransitionPolicy.Decide(false, false, false, false, false)
+                == DockVisibilityAction.None,
+            "Stable HWND visibility must not enqueue native operations.");
+        Check(DockVisibilityTransitionPolicy.Decide(false, true, false, false, false)
+                == DockVisibilityAction.HideImmediately,
+            "Externally hidden windows must settle an outdated shown flag.");
+
         // Avoid a permanent 80 ms native polling loop when the dock is idle,
         // but keep the original edge-reveal latency during maximized windows.
         Check(DockRefreshCadence.Interval(true, false, false) == DockRefreshCadence.IdleMilliseconds,

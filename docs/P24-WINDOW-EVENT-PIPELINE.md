@@ -34,3 +34,14 @@ The project owner elected to skip AppVeyor and manual Windows-preview gates duri
 - Tests cover 800 coalesced foreground events, mixed foreground/structural batches, rejected-callback recovery, z-order differences, title updates, process-ID reuse and closed windows.
 
 As requested, these changes have **not** undergone AppVeyor compilation or a Windows visual preview in this session. Preserve the branch and consider the implementation unverified until a future build is available.
+
+## Stage 4 — Dock hide/reveal state recovery
+
+- `DockVisibilityTransitionPolicy` distinguishes desired visibility, native HWND visibility and a pending compositor hide. The existing edge hold/fullscreen rule still decides whether the dock should show.
+- Windows can externally reveal a logically hidden tool window. The dock now corrects that mismatch rather than remaining exposed. An in-flight hide is not restarted on every pointer poll, while fullscreen/taskbar registration suppression forces immediate hiding.
+- Asynchronous hide callbacks carry a generation number. A cancelled animation cannot hide a subsequently revealed dock or clear another hide's pending state. Current-generation completion rechecks native visibility and invokes a native fallback if needed.
+- `TaskbarWindow.RefreshFromNativeEvent` shares one foreground HWND snapshot between dock indicator and visibility updates; the timer caches that identity to avoid the immediate duplicate foreground repaint.
+- `ShowBar` avoids a duplicate visibility call since `Position` already invokes it.
+- Pure Core tests cover normal hide, pending animation, external show/hide, fullscreen override, reveal cancellation and no-op states.
+
+No Windows compilation, native compositor test or AppVeyor result has been verified for this stage.

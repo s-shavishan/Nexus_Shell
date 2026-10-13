@@ -288,7 +288,7 @@ internal sealed partial class DesktopEnvironment
             {
                 if (IsStopping) return;
                 if (foregroundChanged && ShellLayerInterop.IsExplorerDesktopWindow(NativeMethods.GetForegroundWindow())) Desktop.ShowSurface();
-                Taskbar.View.RefreshWindowStates(); Taskbar.RefreshVisibility();
+                Taskbar.RefreshFromNativeEvent();
                 // Foreground-only events update dock selection immediately
                 // without an expensive full process/window enumeration.
                 // Any coalesced structural event still schedules the scan.
