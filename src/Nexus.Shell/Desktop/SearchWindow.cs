@@ -106,7 +106,18 @@ internal sealed class SearchWindow : DesktopPanelWindow
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_scope, "File search scope");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_results, "Search results");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetLiveSetting(_status, Microsoft.UI.Xaml.Automation.Peers.AutomationLiveSetting.Polite);
-        _query.TextChanged += (_, _) => Schedule(); _category.SelectionChanged += (_, _) => Schedule(); _scope.SelectionChanged += (_, _) => Schedule();
+        _query.TextChanged += (_, _) =>
+        {
+            // Empty Spotlight shows the familiar quick-launch strip. As soon
+            // as the user types, release that space to searchable results
+            // rather than forcing an extra scroll on smaller monitors.
+            var visibility = string.IsNullOrWhiteSpace(_query.Text)
+                ? Visibility.Visible : Visibility.Collapsed;
+            if (_launchFrame.Visibility != visibility) _launchFrame.Visibility = visibility;
+            Schedule();
+        };
+        _category.SelectionChanged += (_, _) => Schedule();
+        _scope.SelectionChanged += (_, _) => Schedule();
         _results.SelectionChanged += (_, _) => RefreshActions();
         _results.DoubleTapped += (_, args) =>
         {
