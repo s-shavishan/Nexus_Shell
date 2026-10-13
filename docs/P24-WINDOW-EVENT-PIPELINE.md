@@ -129,3 +129,14 @@ No .NET/WinUI build or AppVeyor tests were executed in this development batch.
 - Recovery reattaches existing current HWND buttons in retained lifecycle order. It does not replay a full dock rebuild during normal active-window switching or stable recovery scans.
 - A pure `DockVisualRecoveryPolicy` captures the decision and portable tests cover missing dictionary entries, missing child controls, interrupted updates with correct counts, first-baseline rendering, pin/window updates and the stable no-op path.
 - The actual WinUI outcome remains unverified without a Windows build. No AppVeyor or Windows preview was performed by owner preference.
+
+## Stage 12 — Avoid redundant recovery scans and stop async timer work at shutdown
+
+The five-second desktop heartbeat calls `UpdateTaskbar` as a recovery guard. When a prior `EnumWindows` pass was still running, the old coordinator treated the heartbeat like an explicit application change and set `_windowRefreshPending`, forcing a second scan regardless of whether any new native event or user action had arrived.
+
+- `WindowScanAdmissionPolicy` distinguishes idle scans, real notifications/user commands arriving during an active enumeration, and recovery heartbeats already covered by that enumeration. Only the latter are safely absorbed; structural events retain their follow-up scan.
+- The public/internal zero-argument `UpdateTaskbar()` entry point is preserved for all existing callers and method-group compatibility. The private asynchronous coordinator accepts the heartbeat classification, and only the five-second timer opts into that mode.
+- An enumeration completing after `Shutdown` started still completes its lifecycle journal generation and releases `_refreshing`, but no longer updates native refresh timer intervals, failure backoff counters or retry scheduling.
+- Portable tests cover idle heartbeat admission, overlapping heartbeat suppression, explicit structural follow-ups, and a 1,000-heartbeat burst while a scan remains in flight. Existing native event and shutdown timer policies remain unchanged.
+
+**Validation:** Source and regression checks were committed on the draft P2.4 branch. No .NET SDK compilation, AppVeyor run or interactive Windows desktop test was performed here.

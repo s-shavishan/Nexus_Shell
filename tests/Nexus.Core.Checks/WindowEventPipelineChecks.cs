@@ -312,6 +312,27 @@ internal static class WindowEventPipelineChecks
         Check(parallelJournal.CompleteScan(parallelBatch, applied: true) && !parallelJournal.HasPending,
             "A parallel event burst must settle after a successful scan.");
 
+        // Stage 12: the five-second heartbeat is redundant when a scan is
+        // already running, but real native events and explicit user commands
+        // must still queue a successor so their structural changes survive.
+        Check(WindowScanAdmissionPolicy.Decide(false, false) == WindowScanAdmission.Start,
+            "Explicit dock refresh with no scan running must start immediately.");
+        Check(WindowScanAdmissionPolicy.Decide(false, true) == WindowScanAdmission.Start,
+            "Periodic recovery must enumerate when the native worker is idle.");
+        Check(WindowScanAdmissionPolicy.Decide(true, true)
+                == WindowScanAdmission.CoveredByActiveScan,
+            "A recovery heartbeat overlapping an active enumeration must not request a duplicate scan.");
+        Check(WindowScanAdmissionPolicy.Decide(true, false)
+                == WindowScanAdmission.QueueFollowUp,
+            "A real window change or user action during enumeration must request one later scan.");
+        var admissions = Enumerable.Range(0, 1000)
+            .Select(_ => WindowScanAdmissionPolicy.Decide(true, true)).ToArray();
+        Check(admissions.All(x => x == WindowScanAdmission.CoveredByActiveScan),
+            "Repeated recovery heartbeats must never queue redundant follow-up native scans.");
+        Check(WindowScanAdmissionPolicy.Decide(true, false) == WindowScanAdmission.QueueFollowUp
+                && WindowScanAdmissionPolicy.Decide(false, false) == WindowScanAdmission.Start,
+            "A pending structural notification must not be suppressed once the active scan completes.");
+
         // P2.4 shutdown/reentrancy audit: failed scan owns the retry
         // schedule even if a coalesced 50 ms callback is already armed.
         Check(WindowScanTimerPolicy.Decide(false, false, false, false)
