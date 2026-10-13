@@ -66,3 +66,9 @@ The running P2.6 screenshot exposed a flat, indistinguishable middle file area a
 - Portable Core regression assertions for narrow, screenshot-sized and large layouts, plus invalid widths and dialog mode.
 
 **Important:** Source changes are committed, but no native Windows build or comparison screenshot has run for this update. In Windows preview validate 800/940/1200-DIP widths, mixed files, image previews, 1000+ item scrolling, file operations, dialogs, maximize/restore and native glass status before merging.
+
+## Stage 4 — Launchpad paging density
+
+The native Launchpad uses a 760 × 740 DIP window. The previous 24-app page needed four 124-DIP rows plus search, category/collection controls, heading, footer and padding, causing a fourth row to require scrolling at reference size. The page now contains 18 apps (three six-column rows), preserving the existing category, collection, keyboard and icon-loading pipelines. Core regression assertions cover page boundaries, nonoverlap and the last partial page of the 600-app catalog.
+
+Native screenshot and AppVeyor validation remain pending; this is not a claim of visual parity.
