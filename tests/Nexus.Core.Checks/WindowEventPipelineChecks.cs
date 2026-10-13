@@ -312,6 +312,52 @@ internal static class WindowEventPipelineChecks
         Check(parallelJournal.CompleteScan(parallelBatch, applied: true) && !parallelJournal.HasPending,
             "A parallel event burst must settle after a successful scan.");
 
+        // P2.4 integration review: a fault without lifecycle tombstones
+        // must still retry; failures back off, and success resets the cadence.
+        var retryPolicy = new WindowScanRetryBackoff();
+        Check(retryPolicy.ConsecutiveFailures == 0, "A new native scan should have no failures.");
+        Check(retryPolicy.Complete(false) == 500
+            && retryPolicy.Complete(false) == 1000
+            && retryPolicy.Complete(false) == 2000
+            && retryPolicy.Complete(false) == 5000,
+            "Successive enumeration failures must use bounded exponential retry intervals.");
+        for (int i = 0; i < 25; i++)
+            Check(retryPolicy.Complete(false) == WindowScanRetryBackoff.MaxDelayMilliseconds,
+                "Persistent faults must never create a 50 ms native enumeration spin loop.");
+        Check(retryPolicy.Complete(true) == WindowScanRetryBackoff.NormalMilliseconds
+            && retryPolicy.ConsecutiveFailures == 0,
+            "A successful recovery must immediately return future window events to normal cadence.");
+        Check(retryPolicy.Complete(false) == 500
+            && retryPolicy.Complete(true) == WindowScanRetryBackoff.NormalMilliseconds,
+            "The next transient fault must not inherit an old recovery backoff.");
+
+        // Destroyed tool/pop-up HWNDs that were never part of the dock must
+        // not force an expensive XAML button reconcile of unchanged apps.
+        var taskList = new[] {
+            new Nexus.Shell.Models.RunningWindow(new IntPtr(808), "IDE", "ide", 440),
+            new Nexus.Shell.Models.RunningWindow(new IntPtr(809), "Browser", "browser", 441)
+        };
+        var destroyedPopup = new HashSet<IntPtr> { new IntPtr(999) };
+        Check(!WindowListSnapshotPolicy.RequiresDockRefresh(
+                taskList, taskList.ToArray(), destroyedPopup, resetAll: false),
+            "An unrelated native popup destruction must leave the dock layout unchanged.");
+        Check(WindowListSnapshotPolicy.RequiresDockRefresh(
+                taskList, taskList.ToArray(), new HashSet<IntPtr> { taskList[0].Handle }, resetAll: false),
+            "Destroy/recreate of the same dock HWND/PID must still recreate its button.");
+        Check(WindowListSnapshotPolicy.RequiresDockRefresh(
+                taskList, taskList.ToArray(), destroyedPopup, resetAll: true),
+            "A lifecycle-overflow reset must always rebuild all dock identities.");
+        Check(WindowListSnapshotPolicy.RequiresDockRefresh(
+                taskList, [taskList[0] with { Title = "IDE: renamed" }, taskList[1]],
+                new HashSet<IntPtr>(), resetAll: false),
+            "Native title/metadata changes must trigger dock reconciliation.");
+        Check(WindowListSnapshotPolicy.RequiresDockRefresh(
+                taskList, [taskList[0]], new HashSet<IntPtr>(), resetAll: false),
+            "Closed windows must trigger dock button removal.");
+        Check(!WindowListSnapshotPolicy.RequiresDockRefresh(
+                taskList, taskList.ToArray(), new HashSet<IntPtr>(), resetAll: false),
+            "Ordinary identical recovery scans must preserve retained dock layout.");
+
         int lookupCount = 0;
         (int Session, string Name)? Resolve(int pid)
         {

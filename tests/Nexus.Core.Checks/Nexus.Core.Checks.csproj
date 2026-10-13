@@ -63,6 +63,7 @@
     <Compile Include="../../src/Nexus.Shell/Services/WindowEventDispatchGate.cs" Link="WindowEventDispatchGate.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/WindowEventScanPolicy.cs" Link="WindowEventScanPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/WindowListSnapshotPolicy.cs" Link="WindowListSnapshotPolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/WindowScanRetryBackoff.cs" Link="WindowScanRetryBackoff.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/WindowProcessSnapshot.cs" Link="WindowProcessSnapshot.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/WindowEventObserver.cs" Link="WindowEventObserver.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DesktopShellPolicy.cs" Link="DesktopShellPolicy.cs" />

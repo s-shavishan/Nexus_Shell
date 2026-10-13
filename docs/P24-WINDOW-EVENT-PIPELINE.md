@@ -77,3 +77,15 @@ The prior destroy-handle collection was drained **after** the worker returned fr
 - Portable checks cover mid-enumeration notifications, duplicate handles, failed rollback, stale completion, overlapping scan refusal, forced full-reset retry, and 1,800 parallel destroy notifications.
 
 **Status:** Production and portable-test source committed only; AppVeyor and native Windows preview remain skipped by request. These tests have not been executed in this session.
+
+## Stage 8 — Integration audit: native scan backoff and dock invalidations
+
+After PR #23 was opened, a source review identified two retry/rendering edge cases.
+
+- The former scan failure path scheduled a retry only if another window refresh or destruction was pending. An isolated `EnumWindows` or UI application failure could therefore wait until the independent five-second heartbeat to recover.
+- The dispatcher timer's `Interval` was also mutable between normal scans and failed-scan retries, so a failure could leave subsequent ordinary window notifications delayed by an old 500 ms interval.
+- `WindowScanRetryBackoff` now gives every failed scan a bounded retry interval: 500, 1000, 2000 and then 5000 ms. Recovery resets to the normal 50 ms event coalescing window. The timer tick resets its interval before starting the next scan so the previous failure interval does not leak into unrelated events.
+- `WindowListSnapshotPolicy.RequiresDockRefresh` skips full XAML dock reconciliation if the window snapshot is identical and the destroyed HWNDs belong only to incidental native tool windows. Matching dock destruction, metadata changes and full-reset overflow still rebuild affected entries.
+- Portable regression coverage confirms the retry progression/reset, isolated recovery and irrelevant-destroy versus genuine-dock-destroy classification.
+
+**Verification remains source-only:** no installed local .NET SDK, and AppVeyor/Windows preview have been excluded from this iteration by request. The draft PR must not be called build-verified.
