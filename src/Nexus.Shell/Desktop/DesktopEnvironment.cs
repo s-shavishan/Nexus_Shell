@@ -36,6 +36,7 @@ internal sealed partial class DesktopEnvironment
     private WindowEventObserver? _windowEvents;
     private readonly DispatcherTimer _windowRefreshTimer = new() { Interval = TimeSpan.FromMilliseconds(50) };
     private readonly WindowEventDispatchGate _windowEventGate = new();
+    private readonly WindowScanRetryBackoff _windowScanBackoff = new();
     // Destroy notifications can arrive while an asynchronous enumeration runs.
     // Separate each scan's tombstones from later events and restore them if
     // native reconciliation fails; all operations are thread safe.
@@ -98,7 +99,14 @@ internal sealed partial class DesktopEnvironment
             Session.Changed += SessionChanged;
             Notifications.Changed += NotificationHistoryChanged;
             _saveTimer.Tick += SaveTick; _timer.Tick += Tick;
-            _windowRefreshTimer.Tick += (_, _) => { _windowRefreshTimer.Stop(); UpdateTaskbar(); };
+            _windowRefreshTimer.Tick += (_, _) =>
+            {
+                _windowRefreshTimer.Stop();
+                // A delayed retry must not leave the ordinary event-coalescing
+                // timer at 500–5000 ms once this scheduled pass begins.
+                _windowRefreshTimer.Interval = TimeSpan.FromMilliseconds(WindowScanRetryBackoff.NormalMilliseconds);
+                UpdateTaskbar();
+            };
             _integration = new(Desktop.Handle, command => Desktop.DispatcherQueue.TryEnqueue(() =>
             {
                 if (IsStopping) return;
@@ -267,8 +275,9 @@ internal sealed partial class DesktopEnvironment
                 IReadOnlySet<IntPtr> invalidated = lifecycle.ResetAll
                     ? _lastDockSnapshot.Concat(dockSnapshot).Select(window => window.Handle).ToHashSet()
                     : lifecycle.Destroyed;
-                if (!_dockSnapshotInitialized || lifecycle.ResetAll || invalidated.Count > 0
-                    || !WindowListSnapshotPolicy.Equivalent(_lastDockSnapshot, dockSnapshot))
+                if (!_dockSnapshotInitialized
+                    || WindowListSnapshotPolicy.RequiresDockRefresh(
+                        _lastDockSnapshot, dockSnapshot, invalidated, lifecycle.ResetAll))
                 {
                     Taskbar.View.Refresh(dockSnapshot, invalidated);
                     _lastDockSnapshot = dockSnapshot;
@@ -287,15 +296,14 @@ internal sealed partial class DesktopEnvironment
         {
             _dockLifecycle.CompleteScan(lifecycle, applied);
             _refreshing = false;
-            if (!IsStopping && (_windowRefreshPending || _dockLifecycle.HasPending))
-            {
-                // A failed native scan should retry without a 50 ms hot loop.
-                // Restore the normal burst-coalescing latency after recovery.
-                _windowRefreshTimer.Interval = TimeSpan.FromMilliseconds(applied ? 50 : 500);
-                if (!_windowRefreshTimer.IsEnabled) _windowRefreshTimer.Start();
-            }
-            else if (applied)
-                _windowRefreshTimer.Interval = TimeSpan.FromMilliseconds(50);
+            int nextDelay = _windowScanBackoff.Complete(applied);
+            _windowRefreshTimer.Interval = TimeSpan.FromMilliseconds(nextDelay);
+            // Retry even if enumeration failed before recording a destroy:
+            // a transient native/WinUI fault should not wait for the heartbeat.
+            // Repeated failures back off to the existing five-second cadence.
+            if (!IsStopping && (!applied || _windowRefreshPending || _dockLifecycle.HasPending)
+                && !_windowRefreshTimer.IsEnabled)
+                _windowRefreshTimer.Start();
         }
     }
     private void QueueWindowEvent(WindowEvent change)

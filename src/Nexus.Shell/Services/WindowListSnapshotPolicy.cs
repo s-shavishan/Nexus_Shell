@@ -8,6 +8,22 @@ namespace Nexus.Shell.Services;
 // separately retains its own lifecycle button order.
 internal static class WindowListSnapshotPolicy
 {
+    // Destroying a tooltip or a non-tasklist tool HWND should not rebuild
+    // the dock when its actual window set and metadata have not changed.
+    // Explicit reset always wins, including same-HWND/same-PID recreation.
+    internal static bool RequiresDockRefresh(
+        IReadOnlyList<RunningWindow> previous,
+        IReadOnlyList<RunningWindow> next,
+        IReadOnlySet<IntPtr> destroyedHandles,
+        bool resetAll)
+    {
+        ArgumentNullException.ThrowIfNull(destroyedHandles);
+        if (resetAll || !Equivalent(previous, next)) return true;
+        foreach (var window in previous)
+            if (destroyedHandles.Contains(window.Handle)) return true;
+        return false;
+    }
+
     internal static bool Equivalent(IReadOnlyList<RunningWindow> previous, IReadOnlyList<RunningWindow> next)
     {
         ArgumentNullException.ThrowIfNull(previous);
