@@ -63,3 +63,9 @@ The first P2.5 change exposed a regression: `EVENT_SYSTEM_MOVESIZEEND` could ent
 An event-only geometry fast path must not postpone recognition of an active window that was never added to the dock because its create/show WinEvent was missed. The existing unknown-foreground discovery policy is now consulted on **either** a foreground event **or** a completed move/resize event. It returns false for known HWNDs and invalid foreground values; the caller still performs native eligibility/ownership/cloaking checks before scheduling a task-list scan. All other non-foreground fast-path notifications are unchanged.
 
 Portable checks cover known and unknown HWNDs during move/size completion; the regular five-second recovery scan remains in place.
+
+## Stage 5: Animation lifecycle resilience during UI reconciliation
+
+`DockMotionController.SetIndicator` now defers compositor work for indicators that have not yet reached WinUI `Loaded`, or that were temporarily unloaded during dock visual recovery. It discards stale compositor presence/animation tracking for those controls, while the owning `DockItem` keeps its latest logical `Presence`. `TaskbarView.PrepareMotion`, called on `Loaded`, reapplies that latest presence immediately with a settled baseline rather than animating from an obsolete state. Detach/reset also avoids asking WinUI for compositor visuals after unload. This is designed to prevent one transient unloaded-control failure from disabling motion for the whole shell session.
+
+No animation durations, easing curves, dock indicators, pointer hit regions, preview behavior, accessibility policy or native window state transitions have changed. Windows acceptance must still check reduced-effects/high contrast, rapid app minimize/restore, dynamic pin changes, app deletion and dock unload/reload while animating.

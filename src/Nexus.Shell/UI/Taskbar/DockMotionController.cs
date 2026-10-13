@@ -76,6 +76,18 @@ internal sealed class DockMotionController : IDisposable
     internal void SetIndicator(Border indicator, DockPresence presence, bool animate)
     {
         if (_disposed) return;
+        // Initial dock reconciliation precedes WinUI Loaded, and detach/
+        // reparenting can briefly unload existing controls. Creating the
+        // compositor visual before Loaded can throw and permanently disable
+        // motion even though the next frame would be valid. Do not retain a
+        // stale indicator cache entry: PrepareMotion applies the latest
+        // DockItem.Presence at the next Loaded event.
+        if (!indicator.IsLoaded)
+        {
+            _indicators.Remove(indicator);
+            _animatedIndicators.Remove(indicator);
+            return;
+        }
         bool changed = !_indicators.TryGetValue(indicator, out var previous) || previous != presence;
         var update = DockIndicatorUpdatePolicy.Decide(changed, _animatedIndicators.Contains(indicator),
             animate, _enabled, indicator.IsLoaded);
@@ -120,13 +132,14 @@ internal sealed class DockMotionController : IDisposable
         if (indicator is not null && _indicators.Remove(indicator, out var presence))
         {
             _animatedIndicators.Remove(indicator);
-            try { SetLine(indicator, presence); } catch { }
+            if (indicator.IsLoaded) try { SetLine(indicator, presence); } catch { }
         }
     }
     private void ResetAll()
     {
         foreach (var icon in _icons) try { ResetIcon(icon); } catch { }
-        foreach (var pair in _indicators) try { SetLine(pair.Key, pair.Value); } catch { }
+        foreach (var pair in _indicators)
+            if (pair.Key.IsLoaded) try { SetLine(pair.Key, pair.Value); } catch { }
         _animatedIndicators.Clear();
     }
     private void Disable(Exception ex)
