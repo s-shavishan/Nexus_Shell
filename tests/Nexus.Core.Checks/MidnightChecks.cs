@@ -5,6 +5,29 @@ internal static class MidnightChecks
 {
     internal static void Run(Action<bool, string> check)
     {
+        // Reference-fidelity Midnight glass must be coherent across the
+        // dock, menu bar, search and app chrome without degrading fallback.
+        var midnight = AuraPalette.For("Midnight");
+        check(MidnightGlassMetrics.ReferenceEnabled(midnight, false)
+            && !MidnightGlassMetrics.ReferenceEnabled(midnight, true)
+            && !MidnightGlassMetrics.ReferenceEnabled(AuraPalette.For("Solstice"), false),
+            "Reference styling must be isolated to Midnight and respect High Contrast.");
+        check(MidnightGlassMetrics.DockRadius > MidnightGlassMetrics.ControlRadius
+            && MidnightGlassMetrics.FrameRadius > MidnightGlassMetrics.CardRadius
+            && MidnightGlassMetrics.DockButtonWidth > MidnightGlassMetrics.DockCompactButtonWidth,
+            "Midnight visual geometry must preserve intentional corner and density hierarchy.");
+        check(AuraColor.Contrast(AuraColor.Parse(midnight.Tokens["NexusText"]), AuraColor.Parse(midnight.Canvas)) > 7,
+            "Midnight text must remain legible against the dark opaque fallback.");
+        check(midnight.Tokens["NexusSelection"] != midnight.Tokens["NexusInput"]
+            && midnight.Tokens["NexusBorder"] != midnight.Tokens["NexusSidebar"],
+            "Reference selection, input, edge and sidebar surfaces need distinct visual hierarchy.");
+        foreach (var role in new[] { "MenuBar", "Dock", "Frame", "Card", "Input" })
+        {
+            var glass = GlassRecipe.For(midnight, role, "Clear");
+            check(glass.TintOpacity is > 0 and < 1 && glass.LuminosityOpacity is > 0 and < 1
+                && AuraColor.Parse(glass.Fallback).A == 255,
+                "Reference glass must have finite translucent parameters and a fully opaque safety fallback.");
+        }
         var calculator = new CalculatorEngine();
         void Keys(params string[] keys) { foreach (string key in keys) calculator.Input(key); }
         Keys("0", ".", "1", "+", "0", ".", "2", "="); check(calculator.Display == "0.3", "Decimal sums must not expose binary floating point error.");

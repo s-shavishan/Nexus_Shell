@@ -15,9 +15,9 @@ internal sealed class TaskbarView : Grid
     private readonly DesktopEnvironment _environment;
     private readonly Border _frame = new();
     private readonly SolidColorBrush _transparent = new(Microsoft.UI.Colors.Transparent);
-    private readonly Grid _body = new() { ColumnSpacing = 10, Padding = new Thickness(13, 7, 13, 7) };
-    private readonly StackPanel _pins = new() { Orientation = Orientation.Horizontal, Spacing = 3 };
-    private readonly StackPanel _windows = new() { Orientation = Orientation.Horizontal, Spacing = 3 };
+    private readonly Grid _body = new() { ColumnSpacing = 12, Padding = new Thickness(16, 8, 16, 8) };
+    private readonly StackPanel _pins = new() { Orientation = Orientation.Horizontal, Spacing = 4 };
+    private readonly StackPanel _windows = new() { Orientation = Orientation.Horizontal, Spacing = 4 };
     private readonly TextBlock _time = new() { FontSize = 12, TextAlignment = TextAlignment.Right };
     private readonly TextBlock _date = new() { FontSize = 10, TextAlignment = TextAlignment.Right };
     private readonly List<Button> _iconButtons = [];
@@ -72,7 +72,7 @@ internal sealed class TaskbarView : Grid
     private readonly Border _separator;
     private double _reportedWidth;
     internal event Action? PreferredWidthChanged;
-    internal double PreferredWidthDip => (_environment.Session.State.FloatingTaskbar ? 168 : 304) + (_pins.Children.Count + _windows.Children.Count) * (_environment.Session.State.CompactDock ? 44 : 52);
+    internal double PreferredWidthDip => (_environment.Session.State.FloatingTaskbar ? 186 : 322) + (_pins.Children.Count + _windows.Children.Count) * (_environment.Session.State.CompactDock ? 44 : 56);
     internal Border Frame => _frame;
     // The real HWND uses WindowMaterial to control native acrylic, opaque
     // preparation and fallback. Its view must not repaint that same surface.
@@ -86,8 +86,8 @@ internal sealed class TaskbarView : Grid
         var start = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
         _start = IconButton("Launchpad", "Launchpad", () => environment.ShowMenu(), true); start.Children.Add(_start);
         _body.Children.Add(start);
-        var middle = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, VerticalAlignment = VerticalAlignment.Center };
-        _separator = new Border { Width = 1, Height = 22, VerticalAlignment = VerticalAlignment.Center };
+        var middle = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 14, VerticalAlignment = VerticalAlignment.Center };
+        _separator = new Border { Width = 1, Height = 28, VerticalAlignment = VerticalAlignment.Center };
         middle.Children.Add(_pins); middle.Children.Add(_separator); middle.Children.Add(_windows);
         var scroll = new ScrollViewer { Content = middle, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
             HorizontalScrollMode = ScrollMode.Enabled, VerticalScrollMode = ScrollMode.Disabled, VerticalAlignment = VerticalAlignment.Center };
@@ -124,7 +124,7 @@ internal sealed class TaskbarView : Grid
     private Button IconButton(string icon, string title, Action action, bool retain = false)
     {
         UIElement face = NexusIcons.Image(icon, 36);
-        var button = new Button { Content = face, Style = (Style)Application.Current.Resources["DockButton"], Width = 48, Height = 52 };
+        var button = new Button { Content = face, Style = (Style)Application.Current.Resources["DockButton"], Width = 52, Height = 56 };
         button.Loaded += (_, _) => _motion?.AttachHover(button);
         button.Click += (_, _) => action(); ToolTipService.SetToolTip(button, title); Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, title);
         if (retain) _iconButtons.Add(button); _motion?.AttachHover(button); return button;
@@ -134,7 +134,7 @@ internal sealed class TaskbarView : Grid
         var icon = NexusIcons.Image(NexusIcons.ForApp(app), 32);
         _ = AppIconCache.ApplyAsync(icon, app);
         var host = new Grid(); host.Children.Add(icon);
-        var button = new Button { Content = host, Tag = host, Style = (Style)Application.Current.Resources["DockButton"], Width = 48, Height = 52 };
+        var button = new Button { Content = host, Tag = host, Style = (Style)Application.Current.Resources["DockButton"], Width = 52, Height = 56 };
         _pinImages.Add(button, icon); bool arrive = _baselineReconciled;
         void PlayArrival()
         {
@@ -277,7 +277,7 @@ internal sealed class TaskbarView : Grid
         var face = new Grid(); var iconHost = new Grid(); item.Icon = NexusIcons.Image(icon, 32); iconHost.Children.Add(item.Icon); face.Children.Add(iconHost);
         item.Indicator = new Border { Width = 22, Height = 3, CornerRadius = new CornerRadius(2), VerticalAlignment = VerticalAlignment.Bottom, HorizontalAlignment = HorizontalAlignment.Center };
         face.Children.Add(item.Indicator);
-        item.Button = new Button { Content = face, Tag = iconHost, Width = 46, Height = 52, Style = (Style)Application.Current.Resources["DockButton"] };
+        item.Button = new Button { Content = face, Tag = iconHost, Width = 52, Height = 56, Style = (Style)Application.Current.Resources["DockButton"] };
         item.Button.Click += (_, _) => _environment.ToggleDockWindow(item.Window);
         var menu = new MenuFlyout();
         var restore = new MenuFlyoutItem { Text = "Restore / switch to window" };
@@ -468,7 +468,8 @@ internal sealed class TaskbarView : Grid
         }
         foreach (var button in _iconButtons.Concat(_pins.Children.OfType<Button>()).Concat(_windows.Children.OfType<Button>()))
         {
-            Size(button, compact ? 40 : 48, compact ? 44 : 52);
+            Size(button, compact ? MidnightGlassMetrics.DockCompactButtonWidth : MidnightGlassMetrics.DockButtonWidth,
+                compact ? MidnightGlassMetrics.DockCompactButtonHeight : MidnightGlassMetrics.DockButtonHeight);
             if (button.Content is Image icon) Size(icon, compact ? 30 : 36, compact ? 30 : 36);
         }
         foreach (var icon in _pinImages.Values.Concat(_items.Values.Select(i => i.Icon)))
@@ -546,7 +547,7 @@ internal sealed class TaskbarView : Grid
         try
         {
             _environment.Session.State.CompactDock = false; Refresh([]);
-            if (button.Width != 48 || button.Height != 52 || icon.Width != 36 || icon.Height != 36)
+            if (button.Width != 52 || button.Height != 56 || icon.Width != 36 || icon.Height != 36)
                 throw new InvalidOperationException("The normal dock did not apply its production icon geometry.");
             _environment.Session.State.CompactDock = true; Refresh([]);
             if (button.Width != 40 || button.Height != 44 || icon.Width != 30 || icon.Height != 30 || !ReferenceEquals(button, _iconButtons[0]))
@@ -558,7 +559,7 @@ internal sealed class TaskbarView : Grid
                 for (int i = 0; i < 20; i++) Refresh([]);
                 if (writes != 0) throw new InvalidOperationException("Unchanged dock snapshots rewrote icon sizing.");
                 _environment.Session.State.CompactDock = false; Refresh([]);
-                if (button.Width != 48 || button.Height != 52 || icon.Width != 36 || icon.Height != 36)
+                if (button.Width != 52 || button.Height != 56 || icon.Width != 36 || icon.Height != 36)
                     throw new InvalidOperationException("The dock did not restore normal geometry after compact mode.");
             }
             finally { button.UnregisterPropertyChangedCallback(WidthProperty, token); }
@@ -615,7 +616,7 @@ internal sealed class TaskbarView : Grid
     }
     private void ApplyFrameCorners()
     {
-        var corners = new CornerRadius(_environment.Session.State.FloatingTaskbar && !_environment.Theme.HighContrast ? 22 : 0);
+        var corners = new CornerRadius(_environment.Session.State.FloatingTaskbar && !_environment.Theme.HighContrast ? MidnightGlassMetrics.DockRadius : 0);
         if (!_frame.CornerRadius.Equals(corners)) _frame.CornerRadius = corners;
     }
 

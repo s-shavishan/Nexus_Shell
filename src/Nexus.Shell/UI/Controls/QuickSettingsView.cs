@@ -17,7 +17,7 @@ namespace Nexus.Shell.UI.Controls;
 internal sealed class QuickSettingsView : Grid, IDisposable
 {
     private readonly ControlCenterEnvironment _environment;
-    private readonly StackPanel _body = new() { Spacing = 12 };
+    private readonly StackPanel _body = new() { Spacing = 14 };
     private readonly TextBlock _status;
     private readonly InfoBar _error = new() { IsClosable = true, Severity = InfoBarSeverity.Error, Title = "Control Center needs attention" };
     private readonly Grid _nav = new() { ColumnSpacing = 8, RowSpacing = 8 };
@@ -52,12 +52,12 @@ internal sealed class QuickSettingsView : Grid, IDisposable
 
     internal QuickSettingsView(ControlCenterEnvironment environment, Action close)
     {
-        _environment = environment; Padding = new Thickness(22); RowSpacing = 16;
+        _environment = environment; Padding = new Thickness(MidnightGlassMetrics.ContentPadding); RowSpacing = 14;
         KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden;
         RowDefinitions.Add(new() { Height = GridLength.Auto }); RowDefinitions.Add(new() { Height = GridLength.Auto });
         RowDefinitions.Add(new()); RowDefinitions.Add(new() { Height = GridLength.Auto });
         var header = new Grid { ColumnSpacing = 12 }; header.ColumnDefinitions.Add(new()); header.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
-        var heading = new StackPanel { Spacing = 4 }; _heading = Label("Control Center", 23); _heading.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
+        var heading = new StackPanel { Spacing = 4 }; _heading = Label("Control Center", 22); _heading.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
         _subtitle = Label("Everything you need, close at hand.", 12, true);
         heading.Children.Add(_heading); heading.Children.Add(_subtitle); header.Children.Add(heading);
         var dismiss = ShellControls.IconButton("\uE8BB", "Close Control Center", close); Grid.SetColumn(dismiss, 1); header.Children.Add(dismiss); Children.Add(header);
@@ -67,9 +67,9 @@ internal sealed class QuickSettingsView : Grid, IDisposable
         for (int i = 0; i < sections.Length; i++)
         {
             var (name, glyph) = sections[i]; var content = new StackPanel { Spacing = 8, HorizontalAlignment = HorizontalAlignment.Center };
-            var badge = ShellControls.Badge(glyph, environment.Theme, 30); _badges.Add(badge); content.Children.Add(badge); var label = Label(name, 12); label.HorizontalAlignment = HorizontalAlignment.Center; content.Children.Add(label);
+            var badge = ShellControls.Badge(glyph, environment.Theme, 34); _badges.Add(badge); content.Children.Add(badge); var label = Label(name, 12); label.HorizontalAlignment = HorizontalAlignment.Center; content.Children.Add(label);
             var button = ActionButton(name, () => Navigate(name)); button.Content = content; button.HorizontalAlignment = HorizontalAlignment.Stretch;
-            button.HorizontalContentAlignment = HorizontalAlignment.Center; button.Padding = new Thickness(8, 12, 8, 12); button.CornerRadius = new CornerRadius(15); button.BorderThickness = new Thickness(1);
+            button.HorizontalContentAlignment = HorizontalAlignment.Center; button.Padding = new Thickness(8, 12, 8, 12); button.CornerRadius = new CornerRadius(MidnightGlassMetrics.CardRadius); button.BorderThickness = new Thickness(1);
             _tabs[name] = button; Grid.SetRow(button, i / 3); Grid.SetColumn(button, i % 3); nav.Children.Add(button);
         }
         Grid.SetRow(nav, 1); Children.Add(nav);
@@ -104,9 +104,9 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     }
     private StackPanel Card(string title, string? detail = null)
     {
-        var body = new StackPanel { Spacing = 12 }; var heading = Label(title, 15); heading.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold; body.Children.Add(heading);
+        var body = new StackPanel { Spacing = 13 }; var heading = Label(title, 15); heading.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold; body.Children.Add(heading);
         if (!string.IsNullOrWhiteSpace(detail)) body.Children.Add(Label(detail, 12, true));
-        var card = new Border { Child = body, Padding = new Thickness(16), CornerRadius = new CornerRadius(_environment.Theme.HighContrast ? 0 : 16), BorderThickness = new Thickness(1),
+        var card = new Border { Child = body, Padding = new Thickness(17), CornerRadius = new CornerRadius(_environment.Theme.HighContrast ? 0 : MidnightGlassMetrics.CardRadius), BorderThickness = new Thickness(1),
             Background = _environment.Theme.Material("Card", _environment.State.NativeGlass), BorderBrush = _environment.Theme.Edge };
         _cards.Add(card); _body.Children.Add(card); return body;
     }
@@ -120,8 +120,8 @@ internal sealed class QuickSettingsView : Grid, IDisposable
         RequestedTheme = _environment.Theme.ElementTheme;
         foreach (var (label, muted) in _labels) label.Foreground = _environment.Theme.Brush(muted ? "NexusMuted" : "NexusText");
         foreach (var badge in _badges) { badge.Background = _environment.Theme.Brush("NexusSelection"); badge.CornerRadius = new CornerRadius(_environment.Theme.HighContrast ? 0 : 9); if (badge.Child is FontIcon icon) icon.Foreground = _environment.Theme.Brush("NexusAccent"); }
-        foreach (var card in _cards) { card.Background = _environment.Theme.Material("Card", _environment.State.NativeGlass); card.BorderBrush = _environment.Theme.Edge; card.CornerRadius = new CornerRadius(_environment.Theme.HighContrast ? 0 : 16); }
-        foreach (var (section, tab) in _tabs) { tab.Background = section == _section ? _environment.Theme.Brush("NexusSelection") : _environment.Theme.Material("Card", _environment.State.NativeGlass); tab.BorderBrush = section == _section ? _environment.Theme.Brush("NexusAccent") : _environment.Theme.Edge; tab.CornerRadius = new CornerRadius(_environment.Theme.HighContrast ? 0 : 15); }
+        foreach (var card in _cards) { card.Background = _environment.Theme.Material("Card", _environment.State.NativeGlass); card.BorderBrush = _environment.Theme.Edge; card.CornerRadius = new CornerRadius(_environment.Theme.HighContrast ? 0 : MidnightGlassMetrics.CardRadius); }
+        foreach (var (section, tab) in _tabs) { tab.Background = section == _section ? _environment.Theme.Brush("NexusSelection") : _environment.Theme.Material("Card", _environment.State.NativeGlass); tab.BorderBrush = section == _section ? _environment.Theme.Brush("NexusAccent") : _environment.Theme.Edge; tab.CornerRadius = new CornerRadius(_environment.Theme.HighContrast ? 0 : MidnightGlassMetrics.CardRadius); }
         RefreshPreferences();
         RefreshGlassStatus();
     }
