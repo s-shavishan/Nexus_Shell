@@ -28,8 +28,11 @@ internal sealed class FilesView : Grid
     private readonly Button _rename, _undo;
     private readonly Button _back, _forward, _gridButton, _listButton;
     private readonly ComboBox _sort = new() { Width = 110, FontSize = 12 };
-    private readonly Image _preview = new() { Height = 136, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Stretch };
-    private readonly Image _fileIcon = new() { Width = 70, Height = 70, HorizontalAlignment = HorizontalAlignment.Center };
+    private readonly Image _preview = new() { Height = 172, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Stretch };
+    private readonly Image _fileIcon = new() { Width = 86, Height = 86, HorizontalAlignment = HorizontalAlignment.Center };
+    private readonly Border _previewStage = new() { Height = 200, Padding = new Thickness(12), CornerRadius = new CornerRadius(14), BorderThickness = new Thickness(1) };
+    private readonly Border _contentsCard = new() { CornerRadius = new CornerRadius(MidnightGlassMetrics.CardRadius), Padding = new Thickness(13, 14, 13, 12), BorderThickness = new Thickness(1) };
+    private readonly TextBlock _folderHeading = new() { Text = "Contents", FontSize = 17, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock _modified = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap };
     private readonly ProgressRing _loading = new() { Width = 28, Height = 28, IsActive = false, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, IsHitTestVisible = false };
     private readonly DispatcherTimer _slowRead = new() { Interval = TimeSpan.FromSeconds(5) };
@@ -46,8 +49,8 @@ internal sealed class FilesView : Grid
     private readonly TextBlock _fileTitle = new() { Text = "No selection", FontSize = 17, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _fileKind = new() { Text = "Choose a file or folder to see its information.", FontSize = 12, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _fileLocation = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis, MaxLines = 5 };
-    private readonly ColumnDefinition _inspectorColumn = new() { Width = new GridLength(225) };
-    private readonly ColumnDefinition _placesColumn = new() { Width = new GridLength(185) };
+    private readonly ColumnDefinition _inspectorColumn = new() { Width = new GridLength(228) };
+    private readonly ColumnDefinition _placesColumn = new() { Width = new GridLength(190) };
     private readonly StackPanel _bin = new() { Spacing = 16, Padding = new Thickness(28), VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
     private readonly TextBlock _binCount = new() { FontSize = 24 };
     private IReadOnlyList<FileEntry> _entries = [];
@@ -85,12 +88,12 @@ internal sealed class FilesView : Grid
         body.ColumnDefinitions.Add(_inspectorColumn);
         body.SizeChanged += (_, _) =>
         {
-            bool showInspector = request.Kind == FileSelectionKind.Browse && body.ActualWidth >= 800;
-            _inspectorColumn.Width = showInspector ? new GridLength(225) : new GridLength(0);
-            _inspectorCard.Visibility = showInspector ? Visibility.Visible : Visibility.Collapsed;
-            _placesColumn.Width = body.ActualWidth < 590 ? new GridLength(126) : new GridLength(193);
+            var pane = FilesPaneLayoutPolicy.Resolve(body.ActualWidth, request.Kind == FileSelectionKind.Browse);
+            _inspectorColumn.Width = new GridLength(pane.InspectorWidth);
+            _inspectorCard.Visibility = pane.InspectorVisible ? Visibility.Visible : Visibility.Collapsed;
+            _placesColumn.Width = new GridLength(pane.SidebarWidth);
         };
-        var places = new StackPanel { Spacing = 6 };
+        var places = new StackPanel { Spacing = 7 };
         places.Children.Add(new TextBlock { Text = "FAVORITES", FontSize = 11, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             Margin = new Thickness(9, 7, 0, 10), Foreground = environment.Theme.Brush("NexusMuted") });
         foreach (var place in new[] { ("My files", Environment.SpecialFolder.UserProfile), ("Desktop", Environment.SpecialFolder.DesktopDirectory),
@@ -106,11 +109,11 @@ internal sealed class FilesView : Grid
         body.Children.Add(_placesCard);
         _list.SelectionMode = request.Kind == FileSelectionKind.OpenFiles ? ListViewSelectionMode.Multiple : ListViewSelectionMode.Single;
         _tiles.SelectionMode = _list.SelectionMode;
-        _tiles.ItemsPanel = (ItemsPanelTemplate)XamlReader.Load("<ItemsPanelTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'><ItemsWrapGrid ItemWidth='118' ItemHeight='126' Orientation='Horizontal'/></ItemsPanelTemplate>");
+        _tiles.ItemsPanel = (ItemsPanelTemplate)XamlReader.Load("<ItemsPanelTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'><ItemsWrapGrid ItemWidth='116' ItemHeight='136' Orientation='Horizontal'/></ItemsPanelTemplate>");
         _tiles.ItemTemplate = (DataTemplate)XamlReader.Load("""
           <DataTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
-            <StackPanel Width="106" Padding="6,10" Spacing="6" AutomationProperties.Name="{Binding Name}">
-              <Image Width="58" Height="58" Source="{Binding IconUri}" HorizontalAlignment="Center"/>
+            <StackPanel Width="104" Padding="6,10" Spacing="8" AutomationProperties.Name="{Binding Name}">
+              <Image Width="68" Height="68" Source="{Binding IconUri}" HorizontalAlignment="Center"/>
               <TextBlock Text="{Binding Name}" FontSize="12" TextAlignment="Center" TextTrimming="CharacterEllipsis" MaxLines="1"/>
               <TextBlock Text="{Binding Detail}" FontSize="10" Foreground="{ThemeResource NexusMuted}" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
             </StackPanel>
@@ -151,7 +154,13 @@ internal sealed class FilesView : Grid
                 view.RightTapped += (_, args) => view.SelectedItem = ItemAt(view, args.OriginalSource);
             }
         }
-        var contents = new Grid { RowSpacing = 10 }; contents.RowDefinitions.Add(new() { Height = GridLength.Auto }); contents.RowDefinitions.Add(new() { Height = new GridLength(1, GridUnitType.Star) });
+        var contents = new Grid { RowSpacing = 12 };
+        contents.RowDefinitions.Add(new() { Height = GridLength.Auto });
+        contents.RowDefinitions.Add(new() { Height = new GridLength(1, GridUnitType.Star) });
+        var contentHeader = new Grid { ColumnSpacing = 10 };
+        contentHeader.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
+        contentHeader.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) });
+        contentHeader.Children.Add(_folderHeading);
         var views = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
         _gridButton = Button("Grid", () => { _showGrid = true; Render(); return Task.CompletedTask; }); _listButton = Button("List", () => { _showGrid = false; Render(); return Task.CompletedTask; }); views.Children.Add(_gridButton); views.Children.Add(_listButton);
         _rename = Button("Rename…", RenameAsync); _undo = Button("Undo edit", UndoAsync);
@@ -159,13 +168,17 @@ internal sealed class FilesView : Grid
         views.Children.Add(_rename); views.Children.Add(_undo);
         foreach (string sort in new[] { "Name", "Newest", "Size", "Kind" }) _sort.Items.Add(sort);
         _sort.SelectedIndex = 0; _sort.SelectionChanged += (_, _) => Render(); Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_sort, "Sort files"); views.Children.Add(_sort);
-        contents.Children.Add(new ScrollViewer { Content = views, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled });
-        Grid.SetRow(_list, 1); Grid.SetRow(_tiles, 1); contents.Children.Add(_list); contents.Children.Add(_tiles); Grid.SetColumn(contents, 1); body.Children.Add(contents);
+        var viewScroll = new ScrollViewer { Content = views, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled };
+        Grid.SetColumn(viewScroll, 1); contentHeader.Children.Add(viewScroll);
+        contents.Children.Add(contentHeader);
+        Grid.SetRow(_list, 1); Grid.SetRow(_tiles, 1); contents.Children.Add(_list); contents.Children.Add(_tiles);
+        _contentsCard.Child = contents; Grid.SetColumn(_contentsCard, 1); body.Children.Add(_contentsCard);
         Grid.SetColumn(_loading, 1); body.Children.Add(_loading);
-        var details = new StackPanel { Spacing = 12 };
-        details.Children.Add(new TextBlock { Text = "INSPECTOR", FontSize = 11, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+        var details = new StackPanel { Spacing = 14 };
+        details.Children.Add(new TextBlock { Text = "PREVIEW", FontSize = 11, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             Foreground = environment.Theme.Brush("NexusMuted") });
-        details.Children.Add(_preview); details.Children.Add(_fileIcon);
+        var artwork = new Grid(); artwork.Children.Add(_preview); artwork.Children.Add(_fileIcon);
+        _previewStage.Child = artwork; details.Children.Add(_previewStage);
         details.Children.Add(_fileTitle); details.Children.Add(_fileKind);
         details.Children.Add(Button("Open", async () => { if (ActiveList.SelectedItem is FileEntry entry) await OpenAsync(entry); }));
         details.Children.Add(_modified);
@@ -275,6 +288,8 @@ internal sealed class FilesView : Grid
             _list.Visibility = !_showGrid && !_recycle ? Visibility.Visible : Visibility.Collapsed; _tiles.Visibility = _showGrid && !_recycle ? Visibility.Visible : Visibility.Collapsed;
             foreach (var item in entries.Where(e => selected.Contains(e.Path))) ActiveList.SelectedItems.Add(item);
             _gridButton.Background = _environment.Theme.Brush(_showGrid ? "NexusSelection" : "NexusSidebar"); _listButton.Background = _environment.Theme.Brush(!_showGrid ? "NexusSelection" : "NexusSidebar");
+            string folderName = _folder.Length > 0 ? Path.GetFileName(Path.TrimEndingDirectorySeparator(_folder)) : "";
+            _folderHeading.Text = _recycle ? "Recycle Bin" : folderName.Length > 0 ? folderName : "Contents";
             if (!_recycle) _status.Text = entries.Length + " of " + _entries.Count + " items";
         }
         finally { _rendering = false; }
@@ -437,6 +452,15 @@ internal sealed class FilesView : Grid
         _inspectorCard.Background = theme.Material("Card", _environment.State.NativeGlass);
         _inspectorCard.BorderBrush = theme.Edge;
         _inspectorCard.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : MidnightGlassMetrics.CardRadius);
+        _contentsCard.Background = MidnightGlassMetrics.ReferenceEnabled(theme.Palette, theme.HighContrast)
+            ? theme.Surface("Dock") : theme.Material("Card", _environment.State.NativeGlass);
+        _contentsCard.BorderBrush = theme.Edge;
+        _contentsCard.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : MidnightGlassMetrics.CardRadius);
+        _previewStage.Background = MidnightGlassMetrics.ReferenceEnabled(theme.Palette, theme.HighContrast)
+            ? theme.Surface("Hero") : theme.Material("Card", _environment.State.NativeGlass);
+        _previewStage.BorderBrush = theme.Edge;
+        _previewStage.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 14);
+        _folderHeading.Foreground = theme.Brush("NexusText");
         _fileTitle.Foreground = theme.Brush("NexusText"); _fileKind.Foreground = theme.Brush("NexusMuted");
         _fileLocation.Foreground = theme.Brush("NexusSecondary");
         RefreshPlaces();
