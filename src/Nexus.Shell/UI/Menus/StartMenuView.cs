@@ -15,8 +15,25 @@ internal sealed class LaunchpadTile(AppEntry app) : INotifyPropertyChanged
 {
     internal AppEntry App => app;
     public string Name => app.Name;
-    private ImageSource _icon = NexusIcons.Source(NexusIcons.ForApp(app));
-    public ImageSource Icon { get => _icon; set { if (ReferenceEquals(_icon, value)) return; _icon = value; PropertyChanged?.Invoke(this, new(nameof(Icon))); } }
+    private ImageSource? _icon = LaunchpadArtworkPolicy.UsesNexusArtwork(app.Id)
+        ? NexusIcons.Source(NexusIcons.ForApp(app)) : null;
+    private Visibility _placeholder = LaunchpadArtworkPolicy.UsesNexusArtwork(app.Id)
+        ? Visibility.Collapsed : Visibility.Visible;
+    public string Monogram => LaunchpadArtworkPolicy.Monogram(app.Name);
+    public SolidColorBrush TileBrush { get; } = new(ShellTheme.Color(LaunchpadArtworkPolicy.Background(app.Name)));
+    public Visibility PlaceholderVisibility { get => _placeholder; private set
+        { if (_placeholder == value) return; _placeholder = value; PropertyChanged?.Invoke(this, new(nameof(PlaceholderVisibility))); } }
+    public ImageSource? Icon
+    {
+        get => _icon;
+        set
+        {
+            if (ReferenceEquals(_icon, value)) return;
+            _icon = value;
+            PlaceholderVisibility = value is null ? Visibility.Visible : Visibility.Collapsed;
+            PropertyChanged?.Invoke(this, new(nameof(Icon)));
+        }
+    }
     public event PropertyChangedEventHandler? PropertyChanged;
 }
 
@@ -54,7 +71,7 @@ internal sealed class StartMenuView : Grid, IDisposable
     internal StartMenuView(DesktopEnvironment environment)
     {
         _environment = environment; _catalog = new(Builtins());
-        Padding = new Thickness(26); RowSpacing = 16;
+        Padding = new Thickness(30); RowSpacing = 18;
         SizeChanged += (_, _) => _subtitle.MaxWidth = Math.Max(140, ActualWidth - 176);
         KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden;
         foreach (var height in new[] { GridLength.Auto, GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto }) RowDefinitions.Add(new() { Height = height });
@@ -93,12 +110,20 @@ internal sealed class StartMenuView : Grid, IDisposable
         organization.Children.Add(new ScrollViewer { Content = tools, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled });
         Grid.SetRow(organization, 2); Children.Add(organization); RefreshCollections();
         _apps.ItemsPanel = (ItemsPanelTemplate)XamlReader.Load("""
-            <ItemsPanelTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"><ItemsWrapGrid Orientation="Horizontal" ItemWidth="110" ItemHeight="116" /></ItemsPanelTemplate>
+            <ItemsPanelTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"><ItemsWrapGrid Orientation="Horizontal" ItemWidth="112" ItemHeight="124" /></ItemsPanelTemplate>
             """);
         _apps.ItemTemplate = (DataTemplate)XamlReader.Load("""
             <DataTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
               <StackPanel Spacing="11" Padding="4,10" HorizontalAlignment="Stretch" AutomationProperties.Name="{Binding Name}">
-                <Image Source="{Binding Icon}" Width="60" Height="60" />
+                <Grid Width="68" Height="68" HorizontalAlignment="Center">
+                  <Border Width="64" Height="64" CornerRadius="16" Background="{Binding TileBrush}"
+                          Visibility="{Binding PlaceholderVisibility}" HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding Monogram}" FontSize="22" FontWeight="SemiBold"
+                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                  </Border>
+                  <Image Source="{Binding Icon}" Width="64" Height="64" Stretch="Uniform"/>
+                </Grid>
                 <TextBlock Text="{Binding Name}" FontSize="12" TextAlignment="Center" TextTrimming="CharacterEllipsis" TextWrapping="Wrap" MaxLines="2" />
               </StackPanel>
             </DataTemplate>

@@ -47,3 +47,11 @@ The approved target has a larger, more expressive floating dock, a compact horiz
 6. Keep the PR unmerged until the owner explicitly decides; AppVeyor main-only configuration may require owner-controlled test merge, and CI success is not visual approval.
 
 This patch does **not** claim pixel-perfect reference fidelity.
+
+## Stage 2 — Launchpad differentiation and compact control navigation
+
+The supplied Launchpad screenshot shows many unrelated installed Win32 applications represented by the same pastel Nexus glyph. `LaunchpadTile` now retains the real asynchronous Windows thumbnail loading path, but when WinRT cannot provide one it shows a deterministic 64px accent tile with a two-character app-specific monogram instead of cloning the Nexus logo. First-party Nexus features keep their vector artwork. The tile updates in place if a genuine icon arrives; no catalog rescan is triggered. `LaunchpadArtworkPolicy` is portable and tested for stable colors and monograms.
+
+Control Center's navigation changes from a small 3×2 matrix of centered badges to larger, icon-led **2×3 horizontal service cards**. It retains the existing live Core-backed sections and does not invent fake network, brightness or audio state. Notification cards gain more generous internal spacing and distinct unread borders/backgrounds; dismissal, search, snooze, undo and paging remain wired to their existing services.
+
+**Validation:** Check app icons under actual Win10 shell links and packaged/system utilities, as well as changes to loaded thumbnails. Check the Control Center at 100/125/150% DPI and the Notifications panel with mixed read/unread items. The new UI code has not been compiled in this session. All changes remain on unmerged PR #29.

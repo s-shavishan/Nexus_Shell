@@ -16,8 +16,8 @@ internal sealed class NotificationWindow : Window
     private readonly IntPtr _handle;
     private readonly AppWindow _window;
     private readonly Border _frame;
-    private readonly StackPanel _items = new() { Spacing = 10 };
-    private readonly TextBlock _title = new() { Text = "Notifications", FontSize = 23, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
+    private readonly StackPanel _items = new() { Spacing = 12 };
+    private readonly TextBlock _title = new() { Text = "Notifications", FontSize = 22, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
     private readonly TextBlock _subtitle = new() { Text = "Nexus alert history", FontSize = 12 };
     private readonly WindowChrome _chrome;
     private readonly WindowMaterial _material = new();
@@ -37,12 +37,12 @@ internal sealed class NotificationWindow : Window
     internal NotificationWindow(DesktopEnvironment environment)
     {
         _environment = environment;
-        var root = new Grid { Padding = new Thickness(22), RowSpacing = 16, KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden };
+        var root = new Grid { Padding = new Thickness(18), RowSpacing = 13, KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden };
         root.RowDefinitions.Add(new() { Height = GridLength.Auto }); root.RowDefinitions.Add(new() { Height = GridLength.Auto }); root.RowDefinitions.Add(new()); root.RowDefinitions.Add(new() { Height = GridLength.Auto });
         var header = new Grid(); header.ColumnDefinitions.Add(new()); header.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
         var titles = new StackPanel { Spacing = 5 }; titles.Children.Add(_title); titles.Children.Add(_subtitle); header.Children.Add(titles);
         var close = ShellControls.IconButton("\uE8BB", "Close notifications", Hide); Grid.SetColumn(close, 1); header.Children.Add(close); root.Children.Add(header);
-        var filters = new StackPanel { Spacing = 9 }; filters.Children.Add(_search);
+        var filters = new StackPanel { Spacing = 10 }; filters.Children.Add(_search);
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_search, "Search Nexus alert history");
         var tabs = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 5 };
         foreach (string filter in new[] { "All", "Unread", "Issues", "Snoozed" }) { var tab = Button(filter, () => { _filter = filter; _page = 0; _appearance = ""; Refresh(); }); tabs.Children.Add(tab); _filters.Add(filter, tab); }
@@ -58,11 +58,11 @@ internal sealed class NotificationWindow : Window
         footer.Children.Add(new ScrollViewer { Content = edits, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled });
         _quiet = Button("Quiet alerts", () => { environment.Session.State.QuietNotifications = !environment.Session.State.QuietNotifications; environment.SaveState(); Refresh(); }); footer.Children.Add(_quiet);
         footer.Children.Add(new TextBlock { Text = "Nexus alerts only. Windows app notifications stay with Windows.", FontSize = 11, TextWrapping = TextWrapping.Wrap }); Grid.SetRow(footer, 3); root.Children.Add(footer);
-        _frame = new Border { Child = root, CornerRadius = new CornerRadius(22), BorderThickness = new Thickness(1) }; Content = _frame;
+        _frame = new Border { Child = root, CornerRadius = new CornerRadius(MidnightGlassMetrics.FrameRadius), BorderThickness = new Thickness(1) }; Content = _frame;
         _handle = WinRT.Interop.WindowNative.GetWindowHandle(this); _window = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(_handle)); _window.Title = "Nexus notifications";
         WindowSwitcherPolicy.Request(() => _window.IsShownInSwitchers = false, error => Log.Write("Notification switcher fallback", error));
         if (_window.Presenter is OverlappedPresenter presenter) { presenter.SetBorderAndTitleBar(false, false); presenter.IsResizable = presenter.IsMinimizable = presenter.IsMaximizable = false; }
-        ShellLayerInterop.ToolWindow(_handle); _chrome = new(_handle, closeRequested: Hide); _chrome.SetCorners(environment.Theme.HighContrast, 22);
+        ShellLayerInterop.ToolWindow(_handle); _chrome = new(_handle, closeRequested: Hide); _chrome.SetCorners(environment.Theme.HighContrast, MidnightGlassMetrics.FrameRadius);
         _motion = new(_frame, () => environment.Theme.Animations && !environment.Theme.HighContrast && environment.Session.State.SurfaceAnimations && !environment.Session.State.ReducedEffects);
         environment.Notifications.Changed += QueueRefresh;
         var escape = new KeyboardAccelerator { Key = VirtualKey.Escape }; escape.Invoked += (_, e) => { Hide(); e.Handled = true; }; root.KeyboardAccelerators.Add(escape);
@@ -112,7 +112,17 @@ internal sealed class NotificationWindow : Window
             else actions.Children.Add(Button("Snooze 15 min", () => _environment.Notifications.Snooze(notice.Id, TimeSpan.FromMinutes(15))));
             if (!notice.Read) actions.Children.Add(Button("Mark read", () => _environment.Notifications.MarkRead([notice.Id])));
             body.Children.Add(actions);
-            _items.Children.Add(new Border { Child = body, Padding = new Thickness(14), CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 15), Background = theme.Material("Card", _environment.Session.State.NativeGlass), BorderBrush = theme.Edge, BorderThickness = new Thickness(1) });
+            _items.Children.Add(new Border
+            {
+                Child = body,
+                Padding = new Thickness(16, 15, 16, 15),
+                CornerRadius = new CornerRadius(theme.HighContrast ? 0 : MidnightGlassMetrics.CardRadius),
+                Background = notice.Read
+                    ? theme.Material("Card", _environment.Session.State.NativeGlass)
+                    : theme.Brush("NexusSidebar"),
+                BorderBrush = notice.Read ? theme.Edge : theme.Brush("NexusAccent"),
+                BorderThickness = new Thickness(notice.Read ? 1 : 1.5)
+            });
         }
     }
     internal void Show()
@@ -127,5 +137,5 @@ internal sealed class NotificationWindow : Window
         ShellLayerInterop.SetWindowPos(_handle, ShellLayerInterop.Topmost, rect.X, rect.Y, rect.Width, rect.Height, 0x0010);
     }
     internal void ApplyAppearance()
-    { _material.Apply(this, _frame, _environment); _frame.BorderBrush = _environment.Theme.Edge; _frame.CornerRadius = new CornerRadius(_environment.Theme.HighContrast ? 0 : 22); _title.Foreground = _environment.Theme.Brush("NexusText"); _subtitle.Foreground = _environment.Theme.Brush("NexusMuted"); _chrome.SetCorners(_environment.Theme.HighContrast, 22); _motion.Refresh(); if (IsOpen) Refresh(); }
+    { _material.Apply(this, _frame, _environment); _frame.BorderBrush = _environment.Theme.Edge; _frame.CornerRadius = new CornerRadius(_environment.Theme.HighContrast ? 0 : MidnightGlassMetrics.FrameRadius); _title.Foreground = _environment.Theme.Brush("NexusText"); _subtitle.Foreground = _environment.Theme.Brush("NexusMuted"); _chrome.SetCorners(_environment.Theme.HighContrast, MidnightGlassMetrics.FrameRadius); _motion.Refresh(); if (IsOpen) Refresh(); }
 }

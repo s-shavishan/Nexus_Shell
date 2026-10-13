@@ -20,7 +20,7 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     private readonly StackPanel _body = new() { Spacing = 14 };
     private readonly TextBlock _status;
     private readonly InfoBar _error = new() { IsClosable = true, Severity = InfoBarSeverity.Error, Title = "Control Center needs attention" };
-    private readonly Grid _nav = new() { ColumnSpacing = 8, RowSpacing = 8 };
+    private readonly Grid _nav = new() { ColumnSpacing = 10, RowSpacing = 10 };
     private readonly TextBlock _heading, _subtitle;
     private readonly Button _expand;
     private readonly ProgressBar _progress = new() { IsIndeterminate = false, Height = 2, Opacity = 0 };
@@ -62,15 +62,24 @@ internal sealed class QuickSettingsView : Grid, IDisposable
         heading.Children.Add(_heading); heading.Children.Add(_subtitle); header.Children.Add(heading);
         var dismiss = ShellControls.IconButton("\uE8BB", "Close Control Center", close); Grid.SetColumn(dismiss, 1); header.Children.Add(dismiss); Children.Add(header);
         var nav = _nav;
-        for (int i = 0; i < 3; i++) nav.ColumnDefinitions.Add(new()); for (int i = 0; i < 2; i++) nav.RowDefinitions.Add(new());
+        for (int i = 0; i < 2; i++) nav.ColumnDefinitions.Add(new()); for (int i = 0; i < 3; i++) nav.RowDefinitions.Add(new());
         var sections = new[] { ("Sound", "\uE767"), ("Network", "\uE701"), ("Bluetooth", "\uE702"), ("Display", "\uE7F4"), ("Power", "\uE7E8"), ("Desktop", "\uE8FC") };
         for (int i = 0; i < sections.Length; i++)
         {
-            var (name, glyph) = sections[i]; var content = new StackPanel { Spacing = 8, HorizontalAlignment = HorizontalAlignment.Center };
-            var badge = ShellControls.Badge(glyph, environment.Theme, 34); _badges.Add(badge); content.Children.Add(badge); var label = Label(name, 12); label.HorizontalAlignment = HorizontalAlignment.Center; content.Children.Add(label);
-            var button = ActionButton(name, () => Navigate(name)); button.Content = content; button.HorizontalAlignment = HorizontalAlignment.Stretch;
-            button.HorizontalContentAlignment = HorizontalAlignment.Center; button.Padding = new Thickness(8, 12, 8, 12); button.CornerRadius = new CornerRadius(MidnightGlassMetrics.CardRadius); button.BorderThickness = new Thickness(1);
-            _tabs[name] = button; Grid.SetRow(button, i / 3); Grid.SetColumn(button, i % 3); nav.Children.Add(button);
+            var (name, glyph) = sections[i];
+            var content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, VerticalAlignment = VerticalAlignment.Center };
+            var badge = ShellControls.Badge(glyph, environment.Theme, 36);
+            _badges.Add(badge); content.Children.Add(badge);
+            var label = Label(name, 13); label.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
+            label.VerticalAlignment = VerticalAlignment.Center; content.Children.Add(label);
+            var button = ActionButton(name, () => Navigate(name));
+            button.Content = content; button.MinHeight = 68;
+            button.HorizontalAlignment = HorizontalAlignment.Stretch;
+            button.HorizontalContentAlignment = HorizontalAlignment.Left;
+            button.Padding = new Thickness(12, 9, 12, 9);
+            button.CornerRadius = new CornerRadius(MidnightGlassMetrics.CardRadius);
+            button.BorderThickness = new Thickness(1);
+            _tabs[name] = button; Grid.SetRow(button, i / 2); Grid.SetColumn(button, i % 2); nav.Children.Add(button);
         }
         Grid.SetRow(nav, 1); Children.Add(nav);
         var scroll = new ScrollViewer { Content = _body, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };

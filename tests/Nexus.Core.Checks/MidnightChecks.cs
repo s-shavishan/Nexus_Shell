@@ -65,6 +65,18 @@ internal static class MidnightChecks
             && DesktopLayout.TaskbarHeight(false) >= MidnightGlassMetrics.DockButtonHeight + 20
             && DesktopLayout.TaskbarHeight(true) == 56,
             "Floating dock must reserve room for the real icon size and preserve compact mode.");
+        check(LaunchpadArtworkPolicy.UsesNexusArtwork("sections")
+            && !LaunchpadArtworkPolicy.UsesNexusArtwork("discovered-app"),
+            "Only Nexus-owned builtins should keep fixed vector app artwork.");
+        check(LaunchpadArtworkPolicy.Monogram("Administrative Tools") == "AT"
+            && LaunchpadArtworkPolicy.Monogram("Event Viewer") == "EV"
+            && LaunchpadArtworkPolicy.Monogram("Everything") == "EV"
+            && LaunchpadArtworkPolicy.Monogram("7-Zip") == "7Z"
+            && LaunchpadArtworkPolicy.Monogram("") == "APP",
+            "Discovered apps need distinct, stable monograms instead of repeated placeholders.");
+        check(LaunchpadArtworkPolicy.Background("Event Viewer") == LaunchpadArtworkPolicy.Background("Event Viewer")
+            && LaunchpadArtworkPolicy.Background("Event Viewer").Length == 8,
+            "Fallback application tile color must be stable and fully opaque.");
         // The launcher must fit the same real, negatively offset monitors as
         // the expanded search without ever stealing focus or going off screen.
         foreach (var monitor in new[] { new ShellRect(0, 0, 1649, 928), new ShellRect(-2560, -140, 2560, 1440), new ShellRect(100, 200, 640, 480) })
