@@ -43,16 +43,16 @@ public sealed record AuraPalette(string Name, string Canvas, string Panel, strin
     };
     public bool IsLight => Name is "Solstice" or "Opal";
     public string AccentEnd => Name == "Midnight" ? "FF8195F4" : Name == "Ember" ? "FFBA2B52" : Accent;
-    public string DockStart => Name == "Midnight" ? "DF283752" : Name == "Ember" ? "F2491D1D" : Panel;
-    public string DockEnd => Name == "Midnight" ? "ED11182C" : Name == "Ember" ? "F22E1729" : Panel;
-    public string SidebarEnd => Name == "Midnight" ? "DE131C31" : Name == "Ember" ? "F2221320" : Tokens["NexusSidebar"];
+    public string DockStart => Name == "Midnight" ? "C7263958" : Name == "Ember" ? "F2491D1D" : Panel;
+    public string DockEnd => Name == "Midnight" ? "E8142037" : Name == "Ember" ? "F22E1729" : Panel;
+    public string SidebarEnd => Name == "Midnight" ? "E50C172B" : Name == "Ember" ? "F2221320" : Tokens["NexusSidebar"];
     public const string Text = "FFF4F7FE";
     public const string AccentText = "FF171C29";
     public const string Border = "406D809A";
     public const string Input = "F0141B29";
     public static AuraPalette For(string mood) => mood switch
     {
-        "Midnight" => new("Midnight", "FF0A1020", "EE151E32", "F0263148", "FF8EAFFF", "FFB3C5FB", "FFAAB9D4", "FF253A62", "FF171D3A", "FF282453"),
+        "Midnight" => new("Midnight", "FF070F21", "E916243D", "E9223550", "FF399BFF", "FFBBD9FF", "FFB6C6E4", "FF29446C", "FF101E3A", "FF243052"),
         "Solstice" => new("Solstice", "FF9E482D", "F5FFF8F1", "F8FFFCF8", "FFAA461F", "FF805643", "FF4E433A", "FFFFF5E9", "FFF3E5D6", "FF482C46"),
         "Ember" => new("Ember", "FF170B11", "F222111C", "F22D1624", "FFBF311B", "FFFFAE9B", "FFDCC2C8", "FF48201F", "FF351A2E", "FF281020"),
         "Opal" => new("Opal", "FF293668", "DAF0F1F8", "EAF8F8FC", "FF3163BC", "FF526E99", "FF3C485B", "FFF0F2FB", "FFE3EAFB", "FF3F2B67"),
@@ -67,18 +67,18 @@ public sealed record AuraPalette(string Name, string Canvas, string Panel, strin
        var tokens = new Dictionary<string, string>
        {
         ["NexusText"] = Name == "Solstice" ? "FF302923" : IsLight ? "FF1B273D" : Name == "Ember" ? "FFFFF7F2" : Text, ["NexusMuted"] = Muted, ["NexusAccent"] = Accent, ["NexusAccentText"] = IsLight || Name == "Ember" ? "FFFFFFFF" : AccentText,
-        ["NexusSecondary"] = Secondary, ["NexusPanel"] = Panel, ["NexusCard"] = Card, ["NexusBorder"] = IsLight ? "383F332D" : Name == "Midnight" ? "507D90B5" : Name == "Ember" ? "426E3E4B" : "426D809A",
-        ["NexusSidebar"] = Name == "Solstice" ? "F0F1E5DA" : IsLight ? "EAE8EAF3" : Name == "Midnight" ? "E71B263F" : Name == "Ember" ? "F232151B" : "E01B2335",
-        ["NexusInput"] = IsLight ? "F8FFFFFF" : Name == "Midnight" ? "EB0E182C" : Name == "Ember" ? "F21D101A" : Input,
-        ["NexusSelection"] = Name == "Solstice" ? "29AA461F" : IsLight ? "253B62B7" : Name == "Midnight" ? "68435D98" : Name == "Ember" ? "424F2935" : "384F657F",
-        ["NexusShell"] = Name == "Solstice" ? "E3FFF5EB" : IsLight ? "DFF0F0F8" : Name == "Midnight" ? "EA111A2D" : Name == "Ember" ? "F222111C" : "E01A2331", ["NexusIcon"] = Name == "Ember" ? "FF48202E" : "FF34465C", ["NexusHeroStart"] = HeroStart,
+        ["NexusSecondary"] = Secondary, ["NexusPanel"] = Panel, ["NexusCard"] = Card, ["NexusBorder"] = IsLight ? "383F332D" : Name == "Midnight" ? "5A91A9D2" : Name == "Ember" ? "426E3E4B" : "426D809A",
+        ["NexusSidebar"] = Name == "Solstice" ? "F0F1E5DA" : IsLight ? "EAE8EAF3" : Name == "Midnight" ? "D9152440" : Name == "Ember" ? "F232151B" : "E01B2335",
+        ["NexusInput"] = IsLight ? "F8FFFFFF" : Name == "Midnight" ? "C9132541" : Name == "Ember" ? "F21D101A" : Input,
+        ["NexusSelection"] = Name == "Solstice" ? "29AA461F" : IsLight ? "253B62B7" : Name == "Midnight" ? "95256BC2" : Name == "Ember" ? "424F2935" : "384F657F",
+        ["NexusShell"] = Name == "Solstice" ? "E3FFF5EB" : IsLight ? "DFF0F0F8" : Name == "Midnight" ? "DF0E1C34" : Name == "Ember" ? "F222111C" : "E01A2331", ["NexusIcon"] = Name == "Ember" ? "FF48202E" : "FF34465C", ["NexusHeroStart"] = HeroStart,
         ["NexusDesktopText"] = "FFF5F8FF", ["NexusDesktopMuted"] = "FFD2DDED",
         ["NexusHeroEnd"] = HeroEnd, ["NexusOverlay"] = "820E0B18",
         ["NexusDesktopLabel"] = Name == "Midnight" ? "B90C1529" : "CF241B2B", ["NexusHover"] = IsLight ? "FF251E24" : "FFFFFFFF",
         ["NexusHighlight"] = IsLight ? "90FFFFFF" : "26FFFFFF",
         ["NexusSelectedText"] = IsLight ? "FF302923" : Text,
-        ["NexusSegment"] = IsLight ? "E6FFFFFF" : Name == "Midnight" ? "FF344461" : Name == "Ember" ? "FF492330" : "FF39465C",
-        ["NexusTrack"] = IsLight ? "52463E39" : Name == "Midnight" ? "98576F97" : Name == "Ember" ? "685D2B3F" : "687D8A9E"
+        ["NexusSegment"] = IsLight ? "E6FFFFFF" : Name == "Midnight" ? "FF213D63" : Name == "Ember" ? "FF492330" : "FF39465C",
+        ["NexusTrack"] = IsLight ? "52463E39" : Name == "Midnight" ? "90517EAF" : Name == "Ember" ? "685D2B3F" : "687D8A9E"
        };
        // Restyle the native templates as well as Nexus's buttons. Keep the
        // built-in keyboard, selection, automation and editing behavior.
