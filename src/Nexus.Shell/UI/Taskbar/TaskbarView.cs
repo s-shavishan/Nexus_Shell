@@ -372,12 +372,22 @@ internal sealed class TaskbarView : Grid
         ToolTipService.SetToolTip(item.Button, _environment.Session.State.DockPreviews ? null : action + item.Window.Title);
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(item.Button, action + item.Window.Title);
     }
-    private static void SetIndicatorLayout(Border indicator, double width, double opacity)
+    private static void SetIndicatorLayout(
+        Border indicator, double width, double opacity, Action? onPropertyWrite = null)
     {
-        // Presence animation is compositor-owned; WinUI should not remeasure an
-        // underline whose reserved layout slot and opacity are unchanged.
-        if (indicator.Width != width) indicator.Width = width;
-        if (indicator.Opacity != opacity) indicator.Opacity = opacity;
+        // The optional observer is used only by the native UI probe. It counts
+        // actual assignments (not WinUI DP change callbacks, which may be
+        // coalesced for an unattached element). Regular UI calls pass null.
+        if (indicator.Width != width)
+        {
+            indicator.Width = width;
+            onPropertyWrite?.Invoke();
+        }
+        if (indicator.Opacity != opacity)
+        {
+            indicator.Opacity = opacity;
+            onPropertyWrite?.Invoke();
+        }
     }
 
     private void PrepareMotion(DockItem item)
@@ -429,25 +439,23 @@ internal sealed class TaskbarView : Grid
     {
         var indicator = new Border { Width = 22, Opacity = 1 };
         int writes = 0;
-        long width = indicator.RegisterPropertyChangedCallback(FrameworkElement.WidthProperty, (_, _) => writes++);
-        long opacity = indicator.RegisterPropertyChangedCallback(UIElement.OpacityProperty, (_, _) => writes++);
-        try
-        {
-            for (int i = 0; i < 100; i++) SetIndicatorLayout(indicator, 22, 1);
-            if (writes != 0)
-                throw new InvalidOperationException("Unchanged dock indicators triggered repeated WinUI layout writes.");
-            SetIndicatorLayout(indicator, 10, .45);
-            if (indicator.Width != 10 || indicator.Opacity != .45 || writes != 2)
-                throw new InvalidOperationException("A real dock indicator size and opacity transition was suppressed.");
-            SetIndicatorLayout(indicator, 22, 1);
-            if (writes != 4)
-                throw new InvalidOperationException("Restoring dock indicator geometry did not update both properties.");
-        }
-        finally
-        {
-            indicator.UnregisterPropertyChangedCallback(FrameworkElement.WidthProperty, width);
-            indicator.UnregisterPropertyChangedCallback(UIElement.OpacityProperty, opacity);
-        }
+        Action observeWrite = () => writes++;
+        // Count the production method's actual Width/Opacity assignments.
+        // A detached Border may not deliver DP callbacks synchronously on
+        // every WinUI runtime; that should not give a false probe failure.
+        for (int i = 0; i < 100; i++)
+            SetIndicatorLayout(indicator, 22, 1, observeWrite);
+        if (writes != 0 || indicator.Width != 22 || indicator.Opacity != 1)
+            throw new InvalidOperationException(
+                $"Unchanged dock indicator rewrote layout (writes={writes}, width={indicator.Width}, opacity={indicator.Opacity}).");
+        SetIndicatorLayout(indicator, 10, .45, observeWrite);
+        if (indicator.Width != 10 || indicator.Opacity != .45 || writes != 2)
+            throw new InvalidOperationException(
+                $"Dock indicator transition was not applied (writes={writes}, width={indicator.Width}, opacity={indicator.Opacity}).");
+        SetIndicatorLayout(indicator, 22, 1, observeWrite);
+        if (indicator.Width != 22 || indicator.Opacity != 1 || writes != 4)
+            throw new InvalidOperationException(
+                $"Dock indicator geometry was not restored (writes={writes}, width={indicator.Width}, opacity={indicator.Opacity}).");
     }
 
     internal void VerifyRetainedAppearance()
