@@ -26,6 +26,7 @@ An enabled `Nexus-Shell-UI` EventSource now emits **event 5 `WindowDispatchEvent
 | `foreground` | The batch observed an actual foreground WinEvent |
 | `enumeration` | The batch contains a structural notification requiring full window enumeration |
 | `discovery` | The batch found an unknown eligible foreground window and requested recovery |
+| `geometry` | One or more completed interactive move/resize gestures require prompt foreground geometry repair |
 
 This event never includes external HWND/PID, app titles, paths or user content, and writes no local log. Disabled tracing avoids the EventSource write, so ordinary desktop operation has no new timer or trace sink. Existing `dock-enumerate` and `dock-refresh` `WorkEvent` scopes provide synchronous costs when tracing is enabled.
 
@@ -43,3 +44,16 @@ Portable ETW assertions validate event 5 payloads for geometry-only, structural,
 ## Rollback
 
 Drop this branch/PR or revert its small independent commits. No state schema, elevated privileges, installer migration, native taskbar registration or user data changes are required.
+
+## Stage 3: Coalesced geometry completion must bypass polling throttle
+
+The first P2.5 change exposed a regression: `EVENT_SYSTEM_MOVESIZEEND` could enter the foreground-only path, but the ordinary one-second `ForegroundRepairCadence` would suppress a native geometry repair if the last periodic poll was too recent. Closing a drag at the wrong time could delay maximized-window/work-area recovery by almost a second.
+
+- `WindowEventDispatchGate` now retains **three independent signals** (foreground, structural enumeration and completed geometry) while preserving both existing two-signal overloads.
+- A geometry-complete callback requests one forced `ForegroundRepairCadence` sample and runs the existing `DesktopEnvironment.ReconcileForeground` native work without enumerating every running application.
+- A forced sample restarts the periodic repair budget. Normal 80/250 ms pointer polling still coalesces native geometry work and never runs without a foreground HWND.
+- Mixed events (move/resize + foreground + destroy) preserve all three signals. Refused WinUI dispatch retains the geometry flag for the next accepted callback; ticket protection and crash recovery are unchanged.
+- `WindowDispatchEvent` (ETW ID 5) includes a fifth `geometry` Boolean. This event is not a stable external telemetry contract: all P2.5 changes are still draft, and Core tests cover the final payload schema.
+- New portable tests cover a 1,000-event mixed burst, stale-flag cleanup, refused admission recovery, inline delivery and forced foreground repair cooldown.
+
+**CI guard:** app/WinUI native compile and P2.5 branch checks still require an actual AppVeyor run. The newly reported latest `main` status is green for the merged #26 baseline, but that is not proof of this branch.

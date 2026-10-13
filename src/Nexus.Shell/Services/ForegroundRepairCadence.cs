@@ -10,14 +10,17 @@ internal sealed class ForegroundRepairCadence
     private bool _lastMaximized, _initialized;
     private long _lastSample;
 
-    internal bool ShouldSample(IntPtr foreground, bool maximized, long now)
+    // Completion of an interactive move/resize is an actual geometry change,
+    // not a polling tick. Admit its reconciliation despite the normal
+    // one-second fallback cadence, then restart the fallback window.
+    internal bool ShouldSample(IntPtr foreground, bool maximized, long now, bool force = false)
     {
         if (foreground == IntPtr.Zero)
         {
             _initialized = false;
             return false;
         }
-        if (_initialized && foreground == _lastWindow && maximized == _lastMaximized
+        if (!force && _initialized && foreground == _lastWindow && maximized == _lastMaximized
             && now >= _lastSample && now - _lastSample < FallbackMilliseconds)
             return false;
         _lastWindow = foreground;

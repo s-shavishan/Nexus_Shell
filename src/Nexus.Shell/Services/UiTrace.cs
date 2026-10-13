@@ -42,16 +42,17 @@ internal sealed class UiTrace : EventSource
 
     // Count the *delivered* WinEvent batches rather than raw hook calls.
     // No foreign HWND, PID, window name or document metadata is emitted.
-    // Payload flags distinguish the move/resize fast path, a full native
+    // Payload flags distinguish completed geometry changes, a full native
     // task-list enumeration and an unknown-foreground discovery scan.
     [NonEvent]
-    internal static void WindowDispatch(bool foreground, bool enumeration, bool discovery)
+    internal static void WindowDispatch(bool foreground, bool enumeration, bool discovery, bool geometry)
     {
-        if (Source.IsEnabled()) Source.WindowDispatchEvent(Environment.ProcessId, foreground, enumeration, discovery);
+        if (Source.IsEnabled()) Source.WindowDispatchEvent(
+            Environment.ProcessId, foreground, enumeration, discovery, geometry);
     }
     [Event(5, Level = EventLevel.Informational)]
-    public void WindowDispatchEvent(int processId, bool foreground, bool enumeration, bool discovery)
-        => WriteEvent(5, processId, foreground, enumeration, discovery);
+    public void WindowDispatchEvent(int processId, bool foreground, bool enumeration, bool discovery, bool geometry)
+        => WriteEvent(5, processId, foreground, enumeration, discovery, geometry);
 
     // Synchronous work only. Disabled tracing has no stopwatch, allocations,
     // timers or disk writes. A cross-thread disposal marks allocation unknown.

@@ -110,7 +110,7 @@ internal sealed class TaskbarWindow : Window, IDisposable
 
     // Share one foreground HWND between activation indicators and visibility.
     // Update the timer's cache so it cannot repeat the same native event.
-    internal IntPtr RefreshFromNativeEvent(bool structural)
+    internal IntPtr RefreshFromNativeEvent(bool structural, bool geometryChanged = false)
     {
         if (_disposed) return IntPtr.Zero;
         var foreground = NativeMethods.ForegroundTaskWindow();
@@ -118,10 +118,10 @@ internal sealed class TaskbarWindow : Window, IDisposable
         _lastForeground = foreground;
         if (structural) View.RefreshWindowStates(foreground);
         else View.RefreshForegroundStates(previous, foreground);
-        RefreshVisibility(foreground);
+        RefreshVisibility(foreground, forceForegroundRepair: geometryChanged);
         return foreground;
     }
-    internal void RefreshVisibility(IntPtr? observedForeground = null)
+    internal void RefreshVisibility(IntPtr? observedForeground = null, bool forceForegroundRepair = false)
     {
         if (_disposed) return;
         try
@@ -137,7 +137,8 @@ internal sealed class TaskbarWindow : Window, IDisposable
             bool maximized = sameMonitor && NativeMethods.IsZoomed(foreground);
             // The event-driven window reconciliation still runs immediately.
             // Only throttle this extra check from the 80 ms visibility poll.
-            if (_foregroundRepairCadence.ShouldSample(foreground, maximized, Environment.TickCount64))
+            if (_foregroundRepairCadence.ShouldSample(foreground, maximized, Environment.TickCount64,
+                    force: forceForegroundRepair))
                 _environment.ReconcileForeground(monitor, _registration.WorkArea, scale);
             // Query the foreground rectangle just once per visibility tick.
             // Both fullscreen classification and title-control avoidance use
