@@ -36,9 +36,10 @@ internal sealed partial class DesktopEnvironment
     private WindowEventObserver? _windowEvents;
     private readonly DispatcherTimer _windowRefreshTimer = new() { Interval = TimeSpan.FromMilliseconds(50) };
     private readonly WindowEventDispatchGate _windowEventGate = new();
-    // WinEvents can be delivered off-thread; capture destruction identities
-    // before the dispatcher coalesces their individual HWNDs.
-    private readonly System.Collections.Concurrent.ConcurrentDictionary<IntPtr, byte> _destroyedDockHandles = new();
+    // Destroy notifications can arrive while an asynchronous enumeration runs.
+    // Separate each scan's tombstones from later events and restore them if
+    // native reconciliation fails; all operations are thread safe.
+    private readonly DockLifecycleJournal _dockLifecycle = new();
     private bool _windowRefreshPending;
     private EventWaitHandle? _pulse;
     private Process? _host;
@@ -241,7 +242,15 @@ internal sealed partial class DesktopEnvironment
     {
         if (IsStopping || Taskbar is null) return;
         _windowRefreshPending = true;
-        if (_refreshing) return; _refreshing = true; _windowRefreshPending = false;
+        if (_refreshing) return;
+        _refreshing = true;
+        _windowRefreshPending = false;
+
+        // Begin before the worker scan, not after it. A destroyed HWND seen
+        // during enumeration belongs to the following pass, never the result
+        // that was just captured. Failure requeues this batch.
+        var lifecycle = _dockLifecycle.BeginScan();
+        bool applied = false;
         try
         {
             var windows = await Task.Run(() =>
@@ -249,38 +258,44 @@ internal sealed partial class DesktopEnvironment
                 using var measurement = UiTrace.Measure("dock-enumerate", "Dock");
                 return NativeMethods.RunningWindows(Desktop.Handle);
             });
-            // A new event during enumeration schedules another pass instead of
-            // being lost behind the old _refreshing early return.
             if (!IsStopping)
             {
-                // Keep immutable snapshots stable on identical recovery scans.
-                // Foreground cache consumers can reuse their resolved HWND.
                 if (!WindowListSnapshotPolicy.Equivalent(_windows, windows)) _windows = windows;
                 var dockSnapshot = DockWindows();
-                var destroyedHandles = new HashSet<IntPtr>();
-                foreach (var handle in _destroyedDockHandles.Keys)
-                    if (_destroyedDockHandles.TryRemove(handle, out _)) destroyedHandles.Add(handle);
-                if (!_dockSnapshotInitialized || destroyedHandles.Count > 0
+                // Overflow is rare; prefer a single full dock identity reset
+                // to dropping destroyed-window information silently.
+                IReadOnlySet<IntPtr> invalidated = lifecycle.ResetAll
+                    ? _lastDockSnapshot.Concat(dockSnapshot).Select(window => window.Handle).ToHashSet()
+                    : lifecycle.Destroyed;
+                if (!_dockSnapshotInitialized || lifecycle.ResetAll || invalidated.Count > 0
                     || !WindowListSnapshotPolicy.Equivalent(_lastDockSnapshot, dockSnapshot))
                 {
-                    Taskbar.View.Refresh(dockSnapshot, destroyedHandles);
+                    Taskbar.View.Refresh(dockSnapshot, invalidated);
                     _lastDockSnapshot = dockSnapshot;
                     _dockSnapshotInitialized = true;
                 }
                 else Taskbar.View.RefreshWindowStates();
                 Taskbar.RefreshVisibility();
-                // The window board also shows minimized and geometry state;
-                // its native refresh is intentionally independent of this gate.
                 _switcher?.RefreshOpen();
                 var monitor = ShellLayerInterop.Monitor(Taskbar.Handle);
                 ReconcileMaximizedWindows(monitor.Monitor.Bounds, monitor.Work.Bounds, ShellLayerInterop.Scale(Taskbar.Handle));
+                applied = true;
             }
         }
         catch (Exception ex) { Report("Could not refresh running windows", ex, false); }
         finally
         {
+            _dockLifecycle.CompleteScan(lifecycle, applied);
             _refreshing = false;
-            if (!IsStopping && _windowRefreshPending && !_windowRefreshTimer.IsEnabled) _windowRefreshTimer.Start();
+            if (!IsStopping && (_windowRefreshPending || _dockLifecycle.HasPending))
+            {
+                // A failed native scan should retry without a 50 ms hot loop.
+                // Restore the normal burst-coalescing latency after recovery.
+                _windowRefreshTimer.Interval = TimeSpan.FromMilliseconds(applied ? 50 : 500);
+                if (!_windowRefreshTimer.IsEnabled) _windowRefreshTimer.Start();
+            }
+            else if (applied)
+                _windowRefreshTimer.Interval = TimeSpan.FromMilliseconds(50);
         }
     }
     private void QueueWindowEvent(WindowEvent change)
@@ -291,10 +306,9 @@ internal sealed partial class DesktopEnvironment
         if (NativeMethods.WindowProcessId(change.Window) == Environment.ProcessId && !IsOwnAppWindow(change.Window)) return;
         if (change.Kind == 0x8001) // EVENT_OBJECT_DESTROY
         {
-            // Bounded tombstones: a replaced HWND/PID must not inherit its old
-            // button/animation when a destroy + create happens between scans.
-            if (_destroyedDockHandles.Count < 2048)
-                _destroyedDockHandles.TryAdd(change.Window, 0);
+            // WinEvent hooks can run off the UI thread. The lifecycle ledger
+            // preserves this notification across coalescing and failed scans.
+            _dockLifecycle.RecordDestroy(change.Window);
         }
         _windowEventGate.Request(change.IsForeground, WindowEventScanPolicy.RequiresEnumeration(change.Kind),
             callback => Desktop.DispatcherQueue.TryEnqueue(() => callback()),
