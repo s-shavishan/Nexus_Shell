@@ -41,6 +41,7 @@
     <Compile Include="../../src/Nexus.Shell/Services/NotesWorkspace.cs" Link="NotesWorkspace.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/FilePresentation.cs" Link="FilePresentation.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DockVisibility.cs" Link="DockVisibility.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/DockVisibilityTransitionPolicy.cs" Link="DockVisibilityTransitionPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DockRefreshCadence.cs" Link="DockRefreshCadence.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DockPlacementSnapshot.cs" Link="DockPlacementSnapshot.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/WindowExitPolicy.cs" Link="WindowExitPolicy.cs" />
@@ -51,12 +52,21 @@
     <Compile Include="../../src/Nexus.Shell/Services/DockFrameLayoutPolicy.cs" Link="DockFrameLayoutPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DockMotionPolicy.cs" Link="DockMotionPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DockIndicatorUpdatePolicy.cs" Link="DockIndicatorUpdatePolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/DockStateRefreshPolicy.cs" Link="DockStateRefreshPolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/DockForegroundDiscoveryPolicy.cs" Link="DockForegroundDiscoveryPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DockPreviewPolicy.cs" Link="DockPreviewPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DockThumbnailRetry.cs" Link="DockThumbnailRetry.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/WindowThumbnail.cs" Link="WindowThumbnail.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DockWindowSet.cs" Link="DockWindowSet.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/DockVisualRecoveryPolicy.cs" Link="DockVisualRecoveryPolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/DockLifecycleJournal.cs" Link="DockLifecycleJournal.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/CoalescedUiDispatch.cs" Link="CoalescedUiDispatch.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/WindowEventDispatchGate.cs" Link="WindowEventDispatchGate.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/WindowEventScanPolicy.cs" Link="WindowEventScanPolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/WindowListSnapshotPolicy.cs" Link="WindowListSnapshotPolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/WindowScanRetryBackoff.cs" Link="WindowScanRetryBackoff.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/WindowScanTimerPolicy.cs" Link="WindowScanTimerPolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/WindowScanAdmissionPolicy.cs" Link="WindowScanAdmissionPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/WindowProcessSnapshot.cs" Link="WindowProcessSnapshot.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/WindowEventObserver.cs" Link="WindowEventObserver.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DesktopShellPolicy.cs" Link="DesktopShellPolicy.cs" />

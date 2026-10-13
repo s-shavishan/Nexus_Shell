@@ -29,6 +29,110 @@ internal static class DockChecks
         Check(!dock.Reconcile([]), "An unchanged empty dock must skip repeated layout work.");
         Check(dock.Windows.Count == 0, "Closing every app must clear the running dock.");
 
+        // Destroy/create may reuse both HWND and PID between native scans.
+        var oldWindow = new RunningWindow(new IntPtr(800), "First document", "editor", 4200);
+        var otherWindow = new RunningWindow(new IntPtr(801), "Other document", "editor", 4200);
+        var lifecycle = new DockWindowSet();
+        Check(lifecycle.Reconcile([oldWindow, otherWindow]), "Initial dock snapshot must reconcile.");
+        Check(lifecycle.Reconcile([otherWindow, oldWindow], new HashSet<IntPtr> { oldWindow.Handle }),
+            "A recycled HWND in the same process must force a new dock identity.");
+        Check(lifecycle.Windows.SequenceEqual([otherWindow, oldWindow]),
+            "Recycled HWND must append while unaffected buttons retain their order.");
+        Check(!lifecycle.Reconcile([oldWindow, otherWindow]),
+            "Pure z-order changes must not recreate buttons after invalidation.");
+        var reopened = oldWindow with { Title = "Second document" };
+        Check(lifecycle.Reconcile([otherWindow, reopened], new HashSet<IntPtr> { oldWindow.Handle }),
+            "Rapid close/reopen with the same HWND and PID must replace old metadata.");
+        Check(lifecycle.Windows.Count == 2 && lifecycle.Windows[^1] == reopened,
+            "Recycled identities must never leave duplicate buttons.");
+        Check(!lifecycle.Reconcile([otherWindow, reopened], new HashSet<IntPtr> { new IntPtr(999) }),
+            "Destroying an HWND outside the dock must not force layout work.");
+        Check(lifecycle.Reconcile([otherWindow]) && lifecycle.Windows.Count == 1,
+            "Closed app entries must disappear on structural scans.");
+        Check(lifecycle.Reconcile([reopened, otherWindow]) && lifecycle.Windows.Count == 2,
+            "Reopened apps must return without ghost window entries.");
+
+        // Foreground-only events should inspect just two native HWNDs.
+        var before = new IntPtr(10);
+        var after = new IntPtr(12);
+        Check(DockStateRefreshPolicy.ShouldInspect(before, before, after)
+            && DockStateRefreshPolicy.ShouldInspect(after, before, after),
+            "Foreground switches must refresh both old and new active buttons.");
+        Check(!DockStateRefreshPolicy.ShouldInspect(new IntPtr(11), before, after),
+            "Unrelated dock icons must not trigger native state checks.");
+        Check(!DockStateRefreshPolicy.ShouldInspect(IntPtr.Zero, before, after),
+            "Invalid HWNDs must never be inspected.");
+        Check(DockStateRefreshPolicy.ShouldInspect(after, after, after),
+            "Repeated foreground observations must still settle the target app state.");
+        Check(!DockStateRefreshPolicy.ShouldInspect(new IntPtr(44), IntPtr.Zero, IntPtr.Zero),
+            "No foreground must not inspect unrelated dock windows.");
+
+        // A partially failed XAML update can leave DockWindowSet reconciled
+        // while one button was never attached. The next identical snapshot
+        // must force recovery rather than skipping the visual reconciliation.
+        Check(!DockVisualRecoveryPolicy.RequiresFullReconcile(
+                true, false, false, false, 3, 3, 3),
+            "A stable, complete dock must keep its existing low-cost refresh path.");
+        Check(DockVisualRecoveryPolicy.RequiresFullReconcile(
+                true, false, false, true, 3, 3, 3),
+            "An interrupted refresh must always receive a second full attempt.");
+        Check(DockVisualRecoveryPolicy.RequiresFullReconcile(
+                true, false, false, false, 3, 2, 2),
+            "A missing recorded item must trigger reconstruction after a partial failure.");
+        Check(DockVisualRecoveryPolicy.RequiresFullReconcile(
+                true, false, false, false, 3, 3, 2),
+            "A registered button that never reached the WinUI child list must be reattached.");
+        Check(DockVisualRecoveryPolicy.RequiresFullReconcile(
+                false, false, false, false, 0, 0, 0),
+            "First dock initialization must always reconcile.");
+        Check(DockVisualRecoveryPolicy.RequiresFullReconcile(
+                true, true, false, false, 3, 3, 3)
+            && DockVisualRecoveryPolicy.RequiresFullReconcile(
+                true, false, true, false, 3, 3, 3),
+            "Pin edits and real window lifecycle changes must keep full reconciliation.");
+        Check(!DockVisualRecoveryPolicy.RequiresVisualRebuild(false, 3, 3),
+            "An ordinary consistent scan must not detach and reattach WinUI dock buttons.");
+        Check(DockVisualRecoveryPolicy.RequiresVisualRebuild(true, 3, 3),
+            "A failed refresh must restore child order even when button counts happen to match.");
+        Check(DockVisualRecoveryPolicy.RequiresVisualRebuild(false, 3, 2),
+            "Missing visual controls must be repaired after the existing item dictionary stabilizes.");
+        Check(DockVisualRecoveryPolicy.RequiresVisualRebuild(true, 0, 0),
+            "A failed empty-dock refresh must also reset potentially orphaned children.");
+
+        // Stage 13: a crashed WinUI render can leave exactly as many
+        // orphaned buttons as current windows. Compare identities, not only
+        // counts, and reject duplicate or missing dock entries.
+        var observed = new[] {
+            new RunningWindow(new IntPtr(91), "Editor", "editor", 701),
+            new RunningWindow(new IntPtr(92), "Browser", "browser", 702)
+        };
+        var observedKeys = observed.Select(DockWindowIdentity.Of).ToArray();
+        Check(DockVisualRecoveryPolicy.HasConsistentIdentities(observed, observedKeys),
+            "An exact dock identity set should not force expensive repair.");
+        Check(DockVisualRecoveryPolicy.HasConsistentIdentities(
+                observed.Reverse().ToArray(), observedKeys),
+            "A pure EnumWindows order change must not mark stable dock buttons as stale.");
+        Check(!DockVisualRecoveryPolicy.HasConsistentIdentities(observed,
+                [observedKeys[0], new DockWindowIdentity(new IntPtr(100), 703)]),
+            "Equal counts with a stale HWND must still trigger recovery.");
+        Check(!DockVisualRecoveryPolicy.HasConsistentIdentities(observed,
+                [observedKeys[0], new DockWindowIdentity(observed[1].Handle, 999)]),
+            "An equal-count reused HWND with the wrong PID must trigger recovery.");
+        Check(!DockVisualRecoveryPolicy.HasConsistentIdentities(observed,
+                [observedKeys[0], observedKeys[0]]),
+            "Duplicate dock item keys must never pass a reconciliation consistency check.");
+        Check(!DockVisualRecoveryPolicy.HasConsistentIdentities(observed,
+                [observedKeys[0]]),
+            "Missing dock buttons must be restored on the next scan.");
+        Check(!DockVisualRecoveryPolicy.HasConsistentIdentities(
+                [observed[0], observed[0]], [observedKeys[0], observedKeys[1]]),
+            "Duplicate expected window identities must fail instead of hiding malformed snapshots.");
+        Check(DockVisualRecoveryPolicy.HasConsistentIdentities(
+                [observed[0] with { Title = "Renamed Editor" }, observed[1]], observedKeys),
+            "A title-only update must keep the button identity stable; metadata is reconciled separately.");
+        Check(DockVisualRecoveryPolicy.HasConsistentIdentities([], Array.Empty<DockWindowIdentity>()),
+            "A genuinely empty dock is a consistent baseline, not a permanent recovery loop.");
+
         Check(NativeMethods.DockWindowEligibleVisibility(true, false),
             "Normal visible app windows must remain in the dock.");
         Check(NativeMethods.DockWindowEligibleVisibility(true, true),
@@ -70,6 +174,34 @@ internal static class DockChecks
         }), "A normal dock position update must enqueue.");
         work.Dequeue()(); work.Dequeue()();
         Check(positions == 5 && work.Count == 0, "Reentrant dock reposition updates must settle without lost or duplicate callbacks.");
+
+        // A logical hide can outlive the compositor animation that owns it.
+        Check(DockVisibilityTransitionPolicy.Decide(false, true, true, false, false)
+                == DockVisibilityAction.AnimateHide,
+            "A visible dock leaving its reveal corridor should animate once.");
+        Check(DockVisibilityTransitionPolicy.Decide(false, false, true, true, false)
+                == DockVisibilityAction.None,
+            "An in-flight hide must not cause another hide on an 80 ms poll.");
+        Check(DockVisibilityTransitionPolicy.Decide(false, false, true, false, false)
+                == DockVisibilityAction.HideImmediately,
+            "External native visibility must be corrected while the dock is logically hidden.");
+        Check(DockVisibilityTransitionPolicy.Decide(false, false, true, true, true)
+                == DockVisibilityAction.HideImmediately,
+            "Fullscreen must interrupt animation and hide the dock immediately.");
+        Check(DockVisibilityTransitionPolicy.Decide(true, false, true, true, false)
+                == DockVisibilityAction.Show,
+            "Edge reveal must cancel a pending hide and restore the dock.");
+        Check(DockVisibilityTransitionPolicy.Decide(true, true, false, false, false)
+                == DockVisibilityAction.Show,
+            "A native-hidden dock must be restored when it is required onscreen.");
+        Check(DockVisibilityTransitionPolicy.Decide(true, true, true, false, false)
+                == DockVisibilityAction.None
+            && DockVisibilityTransitionPolicy.Decide(false, false, false, false, false)
+                == DockVisibilityAction.None,
+            "Stable HWND visibility must not enqueue native operations.");
+        Check(DockVisibilityTransitionPolicy.Decide(false, true, false, false, false)
+                == DockVisibilityAction.HideImmediately,
+            "Externally hidden windows must settle an outdated shown flag.");
 
         // Avoid a permanent 80 ms native polling loop when the dock is idle,
         // but keep the original edge-reveal latency during maximized windows.

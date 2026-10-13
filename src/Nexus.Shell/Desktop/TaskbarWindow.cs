@@ -23,7 +23,8 @@ internal sealed class TaskbarWindow : Window, IDisposable
     private readonly DockVisibility _visibility = new();
     private readonly ForegroundRepairCadence _foregroundRepairCadence = new();
     private readonly CoalescedUiDispatch _positionDispatch = new();
-    private bool _disposed, _shown = true, _arranging, _visibilityReported;
+    private bool _disposed, _shown = true, _arranging, _visibilityReported, _hidePending;
+    private int _hideGeneration;
     private IntPtr _lastForeground;
     private DockPlacementSnapshot? _lastPlacement;
     private DockFrameGeometry? _lastFrame;
@@ -50,7 +51,12 @@ internal sealed class TaskbarWindow : Window, IDisposable
         {
             if (_disposed) return;
             var foreground = NativeMethods.ForegroundTaskWindow();
-            if (foreground != _lastForeground) { _lastForeground = foreground; View.RefreshWindowStates(foreground); }
+            if (foreground != _lastForeground)
+            {
+                var previous = _lastForeground;
+                _lastForeground = foreground;
+                View.RefreshForegroundStates(previous, foreground);
+            }
             RefreshVisibility(foreground);
         };
         _visibilityTimer.Start();
@@ -99,7 +105,22 @@ internal sealed class TaskbarWindow : Window, IDisposable
             () => { if (!_disposed) Position(); },
             error => Log.Write("Dock reposition dispatch failed; a later native notification can retry", error));
     }
-    internal void ShowBar() { Position(); RefreshVisibility(); }
+    // Position already refreshes visibility; avoid a duplicate native pass.
+    internal void ShowBar() => Position();
+
+    // Share one foreground HWND between activation indicators and visibility.
+    // Update the timer's cache so it cannot repeat the same native event.
+    internal IntPtr RefreshFromNativeEvent(bool structural)
+    {
+        if (_disposed) return IntPtr.Zero;
+        var foreground = NativeMethods.ForegroundTaskWindow();
+        var previous = _lastForeground;
+        _lastForeground = foreground;
+        if (structural) View.RefreshWindowStates(foreground);
+        else View.RefreshForegroundStates(previous, foreground);
+        RefreshVisibility(foreground);
+        return foreground;
+    }
     internal void RefreshVisibility(IntPtr? observedForeground = null)
     {
         if (_disposed) return;
@@ -147,21 +168,66 @@ internal sealed class TaskbarWindow : Window, IDisposable
             bool pointer = NativeMethods.GetCursorPos(out var point) && DockVisibility.InRevealArea(revealArea, BarBounds, point.X, point.Y, _shown, scale);
             bool show = !_arranging && _visibility.Update(floating, maximized || attached, fullscreen,
                 interacting, pointer, Environment.TickCount64);
-            // Hide/show only on transitions. Native Show Desktop can hide this
-            // tool window independently, so recover visibility when needed.
-            if (show && (!_shown || !NativeMethods.Visible(Handle)))
-            { bool reveal = !_shown; _transition.Cancel(); NativeWindow.Show(false); _shown = true; if (reveal) _transition.Restore(); }
-            else if (!show && (fullscreen || _arranging) && (_shown || NativeMethods.Visible(Handle)))
-            { _shown = false; _transition.Cancel(); NativeWindow.Hide(); }
-            else if (!show && _shown) { _shown = false; HideAnimated(); }
+            // Pending compositor motion and actual HWND visibility differ.
+            // Recover from external native Show operations while retaining
+            // the single in-flight animated hide during 80 ms pointer polls.
+            bool nativeVisible = NativeMethods.Visible(Handle);
+            switch (DockVisibilityTransitionPolicy.Decide(
+                show, _shown, nativeVisible, _hidePending, fullscreen || _arranging))
+            {
+                case DockVisibilityAction.Show:
+                    bool reveal = !_shown;
+                    ++_hideGeneration;
+                    _hidePending = false;
+                    _transition.Cancel();
+                    NativeWindow.Show(false);
+                    _shown = true;
+                    if (reveal) _transition.Restore();
+                    break;
+                case DockVisibilityAction.HideImmediately:
+                    ++_hideGeneration;
+                    _hidePending = false;
+                    _shown = false;
+                    _transition.Cancel();
+                    if (nativeVisible) NativeWindow.Hide();
+                    break;
+                case DockVisibilityAction.AnimateHide:
+                    _shown = false;
+                    _hidePending = true;
+                    HideAnimated(++_hideGeneration);
+                    break;
+            }
             _visibilityReported = false;
         }
         catch (Exception ex)
         { if (!_visibilityReported) { _visibilityReported = true; _environment.Report("Could not update dock visibility", ex, false); } }
     }
-    private async void HideAnimated() => await _transition.MinimizeAsync(() => NativeWindow.Hide());
+    private async void HideAnimated(int generation)
+    {
+        try
+        {
+            await _transition.MinimizeAsync(() =>
+            {
+                if (!_disposed && generation == _hideGeneration && !_shown) NativeWindow.Hide();
+            });
+        }
+        catch (Exception error) { Log.Write("Dock hide animation failed; native fallback will be attempted", error); }
+        finally
+        {
+            // An obsolete completion must never finish a newer hide/reveal.
+            if (!_disposed && generation == _hideGeneration)
+            {
+                _hidePending = false;
+                try
+                {
+                    if (!_shown && NativeMethods.Visible(Handle)) NativeWindow.Hide();
+                }
+                catch (Exception error) { Log.Write("Dock native hide recovery failed", error); }
+            }
+        }
+    }
     private (bool Maximized, bool Fullscreen, bool Attached) _applicationState;
     private ShellRect? _applicationMonitor;
     internal void ApplyAppearance() { if (_disposed) return; View.ApplyAppearance(); _material.Apply(this, View.Frame, _environment, "Dock"); Position(); }
-    public void Dispose() { if (_disposed) return; _disposed = true; _visibilityTimer.Stop(); _transition.Dispose(); View.PreferredWidthChanged -= QueuePosition; _registration.Dispose(); _chrome.Dispose(); View.Release(); }
+    public void Dispose() { if (_disposed) return; _disposed = true; ++_hideGeneration; _hidePending = false; _visibilityTimer.Stop(); _transition.Dispose(); View.PreferredWidthChanged -= QueuePosition; _registration.Dispose(); _chrome.Dispose(); View.Release(); }
 }

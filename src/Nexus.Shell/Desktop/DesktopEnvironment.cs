@@ -36,6 +36,11 @@ internal sealed partial class DesktopEnvironment
     private WindowEventObserver? _windowEvents;
     private readonly DispatcherTimer _windowRefreshTimer = new() { Interval = TimeSpan.FromMilliseconds(50) };
     private readonly WindowEventDispatchGate _windowEventGate = new();
+    private readonly WindowScanRetryBackoff _windowScanBackoff = new();
+    // Destroy notifications can arrive while an asynchronous enumeration runs.
+    // Separate each scan's tombstones from later events and restore them if
+    // native reconciliation fails; all operations are thread safe.
+    private readonly DockLifecycleJournal _dockLifecycle = new();
     private bool _windowRefreshPending;
     private EventWaitHandle? _pulse;
     private Process? _host;
@@ -56,6 +61,8 @@ internal sealed partial class DesktopEnvironment
     private readonly CancellationTokenSource _cancel = new();
     private Task<List<AppEntry>>? _catalog;
     private IReadOnlyList<RunningWindow> _windows = [];
+    private IReadOnlyList<RunningWindow> _lastDockSnapshot = [];
+    private bool _dockSnapshotInitialized;
     private bool _refreshing, _saving, _dirty;
 
     internal DesktopEnvironment(ShellSession session, CoreProcessSession core, DesktopSessionMode mode = DesktopSessionMode.Preview, string? hostToken = null, int? hostPid = null)
@@ -92,7 +99,14 @@ internal sealed partial class DesktopEnvironment
             Session.Changed += SessionChanged;
             Notifications.Changed += NotificationHistoryChanged;
             _saveTimer.Tick += SaveTick; _timer.Tick += Tick;
-            _windowRefreshTimer.Tick += (_, _) => { _windowRefreshTimer.Stop(); UpdateTaskbar(); };
+            _windowRefreshTimer.Tick += (_, _) =>
+            {
+                _windowRefreshTimer.Stop();
+                // A delayed retry must not leave the ordinary event-coalescing
+                // timer at 500–5000 ms once this scheduled pass begins.
+                _windowRefreshTimer.Interval = TimeSpan.FromMilliseconds(WindowScanRetryBackoff.NormalMilliseconds);
+                UpdateTaskbar();
+            };
             _integration = new(Desktop.Handle, command => Desktop.DispatcherQueue.TryEnqueue(() =>
             {
                 if (IsStopping) return;
@@ -207,7 +221,11 @@ internal sealed partial class DesktopEnvironment
             Shutdown(DesktopExitCode.RestoreWindows); return;
         }
         CheckCore(); Notifications.RefreshDue();
-        RefreshAppearance(); Taskbar.View.RefreshClock(); UpdateTaskbar();
+        RefreshAppearance(); Taskbar.View.RefreshClock();
+        // A heartbeat already covered by an in-flight enumeration must not
+        // schedule an immediately redundant native scan. Real actions/events
+        // still request a successor if they arrive while one is running.
+        UpdateTaskbarCore(recoveryHeartbeat: true);
         if (!Session.State.UsageTracking) return;
         try
         {
@@ -232,33 +250,91 @@ internal sealed partial class DesktopEnvironment
         { if (!IsStopping && !_coreFailureReported) { _coreFailureReported = true; Report("Nexus Core is unavailable. The desktop remains open while recovery is attempted", ex); } }
         finally { _checkingCore = false; }
     }
-    internal async void UpdateTaskbar()
+    // Preserve the original zero-argument API (including method-group use
+    // by other desktop components) while distinguishing recovery heartbeats.
+    internal void UpdateTaskbar() => UpdateTaskbarCore(recoveryHeartbeat: false);
+
+    private async void UpdateTaskbarCore(bool recoveryHeartbeat)
     {
         if (IsStopping || Taskbar is null) return;
-        _windowRefreshPending = true;
-        if (_refreshing) return; _refreshing = true; _windowRefreshPending = false;
+        var admission = WindowScanAdmissionPolicy.Decide(_refreshing, recoveryHeartbeat);
+        if (admission == WindowScanAdmission.QueueFollowUp)
+        {
+            _windowRefreshPending = true;
+            return;
+        }
+        if (admission == WindowScanAdmission.CoveredByActiveScan) return;
+        _refreshing = true;
+        _windowRefreshPending = false;
+
+        // Begin before the worker scan, not after it. A destroyed HWND seen
+        // during enumeration belongs to the following pass, never the result
+        // that was just captured. Failure requeues this batch.
+        DockLifecycleBatch? lifecycle = null;
+        bool applied = false;
         try
         {
+            lifecycle = _dockLifecycle.BeginScan();
+            // Snapshot the HWND while the WinUI desktop still owns it. The
+            // worker must never access a Desktop instance already closing.
+            var desktopHandle = Desktop.Handle;
             var windows = await Task.Run(() =>
             {
                 using var measurement = UiTrace.Measure("dock-enumerate", "Dock");
-                return NativeMethods.RunningWindows(Desktop.Handle);
+                return NativeMethods.RunningWindows(desktopHandle);
             });
-            // A new event during enumeration schedules another pass instead of
-            // being lost behind the old _refreshing early return.
             if (!IsStopping)
             {
-                _windows = windows; Taskbar.View.Refresh(DockWindows()); Taskbar.RefreshVisibility();
+                if (!WindowListSnapshotPolicy.Equivalent(_windows, windows)) _windows = windows;
+                var dockSnapshot = DockWindows();
+                // Overflow is rare; prefer a single full dock identity reset
+                // to dropping destroyed-window information silently.
+                IReadOnlySet<IntPtr> invalidated = lifecycle.Value.ResetAll
+                    ? _lastDockSnapshot.Concat(dockSnapshot).Select(window => window.Handle).ToHashSet()
+                    : lifecycle.Value.Destroyed;
+                if (!_dockSnapshotInitialized || Taskbar.View.NeedsRecovery
+                    || WindowListSnapshotPolicy.RequiresDockRefresh(
+                        _lastDockSnapshot, dockSnapshot, invalidated, lifecycle.Value.ResetAll))
+                {
+                    Taskbar.View.Refresh(dockSnapshot, invalidated);
+                    _lastDockSnapshot = dockSnapshot;
+                    _dockSnapshotInitialized = true;
+                }
+                else Taskbar.View.RefreshWindowStates();
+                Taskbar.RefreshVisibility();
                 _switcher?.RefreshOpen();
                 var monitor = ShellLayerInterop.Monitor(Taskbar.Handle);
                 ReconcileMaximizedWindows(monitor.Monitor.Bounds, monitor.Work.Bounds, ShellLayerInterop.Scale(Taskbar.Handle));
+                applied = true;
             }
         }
         catch (Exception ex) { Report("Could not refresh running windows", ex, false); }
         finally
         {
+            if (lifecycle is { } started)
+                _dockLifecycle.CompleteScan(started, applied);
             _refreshing = false;
-            if (!IsStopping && _windowRefreshPending && !_windowRefreshTimer.IsEnabled) _windowRefreshTimer.Start();
+            // A suspended desktop's async enumeration can return after
+            // Shutdown has stopped timers. Never mutate/rearm those timers
+            // or the failure counter once shutdown has started.
+            if (!IsStopping)
+            {
+                int nextDelay = _windowScanBackoff.Complete(applied);
+                // Failure must never inherit an already-armed fast timer. It
+                // takes ownership of the next retry and applies backoff even if
+                // new WinEvents arrived during enumeration. A successful scan
+                // leaves an existing coalesced notification timer undisturbed.
+                var plan = WindowScanTimerPolicy.Decide(
+                    IsStopping, applied, _windowRefreshPending || _dockLifecycle.HasPending,
+                    _windowRefreshTimer.IsEnabled);
+                if (plan == WindowScanTimerAction.Restart)
+                    _windowRefreshTimer.Stop();
+                if (plan is WindowScanTimerAction.Start or WindowScanTimerAction.Restart)
+                {
+                    _windowRefreshTimer.Interval = TimeSpan.FromMilliseconds(nextDelay);
+                    _windowRefreshTimer.Start();
+                }
+            }
         }
     }
     private void QueueWindowEvent(WindowEvent change)
@@ -267,15 +343,36 @@ internal sealed partial class DesktopEnvironment
         // Observe native minimize/restore of Nexus content windows too, while
         // ignoring our tool windows and popups to avoid self-refresh loops.
         if (NativeMethods.WindowProcessId(change.Window) == Environment.ProcessId && !IsOwnAppWindow(change.Window)) return;
-        _windowEventGate.Request(change.IsForeground,
+        if (change.Kind == 0x8001) // EVENT_OBJECT_DESTROY
+        {
+            // WinEvent hooks can run off the UI thread. The lifecycle ledger
+            // preserves this notification across coalescing and failed scans.
+            _dockLifecycle.RecordDestroy(change.Window);
+        }
+        _windowEventGate.Request(change.IsForeground, WindowEventScanPolicy.RequiresEnumeration(change.Kind),
             callback => Desktop.DispatcherQueue.TryEnqueue(() => callback()),
-            foregroundChanged =>
+            (foregroundChanged, enumerate) =>
             {
                 if (IsStopping) return;
                 if (foregroundChanged && ShellLayerInterop.IsExplorerDesktopWindow(NativeMethods.GetForegroundWindow())) Desktop.ShowSurface();
-                Taskbar.View.RefreshWindowStates(); Taskbar.RefreshVisibility();
-                // Fixed coalescing window, not a sliding debounce that can starve.
-                if (!_windowRefreshTimer.IsEnabled) _windowRefreshTimer.Start();
+                var currentForeground = Taskbar.RefreshFromNativeEvent(enumerate);
+                // Normal task switches need no EnumWindows pass. An unknown,
+                // eligible external foreground HWND may need recovery after
+                // a missed create/show notification.
+                bool unknown = DockForegroundDiscoveryPolicy.IsUnknownForeground(
+                    foregroundChanged, currentForeground, _windows);
+                bool discover = false;
+                if (unknown && currentForeground != Desktop.Handle
+                    && !ShellLayerInterop.IsExplorerDesktopWindow(currentForeground)
+                    && !NativeMethods.IsOwnToolWindow(currentForeground))
+                {
+                    int pid = NativeMethods.WindowProcessId(currentForeground);
+                    discover = pid > 0 && pid != Environment.ProcessId
+                        && NativeMethods.HasDockPresence(currentForeground)
+                        && !NativeMethods.IsCloaked(currentForeground);
+                }
+                if ((enumerate || discover) && !_windowRefreshTimer.IsEnabled)
+                    _windowRefreshTimer.Start();
             },
             error => Log.Write("Native window event UI dispatch failed; periodic reconciliation remains active", error));
     }

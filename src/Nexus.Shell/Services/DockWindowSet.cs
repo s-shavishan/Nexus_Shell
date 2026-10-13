@@ -13,7 +13,7 @@ public sealed class DockWindowSet
 {
     private readonly List<RunningWindow> _windows = [];
     public IReadOnlyList<RunningWindow> Windows => _windows;
-    public bool Reconcile(IReadOnlyList<RunningWindow> snapshot)
+    public bool Reconcile(IReadOnlyList<RunningWindow> snapshot, IReadOnlySet<IntPtr>? destroyedHandles = null)
     {
         var current = snapshot.Where(w => w.Handle != IntPtr.Zero && w.ProcessId > 0)
             .DistinctBy(DockWindowIdentity.Of).ToDictionary(DockWindowIdentity.Of);
@@ -21,6 +21,14 @@ public sealed class DockWindowSet
         for (int i = _windows.Count - 1; i >= 0; i--)
         {
             var key = DockWindowIdentity.Of(_windows[i]);
+            // Destroy followed by create can reuse the same HWND and PID
+            // between scans. Treat the new instance as a fresh dock entry.
+            if (destroyedHandles?.Contains(key.Handle) == true)
+            {
+                _windows.RemoveAt(i);
+                changed = true;
+                continue;
+            }
             if (current.Remove(key, out var updated))
             {
                 if (_windows[i] != updated) { _windows[i] = updated; changed = true; }

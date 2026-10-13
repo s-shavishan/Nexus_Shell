@@ -16,6 +16,34 @@ internal static class DockExperienceChecks
             Check(DockMotionPolicy.Transition(presence, presence) == DockMotionCue.None,
                 "Repeated polls, title changes and theme repaint must not replay a state cue.");
         }
+        // Deferred motion is safe only for the first arrival. Previously
+        // unloaded icons must not replay obsolete minimize/restore cues.
+        Check(DockCueDeliveryPolicy.Decide(DockMotionCue.Arrive, false, false, false)
+                == DockCueDelivery.BufferArrival,
+            "First arrival may wait until the initial XAML load.");
+        Check(DockCueDeliveryPolicy.Decide(DockMotionCue.Arrive, true, false, true)
+                == DockCueDelivery.Play,
+            "A loaded arrival should animate when the compositor is available.");
+        Check(DockCueDeliveryPolicy.Decide(DockMotionCue.Minimize, true, true, true)
+                == DockCueDelivery.Play
+            && DockCueDeliveryPolicy.Decide(DockMotionCue.Restore, true, true, true)
+                == DockCueDelivery.Play,
+            "Live minimize/restore transitions should animate only while loaded.");
+        Check(DockCueDeliveryPolicy.Decide(DockMotionCue.Minimize, false, true, true)
+                == DockCueDelivery.Discard
+            && DockCueDeliveryPolicy.Decide(DockMotionCue.Restore, false, true, true)
+                == DockCueDelivery.Discard,
+            "Old minimize/restore cues may not survive icon unloading.");
+        Check(DockCueDeliveryPolicy.Decide(DockMotionCue.Arrive, false, true, true)
+                == DockCueDelivery.Discard,
+            "Previously loaded icons must not replay first-arrival animation.");
+        Check(DockCueDeliveryPolicy.Decide(DockMotionCue.Activate, true, true, false)
+                == DockCueDelivery.Discard,
+            "A missing compositor must not retain old activation animations.");
+        Check(DockCueDeliveryPolicy.Decide(DockMotionCue.None, true, true, true)
+                == DockCueDelivery.None,
+            "Stable dock state must never start compositor work.");
+
         var expected = new Dictionary<(DockPresence, DockPresence), DockMotionCue>
         {
             [(DockPresence.Running, DockPresence.Active)] = DockMotionCue.Activate,
