@@ -371,6 +371,7 @@ internal sealed partial class DesktopEnvironment
                         && NativeMethods.HasDockPresence(currentForeground)
                         && !NativeMethods.IsCloaked(currentForeground);
                 }
+                UiTrace.WindowDispatch(foregroundChanged, enumerate, discover);
                 if ((enumerate || discover) && !_windowRefreshTimer.IsEnabled)
                     _windowRefreshTimer.Start();
             },
