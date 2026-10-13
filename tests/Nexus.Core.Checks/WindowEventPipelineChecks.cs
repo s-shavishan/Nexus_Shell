@@ -312,6 +312,35 @@ internal static class WindowEventPipelineChecks
         Check(parallelJournal.CompleteScan(parallelBatch, applied: true) && !parallelJournal.HasPending,
             "A parallel event burst must settle after a successful scan.");
 
+        // P2.4 shutdown/reentrancy audit: failed scan owns the retry
+        // schedule even if a coalesced 50 ms callback is already armed.
+        Check(WindowScanTimerPolicy.Decide(false, false, false, false)
+                == WindowScanTimerAction.Start,
+            "A native scan failure must retry even without a newer window event.");
+        Check(WindowScanTimerPolicy.Decide(false, false, true, false)
+                == WindowScanTimerAction.Start,
+            "Failed scan with pending lifecycle work must schedule recovery.");
+        Check(WindowScanTimerPolicy.Decide(false, false, false, true)
+                == WindowScanTimerAction.Restart
+            && WindowScanTimerPolicy.Decide(false, false, true, true)
+                == WindowScanTimerAction.Restart,
+            "An armed fast timer must be replaced by bounded failure backoff.");
+        Check(WindowScanTimerPolicy.Decide(false, true, true, false)
+                == WindowScanTimerAction.Start,
+            "A successful scan must schedule events that arrived during enumeration.");
+        Check(WindowScanTimerPolicy.Decide(false, true, true, true)
+                == WindowScanTimerAction.None,
+            "A successful scan must not restart an already-armed coalesced event timer.");
+        Check(WindowScanTimerPolicy.Decide(false, true, false, false)
+                == WindowScanTimerAction.None,
+            "A successful idle scan must not schedule redundant enumeration.");
+        foreach (bool applied in new[] { false, true })
+            foreach (bool pending in new[] { false, true })
+                foreach (bool armed in new[] { false, true })
+                    Check(WindowScanTimerPolicy.Decide(true, applied, pending, armed)
+                            == WindowScanTimerAction.None,
+                        "Shutdown must prevent all new and restarted scan timers.");
+
         // P2.4 integration review: a fault without lifecycle tombstones
         // must still retry; failures back off, and success resets the cadence.
         var retryPolicy = new WindowScanRetryBackoff();

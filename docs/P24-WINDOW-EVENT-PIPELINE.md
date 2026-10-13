@@ -89,3 +89,16 @@ After PR #23 was opened, a source review identified two retry/rendering edge cas
 - Portable regression coverage confirms the retry progression/reset, isolated recovery and irrelevant-destroy versus genuine-dock-destroy classification.
 
 **Verification remains source-only:** no installed local .NET SDK, and AppVeyor/Windows preview have been excluded from this iteration by request. The draft PR must not be called build-verified.
+
+## Stage 9 — Scan admission and retry ownership audit
+
+Integration review uncovered two new hazards on top of Stage 8's scan-retry backoff:
+
+- A call to `DockLifecycleJournal.BeginScan` was located outside `UpdateTaskbar`'s exception-handler region. A reentrant admission exception could bypass the `finally` block and permanently leave `_refreshing` true, preventing all subsequent dock scans.
+- A new 50 ms window event could arm the timer while the current scan was still running. On failure, the prior `finally` logic left that already-enabled fast timer untouched even though the failure counter requested 500–5000 ms backoff, potentially creating repeated rapid native scans during persistent errors.
+
+The scan's lifecycle admission is now inside the protected `try` with a nullable generation handle. Cleanup only calls `CompleteScan` for successfully acquired batches, while the guarded `finally` always releases the refresh gate. `WindowScanTimerPolicy` explicitly determines whether a scan completion should leave its timer alone, start one, or restart one. Failed scans replace even an already-armed timer with backoff; successful scans do not interrupt legitimate pending native events. Shutdown schedules nothing.
+
+Portable checks cover exception recovery prerequisites, active-timer replacement after failure, success-with-pending work, idle no-op, and every stop-state combination.
+
+**Status:** Committed source and portable test assertions only; the installed environment has no .NET SDK and the owner chose not to run AppVeyor or a Windows preview. The phase is not build or runtime verified.
