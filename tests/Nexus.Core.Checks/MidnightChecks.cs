@@ -65,6 +65,21 @@ internal static class MidnightChecks
             && DesktopLayout.TaskbarHeight(false) >= MidnightGlassMetrics.DockButtonHeight + 20
             && DesktopLayout.TaskbarHeight(true) == 56,
             "Floating dock must reserve room for the real icon size and preserve compact mode.");
+        // Screenshot-driven Files pane sizing: preserve the primary file list
+        // under tight widths and do not add a noninteractive inspector to dialogs.
+        foreach (double width in new[] { 320d, 590d, 859d, 860d, 940d, 1180d, double.NaN })
+        {
+            var browse = FilesPaneLayoutPolicy.Resolve(width, browse: true);
+            bool expectedInspector = double.IsFinite(width) && width >= 860;
+            double expectedWidth = expectedInspector ? width >= 1170 ? 256 : 228 : 0;
+            check(browse.SidebarWidth is >= 136 and <= 206
+                && browse.InspectorVisible == expectedInspector
+                && browse.InspectorWidth == expectedWidth,
+                "Responsive Files panes must preserve their width hierarchy and hide narrow inspectors.");
+            var picker = FilesPaneLayoutPolicy.Resolve(width, browse: false);
+            check(!picker.InspectorVisible && picker.InspectorWidth == 0,
+                "File selection dialogs must not allocate content width to an inspector.");
+        }
         check(LaunchpadArtworkPolicy.UsesNexusArtwork("sections")
             && !LaunchpadArtworkPolicy.UsesNexusArtwork("discovered-app"),
             "Only Nexus-owned builtins should keep fixed vector app artwork.");

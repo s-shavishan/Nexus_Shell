@@ -55,3 +55,14 @@ The supplied Launchpad screenshot shows many unrelated installed Win32 applicati
 Control Center's navigation changes from a small 3×2 matrix of centered badges to larger, icon-led **2×3 horizontal service cards**. It retains the existing live Core-backed sections and does not invent fake network, brightness or audio state. Notification cards gain more generous internal spacing and distinct unread borders/backgrounds; dismissal, search, snooze, undo and paging remain wired to their existing services.
 
 **Validation:** Check app icons under actual Win10 shell links and packaged/system utilities, as well as changes to loaded thumbnails. Check the Control Center at 100/125/150% DPI and the Notifications panel with mixed read/unread items. The new UI code has not been compiled in this session. All changes remain on unmerged PR #29.
+
+## Stage 3 — Rebuild Files pane framing and preview composition
+
+The running P2.6 screenshot exposed a flat, indistinguishable middle file area and small unframed inspector artwork. The P2.7 Files update introduces:
+- An inset **center content card**, with a real folder name in its header, view/sort actions retained, and larger 68-DIP file illustrations. GridView virtualization, selection, rename, undo, open and drag operations continue to use the original controls.
+- A **200-DIP preview stage** in the inspector that switches between the existing 172-DIP asynchronous image preview and a larger 86-DIP category icon. The original cancellation/version checks remain.
+- Responsive sidebar/inspector width policy. Above 860 DIP in browse mode the inspector is available; below that it collapses so the main file list remains usable. File open/save/folder dialogs never show a browse-only inspector. High Contrast falls back to the existing solid materials.
+- More consistent 50-DIP Files titlebar, accessible traffic-light controls and a 24-DIP shell frame radius (removed while maximized or High Contrast).
+- Portable Core regression assertions for narrow, screenshot-sized and large layouts, plus invalid widths and dialog mode.
+
+**Important:** Source changes are committed, but no native Windows build or comparison screenshot has run for this update. In Windows preview validate 800/940/1200-DIP widths, mixed files, image previews, 1000+ item scrolling, file operations, dialogs, maximize/restore and native glass status before merging.
