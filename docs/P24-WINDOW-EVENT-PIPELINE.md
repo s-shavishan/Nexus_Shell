@@ -55,3 +55,13 @@ No Windows compilation, native compositor test or AppVeyor result has been verif
 - New Core assertions cover loaded/unloaded cue decisions and unknown/known foreground classification.
 
 No AppVeyor run or Windows preview was performed by owner request. Static source edits and assertions do not establish successful compilation, visual correctness or measured latency improvements.
+
+## Stage 6 — Rapid window lifecycle and targeted foreground-state refresh
+
+- Native EVENT_OBJECT_DESTROY notifications retain bounded HWND tombstones across cross-thread WinEvent coalescing. The next UI-thread scan drains these handles. If Windows recycles an HWND and PID between scans, the dock discards the previous control/animation and appends a fresh entry.
+- DockWindowSet.Reconcile(snapshot, destroyedHandles) invalidates recycled handles. TaskbarView.Refresh removes invalidated button controls instead of reusing their dictionary keys.
+- Foreground-only events visit dock items in managed memory but perform Win32 state checks only for previous/current foreground HWNDs. Structural events and the five-second fallback still inspect all entries, including out-of-focus minimize/restore.
+- A follow-up production commit corrected the extracted per-item refresh method to use an early return on stable state.
+- Portable Core regression checks now cover same-process close/reopen, unchanged order, rapid deletion/reinsertion, and two-HWND foreground selection.
+
+This stage has not undergone Windows compilation, AppVeyor execution, or desktop visual tests at owner request. Runtime frame-time improvement remains unmeasured.

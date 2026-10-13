@@ -29,6 +29,44 @@ internal static class DockChecks
         Check(!dock.Reconcile([]), "An unchanged empty dock must skip repeated layout work.");
         Check(dock.Windows.Count == 0, "Closing every app must clear the running dock.");
 
+        // Destroy/create may reuse both HWND and PID between native scans.
+        var oldWindow = new RunningWindow(new IntPtr(800), "First document", "editor", 4200);
+        var otherWindow = new RunningWindow(new IntPtr(801), "Other document", "editor", 4200);
+        var lifecycle = new DockWindowSet();
+        Check(lifecycle.Reconcile([oldWindow, otherWindow]), "Initial dock snapshot must reconcile.");
+        Check(lifecycle.Reconcile([otherWindow, oldWindow], new HashSet<IntPtr> { oldWindow.Handle }),
+            "A recycled HWND in the same process must force a new dock identity.");
+        Check(lifecycle.Windows.SequenceEqual([otherWindow, oldWindow]),
+            "Recycled HWND must append while unaffected buttons retain their order.");
+        Check(!lifecycle.Reconcile([oldWindow, otherWindow]),
+            "Pure z-order changes must not recreate buttons after invalidation.");
+        var reopened = oldWindow with { Title = "Second document" };
+        Check(lifecycle.Reconcile([otherWindow, reopened], new HashSet<IntPtr> { oldWindow.Handle }),
+            "Rapid close/reopen with the same HWND and PID must replace old metadata.");
+        Check(lifecycle.Windows.Count == 2 && lifecycle.Windows[^1] == reopened,
+            "Recycled identities must never leave duplicate buttons.");
+        Check(!lifecycle.Reconcile([otherWindow, reopened], new HashSet<IntPtr> { new IntPtr(999) }),
+            "Destroying an HWND outside the dock must not force layout work.");
+        Check(lifecycle.Reconcile([otherWindow]) && lifecycle.Windows.Count == 1,
+            "Closed app entries must disappear on structural scans.");
+        Check(lifecycle.Reconcile([reopened, otherWindow]) && lifecycle.Windows.Count == 2,
+            "Reopened apps must return without ghost window entries.");
+
+        // Foreground-only events should inspect just two native HWNDs.
+        var before = new IntPtr(10);
+        var after = new IntPtr(12);
+        Check(DockStateRefreshPolicy.ShouldInspect(before, before, after)
+            && DockStateRefreshPolicy.ShouldInspect(after, before, after),
+            "Foreground switches must refresh both old and new active buttons.");
+        Check(!DockStateRefreshPolicy.ShouldInspect(new IntPtr(11), before, after),
+            "Unrelated dock icons must not trigger native state checks.");
+        Check(!DockStateRefreshPolicy.ShouldInspect(IntPtr.Zero, before, after),
+            "Invalid HWNDs must never be inspected.");
+        Check(DockStateRefreshPolicy.ShouldInspect(after, after, after),
+            "Repeated foreground observations must still settle the target app state.");
+        Check(!DockStateRefreshPolicy.ShouldInspect(new IntPtr(44), IntPtr.Zero, IntPtr.Zero),
+            "No foreground must not inspect unrelated dock windows.");
+
         Check(NativeMethods.DockWindowEligibleVisibility(true, false),
             "Normal visible app windows must remain in the dock.");
         Check(NativeMethods.DockWindowEligibleVisibility(true, true),
