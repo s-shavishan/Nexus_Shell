@@ -71,6 +71,50 @@ internal static class NativeUiDispatchChecks
         Check(nested == 2 && pending.Count == 0,
             "Reentrant layout dispatch must execute exactly twice with a clean queue.");
 
+        // Refusing an enqueue does not guarantee that the queue discarded the
+        // callback. A late invocation must be harmless to an accepted successor.
+        var rejected = new CoalescedUiDispatch();
+        Action? rejectedCallback = null;
+        int rejectedDeliveries = 0;
+        var retryCallbacks = new Queue<Action>();
+        Check(!rejected.Request(
+            callback => { rejectedCallback = callback; return false; },
+            () => rejectedDeliveries++),
+            "A rejected callback must be marked obsolete.");
+        Check(rejected.Request(
+            callback => { retryCallbacks.Enqueue(callback); return true; },
+            () => rejectedDeliveries += 10),
+            "A new request should be admitted after a refused native repaint.");
+        rejectedCallback!();
+        Check(!rejected.Request(
+            callback => { retryCallbacks.Enqueue(callback); return true; },
+            () => rejectedDeliveries += 100),
+            "An obsolete repaint callback must not unlock the replacement.");
+        retryCallbacks.Dequeue()();
+        Check(rejectedDeliveries == 10 && retryCallbacks.Count == 0,
+            "Only the accepted repaint generation may be delivered.");
+
+        var inline = new CoalescedUiDispatch();
+        int inlineDeliveries = 0;
+        var inlinePending = new Queue<Action>();
+        Check(!inline.Request(callback =>
+        {
+            callback();
+            Check(inline.Request(
+                next => { inlinePending.Enqueue(next); return true; },
+                () => inlineDeliveries += 10),
+                "An inline finished update must allow a new layout generation.");
+            return false;
+        }, () => inlineDeliveries++),
+            "Late refusal after inline execution must still return failure.");
+        Check(!inline.Request(
+            next => { inlinePending.Enqueue(next); return true; },
+            () => inlineDeliveries += 100),
+            "A previous generation's refusal must not unlock the newly pending update.");
+        inlinePending.Dequeue()();
+        Check(inlineDeliveries == 11 && inlinePending.Count == 0,
+            "The two inline/reentrant generations must each deliver exactly once.");
+
         var legacy = new CoalescedUiDispatch();
         bool threw = false;
         try { legacy.Request(_ => throw new InvalidOperationException("expected"), () => { }); }

@@ -1,17 +1,18 @@
 namespace Nexus.Shell.Services;
 
-// UI-thread-only scheduling gate. Repeated requests share one queued callback.
-// Refusal, throwing enqueue, and a failed UI callback must all release the gate.
-// Existing callers retain exception propagation unless an error reporter is set.
+// UI-thread-owned dispatcher gate for native layout notifications. Each accepted
+// callback owns its own ticket; a late refusal/exception from an earlier enqueue
+// must never unlock the newly queued reposition. Retained callbacks from rejected
+// admissions are ignored rather than executed against a stale WinUI surface.
 public sealed class CoalescedUiDispatch
 {
-    private bool _pending;
+    private uint _nextTicket, _pendingTicket;
 
     public bool Request(Func<Action, bool> enqueue, Action callback, Action<Exception>? report = null)
     {
         ArgumentNullException.ThrowIfNull(enqueue);
         ArgumentNullException.ThrowIfNull(callback);
-        if (_pending) return false;
+        if (_pendingTicket != 0) return false;
 
         void Report(Exception error)
         {
@@ -20,21 +21,31 @@ public sealed class CoalescedUiDispatch
             catch { /* A diagnostic sink must not turn recovery into a UI crash. */ }
         }
 
-        _pending = true;
+        uint ticket = unchecked(++_nextTicket);
+        if (ticket == 0) ticket = unchecked(++_nextTicket);
+        _pendingTicket = ticket;
+
+        void Release()
+        {
+            if (_pendingTicket == ticket) _pendingTicket = 0;
+        }
+
         try
         {
             if (enqueue(() =>
             {
-                _pending = false; // Release before delivery for reentrant requests.
+                if (_pendingTicket != ticket) return; // Rejected/stale callback.
+                _pendingTicket = 0; // Admit a new request during delivery.
                 try { callback(); }
                 catch (Exception error) { Report(error); }
             })) return true;
-            _pending = false;
+
+            Release();
             return false;
         }
         catch (Exception error)
         {
-            _pending = false;
+            Release();
             if (report is null) throw;
             Report(error);
             return false;

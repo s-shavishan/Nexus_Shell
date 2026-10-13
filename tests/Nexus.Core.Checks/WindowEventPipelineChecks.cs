@@ -108,6 +108,52 @@ internal static class WindowEventPipelineChecks
         Check(safeQueue.Count == 0 && nativeErrors.Count == 502,
             "Contained callbacks must release the native-event queue for every subsequent generation.");
 
+        // A rejecting dispatcher may have retained the callback already. If it
+        // runs late, it cannot consume foreground priority or release its retry.
+        var refused = new WindowEventDispatchGate();
+        Action? refusedCallback = null;
+        var validCallbacks = new Queue<Action>();
+        var refusedObservations = new List<bool>();
+        Check(!refused.Request(true,
+            callback => { refusedCallback = callback; return false; },
+            observed => refusedObservations.Add(observed)),
+            "Rejected admission must not claim to have scheduled a foreground event.");
+        Check(refused.Request(false,
+            callback => { validCallbacks.Enqueue(callback); return true; },
+            observed => refusedObservations.Add(observed)),
+            "A valid retry must be admitted after refusal.");
+        refusedCallback!();
+        Check(!refused.Request(false,
+            callback => { validCallbacks.Enqueue(callback); return true; },
+            observed => refusedObservations.Add(observed)),
+            "A rejected callback arriving late must not unlock the valid retry.");
+        validCallbacks.Dequeue()();
+        Check(refusedObservations.SequenceEqual([true]) && validCallbacks.Count == 0,
+            "A stale callback must not deliver twice or steal the retained foreground flag.");
+
+        // Some queue wrappers invoke inline, then report failure to their caller.
+        // The old request's late rejection must not clear the newer generation.
+        var overlap = new WindowEventDispatchGate();
+        var overlapCallbacks = new Queue<Action>();
+        var overlapObservations = new List<bool>();
+        Check(!overlap.Request(false, callback =>
+        {
+            callback();
+            Check(overlap.Request(true,
+                next => { overlapCallbacks.Enqueue(next); return true; },
+                observed => overlapObservations.Add(observed)),
+                "A finished inline batch must admit its successor.");
+            return false;
+        }, observed => overlapObservations.Add(observed)),
+            "An inline callback followed by refusal still reports refused admission.");
+        Check(!overlap.Request(false,
+            next => { overlapCallbacks.Enqueue(next); return true; },
+            observed => overlapObservations.Add(observed)),
+            "A late rejection from an old ticket cannot clear an in-flight successor.");
+        overlapCallbacks.Dequeue()();
+        Check(overlapObservations.SequenceEqual([false, true]) && overlapCallbacks.Count == 0,
+            "The successor must retain foreground priority after inline completion and late refusal.");
+
         int lookupCount = 0;
         (int Session, string Name)? Resolve(int pid)
         {
