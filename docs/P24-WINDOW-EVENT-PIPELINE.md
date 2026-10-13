@@ -121,3 +121,11 @@ The previous Stage 8 `RequiresDockRefresh` helper used the order-sensitive nativ
 - Added a portable regression case for a reference-identical duplicated snapshot. The existing ordered native-window comparer retains its fast reference comparison, as it serves a distinct purpose.
 
 No .NET/WinUI build or AppVeyor tests were executed in this development batch.
+
+## Stage 11 — Repair partial WinUI dock reconciliation after a failed pass
+
+- An asynchronous window scan may get a valid native snapshot, then fail partway through `TaskbarView.Refresh` (for example during native icon materialization or a WinUI child mutation). The retained `DockWindowSet` may already reflect the new identities, while `_items` and `_windows.Children` only partially reflect them. On the next retry, `DockWindowSet.Reconcile` returns unchanged; the old early exit could therefore preserve invisible/missing dock buttons indefinitely.
+- `TaskbarView` now marks its XAML reconciliation incomplete before mutating retained controls and clears the marker only after a completed refresh. A prior failure, mismatched item count or mismatched child count triggers the full UI recovery path even if native window metadata did not change.
+- Recovery reattaches existing current HWND buttons in retained lifecycle order. It does not replay a full dock rebuild during normal active-window switching or stable recovery scans.
+- A pure `DockVisualRecoveryPolicy` captures the decision and portable tests cover missing dictionary entries, missing child controls, interrupted updates with correct counts, first-baseline rendering, pin/window updates and the stable no-op path.
+- The actual WinUI outcome remains unverified without a Windows build. No AppVeyor or Windows preview was performed by owner preference.

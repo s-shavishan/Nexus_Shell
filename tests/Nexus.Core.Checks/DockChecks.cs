@@ -67,6 +67,38 @@ internal static class DockChecks
         Check(!DockStateRefreshPolicy.ShouldInspect(new IntPtr(44), IntPtr.Zero, IntPtr.Zero),
             "No foreground must not inspect unrelated dock windows.");
 
+        // A partially failed XAML update can leave DockWindowSet reconciled
+        // while one button was never attached. The next identical snapshot
+        // must force recovery rather than skipping the visual reconciliation.
+        Check(!DockVisualRecoveryPolicy.RequiresFullReconcile(
+                true, false, false, false, 3, 3, 3),
+            "A stable, complete dock must keep its existing low-cost refresh path.");
+        Check(DockVisualRecoveryPolicy.RequiresFullReconcile(
+                true, false, false, true, 3, 3, 3),
+            "An interrupted refresh must always receive a second full attempt.");
+        Check(DockVisualRecoveryPolicy.RequiresFullReconcile(
+                true, false, false, false, 3, 2, 2),
+            "A missing recorded item must trigger reconstruction after a partial failure.");
+        Check(DockVisualRecoveryPolicy.RequiresFullReconcile(
+                true, false, false, false, 3, 3, 2),
+            "A registered button that never reached the WinUI child list must be reattached.");
+        Check(DockVisualRecoveryPolicy.RequiresFullReconcile(
+                false, false, false, false, 0, 0, 0),
+            "First dock initialization must always reconcile.");
+        Check(DockVisualRecoveryPolicy.RequiresFullReconcile(
+                true, true, false, false, 3, 3, 3)
+            && DockVisualRecoveryPolicy.RequiresFullReconcile(
+                true, false, true, false, 3, 3, 3),
+            "Pin edits and real window lifecycle changes must keep full reconciliation.");
+        Check(!DockVisualRecoveryPolicy.RequiresVisualRebuild(false, 3, 3),
+            "An ordinary consistent scan must not detach and reattach WinUI dock buttons.");
+        Check(DockVisualRecoveryPolicy.RequiresVisualRebuild(true, 3, 3),
+            "A failed refresh must restore child order even when button counts happen to match.");
+        Check(DockVisualRecoveryPolicy.RequiresVisualRebuild(false, 3, 2),
+            "Missing visual controls must be repaired after the existing item dictionary stabilizes.");
+        Check(DockVisualRecoveryPolicy.RequiresVisualRebuild(true, 0, 0),
+            "A failed empty-dock refresh must also reset potentially orphaned children.");
+
         Check(NativeMethods.DockWindowEligibleVisibility(true, false),
             "Normal visible app windows must remain in the dock.");
         Check(NativeMethods.DockWindowEligibleVisibility(true, true),
