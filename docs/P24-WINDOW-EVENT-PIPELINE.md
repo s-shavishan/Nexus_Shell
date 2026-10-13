@@ -45,3 +45,13 @@ As requested, these changes have **not** undergone AppVeyor compilation or a Win
 - Pure Core tests cover normal hide, pending animation, external show/hide, fullscreen override, reveal cancellation and no-op states.
 
 No Windows compilation, native compositor test or AppVeyor result has been verified for this stage.
+
+## Stage 5 — Minimize/restore cue lifetime and unknown foreground recovery
+
+- `DockCueDeliveryPolicy` treats compositor cues as transient feedback, not durable window state. Only a newly created icon's **first arrival** may be buffered until the initial XAML load. Minimize, restore and activation updates observed after an icon unloaded are never replayed later.
+- `TaskbarView` tracks whether each window button was previously mounted. Unload clears any deferred cue; reload settles the live presence indicator without manufacturing a lifecycle animation. Real updates to loaded icons still animate.
+- `TaskbarWindow.RefreshFromNativeEvent` returns its already-captured foreground HWND. Known-app activation remains enumeration-free. If an unknown focused HWND is from an eligible external app, non-cloaked and not a desktop/tool surface, Nexus schedules its existing 50 ms coalesced enumeration to recover a missed create/show event.
+- Existing structural-event enumeration and independent five-second recovery pass remain active.
+- New Core assertions cover loaded/unloaded cue decisions and unknown/known foreground classification.
+
+No AppVeyor run or Windows preview was performed by owner request. Static source edits and assertions do not establish successful compilation, visual correctness or measured latency improvements.

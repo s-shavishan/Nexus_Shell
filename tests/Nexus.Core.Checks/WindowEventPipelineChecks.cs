@@ -207,6 +207,22 @@ internal static class WindowEventPipelineChecks
         Check(nativeRetriesSeen.SequenceEqual([(true, true)]),
             "Stale rejected events must not steal pending structural invalidation.");
 
+        var knownForeground = new[] {
+            new Nexus.Shell.Models.RunningWindow(new IntPtr(101), "Editor", "editor", 1001),
+            new Nexus.Shell.Models.RunningWindow(new IntPtr(102), "Browser", "browser", 1002)
+        };
+        Check(!DockForegroundDiscoveryPolicy.IsUnknownForeground(true, IntPtr.Zero, knownForeground),
+            "Null foreground must not trigger an unknown-app scan.");
+        Check(!DockForegroundDiscoveryPolicy.IsUnknownForeground(false, new IntPtr(103), knownForeground),
+            "Non-foreground events already have their own enumeration decision.");
+        Check(!DockForegroundDiscoveryPolicy.IsUnknownForeground(true, new IntPtr(101), knownForeground),
+            "Alt+Tab between known apps must remain enumeration-free.");
+        Check(DockForegroundDiscoveryPolicy.IsUnknownForeground(true, new IntPtr(103), knownForeground),
+            "Unknown focused apps must be eligible for native discovery checks.");
+        Check(DockForegroundDiscoveryPolicy.IsUnknownForeground(true, new IntPtr(101),
+            Array.Empty<Nexus.Shell.Models.RunningWindow>()),
+            "Missed create/show events must be recoverable before the periodic fallback.");
+
         var previousList = new[] {
             new Nexus.Shell.Models.RunningWindow(new IntPtr(10), "Editor", "editor", 100),
             new Nexus.Shell.Models.RunningWindow(new IntPtr(11), "Browser", "browser", 101)
