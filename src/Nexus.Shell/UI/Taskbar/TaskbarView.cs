@@ -383,12 +383,19 @@ internal sealed class TaskbarView : Grid
             indicator.Width = width;
             onPropertyWrite?.Invoke();
         }
-        if (indicator.Opacity != opacity)
+        // WinUI stores Opacity using single-precision backing values on
+        // some Windows App SDK builds. Reading 0.45 back can produce
+        // 0.44999998807907104. Compare at the effective precision to
+        // avoid redundant XAML layout writes on every steady-state poll.
+        if (!SameNativeOpacity(indicator.Opacity, opacity))
         {
             indicator.Opacity = opacity;
             onPropertyWrite?.Invoke();
         }
     }
+
+    private static bool SameNativeOpacity(double actual, double requested)
+        => (float)actual == (float)requested;
 
     private void PrepareMotion(DockItem item)
     {
@@ -440,20 +447,38 @@ internal sealed class TaskbarView : Grid
         var indicator = new Border { Width = 22, Opacity = 1 };
         int writes = 0;
         Action observeWrite = () => writes++;
-        // Count the production method's actual Width/Opacity assignments.
-        // A detached Border may not deliver DP callbacks synchronously on
-        // every WinUI runtime; that should not give a false probe failure.
+
+        // Count real assignments instead of relying on detached-element
+        // dependency-property callbacks. Validate values at the precision
+        // WinUI actually retains, not exact double equality.
         for (int i = 0; i < 100; i++)
             SetIndicatorLayout(indicator, 22, 1, observeWrite);
-        if (writes != 0 || indicator.Width != 22 || indicator.Opacity != 1)
+        if (writes != 0 || indicator.Width != 22 || !SameNativeOpacity(indicator.Opacity, 1))
             throw new InvalidOperationException(
                 $"Unchanged dock indicator rewrote layout (writes={writes}, width={indicator.Width}, opacity={indicator.Opacity}).");
+
         SetIndicatorLayout(indicator, 10, .45, observeWrite);
-        if (indicator.Width != 10 || indicator.Opacity != .45 || writes != 2)
+        if (indicator.Width != 10 || !SameNativeOpacity(indicator.Opacity, .45) || writes != 2)
             throw new InvalidOperationException(
                 $"Dock indicator transition was not applied (writes={writes}, width={indicator.Width}, opacity={indicator.Opacity}).");
+
+        // This is a real production regression case: the value is returned
+        // as a rounded float on AppVeyor, so 100 subsequent identical
+        // requests must NOT keep rewriting the same opacity.
+        for (int i = 0; i < 100; i++)
+            SetIndicatorLayout(indicator, 10, .45, observeWrite);
+        if (writes != 2 || indicator.Width != 10 || !SameNativeOpacity(indicator.Opacity, .45))
+            throw new InvalidOperationException(
+                $"Stable fractional opacity caused repeat layout writes (writes={writes}, width={indicator.Width}, opacity={indicator.Opacity}).");
+
+        // Distinct fractional opacity must still update on a real change.
+        SetIndicatorLayout(indicator, 10, .65, observeWrite);
+        if (writes != 3 || !SameNativeOpacity(indicator.Opacity, .65))
+            throw new InvalidOperationException(
+                $"Real opacity-only transition was suppressed (writes={writes}, opacity={indicator.Opacity}).");
+
         SetIndicatorLayout(indicator, 22, 1, observeWrite);
-        if (indicator.Width != 22 || indicator.Opacity != 1 || writes != 4)
+        if (indicator.Width != 22 || !SameNativeOpacity(indicator.Opacity, 1) || writes != 5)
             throw new InvalidOperationException(
                 $"Dock indicator geometry was not restored (writes={writes}, width={indicator.Width}, opacity={indicator.Opacity}).");
     }
