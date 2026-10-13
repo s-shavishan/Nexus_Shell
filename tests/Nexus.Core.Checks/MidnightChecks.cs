@@ -60,6 +60,11 @@ internal static class MidnightChecks
         check(history.BackTarget == "first" && history.Current == "second", "Checking a back target must not move history before folder I/O succeeds.");
         history.Back(); history.Visit("third"); check(!history.CanGoForward, "New folder navigation must truncate forward history.");
 
+        check(MidnightGlassMetrics.DockButtonWidth == 64
+            && MidnightGlassMetrics.DockButtonHeight == 68
+            && DesktopLayout.TaskbarHeight(false) >= MidnightGlassMetrics.DockButtonHeight + 20
+            && DesktopLayout.TaskbarHeight(true) == 56,
+            "Floating dock must reserve room for the real icon size and preserve compact mode.");
         // The launcher must fit the same real, negatively offset monitors as
         // the expanded search without ever stealing focus or going off screen.
         foreach (var monitor in new[] { new ShellRect(0, 0, 1649, 928), new ShellRect(-2560, -140, 2560, 1440), new ShellRect(100, 200, 640, 480) })

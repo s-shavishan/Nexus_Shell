@@ -67,7 +67,7 @@ public static class DesktopLayout
         int y = (int)Math.Clamp(bottom + gap, panel.Y, (long)monitor.Bottom - panel.Height);
         return panel with { X = x, Y = y };
     }
-    public static int TaskbarHeight(bool compact) => compact ? 56 : 68;
+    public static int TaskbarHeight(bool compact) => compact ? 56 : 90;
     private static double Scale(double value) => double.IsFinite(value) ? Math.Clamp(value, .5, 4) : 1;
     public static int TaskbarReservationHeight(bool compact, bool floating, double scale)
         => Math.Max(1, (int)Math.Round((TaskbarHeight(compact) + (floating ? 32 : 0)) * Scale(scale)));
