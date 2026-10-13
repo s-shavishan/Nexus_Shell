@@ -292,7 +292,7 @@ internal sealed partial class DesktopEnvironment
                 IReadOnlySet<IntPtr> invalidated = lifecycle.Value.ResetAll
                     ? _lastDockSnapshot.Concat(dockSnapshot).Select(window => window.Handle).ToHashSet()
                     : lifecycle.Value.Destroyed;
-                if (!_dockSnapshotInitialized
+                if (!_dockSnapshotInitialized || Taskbar.View.NeedsRecovery
                     || WindowListSnapshotPolicy.RequiresDockRefresh(
                         _lastDockSnapshot, dockSnapshot, invalidated, lifecycle.Value.ResetAll))
                 {

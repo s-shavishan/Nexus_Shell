@@ -32,6 +32,28 @@ internal sealed class TaskbarView : Grid
     private bool _baselineReconciled, _released, _refreshIncomplete;
     private bool? _appliedCompactDock;
     internal bool ContextMenuOpen => _openContextMenus.Count > 0;
+
+    // A failed settings-triggered Refresh can leave a partially updated UI
+    // even when the next native snapshot is unchanged. The environment uses
+    // this invariant to force recovery without waiting for a new window event.
+    internal bool NeedsRecovery
+    {
+        get
+        {
+            if (_released) return false;
+            if (_refreshIncomplete
+                || !DockVisualRecoveryPolicy.HasConsistentIdentities(_windowSet.Windows, _items.Keys)
+                || _items.Count != _windows.Children.Count) return true;
+            for (int i = 0; i < _windowSet.Windows.Count; i++)
+            {
+                var key = DockWindowIdentity.Of(_windowSet.Windows[i]);
+                if (!_items.TryGetValue(key, out var item)
+                    || !ReferenceEquals(_windows.Children[i], item.Button))
+                    return true;
+            }
+            return false;
+        }
+    }
     private sealed class DockItem
     {
         internal RunningWindow Window;
@@ -174,7 +196,7 @@ internal sealed class TaskbarView : Grid
         // Reconcile may have failed after updating the retained DockWindowSet,
         // but before completing the WinUI child list. A later identical native
         // snapshot must not bypass the repair path.
-        bool recovering = _refreshIncomplete;
+        bool recovering = NeedsRecovery;
         _refreshIncomplete = true;
         var pins = _environment.Session.State.PinnedApps.ToArray();
         bool pinsChanged = !_shownPins.SequenceEqual(pins);
