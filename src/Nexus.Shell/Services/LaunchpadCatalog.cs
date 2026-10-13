@@ -4,7 +4,8 @@ namespace Nexus.Shell.Services;
 
 public static class LaunchpadCatalog
 {
-    public const int PageSize = 24;
+    // Three complete six-column rows in the 760x740 DIP Launchpad panel.
+    public const int PageSize = 18;
     public static IReadOnlyList<AppEntry> Build(IEnumerable<AppEntry> builtins, IEnumerable<AppEntry> pins, IEnumerable<AppEntry> discovered)
         => builtins.Concat(pins).Concat(discovered).Where(app => app is not null && !string.IsNullOrWhiteSpace(app.Name) && !string.IsNullOrWhiteSpace(app.Target))
             .DistinctBy(app => app.Target, StringComparer.OrdinalIgnoreCase).Take(600).ToArray();

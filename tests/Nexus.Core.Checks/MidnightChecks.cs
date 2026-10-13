@@ -80,6 +80,8 @@ internal static class MidnightChecks
             check(!picker.InspectorVisible && picker.InspectorWidth == 0,
                 "File selection dialogs must not allocate content width to an inspector.");
         }
+        check(LaunchpadCatalog.PageSize == 18 && 6 * 3 == LaunchpadCatalog.PageSize,
+            "Launchpad must show three complete six-column rows at reference size.");
         check(LaunchpadArtworkPolicy.UsesNexusArtwork("sections")
             && !LaunchpadArtworkPolicy.UsesNexusArtwork("discovered-app"),
             "Only Nexus-owned builtins should keep fixed vector app artwork.");
