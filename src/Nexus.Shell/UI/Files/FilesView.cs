@@ -57,7 +57,7 @@ internal sealed class FilesView : Grid
     private readonly LatestWorkQueue _navigation = new(), _previews = new();
     internal FilesView(FilesEnvironment environment, FileSelectionRequest request, Action<IReadOnlyList<string>> complete)
     {
-        _environment = environment; _request = request; _complete = complete; Padding = new Thickness(12); RowSpacing = 10;
+        _environment = environment; _request = request; _complete = complete; Padding = new Thickness(18); RowSpacing = 14;
         _slowRead.Tick += (_, _) =>
         {
             _slowRead.Stop();
@@ -66,7 +66,7 @@ internal sealed class FilesView : Grid
         _showGrid = request.Kind == FileSelectionKind.Browse;
         RequestedTheme = environment.Theme.ElementTheme; KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden; Background = environment.Theme.Brush("NexusPanel");
         foreach (var height in new[] { GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto }) RowDefinitions.Add(new() { Height = height });
-        var toolbar = new Grid { ColumnSpacing = 8 };
+        var toolbar = new Grid { ColumnSpacing = 10 };
         foreach (var width in new[] { GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto }) toolbar.ColumnDefinitions.Add(new() { Width = width });
         var history = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 1 };
         _back = Button("‹", () => _history.BackTarget is string path ? NavigateAsync(path, -1) : Task.CompletedTask); history.Children.Add(_back);
@@ -79,7 +79,7 @@ internal sealed class FilesView : Grid
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_address, "Folder path; press Enter to open");
         Grid.SetColumn(_address, 2); toolbar.Children.Add(_address);
         _filter.TextChanged += (_, _) => Render(); Grid.SetColumn(_filter, 3); toolbar.Children.Add(_filter); Children.Add(toolbar);
-        var body = new Grid { ColumnSpacing = 14 };
+        var body = new Grid { ColumnSpacing = 12 };
         body.ColumnDefinitions.Add(_placesColumn);
         body.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) });
         body.ColumnDefinitions.Add(_inspectorColumn);
@@ -88,7 +88,7 @@ internal sealed class FilesView : Grid
             bool showInspector = request.Kind == FileSelectionKind.Browse && body.ActualWidth >= 800;
             _inspectorColumn.Width = showInspector ? new GridLength(225) : new GridLength(0);
             _inspectorCard.Visibility = showInspector ? Visibility.Visible : Visibility.Collapsed;
-            _placesColumn.Width = body.ActualWidth < 590 ? new GridLength(125) : new GridLength(185);
+            _placesColumn.Width = body.ActualWidth < 590 ? new GridLength(126) : new GridLength(193);
         };
         var places = new StackPanel { Spacing = 6 };
         places.Children.Add(new TextBlock { Text = "FAVORITES", FontSize = 11, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
@@ -430,8 +430,13 @@ internal sealed class FilesView : Grid
     {
         var theme = _environment.Theme; RequestedTheme = theme.ElementTheme; Background = null;
         _status.Foreground = _modified.Foreground = theme.Brush("NexusMuted"); _list.Foreground = _tiles.Foreground = theme.Brush("NexusText");
-        _placesCard.Background = theme.Material("Panel", _environment.State.NativeGlass); _placesCard.BorderBrush = theme.Edge; _placesCard.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 12);
-        _inspectorCard.Background = theme.Material("Card", _environment.State.NativeGlass); _inspectorCard.BorderBrush = theme.Edge; _inspectorCard.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 14);
+        _placesCard.Background = MidnightGlassMetrics.ReferenceEnabled(theme.Palette, theme.HighContrast)
+            ? theme.Surface("Sidebar") : theme.Material("Panel", _environment.State.NativeGlass);
+        _placesCard.BorderBrush = theme.Edge;
+        _placesCard.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : MidnightGlassMetrics.CardRadius);
+        _inspectorCard.Background = theme.Material("Card", _environment.State.NativeGlass);
+        _inspectorCard.BorderBrush = theme.Edge;
+        _inspectorCard.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : MidnightGlassMetrics.CardRadius);
         _fileTitle.Foreground = theme.Brush("NexusText"); _fileKind.Foreground = theme.Brush("NexusMuted");
         _fileLocation.Foreground = theme.Brush("NexusSecondary");
         RefreshPlaces();

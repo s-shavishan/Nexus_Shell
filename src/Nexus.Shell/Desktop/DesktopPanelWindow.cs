@@ -35,13 +35,13 @@ internal abstract class DesktopPanelWindow : Window
     protected DesktopPanelWindow(DesktopEnvironment environment, string title, FrameworkElement body, int width, int height, bool center = false, bool animateBody = true)
     {
         Environment = environment; _width = width; _height = height; _center = center;
-        Root = new Grid { Padding = new Thickness(22), RowSpacing = 16, KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden };
+        Root = new Grid { Padding = new Thickness(MidnightGlassMetrics.ContentPadding), RowSpacing = 14, KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden };
         Root.RowDefinitions.Add(new() { Height = GridLength.Auto }); Root.RowDefinitions.Add(new());
         var header = new Grid { ColumnSpacing = 12 }; header.ColumnDefinitions.Add(new()); header.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
-        _title = new TextBlock { Text = title, FontSize = 24, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+        _title = new TextBlock { Text = title, FontSize = 22, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
         header.Children.Add(_title); var close = ShellControls.IconButton("\uE8BB", "Close " + title, Hide); Grid.SetColumn(close, 1); header.Children.Add(close);
         Root.Children.Add(header); Grid.SetRow(body, 1); Root.Children.Add(body);
-        Frame = new Border { Child = Root, CornerRadius = new CornerRadius(22), BorderThickness = new Thickness(1) }; Content = Frame;
+        Frame = new Border { Child = Root, CornerRadius = new CornerRadius(MidnightGlassMetrics.FrameRadius), BorderThickness = new Thickness(1) }; Content = Frame;
         Handle = WinRT.Interop.WindowNative.GetWindowHandle(this); Native = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(Handle)); Native.Title = "Nexus " + title;
         WindowSwitcherPolicy.Request(() => Native.IsShownInSwitchers = false, error => Log.Write("Desktop panel switcher fallback", error));
         if (Native.Presenter is OverlappedPresenter presenter) { presenter.SetBorderAndTitleBar(false, false); presenter.IsResizable = presenter.IsMinimizable = presenter.IsMaximizable = false; }
@@ -75,8 +75,8 @@ internal abstract class DesktopPanelWindow : Window
     internal virtual void ApplyAppearance()
     {
         var theme = Environment.Theme; Root.RequestedTheme = theme.ElementTheme;
-        _material.Apply(this, Frame, Environment); Frame.BorderBrush = theme.Edge; Frame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 22);
-        _title.Foreground = theme.Brush("NexusText"); _chrome.SetCorners(theme.HighContrast, 22); _motion.Refresh();
+        _material.Apply(this, Frame, Environment); Frame.BorderBrush = theme.Edge; Frame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : MidnightGlassMetrics.FrameRadius);
+        _title.Foreground = theme.Brush("NexusText"); _chrome.SetCorners(theme.HighContrast, MidnightGlassMetrics.FrameRadius); _motion.Refresh();
     }
     protected virtual void OnHidden() { }
     protected virtual void OnShown() { }

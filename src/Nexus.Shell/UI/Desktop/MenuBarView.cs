@@ -10,13 +10,13 @@ namespace Nexus.Shell.UI.Desktop;
 internal sealed class MenuBarView : Grid, IDisposable
 {
     private readonly DesktopEnvironment _environment;
-    private readonly TextBlock _clock = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+    private readonly TextBlock _clock = new() { FontSize = 12.5, VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock _badge = new() { FontSize = 10, VerticalAlignment = VerticalAlignment.Center };
     private readonly Button _notification;
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(15) };
     private readonly Grid _controls = new() { Width = 17, Height = 17 };
     private readonly List<Button> _buttons = [];
-    private readonly TextBlock _activeTitle = new() { Text = "Desktop", FontSize = 12, MaxWidth = 190, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
+    private readonly TextBlock _activeTitle = new() { Text = "Desktop", FontSize = 13, MaxWidth = 210, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
     private readonly Button _activeApp;
     private readonly StackPanel _windowControls = new() { Orientation = Orientation.Horizontal, Spacing = 3, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 8, 0) };
     private readonly Button _minimize, _maximize, _close;
@@ -24,10 +24,10 @@ internal sealed class MenuBarView : Grid, IDisposable
     private int _refreshQueued;
     internal MenuBarView(DesktopEnvironment environment)
     {
-        _environment = environment; Padding = new Thickness(10, 0, 12, 0); ColumnSpacing = 8;
+        _environment = environment; Padding = new Thickness(18, 0, 16, 0); ColumnSpacing = 12;
         KeyboardAcceleratorPlacementMode = Microsoft.UI.Xaml.Input.KeyboardAcceleratorPlacementMode.Hidden;
         ColumnDefinitions.Add(new()); ColumnDefinitions.Add(new() { Width = GridLength.Auto });
-        var left = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 1, VerticalAlignment = VerticalAlignment.Center };
+        var left = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
         void Menu(string text, MenuFlyout flyout, bool bold = false)
         { var button = Basic(text, text + " menu"); button.FontWeight = bold ? Microsoft.UI.Text.FontWeights.SemiBold : Microsoft.UI.Text.FontWeights.Normal; button.Flyout = flyout; left.Children.Add(button); }
         var nexus = Basic(NexusIcons.Image("Launchpad", 19), "Nexus menu"); nexus.Width = 34; nexus.Padding = new Thickness(5, 0, 5, 0); nexus.Flyout = environment.Menus.NexusMenu(); left.Children.Add(nexus);
@@ -87,7 +87,7 @@ internal sealed class MenuBarView : Grid, IDisposable
     }
     private Button Basic(object content, string name)
     {
-        var button = new Button { Content = content, FontSize = 12, MinHeight = 28, Height = 28, CornerRadius = new CornerRadius(6), Padding = new Thickness(8, 0, 8, 0), Style = (Style)Application.Current.Resources["QuietButton"] };
+        var button = new Button { Content = content, FontSize = 13, MinHeight = 30, Height = 30, CornerRadius = new CornerRadius(8), Padding = new Thickness(10, 0, 10, 0), Style = (Style)Application.Current.Resources["QuietButton"] };
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, name); ToolTipService.SetToolTip(button, name); _buttons.Add(button); return button;
     }
     private void QueueRefresh()

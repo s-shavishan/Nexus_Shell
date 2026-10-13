@@ -26,6 +26,7 @@
     <Compile Include="../../src/Nexus.Shell/Services/LaunchpadCatalogCache.cs" Link="LaunchpadCatalogCache.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/LaunchpadRefreshGate.cs" Link="LaunchpadRefreshGate.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/GlassRecipe.cs" Link="GlassRecipe.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/MidnightGlassMetrics.cs" Link="MidnightGlassMetrics.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/GlassTintRetention.cs" Link="GlassTintRetention.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/GlassRimPolicy.cs" Link="GlassRimPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/GlassRimStatePolicy.cs" Link="GlassRimStatePolicy.cs" />
