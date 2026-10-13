@@ -20,3 +20,20 @@ public static class DockMotionPolicy
     { DockPresence.Active => 1, DockPresence.Minimized => 5f / 22, _ => 10f / 22 };
     public static float IndicatorOpacity(DockPresence presence) => presence == DockPresence.Minimized ? .45f : 1;
 }
+
+
+// Animation cues are transient feedback, not durable window state.
+// Only the initial arrival can wait for a button's first XAML load.
+internal enum DockCueDelivery { None, Play, BufferArrival, Discard }
+
+internal static class DockCueDeliveryPolicy
+{
+    internal static DockCueDelivery Decide(DockMotionCue cue,
+        bool loaded, bool everLoaded, bool compositorReady)
+    {
+        if (cue == DockMotionCue.None) return DockCueDelivery.None;
+        if (loaded) return compositorReady ? DockCueDelivery.Play : DockCueDelivery.Discard;
+        return !everLoaded && cue == DockMotionCue.Arrive
+            ? DockCueDelivery.BufferArrival : DockCueDelivery.Discard;
+    }
+}

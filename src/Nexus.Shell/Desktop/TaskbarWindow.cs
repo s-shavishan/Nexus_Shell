@@ -105,13 +105,14 @@ internal sealed class TaskbarWindow : Window, IDisposable
 
     // Share one foreground HWND between activation indicators and visibility.
     // Update the timer's cache so it cannot repeat the same native event.
-    internal void RefreshFromNativeEvent()
+    internal IntPtr RefreshFromNativeEvent()
     {
-        if (_disposed) return;
+        if (_disposed) return IntPtr.Zero;
         var foreground = NativeMethods.ForegroundTaskWindow();
         _lastForeground = foreground;
         View.RefreshWindowStates(foreground);
         RefreshVisibility(foreground);
+        return foreground;
     }
     internal void RefreshVisibility(IntPtr? observedForeground = null)
     {

@@ -288,11 +288,24 @@ internal sealed partial class DesktopEnvironment
             {
                 if (IsStopping) return;
                 if (foregroundChanged && ShellLayerInterop.IsExplorerDesktopWindow(NativeMethods.GetForegroundWindow())) Desktop.ShowSurface();
-                Taskbar.RefreshFromNativeEvent();
-                // Foreground-only events update dock selection immediately
-                // without an expensive full process/window enumeration.
-                // Any coalesced structural event still schedules the scan.
-                if (enumerate && !_windowRefreshTimer.IsEnabled) _windowRefreshTimer.Start();
+                var currentForeground = Taskbar.RefreshFromNativeEvent();
+                // Normal task switches need no EnumWindows pass. An unknown,
+                // eligible external foreground HWND may need recovery after
+                // a missed create/show notification.
+                bool unknown = DockForegroundDiscoveryPolicy.IsUnknownForeground(
+                    foregroundChanged, currentForeground, _windows);
+                bool discover = false;
+                if (unknown && currentForeground != Desktop.Handle
+                    && !ShellLayerInterop.IsExplorerDesktopWindow(currentForeground)
+                    && !NativeMethods.IsOwnToolWindow(currentForeground))
+                {
+                    int pid = NativeMethods.WindowProcessId(currentForeground);
+                    discover = pid > 0 && pid != Environment.ProcessId
+                        && NativeMethods.HasDockPresence(currentForeground)
+                        && !NativeMethods.IsCloaked(currentForeground);
+                }
+                if ((enumerate || discover) && !_windowRefreshTimer.IsEnabled)
+                    _windowRefreshTimer.Start();
             },
             error => Log.Write("Native window event UI dispatch failed; periodic reconciliation remains active", error));
     }

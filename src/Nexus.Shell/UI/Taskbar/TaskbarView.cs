@@ -41,6 +41,7 @@ internal sealed class TaskbarView : Grid
         internal DockPresence? Presence;
         internal DockMotionCue PendingCue;
         internal bool NewlyOpened;
+        internal bool EverLoaded;
         internal bool? PreviewsEnabled;
         internal (bool Active, bool Minimized)? State;
         internal DockItem(RunningWindow window) => Window = window;
@@ -243,8 +244,19 @@ internal sealed class TaskbarView : Grid
         };
         menu.Closed += (_, _) => { _openContextMenus.Remove(menu); _environment.Taskbar.RefreshVisibility(); };
         item.Button.ContextFlyout = menu;
-        item.Button.Loaded += (_, _) => { if (!_released) { _motion?.AttachHover(item.Button); PrepareMotion(item); } };
-        item.Button.Unloaded += (_, _) => _dockMotion?.Detach(item.Icon, item.Indicator);
+        item.Button.Loaded += (_, _) =>
+        {
+            if (_released) return;
+            _motion?.AttachHover(item.Button);
+            PrepareMotion(item);
+            item.EverLoaded = true;
+        };
+        item.Button.Unloaded += (_, _) =>
+        {
+            item.EverLoaded = true;
+            item.PendingCue = DockMotionCue.None;
+            _dockMotion?.Detach(item.Icon, item.Indicator);
+        };
         item.Button.PointerEntered += (_, e) =>
         {
             if (e.Pointer.PointerDeviceType != Microsoft.UI.Input.PointerDeviceType.Mouse) return;
@@ -271,7 +283,20 @@ internal sealed class TaskbarView : Grid
             var cue = valid ? DockMotionPolicy.Transition(item.Presence, presence, item.NewlyOpened) : DockMotionCue.None;
             bool transitioned = DockIndicatorUpdatePolicy.ShouldTransition(valid, item.Presence, presence);
             bool initialized = item.Presence is not null; item.Presence = valid ? presence : null; item.NewlyOpened = false;
-            if (cue != DockMotionCue.None) { if (item.Icon.IsLoaded && _dockMotion is not null) { _dockMotion.Play(item.Icon, cue); item.PendingCue = DockMotionCue.None; } else item.PendingCue = cue; }
+            if (!valid) item.PendingCue = DockMotionCue.None;
+            switch (DockCueDeliveryPolicy.Decide(cue, item.Icon.IsLoaded, item.EverLoaded, _dockMotion is not null))
+            {
+                case DockCueDelivery.Play:
+                    _dockMotion!.Play(item.Icon, cue);
+                    item.PendingCue = DockMotionCue.None;
+                    break;
+                case DockCueDelivery.BufferArrival:
+                    item.PendingCue = DockMotionCue.Arrive;
+                    break;
+                case DockCueDelivery.Discard:
+                    item.PendingCue = DockMotionCue.None;
+                    break;
+            }
             if (_dockMotion is not null && transitioned)
             {
                 SetIndicatorLayout(item.Indicator, 22, 1);
@@ -305,7 +330,9 @@ internal sealed class TaskbarView : Grid
         if (_dockMotion is null) return;
         SetIndicatorLayout(item.Indicator, 22, 1);
         _dockMotion.SetIndicator(item.Indicator, item.Presence ?? DockPresence.Running, false);
-        _dockMotion.Play(item.Icon, item.PendingCue); item.PendingCue = DockMotionCue.None;
+        if (item.PendingCue == DockMotionCue.Arrive && item.Icon.IsLoaded)
+            _dockMotion.Play(item.Icon, item.PendingCue);
+        item.PendingCue = DockMotionCue.None;
     }
     internal void CancelPreviewRequest() { _hoverTimer.Stop(); _hoverItem = null; }
     private bool TryGetAnchor(Button button, out ShellRect anchor)
