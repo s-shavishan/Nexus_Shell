@@ -112,7 +112,7 @@ internal sealed class StartMenuView : Grid, IDisposable
         organization.Children.Add(new ScrollViewer { Content = tools, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled });
         Grid.SetRow(organization, 2); Children.Add(organization); RefreshCollections();
         _apps.ItemsPanel = (ItemsPanelTemplate)XamlReader.Load("""
-            <ItemsPanelTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"><ItemsWrapGrid Orientation="Horizontal" ItemWidth="112" ItemHeight="124" /></ItemsPanelTemplate>
+            <ItemsPanelTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"><ItemsWrapGrid Orientation="Horizontal" ItemWidth="104" ItemHeight="124" /></ItemsPanelTemplate>
             """);
         _apps.ItemTemplate = (DataTemplate)XamlReader.Load("""
             <DataTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
