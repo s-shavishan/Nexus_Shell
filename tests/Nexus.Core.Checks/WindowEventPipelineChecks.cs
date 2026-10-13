@@ -154,13 +154,56 @@ internal static class WindowEventPipelineChecks
         Check(overlapObservations.SequenceEqual([false, true]) && overlapCallbacks.Count == 0,
             "The successor must retain foreground priority after inline completion and late refusal.");
 
-        // A foreground-only activation must never enumerate every open window.
-        // Other, including unexpected, native event kinds remain conservative.
+        // Neither foreground switching nor completing an interactive
+        // move/resize changes task-list membership by itself. Both still
+        // deliver an immediate UI callback for native geometry/visibility.
         Check(!WindowEventScanPolicy.RequiresEnumeration(0x0003),
             "Foreground activation should update the dock without a complete EnumWindows pass.");
-        foreach (uint kind in new uint[] { 0x000B, 0x0016, 0x0017, 0x8000, 0x8001, 0x8002, 0x8003, 0x800C, 0x8017, 0x8018, 0xDEAD })
+        Check(!WindowEventScanPolicy.RequiresEnumeration(0x000B),
+            "Move/resize completion should refresh geometry without enumerating every open window.");
+        foreach (uint kind in new uint[] { 0x0016, 0x0017, 0x8000, 0x8001, 0x8002, 0x8003, 0x800C, 0x8017, 0x8018, 0xDEAD })
             Check(WindowEventScanPolicy.RequiresEnumeration(kind),
-                "Structural and unknown events must retain a full task-list recovery scan.");
+                "Lifecycle, title, minimize and unknown events must retain full task-list recovery.");
+
+        var geometryBatch = new WindowEventDispatchGate();
+        var geometryQueue = new Queue<Action>();
+        var geometryResults = new List<(bool Foreground, bool Enumerate)>();
+        Check(geometryBatch.Request(false, WindowEventScanPolicy.RequiresEnumeration(0x000B),
+                action => { geometryQueue.Enqueue(action); return true; },
+                (foreground, enumerate) => geometryResults.Add((foreground, enumerate))),
+            "A completed window move must still enqueue an immediate UI refresh.");
+        for (int i = 0; i < 700; i++)
+            Check(!geometryBatch.Request(false, WindowEventScanPolicy.RequiresEnumeration(0x000B),
+                action => { geometryQueue.Enqueue(action); return true; },
+                (foreground, enumerate) => geometryResults.Add((foreground, enumerate))),
+                "Move/resize completion bursts must be coalesced into one delivery.");
+        Check(geometryQueue.Count == 1,
+            "Hundreds of redundant move/size notifications must not flood the dispatcher.");
+        geometryQueue.Dequeue()();
+        Check(geometryResults.SequenceEqual([(false, false)]),
+            "A pure geometry batch must not schedule a full window enumeration.");
+        Check(geometryBatch.Request(false, false,
+                action => { geometryQueue.Enqueue(action); return true; },
+                (foreground, enumerate) => geometryResults.Add((foreground, enumerate))),
+            "A subsequent geometry callback must be admitted.");
+        Check(!geometryBatch.Request(false, WindowEventScanPolicy.RequiresEnumeration(0x8001),
+                action => { geometryQueue.Enqueue(action); return true; },
+                (foreground, enumerate) => geometryResults.Add((foreground, enumerate))),
+            "A destroy event must coalesce with the pending geometry update.");
+        geometryQueue.Dequeue()();
+        Check(geometryResults[^1] == (false, true),
+            "Destroy events must upgrade an outstanding move/size batch to structural enumeration.");
+        Check(geometryBatch.Request(false, false,
+                action => { geometryQueue.Enqueue(action); return true; },
+                (foreground, enumerate) => geometryResults.Add((foreground, enumerate)))
+            && !geometryBatch.Request(true, false,
+                action => { geometryQueue.Enqueue(action); return true; },
+                (foreground, enumerate) => geometryResults.Add((foreground, enumerate))),
+            "Concurrent move/size and foreground notifications must coalesce.");
+        geometryQueue.Dequeue()();
+        Check(geometryResults[^1] == (true, false),
+            "Foreground observations must survive a geometry-only batch without forcing enumeration.");
+
 
         var nativeBatch = new WindowEventDispatchGate();
         var nativeBatchQueue = new Queue<Action>();
