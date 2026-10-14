@@ -142,21 +142,26 @@ internal sealed class StartMenuView : Grid, IDisposable
         organization.Children.Add(_organizeFrame);
         Grid.SetRow(organization, 2); Children.Add(organization); RefreshCollections();
         _apps.ItemsPanel = (ItemsPanelTemplate)XamlReader.Load("""
-            <ItemsPanelTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"><ItemsWrapGrid Orientation="Horizontal" ItemWidth="104" ItemHeight="124" /></ItemsPanelTemplate>
+            <ItemsPanelTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"><ItemsWrapGrid Orientation="Horizontal" ItemWidth="110" ItemHeight="137" /></ItemsPanelTemplate>
             """);
         _apps.ItemTemplate = (DataTemplate)XamlReader.Load("""
             <DataTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
-              <StackPanel Spacing="11" Padding="4,10" HorizontalAlignment="Stretch" AutomationProperties.Name="{Binding Name}">
-                <Grid Width="68" Height="68" HorizontalAlignment="Center">
-                  <Border Width="64" Height="64" CornerRadius="16" Background="{Binding TileBrush}"
-                          Visibility="{Binding PlaceholderVisibility}" HorizontalAlignment="Center">
-                    <TextBlock Text="{Binding Monogram}" FontSize="22" FontWeight="SemiBold"
-                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"
-                               HorizontalAlignment="Center" VerticalAlignment="Center" />
-                  </Border>
-                  <Image Source="{Binding Icon}" Width="64" Height="64" Stretch="Uniform"/>
-                </Grid>
-                <TextBlock Text="{Binding Name}" FontSize="12" TextAlignment="Center" TextTrimming="CharacterEllipsis" TextWrapping="Wrap" MaxLines="2" />
+              <StackPanel Spacing="10" Padding="5,9" HorizontalAlignment="Center" AutomationProperties.Name="{Binding Name}">
+                <Border Width="88" Height="88" CornerRadius="24"
+                        BorderBrush="{ThemeResource NexusBorder}" BorderThickness="1"
+                        Background="{ThemeResource NexusSidebar}">
+                  <Grid Width="76" Height="76">
+                    <Border Width="72" Height="72" CornerRadius="19" Background="{Binding TileBrush}"
+                            Visibility="{Binding PlaceholderVisibility}" HorizontalAlignment="Center">
+                      <TextBlock Text="{Binding Monogram}" FontSize="24" FontWeight="SemiBold"
+                                 Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <Image Source="{Binding Icon}" Width="72" Height="72" Stretch="Uniform"/>
+                  </Grid>
+                </Border>
+                <TextBlock Width="100" Text="{Binding Name}" FontSize="12" TextAlignment="Center"
+                           TextTrimming="CharacterEllipsis" TextWrapping="Wrap" MaxLines="2"/>
               </StackPanel>
             </DataTemplate>
             """);
@@ -178,10 +183,14 @@ internal sealed class StartMenuView : Grid, IDisposable
             Action(hidden ? "Show in Launchpad" : "Hide from Launchpad", () => DesktopOrganization.SetHidden(state, app.Target, !hidden));
         };
         _apps.RightTapped += (_, args) => { DependencyObject? node = args.OriginalSource as DependencyObject; while (node is not null && node is not GridViewItem && !ReferenceEquals(node, _apps)) node = VisualTreeHelper.GetParent(node); _apps.SelectedItem = node is GridViewItem item ? item.Content : null; };
-        Grid.SetRow(_apps, 3); Children.Add(_apps);
+        var gallery = new Grid();
+        gallery.Children.Add(_apps);
+        _galleryFrame.Child = gallery;
+        Grid.SetRow(_galleryFrame, 3);
+        Children.Add(_galleryFrame);
         var empty = new StackPanel { Spacing = 14, HorizontalAlignment = HorizontalAlignment.Center }; var emptyIcon = ShellControls.Icon("\uE721", 32); emptyIcon.Foreground = environment.Theme.Brush("NexusMuted"); empty.Children.Add(emptyIcon);
         empty.Children.Add(new TextBlock { Text = "Nothing here yet", FontSize = 18, Foreground = environment.Theme.Brush("NexusText"), TextAlignment = TextAlignment.Center });
-        empty.Children.Add(new TextBlock { Text = "Try another category or search.\nRight-click apps to add them to a collection.\nHidden apps can be restored from the Hidden tab.", FontSize = 12, Foreground = environment.Theme.Brush("NexusMuted"), TextAlignment = TextAlignment.Center }); _empty.Child = empty; Grid.SetRow(_empty, 3); Children.Add(_empty);
+        empty.Children.Add(new TextBlock { Text = "Try another category or search.\nRight-click apps to add them to a collection.\nHidden apps can be restored from the Hidden tab.", FontSize = 12, Foreground = environment.Theme.Brush("NexusMuted"), TextAlignment = TextAlignment.Center }); _empty.Child = empty; gallery.Children.Add(_empty);
         var footer = new Grid(); footer.ColumnDefinitions.Add(new()); footer.ColumnDefinitions.Add(new() { Width = GridLength.Auto }); footer.Children.Add(_hint);
         var pages = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 9 }; pages.Children.Add(_previous); pages.Children.Add(_dots); pages.Children.Add(_next); Grid.SetColumn(pages, 1); footer.Children.Add(pages); Grid.SetRow(footer, 4); Children.Add(footer);
         _previous.Style = _next.Style = (Style)Application.Current.Resources["QuietButton"]; _previous.Padding = _next.Padding = new Thickness(0); _previous.Height = _next.Height = 32;
@@ -325,9 +334,29 @@ internal sealed class StartMenuView : Grid, IDisposable
         if (_apps.ItemsSource is IEnumerable<LaunchpadTile> realized)
             foreach (var tile in realized) tile.UpdateContrast(theme.HighContrast);
         _title.Foreground = _apps.Foreground = _search.Foreground = theme.Brush("NexusText"); _hint.Foreground = _subtitle.Foreground = _searchIcon.Foreground = theme.Brush("NexusMuted");
-        _searchFrame.Background = theme.Material("Input", _environment.Session.State.NativeGlass); _searchFrame.BorderBrush = _search.FocusState == FocusState.Unfocused ? theme.Edge : theme.Brush("NexusAccent"); _searchFrame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 13);
+        _searchFrame.Background = theme.Material("Input", _environment.Session.State.NativeGlass);
+        _searchFrame.BorderBrush = _search.FocusState == FocusState.Unfocused ? theme.Edge : theme.Brush("NexusAccent");
+        _searchFrame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 18);
+        _galleryFrame.Background = MidnightGlassMetrics.ReferenceEnabled(theme.Palette, theme.HighContrast)
+            ? theme.Surface("Dock") : theme.Material("Card", _environment.Session.State.NativeGlass);
+        _galleryFrame.BorderBrush = theme.Edge;
+        _galleryFrame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 22);
+        _organizeFrame.Background = theme.Material("Card", _environment.Session.State.NativeGlass);
+        _organizeFrame.BorderBrush = theme.Edge;
+        _organizeFrame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 14);
+        _organizeButton.Background = theme.Brush("NexusSidebar");
+        _organizeButton.Foreground = theme.Brush("NexusText");
         foreach (var (category, button) in _categories) { button.Background = category == _category ? theme.Brush("NexusSelection") : theme.Material("Card", _environment.Session.State.NativeGlass); button.Foreground = theme.Brush("NexusText"); button.BorderBrush = theme.Edge; button.BorderThickness = new Thickness(1); button.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 10); }
         if (_empty.Child is StackPanel empty) { foreach (var label in empty.Children.OfType<TextBlock>()) label.Foreground = theme.Brush(label.FontSize > 15 ? "NexusText" : "NexusMuted"); foreach (var icon in empty.Children.OfType<FontIcon>()) icon.Foreground = theme.Brush("NexusMuted"); }
     }
+    internal void VerifyGalleryComposition()
+    {
+        if (_galleryFrame.Child is not Grid stage
+            || !stage.Children.Contains(_apps)
+            || !stage.Children.Contains(_empty)
+            || _organizerOpen || _organizeFrame.Visibility != Visibility.Collapsed)
+            throw new InvalidOperationException("Launchpad glass gallery or its default organization hierarchy is invalid.");
+    }
+
     public void Dispose() { if (_disposed) return; _environment.Session.Changed -= _catalog.Invalidate; Hide(); _disposed = true; ++_renderVersion; _filterTimer.Stop(); }
 }
