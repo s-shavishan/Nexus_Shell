@@ -105,8 +105,8 @@ internal static class DesktopUiChecks
         Check(opposite.Zone == "Right half" && opposite.Bounds.X == -960,
             "Overview right-edge drop must position windows on the correct monitor half.");
         var edgeClamp = WindowOverviewGeometry.Drag(workspace, beforeOverview, 40000, 40000, -1200, 440, 1);
-        Check(edgeClamp.Bounds.Right == workspace.X + workspace.Width
-            && edgeClamp.Bounds.Bottom == workspace.Y + workspace.Height,
+        Check(edgeClamp.Bounds.X + edgeClamp.Bounds.Width == workspace.X + workspace.Width
+            && edgeClamp.Bounds.Y + edgeClamp.Bounds.Height == workspace.Y + workspace.Height,
             "Overview free placement must clamp off-screen drags to the monitor work area.");
         // A selection box must follow mouse motion in every direction, and
         // must never activate unrelated desktop items in empty space.
