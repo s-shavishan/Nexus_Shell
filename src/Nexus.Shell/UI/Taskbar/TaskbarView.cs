@@ -433,7 +433,7 @@ internal sealed class TaskbarView : Grid
             if (marker.Indicator.Visibility != visibility) marker.Indicator.Visibility = visibility;
             bool foregroundApp = exists && running!.Handle == foreground;
             bool minimized = exists && (NativeMethods.IsMinimized(running!.Handle)
-                || !NativeMethods.Visible(running.Handle));
+                || !NativeMethods.Visible(running!.Handle));
             if (exists)
             {
                 var brush = _environment.Theme.Brush(foregroundApp ? "NexusAccent" : "NexusMuted");
@@ -444,7 +444,7 @@ internal sealed class TaskbarView : Grid
             // A standard WinUI tooltip otherwise overlaps the live DWM card
             // and can make the pin seem unresponsive. Mirror running icons:
             // accessible name always, tooltip only when previews are off.
-            object? tooltip = _environment.Session.State.DockPreviews ? null : action;
+            var tooltip = _environment.Session.State.DockPreviews ? null : action;
             if (!Equals(ToolTipService.GetToolTip(button), tooltip))
                 ToolTipService.SetToolTip(button, tooltip);
             if (Microsoft.UI.Xaml.Automation.AutomationProperties.GetName(button) != action)
