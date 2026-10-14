@@ -63,3 +63,17 @@ These source changes were checked by 10 targeted cross-file assertions. **Those 
 **Acceptance additions:** With pinned Firefox/Files/Calculator, hover a running pin and confirm the correct preview after a short delay; press Down on focused pin, then Escape to dismiss; check Alt+Tab/focus, minimized-window fallback, context-menu Open windows activation, 15+ windows, and remove/re-pin during pending hover. Repeat in Compact Dock, 125%/150% DPI and Windows 10/11. Live DWM previews can still be unavailable under VirtualBox—validate fallback instead of claiming hardware support.
 
 **CI status:** The existing main-branch build has not been independently verified green as of this edit. GitHub's status API reported a pending main build after an earlier error, and AppVeyor's console was not externally readable. Use GitHub's latest CI status and the first failing AppVeyor console line before calling P3.0 testable; this document does not claim compile success.
+
+
+## CI checkpoint and pinned hover stabilization
+
+**Updated baseline:** GitHub's AppVeyor branch check reports **success** for `main` commit `5cd41d1259fe158eb7e227989f8b28b1371ea62c`, linked to build [54897165](https://ci.appveyor.com/project/s-shavishan/nexus-shell/builds/54897165). This clears the previously listed baseline CI uncertainty, **not** the user's manual VM acceptance requirements.
+
+The follow-up also now:
+- Suppresses pinned-app WinUI tooltips **while native preview cards are enabled**, matching the existing running-icon policy. Screen-reader automation names always stay available and indicate **Open / Switch to / Minimize / Restore** based on the observed native state.
+- Uses native ownership checks before drawing a pinned running indicator or opening a preview, so stale HWND/PID pairs do not masquerade as active.
+- Populates the **Open windows** submenu in `MenuFlyout.Opening`, before the flyout is measured; the opened event only manages preview dismissal and visibility retention.
+- Keeps a single pending hover request per dock: moving from pin to running icon (or vice versa) cancels the previous request. Pin rebuild and release cancel outstanding requests.
+- Adds portable policy tests for action labels, 18-window menu input, deduplication, 12-entry cap, process spoofing and invalid limits.
+
+**Remaining quality gate:** P3.0 is still source-only until branch AppVeyor, Windows 10 VirtualBox and Windows 11 interactive verification. In particular validate no hovering popup remains after moving between pins and running icons, and no preview is attempted for an invalid or closed HWND.
