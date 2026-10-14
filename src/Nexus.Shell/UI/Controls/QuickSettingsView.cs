@@ -227,17 +227,28 @@ internal sealed class QuickSettingsView : Grid, IDisposable
             _queued.Clear(); Log.Write("Control Center " + request.Section + " request failed", error);
             if (!_disposed && _session.Accepts(generation, request.Section))
             {
-                if (request.Section == "Display" && _state is not null)
+                if (ControlCenterTilePolicy.RetainPanelAfterFailure(
+                    request.Section, request.Change is not null, _state is not null))
                 {
-                    // A failed native mode change must NEVER erase the
-                    // pending preview's Keep/Revert controls. The Core timer
-                    // owns rollback independently of this UI; refresh the
-                    // snapshot when the failed request settles.
+                    // A rejected or failed device mutation must not make an
+                    // otherwise working network/Bluetooth/Power panel vanish.
+                    // Never replay a rejected command: the user must decide
+                    // whether to retry after reading the error or refreshing.
                     ShowError(error.Message);
-                    _status.Text = _state.Preview is not null
-                        ? "Display change failed · Keep or Revert remains available. Automatic rollback is still active."
-                        : "Display request failed · existing controls are retained. Refreshing device state…";
-                    _readAgain = request.Change is not null;
+                    if (request.Section == "Display")
+                    {
+                        // Core owns the independent display auto-revert timer.
+                        // Keep/Revert stays visible even if the refresh fails.
+                        _status.Text = _state!.Preview is not null
+                            ? "Display change failed · Keep or Revert remains available. Automatic rollback is still active."
+                            : "Display request failed · existing controls are retained. Refreshing device state…";
+                        _readAgain = request.Change is not null;
+                    }
+                    else
+                    {
+                        _status.Text = "Change not confirmed. Controls remain available; review the error and choose Refresh.";
+                        _readAgain = false;
+                    }
                 }
                 else
                 {
