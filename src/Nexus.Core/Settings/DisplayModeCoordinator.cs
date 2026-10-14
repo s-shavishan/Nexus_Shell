@@ -75,6 +75,20 @@ internal sealed class DisplayModeCoordinator(Action<Exception>? report = null) :
                             ? "The preview expired and the previous resolution was restored."
                             : "The preview expired, but Windows could not restore the old resolution yet. Try Revert again.");
                     }
+                    // Do not persist a mode that Windows or another app
+                    // already replaced during the preview (hotplug, remote
+                    // session or a driver-reset). The one-click Keep action
+                    // must confirm the *current* native mode, not a stale
+                    // selection recorded before the display changed.
+                    var current = DisplaySettings.CurrentMode(pending.Device);
+                    if (!DisplayModePreviewPolicy.IsRequestedModeActive(
+                        pending.Id, DisplaySettings.ModeId(current)))
+                    {
+                        bool restored = Restore(pending);
+                        throw new InvalidOperationException(restored
+                            ? "The display changed during preview; the previous mode was restored. Choose a fresh mode."
+                            : "The display changed during preview and the old mode could not be restored yet. Revert remains available.");
+                    }
                     // Persist ONLY after explicit confirmation.
                     var selected = pending.Selected;
                     DisplaySettings.Apply(pending.Device, ref selected, persist: true);
