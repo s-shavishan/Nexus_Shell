@@ -42,6 +42,7 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     private SettingsRequest? _active;
     private Slider? _brightness;
     private TextBlock? _brightnessLabel;
+    private TextBlock? _displayPreviewLabel;
     private TextBlock? _glassStatus;
     private ComboBox? _glassStyle;
     private ComboBox? _glassQuality;
@@ -134,7 +135,7 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     private void ClearBody()
     {
         if (_labels.Count > _fixedLabels) _labels.RemoveRange(_fixedLabels, _labels.Count - _fixedLabels);
-        _body.Children.Clear(); _cards.Clear(); _deviceButtons.Clear(); _preferences.Clear(); _networkEditors.Clear(); _mixer.Clear(); _brightness = null; _brightnessLabel = null; _wallpaper = null; _glassStatus = null; _glassStyle = null;
+        _body.Children.Clear(); _cards.Clear(); _deviceButtons.Clear(); _preferences.Clear(); _networkEditors.Clear(); _mixer.Clear(); _brightness = null; _brightnessLabel = null; _displayPreviewLabel = null; _wallpaper = null; _glassStatus = null; _glassStyle = null;
     }
     internal void ApplyAppearance()
     {
@@ -296,8 +297,10 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     {
         var brightness = state.Brightness;
         string signature = (brightness?.DeviceId ?? "") + "|" + brightness?.Available + "|"
-            + string.Join("|", (state.Displays ?? []).Select(d => d.ToString())) + "|"
-            + state.Preview?.ToString();
+            + string.Join("|", (state.Displays ?? []).Select(d =>
+                $"{d.DeviceId}:{d.Name}:{d.Width}x{d.Height}@{d.RefreshHz}:"
+                + string.Join(",", (d.Modes ?? []).Select(m => m.Id)))) + "|"
+            + state.Preview?.DeviceId + ":" + state.Preview?.ModeId;
         if (_signature != signature || (brightness?.Available == true && _brightnessLabel is null))
         {
             _signature = signature; ClearBody(); _brightness = null; _brightnessLabel = null;
@@ -307,7 +310,8 @@ internal sealed class QuickSettingsView : Grid, IDisposable
                     display.Name + $" · {display.Width} × {display.Height} at {display.RefreshHz} Hz");
                 if (state.Preview is { } preview && preview.DeviceId == display.DeviceId)
                 {
-                    card.Children.Add(Label($"Preview active · {preview.SecondsRemaining} seconds to confirm or auto-revert", 12));
+                    _displayPreviewLabel = Label($"Preview active · {preview.SecondsRemaining} seconds to confirm or auto-revert", 12);
+                    card.Children.Add(_displayPreviewLabel);
                     var confirmation = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
                     confirmation.Children.Add(DeviceButton("Keep this display mode", () =>
                         Queue(new("display-keep", display.DeviceId), true)));
@@ -338,7 +342,7 @@ internal sealed class QuickSettingsView : Grid, IDisposable
                         .FirstOrDefault(item => string.Equals(item.Tag as string, current, StringComparison.Ordinal));
                     if (picker.SelectedItem is null) picker.SelectedIndex = 0;
                     card.Children.Add(picker);
-                    card.Children.Add(DeviceButton("Preview selected mode · auto-revert after 18s", () =>
+                    card.Children.Add(DeviceButton($"Preview selected mode · auto-revert after {DisplayModePreviewPolicy.TimeoutSeconds}s", () =>
                     {
                         if (picker.SelectedItem is not ComboBoxItem { Tag: string id }) return;
                         if (id == current) { _status.Text = "This display mode is already active."; return; }
@@ -390,6 +394,8 @@ internal sealed class QuickSettingsView : Grid, IDisposable
             options.Children.Add(actions);
             options.Children.Add(DeviceButton("Night light…", () => _environment.OpenWindowsTool("night-light")));
         }
+        if (state.Preview is { } activePreview && _displayPreviewLabel is not null)
+            _displayPreviewLabel.Text = $"Preview active · {activePreview.SecondsRemaining} seconds to confirm or auto-revert";
         _syncing = true;
         try { if (brightness?.Available == true && _brightness is not null) { double value = Pending("brightness", brightness.DeviceId)?.Value ?? brightness.Percent; _brightness.Value = value; _brightnessLabel!.Text = brightness.Device + " · " + Math.Round(value) + "%"; } else if (_brightnessLabel is not null) _brightnessLabel.Text = brightness?.Message ?? "Brightness is unavailable."; }
         finally { _syncing = false; }
