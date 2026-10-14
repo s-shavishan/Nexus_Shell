@@ -59,3 +59,35 @@ P2.8 / PR #31 was already merged to main when P2.9 work began. P2.8 changed desk
 ## Engineering boundaries
 
 Explorer remains running for the Windows notification/calendar ecosystem. Nexus must not kill Explorer or seize native keyboard shortcuts. No hardware setting is faked; unsupported operations are absent or routed to Windows. The native window manager remains Windows/DWM; Nexus is a desktop surface and placement orchestrator.
+
+## Windows 10 VirtualBox early-build feedback — 2026-10-14
+
+The user **confirmed on NT10@VBOX** that Windows Tools now responds, the first-session dock gap no longer occurs, the active title clears after closing windows, the dock's visible horizontal scrollbar is gone, Ctrl/Shift multi-selection works, and drag-selection works. Treat those as user-confirmed for the specific tested early build, not every device and version.
+
+The user **did not accept** Bluetooth capability hiding, visual Network menu improvement, actual Display controls, dock visual quality, or pinned/running icon grouping (partial only). The user also showed four detail crops with heavy dark/light border stacks around traffic-light captions, sidebar panels, Launchpad/dock islands, and the menu bar. Mouse-edge resize of Nexus-owned panels was unavailable.
+
+### Follow-up source changes added AFTER early-build feedback
+
+- Replaced the default bright-blue rubber-band fill with a retained semi-transparent diagonal gradient and softly rounded hairline. A release of an empty-canvas click clears selected entries on Desktop and Files; Ctrl/Shift and drag selection remain intact. The marquee is *glass-like paint*, **not** actual DWM blur.
+- Reduced oversized shared surface radius metrics; removed redundant native region +1-pixel overdraw and double-painted XAML frame borders; stopped painting one-pixel hard outlines around every dock island and softened the top glint. High Contrast retains its explicit high-visibility outline.
+- Ordinary Nexus tool panels use native OverlappedPresenter resizing plus WindowChrome WM_NCHITTEST edge/corner hit tests with usable minimum sizes. Spotlight and immersive Overview explicitly remain fixed-size; full Control Center becomes resize-capable, while compact menu-bar flyouts remain anchored and nonresizable. Native preflight verifies these distinctions.
+- Compact Network/Bluetooth/Display panel default heights are lower, with inner scrolling. Full Control Center default footprint is smaller.
+- Added fixed, direct Windows DisplaySwitch projection buttons only when multiple displays are present. Brightness still appears only if Core confirms a supported hardware backend. Resolution, scaling and Night light settings remain native Windows routes (not Nexus-native sliders); no claims of complete Display management.
+- Kept the P2.9 existing Bluetooth classic-radio probe that hides its menu-bar and Control Center controls only on confirmed absence, with a diagnostic route for uncertain enumeration.
+
+### Mandatory specific Windows tests for this follow-up
+
+1. Drag a marquee through selected desktop icons, then click **empty desktop**; selections must clear. Repeat in Files list and grid. Compare the selected region to the requested subtle glass look; no heavy native-blue rectangle.
+2. Hover every corner and edge of **Windows Tools, desktop panels and expanded Control Center**, drag each to resize (100% and 150% scaling), then test keyboard focus, minimize/restore, scroll clipping and closing. Compact Network/Bluetooth flyouts must not resize.
+3. Inspect **traffic-light caption, panel/dock/menu corners** at 100% and 150% with glass on/off, high contrast, reduced effects. No double rim, black/white protruding pixels or loss of corner clipping.
+4. On VBox with no Bluetooth radio: neither menu-bar Bluetooth icon nor full Control Center tile should appear; a direct hardware diagnostic may report why. On real supported hardware, scanning/discovery must retain correct Core-backed behavior.
+5. On single-monitor VBox: do not claim active projection, resolution or brightness widgets if unsupported. On multi-monitor Windows 10/11, verify PC Screen/Duplicate/Extend/Second Screen actions actually change Windows projection without spawning a decorative settings panel.
+6. Network quick panel must fit Ethernet status without a tall empty bottom area; Details expands readable IP/gateway/DNS text and Network adapters opens a native Windows dialog. Verify real Wi-Fi radios separately.
+7. Retest pinned .lnk/.exe Calculator and multiple document windows. Do not remove a real second window to hide a duplicated pin.
+8. AppVeyor: compile **all** native Windows projects and preflight. None of these source edits is accepted as runtime verified until AppVeyor passes.
+
+### Still open after follow-up
+
+- True OS-level pixel-perfect Liquid Glass/DWM depth is not solved by removing duplicate lines. VM GPU, DesktopAcrylic availability, per-pixel antialiasing of Win10 GDI regions and compositor fallback must be profiled.
+- A complete direct resolution/refresh-rate/orientation settings transaction with preflight and timed revert is **not implemented**. Native Windows Settings routes are not a replacement for it.
+- App layout transition animations and cross-monitor drag staging, unusual Ctrl+F-style keyboard hint popup root cause, broader file batch operations and universal packaged/UWP pin identity still require separate native validation and further source work.
