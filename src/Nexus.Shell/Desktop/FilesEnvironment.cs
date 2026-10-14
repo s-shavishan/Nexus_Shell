@@ -130,16 +130,45 @@ internal sealed class FilesEnvironment
     }
     internal void EditTarget(string path)
     {
-        if (_stopping || !Path.IsPathFullyQualified(path) || !File.Exists(path)) return;
+        if (_stopping || !Path.IsPathFullyQualified(path)) return;
+        if (!File.Exists(path))
+        {
+            _window?.View.ShowMessage("The file is no longer available. Refresh Nexus Files.");
+            return;
+        }
         try
         {
-            using var process = Process.Start(new ProcessStartInfo(path) { Verb = "edit", UseShellExecute = true });
-            if (process is null) throw new InvalidOperationException("No registered Edit handler exists for this file type.");
+            // Honor a registered Windows Edit verb without interpreting the
+            // filename as shell arguments. The native association can be
+            // missing even when this extension is a recognized text format.
+            using var editor = Process.Start(new ProcessStartInfo(path)
+            {
+                Verb = "edit",
+                UseShellExecute = true
+            });
+            if (editor is not null) return;
         }
         catch (Exception error)
         {
-            Log.Write("No registered native editor for " + Path.GetExtension(path), error);
-            _window?.View.ShowMessage("No editor is registered. Choose Open with… instead.");
+            Log.Write("Registered Windows Edit verb unavailable for " + Path.GetExtension(path), error);
+        }
+
+        try
+        {
+            // Explicit system executable + ArgumentList, no cmd.exe /C and
+            // no arbitrary JSON-provided handler path. Notepad is the safe
+            // fallback for a supported source/text/data profile.
+            string executable = Path.Combine(System.Environment.GetFolderPath(
+                System.Environment.SpecialFolder.System), "notepad.exe");
+            var fallback = new ProcessStartInfo(executable) { UseShellExecute = false };
+            fallback.ArgumentList.Add(path);
+            using var editor = Process.Start(fallback);
+            if (editor is null) throw new InvalidOperationException("Windows did not open Notepad.");
+        }
+        catch (Exception error)
+        {
+            Log.Write("Text editor fallback failed for " + Path.GetExtension(path), error);
+            _window?.View.ShowMessage("The editor is unavailable. Try Open with… instead.");
         }
     }
     internal void OpenTarget(string path)
