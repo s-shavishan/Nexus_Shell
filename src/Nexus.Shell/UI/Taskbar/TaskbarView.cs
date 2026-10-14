@@ -35,6 +35,8 @@ internal sealed class TaskbarView : Grid
     private readonly HashSet<MenuFlyout> _openContextMenus = [];
     private readonly Dictionary<Button, Image> _pinImages = [];
     private readonly Dictionary<Button, (AppEntry App, Border Indicator)> _pinMarkers = [];
+    private readonly Dictionary<string, string> _shortcutTargets = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _pendingShortcuts = new(StringComparer.OrdinalIgnoreCase);
     private readonly DispatcherTimer _hoverTimer = new() { Interval = TimeSpan.FromMilliseconds(DockPreviewPolicy.HoverDelayMilliseconds) };
     private readonly EventHandler<object> _hoverTick;
     private DockItem? _hoverItem;
@@ -153,6 +155,7 @@ internal sealed class TaskbarView : Grid
     }
     private Button PinButton(AppEntry app)
     {
+        QueueShortcutIdentity(app.Target);
         var icon = NexusIcons.Image(NexusIcons.ForApp(app), 46);
         _ = AppIconCache.ApplyAsync(icon, app);
         var host = new Grid(); host.Children.Add(icon);
@@ -307,9 +310,41 @@ internal sealed class TaskbarView : Grid
         ApplyDensity(); RefreshClock(); _baselineReconciled = true;
         _refreshIncomplete = false;
     }
+    private void QueueShortcutIdentity(string target)
+    {
+        if (!target.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase)
+            || !Path.IsPathFullyQualified(target) || target.StartsWith(@"\\", StringComparison.Ordinal)
+            || _shortcutTargets.ContainsKey(target) || !_pendingShortcuts.Add(target)) return;
+        // IShellLink uses STA COM. Resolve only once per new pin, away from the
+        // dock's frame/foreground/scroll lanes; no blocking file or COM calls
+        // during a hover or native window event.
+        var thread = new Thread(() =>
+        {
+            string resolved = "";
+            try
+            {
+                var link = ShortcutResolver.Read(target);
+                if (link.Target.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                    resolved = link.Target;
+            }
+            catch (Exception error) { Log.Write("Pinned shortcut identity unavailable: " + target, error); }
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                _pendingShortcuts.Remove(target);
+                if (_released) return;
+                _shortcutTargets[target] = resolved;
+                RefreshWindowStates(); // Update pinned/running identity, not the XAML tree.
+            });
+        }) { IsBackground = true, Name = "Nexus dock shortcut identity" };
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+    }
     private RunningWindow? FindPinnedWindow(AppEntry pin)
-        => _windowSet.Windows.FirstOrDefault(window =>
-            DockPinnedWindowPolicy.Matches(pin.Target, pin.Name, window.Title, window.ProcessName));
+    {
+        string target = _shortcutTargets.TryGetValue(pin.Target, out var resolved) ? resolved : pin.Target;
+        return _windowSet.Windows.FirstOrDefault(window =>
+            DockPinnedWindowPolicy.Matches(target, pin.Name, window.Title, window.ProcessName));
+    }
 
     private bool HasPinnedArtwork(RunningWindow window)
         => _shownPins.Any(pin =>
