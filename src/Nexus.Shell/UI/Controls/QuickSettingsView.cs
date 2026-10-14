@@ -226,7 +226,27 @@ internal sealed class QuickSettingsView : Grid, IDisposable
         {
             _queued.Clear(); Log.Write("Control Center " + request.Section + " request failed", error);
             if (!_disposed && _session.Accepts(generation, request.Section))
-            { _state = null; _signature = ""; ClearBody(); Card(request.Section, "The current device state could not be read. Refresh to try again."); ShowError(error.Message); _status.Text = "Device state needs a refresh."; }
+            {
+                if (request.Section == "Display" && _state is not null)
+                {
+                    // A failed native mode change must NEVER erase the
+                    // pending preview's Keep/Revert controls. The Core timer
+                    // owns rollback independently of this UI; refresh the
+                    // snapshot when the failed request settles.
+                    ShowError(error.Message);
+                    _status.Text = _state.Preview is not null
+                        ? "Display change failed · Keep or Revert remains available. Automatic rollback is still active."
+                        : "Display request failed · existing controls are retained. Refreshing device state…";
+                    _readAgain = request.Change is not null;
+                }
+                else
+                {
+                    _state = null; _signature = ""; ClearBody();
+                    Card(request.Section, "The current device state could not be read. Refresh to try again.");
+                    ShowError(error.Message);
+                    _status.Text = "Device state needs a refresh.";
+                }
+            }
         }
         finally
         {
