@@ -21,8 +21,12 @@ public static class FileTypeContextCatalog
     private static readonly FileTypeMenuProfile Unknown = new("fallback.unknown", "File",
         "open", ["open_with"]);
     private static readonly FileTypeMenuProfile Folder = new("folder", "Folder", "open", []);
-    private static readonly HashSet<string> ValidActions = new(StringComparer.Ordinal)
-    { "open", "play", "run", "edit", "open_with" };
+    // A menu's first entry is always a safe Windows association invocation.
+    // Config cannot repurpose that entry as an arbitrary action ID.
+    private static readonly HashSet<string> PrimaryActions = new(StringComparer.Ordinal)
+    { "open", "play", "run" };
+    private static readonly HashSet<string> SecondaryActions = new(StringComparer.Ordinal)
+    { "edit", "open_with" };
     private static readonly string CatalogPath = Path.Combine(AppContext.BaseDirectory,
         "Assets", "Configuration", "file_context_profiles.json");
     private static CatalogSnapshot _snapshot = new(
@@ -140,7 +144,8 @@ public static class FileTypeContextCatalog
                         + ". Resolve conflicts in the catalog before reloading.");
             }
         }
-        if (document.Fallback.Id != "fallback.unknown" || extensions.Count > 1500)
+        if (document.Fallback.Id != "fallback.unknown"
+            || document.Fallback.Primary != "open" || extensions.Count > 1500)
             throw new InvalidDataException("Missing default fallback or oversized catalog.");
         return new CatalogSnapshot(extensions, document.Fallback);
 
@@ -151,7 +156,9 @@ public static class FileTypeContextCatalog
         if (profile is null || string.IsNullOrWhiteSpace(profile.Id)
             || profile.Id.Length > 64 || string.IsNullOrWhiteSpace(profile.Label)
             || profile.Label.Length > 64 || profile.Actions is null || profile.Actions.Length > 6
-            || !ValidActions.Contains(profile.Primary) || profile.Actions.Any(a => !ValidActions.Contains(a)))
+            || !PrimaryActions.Contains(profile.Primary)
+            || profile.Actions.Any(a => !SecondaryActions.Contains(a))
+            || profile.Actions.Distinct(StringComparer.Ordinal).Count() != profile.Actions.Length)
             throw new InvalidDataException("Invalid file menu profile/action.");
     }
 
