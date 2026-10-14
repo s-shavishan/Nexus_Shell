@@ -24,6 +24,7 @@ internal sealed class WindowThumbnail : IDisposable
     [DllImport("dwmapi.dll")] private static extern int DwmUnregisterThumbnail(IntPtr thumbnail);
     [DllImport("dwmapi.dll")] private static extern int DwmIsCompositionEnabled([MarshalAs(UnmanagedType.Bool)] out bool enabled);
     private IntPtr _thumbnail;
+    private ShellRect? _lastDestination;
     private readonly RunningWindow _source;
     private bool _disposed;
     internal bool IsAttached => !_disposed && _thumbnail != IntPtr.Zero;
@@ -46,18 +47,23 @@ internal sealed class WindowThumbnail : IDisposable
             || DwmQueryThumbnailSourceSize(_thumbnail, out var size) < 0) return false;
         var fit = DockPreviewPolicy.FitSource(viewport, size.Width, size.Height);
         if (fit.Width <= 0 || fit.Height <= 0) return false;
+        // DWM retains an unchanged destination. Live layout notifications
+        // should not call the native compositor repeatedly for the same rect.
+        if (_lastDestination == fit) return true;
         var properties = new Properties
         {
             Flags = 1 | 4 | 8 | 16, // destination, opacity, visibility, source client area only
             Destination = new() { Left = fit.X, Top = fit.Y, Right = fit.Right, Bottom = fit.Bottom },
             Opacity = 255, Visible = true, ClientOnly = false
         };
-        return DwmUpdateThumbnailProperties(_thumbnail, ref properties) >= 0;
+        bool updated = DwmUpdateThumbnailProperties(_thumbnail, ref properties) >= 0;
+        if (updated) _lastDestination = fit;
+        return updated;
     }
     public void Dispose()
     {
         if (_disposed) return; _disposed = true;
-        var thumbnail = _thumbnail; _thumbnail = IntPtr.Zero;
+        var thumbnail = _thumbnail; _thumbnail = IntPtr.Zero; _lastDestination = null;
         if (thumbnail != IntPtr.Zero) _ = DwmUnregisterThumbnail(thumbnail);
     }
 }
