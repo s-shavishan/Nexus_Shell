@@ -89,6 +89,28 @@ internal static class DesktopUiChecks
             && !WindowOverviewInteractionPolicy.SuppressClick("hwnd:1", "hwnd:1", 1400, 1400)
             && !WindowOverviewInteractionPolicy.SuppressClick(null, "hwnd:1", 1400, 1300),
             "Drag-click suppression must affect only the dragged card until its deadline.");
+        // Live window dragging must not depend on a queryable process path.
+        // Use native screen/work-area geometry, not persistent saved-layout
+        // identity, when staging a move on another display.
+        var fromDisplay = new LayoutRect(-1920, -100, 1920, 1080);
+        var toDisplay = new LayoutRect(0, 38, 1920, 1042);
+        var liveBounds = new LayoutRect(-1650, 0, 800, 600);
+        var projected = WindowOverviewGeometry.ProjectBetween(liveBounds, fromDisplay, toDisplay);
+        Check(projected.X == 270 && projected.Y >= 130 && projected.Y <= 135
+            && projected.Width == 800 && projected.Height >= 575 && projected.Height <= 582,
+            "Native live HWND positions must project across monitors without requiring a saved app identity.");
+        var sameDisplay = WindowOverviewGeometry.ProjectBetween(liveBounds, fromDisplay, fromDisplay);
+        Check(sameDisplay == liveBounds, "Projecting onto the same monitor must preserve an already valid window rectangle.");
+        var smallDisplay = new LayoutRect(2400, 100, 120, 80);
+        var constrained = WindowOverviewGeometry.ProjectBetween(liveBounds, fromDisplay, smallDisplay);
+        Check(constrained.X >= smallDisplay.X && constrained.Y >= smallDisplay.Y
+            && (long)constrained.X + constrained.Width <= (long)smallDisplay.X + smallDisplay.Width
+            && (long)constrained.Y + constrained.Height <= (long)smallDisplay.Y + smallDisplay.Height,
+            "A small secondary display must never receive an offscreen staged rectangle.");
+        bool rejectedInvalidGeometry = false;
+        try { _ = WindowOverviewGeometry.ProjectBetween(liveBounds, fromDisplay, default); }
+        catch (ArgumentException) { rejectedInvalidGeometry = true; }
+        Check(rejectedInvalidGeometry, "A disconnected or zero-area monitor must reject live window projection.");
         // Fullscreen overview moves are only geometry until the user applies.
         var workspace = new LayoutRect(-1920, -80, 1920, 1080);
         var beforeOverview = new LayoutRect(-1700, 0, 800, 600);
