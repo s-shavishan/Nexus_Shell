@@ -20,7 +20,7 @@ public static class DockPinnedWindowPolicy
             // so the pinned Files icon could NEVER own its running entry.
             if (target.Equals("nexus:files", StringComparison.OrdinalIgnoreCase))
                 return string.Equals(process, "Nexus.Shell", StringComparison.OrdinalIgnoreCase)
-                    && (string.Equals(title, "Files · Nexus", StringComparison.OrdinalIgnoreCase)
+                    && (string.Equals(title, "My files · Nexus", StringComparison.OrdinalIgnoreCase)
                         || (title?.EndsWith(" · Nexus Files", StringComparison.OrdinalIgnoreCase) ?? false));
             if (!string.Equals(process, "nexus", StringComparison.OrdinalIgnoreCase)) return false;
             string? expected = target.ToLowerInvariant() switch
