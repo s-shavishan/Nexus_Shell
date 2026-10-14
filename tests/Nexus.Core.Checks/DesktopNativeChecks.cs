@@ -81,7 +81,19 @@ internal static class DesktopNativeChecks
                 throw new Exception("The native layout must place its own test window in a usable monitor area.");
             if (layouts.Undo() != 1 || !GetWindowRect(window, out var restored) || !restored.Equals(original))
                 throw new Exception("Undo must restore the test window's original geometry.");
-            Console.WriteLine("PASS: actual Win32 window placement, process ownership rejection and undo (own test window only).");
+            // Exercise the EXACT overview Done -> WindowLayouts.Apply -> Undo
+            // path, not only the one-click Arrange helper used by older UI.
+            var own = new RunningWindow(window, "Staged overview test", "test", Environment.ProcessId);
+            var stagedBounds = new LayoutRect(original.Left + 35, original.Top + 25,
+                original.Right - original.Left, original.Bottom - original.Top);
+            if (layouts.Apply([new WindowMove(own, stagedBounds)]) != 1
+                || !GetWindowRect(window, out var stagedApplied)
+                || stagedApplied.Left != stagedBounds.X || stagedApplied.Top != stagedBounds.Y)
+                throw new Exception("Applying a staged overview rectangle must move the real test HWND.");
+            if (!layouts.CanUndo || layouts.Undo() != 1
+                || !GetWindowRect(window, out var afterStagedUndo) || !afterStagedUndo.Equals(original))
+                throw new Exception("Undo after Done must restore the test HWND's original rectangle.");
+            Console.WriteLine("PASS: actual Win32 placement, staged overview Apply and Undo, process ownership rejection (own test window).");
             var actions = new List<string>();
             using (var integration = new DesktopIntegration(window, actions.Add))
             {
