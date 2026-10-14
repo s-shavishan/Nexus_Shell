@@ -12,6 +12,7 @@ internal sealed class MenuBarView : Grid, IDisposable
     private readonly DesktopEnvironment _environment;
     private readonly TextBlock _clock = new() { FontSize = 12.5, VerticalAlignment = VerticalAlignment.Center };
     private readonly Button _notification;
+    private readonly Button _bluetooth;
     private readonly TextBlock _inputLabel = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
     private readonly Button _inputLanguage, _awake;
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(15) };
@@ -52,7 +53,7 @@ internal sealed class MenuBarView : Grid, IDisposable
         { Button? button = null; button = Icon(glyph, section + " controls", () => environment.ShowQuickControl(section, environment.MenuControlAnchor(button!))); button.ContextFlyout = environment.Menus.SystemControlMenu(section); return button; }
         QuickControl("\uE701", "Network"); QuickControl("\uE767", "Sound");
         Icon("\uE721", "Nexus Search · Ctrl+Alt+Space", environment.ShowSearch);
-        var bluetooth = QuickControl("\uE702", "Bluetooth"); var display = QuickControl("\uE7F4", "Display");
+        _bluetooth = QuickControl("\uE702", "Bluetooth"); var display = QuickControl("\uE7F4", "Display");
         var controls = _controls;
         for (int i = 0; i < 2; i++)
         { controls.Children.Add(new Border { Height = 2, Background = new SolidColorBrush(Microsoft.UI.Colors.White), VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, i * 8 + 4, 0, 0), CornerRadius = new CornerRadius(1) }); controls.Children.Add(new Ellipse { Width = 5, Height = 5, Fill = new SolidColorBrush(Microsoft.UI.Colors.White), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(i == 0 ? 3 : 10, i * 8 + 2.5, 0, 0) }); }
@@ -70,7 +71,7 @@ internal sealed class MenuBarView : Grid, IDisposable
             int shown = ActualWidth < 480 ? 1 : ActualWidth < 950 ? 2 : int.MaxValue;
             foreach (var (button, i) in left.Children.OfType<Button>().Select((button, i) => (button, i))) SetVisible(button, i < shown);
             foreach (var button in right.Children.OfType<Button>().Take(2)) SetVisible(button, ActualWidth >= 650);
-            SetVisible(bluetooth, ActualWidth >= 900);
+            SetVisible(_bluetooth, ActualWidth >= 900 && BluetoothRadioAvailability.ShowControls(BluetoothRadioAvailability.Detect()));
             SetVisible(display, ActualWidth >= 900);
             Refresh();
         };
@@ -125,6 +126,7 @@ internal sealed class MenuBarView : Grid, IDisposable
             if (!Equals(ToolTipService.GetToolTip(_inputLanguage), input.Name)) ToolTipService.SetToolTip(_inputLanguage, input.Name);
         }
         catch { SetText(_inputLabel, "—"); }
+        SetVisible(_bluetooth, ActualWidth >= 900 && BluetoothRadioAvailability.ShowControls(BluetoothRadioAvailability.Detect()));
         SetVisible(_awake, _environment.KeepAwake.Active && ActualWidth >= 650);
         string awake = _environment.KeepAwake.Status;
         SetName(_awake, awake);

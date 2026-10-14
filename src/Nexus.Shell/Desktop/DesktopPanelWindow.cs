@@ -29,8 +29,12 @@ internal abstract class DesktopPanelWindow : Window
     protected bool IsClosed { get; private set; }
     internal bool IsOpen { get; private set; }
     protected virtual bool DismissOnDeactivate => true;
+    protected virtual bool IsImmersive => false;
+    protected virtual bool AllowUserResize => !IsImmersive;
     internal string MaterialStatus => _material.Status;
     internal FrameworkElement ValidationRoot => Root;
+    internal bool UserResizeEnabledForValidation => AllowUserResize
+        && Native.Presenter is OverlappedPresenter { IsResizable: true };
     internal void PrepareValidation(IntPtr owner, int width, int height)
     { ShowPanel(owner); double scale = ShellLayerInterop.Scale(owner); Native.MoveAndResize(new RectInt32(0, 0, (int)Math.Round(width * scale), (int)Math.Round(height * scale))); }
     protected DesktopPanelWindow(DesktopEnvironment environment, string title, FrameworkElement body, int width, int height, bool center = false, bool animateBody = true)
@@ -45,8 +49,12 @@ internal abstract class DesktopPanelWindow : Window
         Frame = new Border { Child = Root, CornerRadius = new CornerRadius(MidnightGlassMetrics.FrameRadius), BorderThickness = new Thickness(1) }; Content = Frame;
         Handle = WinRT.Interop.WindowNative.GetWindowHandle(this); Native = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(Handle)); Native.Title = "Nexus " + title;
         WindowSwitcherPolicy.Request(() => Native.IsShownInSwitchers = false, error => Log.Write("Desktop panel switcher fallback", error));
-        if (Native.Presenter is OverlappedPresenter presenter) { presenter.SetBorderAndTitleBar(false, false); presenter.IsResizable = presenter.IsMinimizable = presenter.IsMaximizable = false; }
-        ShellLayerInterop.ToolWindow(Handle); _chrome = new(Handle, closeRequested: Hide);
+        if (Native.Presenter is OverlappedPresenter presenter) { presenter.SetBorderAndTitleBar(false, false); presenter.IsResizable = AllowUserResize;
+            presenter.IsMinimizable = presenter.IsMaximizable = false; }
+        ShellLayerInterop.ToolWindow(Handle);
+        _chrome = new(Handle, resizable: AllowUserResize,
+            minimumWidth: Math.Min(420, _width), minimumHeight: Math.Min(300, _height),
+            closeRequested: Hide);
         _motion = new(animateBody ? Root : header, () => environment.Theme.Animations && !environment.Theme.HighContrast && environment.Session.State.SurfaceAnimations && !environment.Session.State.ReducedEffects);
         var escape = new KeyboardAccelerator { Key = VirtualKey.Escape }; escape.Invoked += (_, e) => { Hide(); e.Handled = true; }; Root.KeyboardAccelerators.Add(escape);
         Activated += (_, args) =>
@@ -83,8 +91,12 @@ internal abstract class DesktopPanelWindow : Window
     internal virtual void ApplyAppearance()
     {
         var theme = Environment.Theme; Root.RequestedTheme = theme.ElementTheme;
-        _material.Apply(this, Frame, Environment); Frame.BorderBrush = theme.Edge; Frame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : MidnightGlassMetrics.FrameRadius);
-        _title.Foreground = theme.Brush("NexusText"); _chrome.SetCorners(theme.HighContrast, MidnightGlassMetrics.FrameRadius); _motion.Refresh();
+        _material.Apply(this, Frame, Environment); Frame.BorderBrush = theme.Edge;
+        Frame.BorderThickness = new Thickness(theme.HighContrast ? 1 : 0);
+        Frame.CornerRadius = new CornerRadius(theme.HighContrast || IsImmersive ? 0 : MidnightGlassMetrics.FrameRadius);
+        _title.Foreground = theme.Brush("NexusText");
+        _chrome.SetCorners(theme.HighContrast || IsImmersive, IsImmersive ? 0 : MidnightGlassMetrics.FrameRadius);
+        _motion.Refresh();
     }
     protected virtual void OnHidden() { }
     protected virtual void OnShown() { }

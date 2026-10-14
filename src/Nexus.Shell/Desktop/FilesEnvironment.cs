@@ -55,6 +55,7 @@ internal sealed class FilesEnvironment
         Apply(await _client.CallAsync<AppearanceSettings>(RuntimeOperations.Pulse, new { }, TimeSpan.FromSeconds(3), _cancel.Token));
         var launch = _work.Launch;
         string folder = launch.Folder ?? Environment.GetFolderPath(launch.Request.Kind == FileSelectionKind.Browse ? Environment.SpecialFolder.UserProfile : Environment.SpecialFolder.MyDocuments);
+        _ = FileTypeContextCatalog.Initialize();
         _window = new(this, launch.Request, folder);
         _window.Closed += async (_, _) => await WindowClosedAsync();
         _timer.Tick += Pulse; _timer.Start();
@@ -126,6 +127,49 @@ internal sealed class FilesEnvironment
         if (_stopping) return;
         if (_window is not null) _window.Close();
         else { _stopping = true; _timer.Stop(); _cancel.Cancel(); _core.Dispose(); Stopped?.Invoke(); }
+    }
+    internal void EditTarget(string path)
+    {
+        if (_stopping || !Path.IsPathFullyQualified(path)) return;
+        if (!File.Exists(path))
+        {
+            _window?.View.ShowMessage("The file is no longer available. Refresh Nexus Files.");
+            return;
+        }
+        try
+        {
+            // Honor a registered Windows Edit verb without interpreting the
+            // filename as shell arguments. The native association can be
+            // missing even when this extension is a recognized text format.
+            using var editor = Process.Start(new ProcessStartInfo(path)
+            {
+                Verb = "edit",
+                UseShellExecute = true
+            });
+            if (editor is not null) return;
+        }
+        catch (Exception error)
+        {
+            Log.Write("Registered Windows Edit verb unavailable for " + Path.GetExtension(path), error);
+        }
+
+        try
+        {
+            // Explicit system executable + ArgumentList, no cmd.exe /C and
+            // no arbitrary JSON-provided handler path. Notepad is the safe
+            // fallback for a supported source/text/data profile.
+            string executable = Path.Combine(System.Environment.GetFolderPath(
+                System.Environment.SpecialFolder.System), "notepad.exe");
+            var fallback = new ProcessStartInfo(executable) { UseShellExecute = false };
+            fallback.ArgumentList.Add(path);
+            using var editor = Process.Start(fallback);
+            if (editor is null) throw new InvalidOperationException("Windows did not open Notepad.");
+        }
+        catch (Exception error)
+        {
+            Log.Write("Text editor fallback failed for " + Path.GetExtension(path), error);
+            _window?.View.ShowMessage("The editor is unavailable. Try Open with… instead.");
+        }
     }
     internal void OpenTarget(string path)
     {

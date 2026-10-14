@@ -63,6 +63,7 @@ internal sealed class FilesView : Grid
     private readonly LatestWorkQueue _navigation = new(), _previews = new();
     internal FilesView(FilesEnvironment environment, FileSelectionRequest request, Action<IReadOnlyList<string>> complete)
     {
+        _ = FileTypeContextCatalog.Initialize();
         _environment = environment; _request = request; _complete = complete; Padding = new Thickness(18); RowSpacing = 14; IsHitTestVisible = !environment.Validation;
         _slowRead.Tick += (_, _) =>
         {
@@ -157,13 +158,23 @@ internal sealed class FilesView : Grid
                 selectAll.Invoked += (_, args) => { if (!_navigating && !_recycle) { view.SelectAll(); args.Handled = true; } };
                 view.KeyboardAccelerators.Add(selectAll);
                 var context = ShellMenu.Create();
-                context.Opening += (_, _) => BuildContext(context,
-                    view.SelectedItems.Count == 1 ? view.SelectedItem as FileEntry : null);
+                context.Opening += (_, _) =>
+                {
+                    var selected = view.SelectedItems.OfType<FileEntry>().ToArray();
+                    BuildContext(context, selected.Length == 1 ? selected[0] : null, selected);
+                };
                 view.ContextFlyout = context;
                 view.RightTapped += (_, args) =>
                 {
                     var clicked = ItemAt(view, args.OriginalSource);
-                    if (clicked is not null && !view.SelectedItems.Contains(clicked)) view.SelectedItem = clicked;
+                    if (clicked is null)
+                    {
+                        // A right-click on empty canvas is the folder menu,
+                        // not a stale selection's single/multi-file menu.
+                        view.SelectedItems.Clear();
+                    }
+                    else if (!view.SelectedItems.Contains(clicked))
+                        view.SelectedItem = clicked;
                 };
             }
         }
@@ -408,36 +419,90 @@ internal sealed class FilesView : Grid
         catch (Exception error) { if (!_closed) ShowError(error); }
         finally { _dialog = false; UpdateActions(); }
     }
-    private void BuildContext(MenuFlyout menu, FileEntry? target)
+    private async Task TransferSelectionAsync(FileJobKind kind, IReadOnlyList<FileEntry> targets)
+    {
+        if (_closed || _dialog || _navigating || _recycle || targets.Count == 0 || targets.Count > 100) return;
+        string[] paths = targets.Select(entry => entry.Path).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        if (paths.Length == 0) return;
+        _dialog = true; UpdateActions();
+        try { await _environment.QueueTransferAsync(paths, kind); }
+        finally { _dialog = false; UpdateActions(); }
+    }
+
+    private void BuildContext(MenuFlyout menu, FileEntry? target, IReadOnlyList<FileEntry>? selection = null)
     {
         menu.Items.Clear();
-        if (_closed || _navigating || _dialog || _recycle) { menu.Items.Add(new MenuFlyoutItem { Text = "File actions unavailable", IsEnabled = false }); return; }
-        if (target is null)
+        if (_closed || _navigating || _dialog || _recycle)
+        {
+            menu.Items.Add(new MenuFlyoutItem { Text = "File actions unavailable", IsEnabled = false });
+            return;
+        }
+        var targets = selection is { Count: > 0 }
+            ? selection.ToArray()
+            : target is not null ? [target] : [];
+        if (targets.Length == 0)
         {
             menu.Items.Add(ShellMenu.Action("New folder…", () => RunContextAsync(NewFolderAsync), "\uE8F4", enabled: _folder.Length > 0));
             menu.Items.Add(ShellMenu.Action("Refresh", () => RunContextAsync(() => NavigateAsync(_folder)), "\uE72C", "F5"));
-            var view = ShellMenu.Group("View", "\uE8A9"); view.Items.Add(ShellMenu.Toggle("List", !_showGrid, () => { _showGrid = false; Render(); })); view.Items.Add(ShellMenu.Toggle("Grid", _showGrid, () => { _showGrid = true; Render(); })); menu.Items.Add(view);
-            if (_request.Kind == FileSelectionKind.Browse) menu.Items.Add(ShellMenu.Action("Open folder in Windows Explorer", () => _environment.OpenTarget(_folder), "\uED25"));
+            var view = ShellMenu.Group("View", "\uE8A9");
+            view.Items.Add(ShellMenu.Toggle("List", !_showGrid, () => { _showGrid = false; Render(); }));
+            view.Items.Add(ShellMenu.Toggle("Grid", _showGrid, () => { _showGrid = true; Render(); }));
+            menu.Items.Add(view);
+            if (_request.Kind == FileSelectionKind.Browse)
+                menu.Items.Add(ShellMenu.Action("Open folder in Windows Explorer", () => _environment.OpenTarget(_folder), "\uED25"));
             return;
         }
-        // A context invocation keeps its original target even if selection or
-        // a folder refresh changes before the user chooses an action.
-        var policy = FileContextPolicy.For(target.Path, target.IsFolder);
-        menu.Items.Add(ShellMenu.Action(policy.OpenLabel, () => RunContextAsync(() => OpenAsync(target)), policy.Icon));
-        if (policy.OpenWith) menu.Items.Add(ShellMenu.Action("Open with…", () => RunContextAsync(() => _environment.WindowsFileAsync(target.Path, "open-with")), "\uE8A5"));
-        menu.Items.Add(new MenuFlyoutSeparator());
-        var transfer = ShellMenu.Group("Transfer", "\uE8B7"); transfer.Items.Add(ShellMenu.Action("Copy to…", () => RunContextAsync(() => TransferAsync(FileJobKind.Copy, target)), "\uE8C8")); transfer.Items.Add(ShellMenu.Action("Move to…", () => RunContextAsync(() => TransferAsync(FileJobKind.Move, target)), "\uE8DE")); menu.Items.Add(transfer);
-        menu.Items.Add(ShellMenu.Action("Rename…", () => RunContextAsync(() => RenameAsync(target)), "\uE8AC", "F2"));
-        var more = ShellMenu.Group("More", "\uE712");
-        more.Items.Add(ShellMenu.Action("Copy path", () =>
+        if (targets.Length > 100)
         {
-            var data = new Windows.ApplicationModel.DataTransfer.DataPackage(); data.SetText(target.Path);
-            try { Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(data); _status.Text = "Path copied."; } catch (Exception error) { ShowError(error); }
-        }, "\uE8C8"));
-        more.Items.Add(ShellMenu.Action("Show in Windows Explorer", () => RunContextAsync(() => _environment.WindowsFileAsync(target.Path, "reveal")), "\uED25"));
-        more.Items.Add(ShellMenu.Action("Properties…", () => RunContextAsync(() => _environment.WindowsFileAsync(target.Path, "properties")), "\uE946"));
-        if (_edits.CanUndo) more.Items.Add(ShellMenu.Action(_edits.UndoLabel, () => RunContextAsync(UndoAsync), "\uE7A7", "Ctrl+Z")); menu.Items.Add(more);
-        menu.Items.Add(new MenuFlyoutSeparator()); menu.Items.Add(ShellMenu.Action("Windows options…", () => RunContextAsync(() => _environment.WindowsFileAsync(target.Path, "menu")), "\uE713"));
+            menu.Items.Add(new MenuFlyoutItem
+            {
+                Text = "Select up to 100 items for batch actions",
+                IsEnabled = false
+            });
+            return;
+        }
+        // Capture the original targets. A later refresh or selection change
+        // cannot retarget a queued Core transfer or native Windows command.
+        var selected = targets.ToArray();
+        var single = selected.Length == 1 ? selected[0] : null;
+        var handlers = new Dictionary<FileContextCommand, Action>
+        {
+            [FileContextCommand.CopyTo] = () => RunContextAsync(() => TransferSelectionAsync(FileJobKind.Copy, selected)),
+            [FileContextCommand.MoveTo] = () => RunContextAsync(() => TransferSelectionAsync(FileJobKind.Move, selected)),
+            [FileContextCommand.CopyPath] = () =>
+            {
+                try
+                {
+                    var data = new Windows.ApplicationModel.DataTransfer.DataPackage();
+                    data.SetText(string.Join(Environment.NewLine, selected.Select(item => item.Path)));
+                    Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(data);
+                    _status.Text = selected.Length == 1 ? "Path copied." : selected.Length + " paths copied.";
+                }
+                catch (Exception error) { ShowError(error); }
+            }
+        };
+        if (single is not null)
+        {
+            var captured = single;
+            handlers[FileContextCommand.Open] = () => RunContextAsync(() => OpenAsync(captured));
+            if (!captured.IsFolder)
+            {
+                handlers[FileContextCommand.OpenWith] = () =>
+                    RunContextAsync(() => _environment.WindowsFileAsync(captured.Path, "open-with"));
+                handlers[FileContextCommand.Edit] = () => _environment.EditTarget(captured.Path);
+            }
+            handlers[FileContextCommand.Rename] = () => RunContextAsync(() => RenameAsync(captured));
+            handlers[FileContextCommand.Properties] = () =>
+                RunContextAsync(() => _environment.WindowsFileAsync(captured.Path, "properties"));
+            handlers[FileContextCommand.Reveal] = () =>
+                RunContextAsync(() => _environment.WindowsFileAsync(captured.Path, "reveal"));
+            handlers[FileContextCommand.WindowsOptions] = () =>
+                RunContextAsync(() => _environment.WindowsFileAsync(captured.Path, "menu"));
+            if (_edits.CanUndo)
+                handlers[FileContextCommand.Undo] = () => RunContextAsync(UndoAsync);
+        }
+        TypedFileMenu.Build(menu, selected.Select(item => new FileTypeMenuTarget(item.Path, item.IsFolder)).ToArray(),
+            handlers, _edits.UndoLabel);
     }
     private async void RunContextAsync(Func<Task> action)
     { try { if (!_closed && !_environment.Validation) await action(); } catch (OperationCanceledException) when (_closed) { } catch (Exception error) { if (!_closed) ShowError(error); } }
@@ -451,9 +516,19 @@ internal sealed class FilesView : Grid
         {
             var menu = ShellMenu.Create(); BuildContext(menu, new FileEntry(Path.GetFileName(path), path, folder, "Fixture"));
             var policy = FileContextPolicy.For(path, folder);
-            if (menu.Items.Count > 9 || menu.Items.OfType<MenuFlyoutItem>().First().Text != policy.OpenLabel || menu.Items.OfType<MenuFlyoutItem>().Any(item => item.Text == "Open with…") != policy.OpenWith)
-                throw new InvalidOperationException("The production file context did not preserve compact type-specific actions.");
+            if (menu.Items.Count(x => x is not MenuFlyoutSeparator) > 7
+                || menu.Items.OfType<MenuFlyoutItem>().First().Text != policy.OpenLabel
+                || menu.Items.OfType<MenuFlyoutItem>().Any(item => item.Text == "Open with…") != policy.OpenWith)
+                throw new InvalidOperationException("The production file context lost its compact profile-aware actions.");
         }
+        var mixed = ShellMenu.Create();
+        BuildContext(mixed, null, [
+            new FileEntry("photo.png", @"C:\Example\photo.png", false, "Fixture"),
+            new FileEntry("script.cs", @"C:\Example\script.cs", false, "Fixture")]);
+        if (mixed.Items.Count(x => x is not MenuFlyoutSeparator) > 7
+            || mixed.Items.OfType<MenuFlyoutItem>().Any(i => i.Text is "Open" or "Run application" or "Edit")
+            || mixed.Items.OfType<MenuFlyoutItem>().First().Text != "Copy 2 items to…")
+            throw new InvalidOperationException("Mixed file selection must offer safe batch actions instead of single-file execution.");
     }
     private ContentDialog Dialog(string title, object content, string primary) => new() { XamlRoot = XamlRoot, RequestedTheme = RequestedTheme, Title = title, Content = content,
         PrimaryButtonText = primary, CloseButtonText = "Cancel", DefaultButton = ContentDialogButton.Close };

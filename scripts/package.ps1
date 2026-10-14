@@ -10,6 +10,10 @@ foreach ($name in @('restore-sign-in.ps1','Restore-Nexus-SignIn.bat')) {
 foreach ($name in @('Nexus.UI-Templates.json','Nexus.UI-Check.json','verify-native-ui.ps1','Check-Nexus-UI.bat','desktop-health.ps1','Check-Nexus-Desktop.bat')) {
     if (-not (Test-Path (Join-Path $publishDirectory $name))) { throw "UI validation/diagnostic helper missing: $name" }
 }
+$contextCatalog = 'Assets/Configuration/file_context_profiles.json'
+if (-not (Test-Path (Join-Path $publishDirectory $contextCatalog) -PathType Leaf)) {
+    throw "The Nexus file-context catalog is missing from the publish folder: $contextCatalog"
+}
 $reportPath = Join-Path $publishDirectory 'Nexus.resources.json'
 if (-not (Test-Path $reportPath)) { throw 'The published resources have not been verified. Run scripts\build.ps1 first.' }
 $report = Get-Content $reportPath -Raw | ConvertFrom-Json
@@ -31,7 +35,7 @@ $archive = [IO.Compression.ZipFile]::OpenRead($zip)
 try {
     $entries = @{}
     foreach ($zipEntry in $archive.Entries) { $entries[$zipEntry.FullName.Replace('\', '/')] = $zipEntry }
-    foreach ($name in @('Nexus.Core.exe', 'Nexus.Core.dll', 'Nexus.Core.deps.json', 'Nexus.Core.runtimeconfig.json', 'Nexus.Runtime.dll')) {
+    foreach ($name in @('Nexus.Core.exe', 'Nexus.Core.dll', 'Nexus.Core.deps.json', 'Nexus.Core.runtimeconfig.json', 'Nexus.Runtime.dll', $contextCatalog)) {
         if ($null -eq $entries[$name]) { throw "The ZIP is missing $name." }
     }
     foreach ($resource in $report.ResourceFiles) {

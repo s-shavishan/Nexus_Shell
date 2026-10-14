@@ -1,0 +1,350 @@
+{
+  "schema": "nexus.shell.filecontext/v1",
+  "profiles": [
+    {
+      "id": "documents.text",
+      "label": "Text and markup",
+      "extensions": [
+        ".txt",
+        ".text",
+        ".rtf",
+        ".md",
+        ".markdown",
+        ".rst",
+        ".adoc",
+        ".tex",
+        ".log",
+        ".ini",
+        ".cfg",
+        ".conf",
+        ".properties",
+        ".env"
+      ],
+      "primary": "open",
+      "actions": [
+        "edit",
+        "open_with"
+      ]
+    },
+    {
+      "id": "documents.office",
+      "label": "Office document",
+      "extensions": [
+        ".doc",
+        ".docx",
+        ".docm",
+        ".xls",
+        ".xlsx",
+        ".xlsm",
+        ".ppt",
+        ".pptx",
+        ".pptm",
+        ".odt",
+        ".ods",
+        ".odp",
+        ".pdf",
+        ".epub"
+      ],
+      "primary": "open",
+      "actions": [
+        "open_with"
+      ]
+    },
+    {
+      "id": "image.raster",
+      "label": "Image",
+      "extensions": [
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".webp",
+        ".avif",
+        ".heic",
+        ".bmp",
+        ".tif",
+        ".tiff",
+        ".ico",
+        ".apng"
+      ],
+      "primary": "open",
+      "actions": [
+        "open_with"
+      ]
+    },
+    {
+      "id": "image.design",
+      "label": "Design asset",
+      "extensions": [
+        ".svg",
+        ".psd",
+        ".psb",
+        ".xcf",
+        ".kra",
+        ".ai",
+        ".eps",
+        ".blend",
+        ".fig",
+        ".gltf",
+        ".glb",
+        ".obj",
+        ".stl"
+      ],
+      "primary": "open",
+      "actions": [
+        "open_with"
+      ]
+    },
+    {
+      "id": "audio.general",
+      "label": "Audio",
+      "extensions": [
+        ".mp3",
+        ".wav",
+        ".flac",
+        ".aac",
+        ".m4a",
+        ".ogg",
+        ".opus",
+        ".wma",
+        ".aiff",
+        ".ape",
+        ".mid",
+        ".midi"
+      ],
+      "primary": "play",
+      "actions": [
+        "open_with"
+      ]
+    },
+    {
+      "id": "video.general",
+      "label": "Video",
+      "extensions": [
+        ".mp4",
+        ".m4v",
+        ".mkv",
+        ".avi",
+        ".mov",
+        ".webm",
+        ".flv",
+        ".wmv",
+        ".ogv",
+        ".mts",
+        ".m2ts",
+        ".3gp",
+        ".vob"
+      ],
+      "primary": "play",
+      "actions": [
+        "open_with"
+      ]
+    },
+    {
+      "id": "code.source",
+      "label": "Source code",
+      "extensions": [
+        ".c",
+        ".h",
+        ".cpp",
+        ".hpp",
+        ".cs",
+        ".fs",
+        ".vb",
+        ".java",
+        ".go",
+        ".rs",
+        ".swift",
+        ".kt",
+        ".py",
+        ".rb",
+        ".lua",
+        ".php",
+        ".js",
+        ".mjs",
+        ".cjs",
+        ".jsx",
+        ".ts",
+        ".tsx",
+        ".vue",
+        ".svelte",
+        ".html",
+        ".htm",
+        ".css",
+        ".scss",
+        ".sh",
+        ".bat",
+        ".cmd",
+        ".ps1",
+        ".sql"
+      ],
+      "primary": "open",
+      "actions": [
+        "edit",
+        "open_with"
+      ]
+    },
+    {
+      "id": "data.config",
+      "label": "Structured data",
+      "extensions": [
+        ".json",
+        ".jsonc",
+        ".json5",
+        ".xml",
+        ".yaml",
+        ".yml",
+        ".toml",
+        ".csv",
+        ".tsv",
+        ".jsonl",
+        ".ndjson",
+        ".parquet",
+        ".arrow",
+        ".sqlite",
+        ".sqlite3",
+        ".db"
+      ],
+      "primary": "open",
+      "actions": [
+        "edit",
+        "open_with"
+      ]
+    },
+    {
+      "id": "archive.generic",
+      "label": "Archive",
+      "extensions": [
+        ".zip",
+        ".zipx",
+        ".7z",
+        ".rar",
+        ".tar",
+        ".gz",
+        ".tgz",
+        ".tar.gz",
+        ".bz2",
+        ".tar.bz2",
+        ".xz",
+        ".tar.xz",
+        ".zst",
+        ".cab",
+        ".iso",
+        ".vhd",
+        ".vhdx",
+        ".vmdk",
+        ".vdi",
+        ".qcow2"
+      ],
+      "primary": "open",
+      "actions": [
+        "open_with"
+      ]
+    },
+    {
+      "id": "exec.app",
+      "label": "Application or installer",
+      "extensions": [
+        ".exe",
+        ".msi",
+        ".msix",
+        ".appx",
+        ".com",
+        ".scr",
+        ".msu"
+      ],
+      "primary": "run",
+      "actions": []
+    },
+    {
+      "id": "system.library",
+      "label": "Library or system file",
+      "extensions": [
+        ".dll",
+        ".sys",
+        ".ocx",
+        ".cpl",
+        ".drv",
+        ".efi"
+      ],
+      "primary": "open",
+      "actions": []
+    },
+    {
+      "id": "security.key",
+      "label": "Certificate or key",
+      "extensions": [
+        ".cer",
+        ".crt",
+        ".pem",
+        ".pfx",
+        ".p12",
+        ".csr",
+        ".der",
+        ".asc",
+        ".gpg",
+        ".pgp",
+        ".sig"
+      ],
+      "primary": "open",
+      "actions": [
+        "open_with"
+      ]
+    },
+    {
+      "id": "ai.model",
+      "label": "AI model",
+      "extensions": [
+        ".gguf",
+        ".safetensors",
+        ".onnx",
+        ".pth",
+        ".pt",
+        ".tflite",
+        ".mlmodel"
+      ],
+      "primary": "open",
+      "actions": [
+        "open_with"
+      ]
+    },
+    {
+      "id": "games.assets",
+      "label": "Game or project asset",
+      "extensions": [
+        ".pak",
+        ".uasset",
+        ".umap",
+        ".unitypackage",
+        ".godot",
+        ".sav",
+        ".rom",
+        ".gba",
+        ".nds"
+      ],
+      "primary": "open",
+      "actions": [
+        "open_with"
+      ]
+    },
+    {
+      "id": "shortcuts.windows",
+      "label": "Windows shortcut",
+      "extensions": [
+        ".lnk",
+        ".url",
+        ".website"
+      ],
+      "primary": "open",
+      "actions": []
+    }
+  ],
+  "fallback": {
+    "id": "fallback.unknown",
+    "label": "File",
+    "primary": "open",
+    "actions": [
+      "open_with"
+    ]
+  }
+}

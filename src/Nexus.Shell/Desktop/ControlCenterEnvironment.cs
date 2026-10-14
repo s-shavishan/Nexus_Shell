@@ -108,6 +108,73 @@ internal sealed class ControlCenterEnvironment
     internal void LockScreen() => Action("lock");
     internal void ShowControls(string? page = null) => Action("personalize");
     internal void Advanced(string section) => Action("advanced", section);
+    internal void SetProjection(string mode)
+    {
+        // DisplaySwitch supports fixed Windows projection profiles. Do not
+        // pass arbitrary commands or treat this as a brightness controller.
+        string option = mode switch
+        {
+            "Internal" => "/internal",
+            "Duplicate" => "/clone",
+            "Extend" => "/extend",
+            "External" => "/external",
+            _ => ""
+        };
+        if (option.Length == 0) { _window?.View.ShowError("Unknown projection mode."); return; }
+        try
+        {
+            string executable = Path.Combine(System.Environment.GetFolderPath(
+                System.Environment.SpecialFolder.System), "DisplaySwitch.exe");
+            var start = new ProcessStartInfo(executable)
+            {
+                UseShellExecute = false,
+                WorkingDirectory = Path.GetDirectoryName(executable)!
+            };
+            start.ArgumentList.Add(option);
+            using var launched = Process.Start(start);
+            if (launched is null) throw new InvalidOperationException("Windows rejected this display projection.");
+        }
+        catch (Exception error)
+        {
+            Log.Write("Native projection change unavailable: " + mode, error);
+            _window?.View.ShowError("Windows could not apply the projection. Use Display settings.");
+        }
+    }
+    internal void OpenWindowsTool(string id)
+    {
+        // A deliberately closed allowlist; no textbox value may become a
+        // native executable, command-line argument or settings URI.
+        var tool = WindowsToolCatalog.Find(id);
+        if (tool is null || tool.Id is not
+            ("project-display" or "night-light" or "network-settings" or "network-adapters" or "bluetooth-settings" or "task-manager" or "volume-mixer"))
+        {
+            _window?.View.ShowError("This Windows control is unavailable.");
+            return;
+        }
+        try
+        {
+            bool native = tool.Kind is WindowsToolKind.SystemExecutable or WindowsToolKind.ControlPanelApplet;
+            if (native && !WindowsToolCatalog.SafeNativeTarget(tool))
+                throw new InvalidOperationException("The Windows tool target was not allowlisted.");
+            if (!native && tool.Kind != WindowsToolKind.Settings)
+                throw new InvalidOperationException("Unsupported Windows tool category.");
+            var target = native
+                ? Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.System), tool.Target)
+                : tool.Target;
+            var start = new ProcessStartInfo(target)
+            {
+                UseShellExecute = true,
+                WorkingDirectory = native ? Path.GetDirectoryName(target)! : AppContext.BaseDirectory
+            };
+            using var launched = Process.Start(start);
+            if (launched is null) throw new InvalidOperationException("Windows did not start this control.");
+        }
+        catch (Exception error)
+        {
+            Log.Write("Native control route failed: " + id, error);
+            _window?.View.ShowError("Windows could not open " + tool.Name + ". Try the advanced settings link.");
+        }
+    }
     internal void Expand() => Action("expand");
     internal void Stop()
     {

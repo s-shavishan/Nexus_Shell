@@ -83,8 +83,10 @@
     <Compile Include="../../src/Nexus.Shell/Services/FileCatalog.cs" Link="FileCatalog.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/LatestWorkQueue.cs" Link="LatestWorkQueue.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/WindowsToolCatalog.cs" Link="WindowsToolCatalog.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/BluetoothRadioAvailability.cs" Link="BluetoothRadioAvailability.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/WindowsShellPolicy.cs" Link="WindowsShellPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/FileContextPolicy.cs" Link="FileContextPolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/FileTypeContextCatalog.cs" Link="FileTypeContextCatalog.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/WindowsShellBridge.cs" Link="WindowsShellBridge.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/KeepAwakeSession.cs" Link="KeepAwakeSession.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/WindowsDesktopEvents.cs" Link="WindowsDesktopEvents.cs" />
@@ -120,6 +122,12 @@
     <Compile Include="../../src/Nexus.Shell/Services/ClipboardCaptureGate.cs" Link="ClipboardCaptureGate.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/ClipboardCapturePolicy.cs" Link="ClipboardCapturePolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/WindowBoardPolicy.cs" Link="WindowBoardPolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/WindowOverviewGeometry.cs" Link="WindowOverviewGeometry.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/DesktopWindowCatalog.cs" Link="DesktopWindowCatalog.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="../../src/Nexus.Shell/Assets/Configuration/file_context_profiles.json"
+             Link="Assets/Configuration/file_context_profiles.json"
+             CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

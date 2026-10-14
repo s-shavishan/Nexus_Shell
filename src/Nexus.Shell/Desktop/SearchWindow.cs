@@ -12,6 +12,9 @@ namespace Nexus.Shell.Desktop;
 // A desktop surface, not another app launcher. Launchpad remains the app catalog.
 internal sealed class SearchWindow : DesktopPanelWindow
 {
+    // Spotlight manages compact/expanded geometry itself; resizing it would
+    // conflict with dynamic search result positioning.
+    protected override bool AllowUserResize => false;
     private sealed record Row(string Name, string Detail, string Icon, SearchHit? File = null, string? Command = null, RunningWindow? Window = null);
     private readonly TextBox _query = new() { PlaceholderText = "Find a file, folder, window or desktop control…", MaxLength = SearchPolicy.MaximumQueryLength, FontSize = 17, Padding = new Thickness(14, 11, 14, 11), CornerRadius = new CornerRadius(13) };
     private readonly ComboBox _category = new() { MinWidth = 145 };

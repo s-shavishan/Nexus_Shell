@@ -68,6 +68,7 @@ internal sealed partial class DesktopEnvironment
     internal DesktopEnvironment(ShellSession session, CoreProcessSession core, DesktopSessionMode mode = DesktopSessionMode.Preview, string? hostToken = null, int? hostPid = null)
     {
         Session = session; _core = core; Notifications = new(Session.State.NotificationHistory); Notifications.Quiet = Session.State.QuietNotifications;
+        _ = FileTypeContextCatalog.Initialize();
         Mode = mode; Menus = new(this); _usage = new(Session.State); _usageTracking = Session.State.UsageTracking;
         if (IsManagedDesktop)
         {

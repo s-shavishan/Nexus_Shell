@@ -27,7 +27,7 @@ internal sealed class MenuBarWindow : Window
     private double _scale;
     internal MenuBarWindow(DesktopEnvironment environment)
     {
-        _environment = environment; _view = new(environment); _frame = new Border { Child = _view, BorderThickness = new Thickness(1), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top }; var root = new Grid(); root.Children.Add(_frame); Content = root;
+        _environment = environment; _view = new(environment); _frame = new Border { Child = _view, BorderThickness = new Thickness(0), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top }; var root = new Grid(); root.Children.Add(_frame); Content = root;
         _handle = WinRT.Interop.WindowNative.GetWindowHandle(this); _window = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(_handle)); _window.Title = "Nexus menu bar";
         WindowSwitcherPolicy.Request(() => _window.IsShownInSwitchers = false, error => Log.Write("Menu bar switcher fallback", error));
         if (_window.Presenter is OverlappedPresenter presenter) { presenter.SetBorderAndTitleBar(false, false); presenter.IsResizable = presenter.IsMaximizable = presenter.IsMinimizable = false; }
@@ -52,7 +52,7 @@ internal sealed class MenuBarWindow : Window
         _frame.Width = local.Width / scale; _frame.Height = local.Height / scale;
         _frame.Margin = new Thickness(local.X / scale, local.Y / scale, 0, 0);
         _frame.CornerRadius = new CornerRadius(_attached || _environment.Theme.HighContrast ? 0 : 10);
-        _frame.BorderThickness = _attached ? new Thickness(0, 0, 0, 1) : new Thickness(1);
+        _frame.BorderThickness = _environment.Theme.HighContrast ? new Thickness(1) : new Thickness(0);
         bool animate = before is not null && oldScale == scale && _frame.IsLoaded && _visible && _environment.Theme.Animations && !_environment.Theme.HighContrast && _environment.Session.State.SurfaceAnimations && !_environment.Session.State.ReducedEffects;
         // Commit native and XAML bounds together. The old animation expanded the
         // HWND region across transparent, unpainted root margins until completion.

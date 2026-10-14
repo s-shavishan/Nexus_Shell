@@ -12,6 +12,10 @@ internal static class MidnightChecks
             && !MidnightGlassMetrics.ReferenceEnabled(midnight, true)
             && !MidnightGlassMetrics.ReferenceEnabled(AuraPalette.For("Solstice"), false),
             "Reference styling must be isolated to Midnight and respect High Contrast.");
+        check(MidnightGlassMetrics.FrameRadius <= 20
+            && MidnightGlassMetrics.DockRadius <= 22
+            && MidnightGlassMetrics.CardRadius <= 16,
+            "Refined Midnight frames must avoid the oversized hard-looking corner radius.");
         check(MidnightGlassMetrics.DockRadius > MidnightGlassMetrics.ControlRadius
             && MidnightGlassMetrics.FrameRadius > MidnightGlassMetrics.CardRadius
             && MidnightGlassMetrics.DockButtonWidth > MidnightGlassMetrics.DockCompactButtonWidth,

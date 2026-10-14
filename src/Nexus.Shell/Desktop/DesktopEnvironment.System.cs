@@ -136,7 +136,13 @@ internal sealed partial class DesktopEnvironment
                 if (!await Windows.System.Launcher.LaunchUriAsync(new Uri(tool.Target)))
                     StartSystemExecutable("SnippingTool.exe");
             }
-            else StartSystemExecutable(tool.Target);
+            else if (tool.Kind is WindowsToolKind.SystemExecutable or WindowsToolKind.ControlPanelApplet)
+            {
+                if (!WindowsToolCatalog.SafeNativeTarget(tool))
+                    throw new InvalidOperationException("The Windows tool target was not allowlisted.");
+                StartSystemExecutable(tool.Target);
+            }
+            else throw new InvalidOperationException("Unsupported Windows tool category.");
         }
         catch (OperationCanceledException) when (IsStopping) { }
         catch (Exception error) { if (!IsStopping) Report(tool.Name + " could not open. It may be unavailable in this Windows installation", error); }

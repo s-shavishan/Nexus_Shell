@@ -33,9 +33,11 @@ internal sealed class QuickSettingsWindow : Window
         _window = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(_handle));
         _window.Title = "Nexus Control Center"; WindowSwitcherPolicy.Request(() => _window.IsShownInSwitchers = false, error => Log.Write("Switcher API unavailable; using native tool-window styling", error));
         if (_window.Presenter is OverlappedPresenter presenter)
-        { presenter.SetBorderAndTitleBar(false, false); presenter.IsResizable = presenter.IsMinimizable = presenter.IsMaximizable = false; }
+        { presenter.SetBorderAndTitleBar(false, false);
+          presenter.IsResizable = true; presenter.IsMinimizable = presenter.IsMaximizable = false; }
         ShellLayerInterop.ToolWindow(_handle);
-        _chrome = new(_handle, closeRequested: environment.Hide);
+        _chrome = new(_handle, resizable: true, resizeAllowed: () => !_compact,
+            minimumWidth: 390, minimumHeight: 330, closeRequested: environment.Hide);
         _motion = new(_frame, () => environment.Theme.Animations && !environment.Theme.HighContrast && environment.State.SurfaceAnimations && !environment.State.ReducedEffects);
         Activated += (_, args) => { if (IsOpen && args.WindowActivationState == WindowActivationState.Deactivated) environment.Hide(); };
         Closed += (_, _) => { _closed = true; IsOpen = false; _motion.Dispose(); _chrome.Dispose(); _view.Dispose(); environment.Stop(); };
@@ -43,7 +45,9 @@ internal sealed class QuickSettingsWindow : Window
     }
     internal void Show(string? section = null, bool compact = false)
     {
-        if (_closed) return; _compact = compact; ApplyAppearance(); Position();
+        if (_closed) return; _compact = compact;
+        if (_window.Presenter is OverlappedPresenter presenter) presenter.IsResizable = !compact;
+        ApplyAppearance(); Position();
         bool wasOpen = IsOpen; _frame.IsHitTestVisible = true; IsOpen = true; _view.Open(section, compact); Activate(); if (!wasOpen) _motion.Open();
     }
     internal void Position()
@@ -53,7 +57,7 @@ internal sealed class QuickSettingsWindow : Window
         var bounds = new ShellRect(monitor.X, monitor.Y, monitor.Width, monitor.Height);
         var anchor = _environment.Snapshot.Desired.Anchor;
         var rect = _compact ? DesktopLayout.AnchoredQuickControlBounds(bounds, monitor.Scale, _environment.Snapshot.Desired.Section,
-            anchor is null ? null : new ShellRect(anchor.X, anchor.Y, anchor.Width, anchor.Height)) : DesktopLayout.PanelBounds(bounds, monitor.Scale, 540, 740);
+            anchor is null ? null : new ShellRect(anchor.X, anchor.Y, anchor.Width, anchor.Height)) : DesktopLayout.PanelBounds(bounds, monitor.Scale, 512, 656);
         ShellLayerInterop.SetWindowPos(_handle, ShellLayerInterop.Topmost, rect.X, rect.Y, rect.Width, rect.Height, 0x0010);
     }
     internal void HideSurface() { if (_closed || !IsOpen) return; IsOpen = false; _frame.IsHitTestVisible = false; _view.Hide(); _window.Hide(); _motion.Hide(); }
@@ -61,7 +65,7 @@ internal sealed class QuickSettingsWindow : Window
     {
         var theme = _environment.Theme;
         _frame.RequestedTheme = theme.ElementTheme; _material.Apply(this, _frame, theme, _environment.State); _frame.BorderBrush = theme.Edge;
-        _frame.BorderThickness = new Thickness(1); _frame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : MidnightGlassMetrics.FrameRadius);
+        _frame.BorderThickness = new Thickness(theme.HighContrast ? 1 : 0); _frame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : MidnightGlassMetrics.FrameRadius);
         _chrome.SetCorners(theme.HighContrast, MidnightGlassMetrics.FrameRadius); _motion.Refresh(); _view.ApplyAppearance();
     }
     internal void RefreshPreferences() => _view.RefreshPreferences();

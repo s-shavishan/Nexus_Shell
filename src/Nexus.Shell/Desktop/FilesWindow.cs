@@ -54,7 +54,7 @@ internal sealed class FilesWindow : Window
         if (request.Kind == FileSelectionKind.Browse) View.FolderChanged += title => { _title.Text = title; NativeWindow.Title = title + " · Nexus Files"; };
         if (NativeWindow.Presenter is OverlappedPresenter overlapped) overlapped.SetBorderAndTitleBar(false, false);
         _transition = new(_surface, () => environment.Theme.Animations && !environment.Theme.HighContrast && environment.State.SurfaceAnimations && !environment.State.ReducedEffects);
-        _chrome = new(Handle, resizable: true, stateChanged: maximized => { _surface.CornerRadius = new CornerRadius(maximized || environment.Theme.HighContrast ? 0 : MidnightGlassMetrics.FrameRadius); _surface.BorderThickness = new Thickness(maximized ? 0 : 1); }, minimizeRequested: Minimize, closeRequested: RequestClose, role: "Files");
+        _chrome = new(Handle, resizable: true, stateChanged: maximized => { _surface.CornerRadius = new CornerRadius(maximized || environment.Theme.HighContrast ? 0 : MidnightGlassMetrics.FrameRadius); _surface.BorderThickness = new Thickness(maximized || !environment.Theme.HighContrast ? 0 : 1); }, minimizeRequested: Minimize, closeRequested: RequestClose, role: "Files");
         _transition.BindRestore(_chrome);
         _caption = new(NativeWindow, _chrome, dragArea);
         _motion = new(_surface, () => environment.Theme.Animations && !environment.Theme.HighContrast && environment.State.SurfaceAnimations && !environment.State.ReducedEffects);
@@ -89,7 +89,8 @@ internal sealed class FilesWindow : Window
     {
         var theme = _environment.Theme;
         _frame.RequestedTheme = theme.ElementTheme; _frame.Background = null; _material.Apply(this, _surface, theme, _environment.State);
-        _surface.CornerRadius = new CornerRadius(theme.HighContrast || _chrome.IsAttached ? 0 : MidnightGlassMetrics.FrameRadius); _surface.BorderBrush = theme.Edge; _title.Foreground = theme.Brush("NexusText"); _titleBar.Background = theme.Material("MenuBar", _environment.State.NativeGlass); _titleBar.BorderBrush = theme.Edge;
+        _surface.CornerRadius = new CornerRadius(theme.HighContrast || _chrome.IsAttached ? 0 : MidnightGlassMetrics.FrameRadius);
+        _surface.BorderBrush = theme.Edge; _surface.BorderThickness = new Thickness(theme.HighContrast && !_chrome.IsAttached ? 1 : 0); _title.Foreground = theme.Brush("NexusText"); _titleBar.Background = theme.Material("MenuBar", _environment.State.NativeGlass); _titleBar.BorderBrush = theme.Edge;
         _chrome.SetCorners(theme.HighContrast); _motion.Refresh(); View.ApplyAppearance();
     }
 }

@@ -1,5 +1,6 @@
 using Nexus.Shell.Models;
 using Nexus.Shell.Services;
+using Nexus.Runtime;
 using System.Text.Json;
 
 internal static class DesktopUiChecks
@@ -9,6 +10,126 @@ internal static class DesktopUiChecks
         && inner.X >= outer.X && inner.Y >= outer.Y && inner.Right <= outer.Right && inner.Bottom <= outer.Bottom;
     internal static void Run()
     {
+        Check(FileTypeContextCatalog.Initialize() && FileTypeContextCatalog.Reload(),
+            "The shipped file context schema must parse before native UI builds.");
+        string fileTypeJson = File.ReadAllText(Path.Combine(AppContext.BaseDirectory,
+            "Assets", "Configuration", "file_context_profiles.json"));
+        Check(FileTypeContextCatalog.ValidateJson(fileTypeJson, out var schemaError) && schemaError.Length == 0,
+            "The shipped file-type profiles must pass pure schema validation.");
+        string duplicateExtension = fileTypeJson.Replace("\".mp4\"", "\".png\"", StringComparison.Ordinal);
+        Check(!FileTypeContextCatalog.ValidateJson(duplicateExtension, out var duplicateError)
+            && duplicateError.Contains("Ambiguous extension", StringComparison.Ordinal),
+            "Conflicting extension ownership must fail before it reaches the live menu cache.");
+        Check(!FileTypeContextCatalog.ValidateJson(fileTypeJson.Replace("\"primary\": \"open\"",
+                "\"primary\": \"decrypt\"", StringComparison.Ordinal), out _)
+            && !FileTypeContextCatalog.ValidateJson("{broken json", out _),
+            "Unknown action handlers and malformed JSON must never become executable menu entries.");
+        Check(FileTypeContextCatalog.Resolve(@"C:\Data\movie.mp4", false).Id == "video.general",
+            "Rejecting an invalid proposed catalog must preserve the last known-good live resolution.");
+        Check(FileTypeContextCatalog.Resolve(@"C:\Data\movie.MP4", false).Id == "video.general"
+            && FileTypeContextCatalog.Resolve(@"C:\Data\archive.TAR.GZ", false).Id == "archive.generic"
+            && FileTypeContextCatalog.Resolve(@"C:\Data\project.TS", false).Id == "code.source"
+            && FileTypeContextCatalog.Resolve(@"C:\Data\unknown.MDF", false).Id == "fallback.unknown"
+            && FileTypeContextCatalog.Resolve(@"C:\Data\images", true).Id == "folder",
+            "Profiles must be deterministic, case-insensitive and support longest compound extensions with safe fallback.");
+        var mixedFileContext = FileTypeContextCatalog.Plan([
+            new FileTypeMenuTarget(@"C:\Data\photo.png", false),
+            new FileTypeMenuTarget(@"C:\Data\project.cs", false)]);
+        Check(mixedFileContext.SelectionCount == 2 && mixedFileContext.Primary.Length == 0
+            && mixedFileContext.CommonActions.SequenceEqual(["open_with"]),
+            "Mixed selections retain only common type capabilities and never mass-run applications.");
+        Check(FileTypeContextCatalog.Resolve(@"C:\Data\shortcut.lnk", false).Id == "shortcuts.windows"
+            && FileTypeContextCatalog.Resolve(@"C:\Data\demo.CUSTOM", false).Id == "fallback.unknown",
+            "Shortcuts must not offer an unsuitable Open with command; unknown types remain usable.");
+        Check(FileTypeContextCatalog.Resolve(@"C:\Data\source.cs", false).Actions.Contains("edit")
+            && FileTypeContextCatalog.Resolve(@"C:\Data\settings.json", false).Actions.Contains("edit")
+            && !FileTypeContextCatalog.Resolve(@"C:\Data\installer.exe", false).Actions.Contains("edit")
+            && !FileTypeContextCatalog.Resolve(@"C:\Data\shortcut.lnk", false).Actions.Contains("edit")
+            && !FileTypeContextCatalog.Resolve(@"C:\Data\photo.png", false).Actions.Contains("edit"),
+            "Text editor fallback must only be offered for profiles with declared edit support.");
+        Check(FileTypeContextCatalog.Plan([new(@"C:\Data\audio.mp3", false)]).Primary == "play"
+            && FileContextPolicy.For(@"C:\Data\setup.exe", false).OpenLabel == "Run application"
+            && FileContextPolicy.For(@"C:\Data\bundle.tar.gz", false).OpenLabel == "Open archive",
+            "Native context labels reflect their file-profile default.");
+        var displayEpoch = Guid.NewGuid();
+        SettingsRules.Validate(new SettingsRequest("Display", 17,
+            new SettingsChange("display-preview", "DISPLAY1", "1280x720@60", Epoch: displayEpoch)), displayEpoch);
+        SettingsRules.Validate(new SettingsRequest("Display", 17,
+            new SettingsChange("display-keep", "DISPLAY1", Epoch: displayEpoch)), displayEpoch);
+        SettingsRules.Validate(new SettingsRequest("Display", 17,
+            new SettingsChange("display-revert", "DISPLAY1", Epoch: displayEpoch)), displayEpoch);
+        bool badDisplayRejected = false;
+        try { SettingsRules.Validate(new SettingsRequest("Display", 17,
+            new SettingsChange("display-preview", "DISPLAY1", "", Epoch: displayEpoch)), displayEpoch); }
+        catch (RuntimeFailure) { badDisplayRejected = true; }
+        Check(badDisplayRejected, "Mode changes must reject empty mode IDs.");
+        badDisplayRejected = false;
+        try { SettingsRules.Validate(new SettingsRequest("Display", 17,
+            new SettingsChange("display-keep", "DISPLAY1", Enabled: true, Epoch: displayEpoch)), displayEpoch); }
+        catch (RuntimeFailure) { badDisplayRejected = true; }
+        Check(badDisplayRejected, "Confirmation cannot carry unvalidated toggle values.");
+        Check(new[] { 0, 2, 55, 259, 433, 1168 }.All(BluetoothRadioAvailability.NoRadioError)
+            && !BluetoothRadioAvailability.NoRadioError(5)
+            && !BluetoothRadioAvailability.NoRadioError(31),
+            "No-radio Win32 errors must hide Bluetooth but real access/driver failures must remain visible.");
+        Check(!BluetoothRadioAvailability.ShowControls(false)
+            && BluetoothRadioAvailability.ShowControls(true)
+            && BluetoothRadioAvailability.ShowControls(null),
+            "Bluetooth UI must disappear only for positively confirmed absent radios.");
+        Check(WindowsToolCatalog.Find("night-light")?.Target == "ms-settings:nightlight"
+            && WindowsToolCatalog.Find("network-adapters")?.Target == "ncpa.cpl"
+            && WindowsToolCatalog.Find("project-display")?.Target == "DisplaySwitch.exe",
+            "Advanced Control Center actions must use fixed audited Windows routes.");
+        Check(WindowOverviewInteractionPolicy.CanSwitch(0)
+            && !WindowOverviewInteractionPolicy.CanSwitch(1)
+            && !WindowOverviewInteractionPolicy.CanSwitch(12),
+            "The overview cannot silently discard a staged arrangement when switching cards.");
+        Check(WindowOverviewInteractionPolicy.SuppressClick("hwnd:1", "hwnd:1", 1400, 1300)
+            && !WindowOverviewInteractionPolicy.SuppressClick("hwnd:1", "hwnd:2", 1400, 1300)
+            && !WindowOverviewInteractionPolicy.SuppressClick("hwnd:1", "hwnd:1", 1400, 1400)
+            && !WindowOverviewInteractionPolicy.SuppressClick(null, "hwnd:1", 1400, 1300),
+            "Drag-click suppression must affect only the dragged card until its deadline.");
+        // Live window dragging must not depend on a queryable process path.
+        // Use native screen/work-area geometry, not persistent saved-layout
+        // identity, when staging a move on another display.
+        var fromDisplay = new LayoutRect(-1920, -100, 1920, 1080);
+        var toDisplay = new LayoutRect(0, 38, 1920, 1042);
+        var liveBounds = new LayoutRect(-1650, 0, 800, 600);
+        var projected = WindowOverviewGeometry.ProjectBetween(liveBounds, fromDisplay, toDisplay);
+        Check(projected.X == 270 && projected.Y >= 130 && projected.Y <= 135
+            && projected.Width == 800 && projected.Height >= 575 && projected.Height <= 582,
+            "Native live HWND positions must project across monitors without requiring a saved app identity.");
+        var sameDisplay = WindowOverviewGeometry.ProjectBetween(liveBounds, fromDisplay, fromDisplay);
+        Check(sameDisplay == liveBounds, "Projecting onto the same monitor must preserve an already valid window rectangle.");
+        var smallDisplay = new LayoutRect(2400, 100, 120, 80);
+        var constrained = WindowOverviewGeometry.ProjectBetween(liveBounds, fromDisplay, smallDisplay);
+        Check(constrained.X >= smallDisplay.X && constrained.Y >= smallDisplay.Y
+            && (long)constrained.X + constrained.Width <= (long)smallDisplay.X + smallDisplay.Width
+            && (long)constrained.Y + constrained.Height <= (long)smallDisplay.Y + smallDisplay.Height,
+            "A small secondary display must never receive an offscreen staged rectangle.");
+        bool rejectedInvalidGeometry = false;
+        try { _ = WindowOverviewGeometry.ProjectBetween(liveBounds, fromDisplay, default); }
+        catch (ArgumentException) { rejectedInvalidGeometry = true; }
+        Check(rejectedInvalidGeometry, "A disconnected or zero-area monitor must reject live window projection.");
+        // Fullscreen overview moves are only geometry until the user applies.
+        var workspace = new LayoutRect(-1920, -80, 1920, 1080);
+        var beforeOverview = new LayoutRect(-1700, 0, 800, 600);
+        var free = WindowOverviewGeometry.Drag(workspace, beforeOverview, 50, 90, -1200, 440, 1);
+        Check(free.Zone == "Free position" && free.Bounds.X == -1650 && free.Bounds.Y == 90,
+            "Overview should stage free movement using physical negative-origin geometry.");
+        var leftSnap = WindowOverviewGeometry.Drag(workspace, beforeOverview, 0, 0, workspace.X + 10, 420, 1);
+        Check(leftSnap.Zone == "Left half" && leftSnap.Bounds.X == -1920 && leftSnap.Bounds.Width == 960,
+            "Overview left-edge drag should preview an exact half-screen snap.");
+        var quarter = WindowOverviewGeometry.Drag(workspace, beforeOverview, 0, 0, workspace.X + 2, workspace.Y + 2, 1.5);
+        Check(quarter.Zone == "Quarter snap" && quarter.Bounds.Width == 960 && quarter.Bounds.Height == 540,
+            "Overview corner drag should stage a quarter-screen tile at scaled DPI.");
+        var opposite = WindowOverviewGeometry.Drag(workspace, beforeOverview, 0, 0, workspace.X + workspace.Width - 1, 420, 1);
+        Check(opposite.Zone == "Right half" && opposite.Bounds.X == -960,
+            "Overview right-edge drop must position windows on the correct monitor half.");
+        var edgeClamp = WindowOverviewGeometry.Drag(workspace, beforeOverview, 40000, 40000, -1200, 440, 1);
+        Check(edgeClamp.Bounds.X + edgeClamp.Bounds.Width == workspace.X + workspace.Width
+            && edgeClamp.Bounds.Y + edgeClamp.Bounds.Height == workspace.Y + workspace.Height,
+            "Overview free placement must clamp off-screen drags to the monitor work area.");
         // A selection box must follow mouse motion in every direction, and
         // must never activate unrelated desktop items in empty space.
         Check(!SelectionMarqueeGeometry.HasStarted(10, 10, 13, 13)

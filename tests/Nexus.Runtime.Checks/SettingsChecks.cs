@@ -27,6 +27,19 @@ internal static class SettingsChecks
             var state = await service.ExecuteAsync(new(section), CancellationToken.None);
             Check(state.Section == section && state.Epoch == service.Epoch && state.Epoch != Guid.Empty, "The service must own the snapshot epoch.");
         }
+        Check(DisplayModePreviewPolicy.IsRequestedModeActive("1920x1080@60", "1920x1080@60")
+            && !DisplayModePreviewPolicy.IsRequestedModeActive("1920x1080@60", "1280x720@60")
+            && !DisplayModePreviewPolicy.IsRequestedModeActive("1920x1080@60", "1920x1080@59")
+            && !DisplayModePreviewPolicy.IsRequestedModeActive("", "1920x1080@60"),
+            "A Display Keep must persist only the still-active previewed mode; hotplug and driver resets invalidate confirmation.");
+        Check(DisplayModePreviewPolicy.TimeoutSeconds == 18
+            && DisplayModePreviewPolicy.Remaining(new DateTimeOffset(2026, 10, 14, 12, 0, 18, TimeSpan.Zero),
+                new DateTimeOffset(2026, 10, 14, 12, 0, 0, TimeSpan.Zero)) == 18
+            && !DisplayModePreviewPolicy.Expired(new DateTimeOffset(2026, 10, 14, 12, 0, 18, TimeSpan.Zero),
+                new DateTimeOffset(2026, 10, 14, 12, 0, 17, TimeSpan.Zero))
+            && DisplayModePreviewPolicy.Expired(new DateTimeOffset(2026, 10, 14, 12, 0, 18, TimeSpan.Zero),
+                new DateTimeOffset(2026, 10, 14, 12, 0, 18, TimeSpan.Zero)),
+            "Display preview expiry must be deterministic and inclusive at the 18-second deadline.");
         int reads = backend.Calls;
         await Reject("settings-section", () => service.ExecuteAsync(new("Registry"), CancellationToken.None));
         await Reject("settings-window", () => service.ExecuteAsync(new("Sound", Window: -1), CancellationToken.None));
@@ -38,6 +51,11 @@ internal static class SettingsChecks
         foreach (string target in new[] { "", " ", new string('x', 513), "bad\0device" })
             await Reject("settings-target", () => service.ExecuteAsync(new("Sound", Change: new("volume", target, Value: 10, Epoch: service.Epoch)), CancellationToken.None));
         await Reject("settings-command", () => service.ExecuteAsync(new("Display", Change: new("volume", "output", Value: 30, Epoch: service.Epoch)), CancellationToken.None));
+        await Reject("settings-command", () => service.ExecuteAsync(new("Display", Change: new("display-preview", "display", "", Epoch: service.Epoch)), CancellationToken.None));
+        await Reject("settings-command", () => service.ExecuteAsync(new("Display", Change: new("display-preview", "display", "1920x1080@60", Enabled: true, Epoch: service.Epoch)), CancellationToken.None));
+        await Reject("settings-command", () => service.ExecuteAsync(new("Display", Change: new("display-preview", "display", "1920x1080@60", Value: 1, Epoch: service.Epoch)), CancellationToken.None));
+        await Reject("settings-command", () => service.ExecuteAsync(new("Display", Change: new("display-keep", "display", Value: 1, Epoch: service.Epoch)), CancellationToken.None));
+        await Reject("settings-command", () => service.ExecuteAsync(new("Display", Change: new("display-revert", "display", Enabled: false, Epoch: service.Epoch)), CancellationToken.None));
         await Reject("settings-command", () => service.ExecuteAsync(new("Power", Change: new("power-plan", "plan", Value: 30, Epoch: service.Epoch)), CancellationToken.None));
         await Reject("settings-command", () => service.ExecuteAsync(new("Network", Change: new("wifi-connect", "adapter", Epoch: service.Epoch)), CancellationToken.None));
         await Reject("settings-command", () => service.ExecuteAsync(new("Network", Change: new("wifi-radio", "adapter", Enabled: true, Epoch: service.Epoch), Scan: true), CancellationToken.None));
@@ -51,6 +69,9 @@ internal static class SettingsChecks
             new("Sound", Change: new("volume", "output", "session", Value: 100, Enabled: true, Epoch: service.Epoch)),
             new("Sound", Change: new("volume", "output", Enabled: false, Epoch: service.Epoch)),
             new("Display", Change: new("brightness", "display", Value: 65, Epoch: service.Epoch)),
+            new("Display", Change: new("display-preview", "display", "1280x720@60", Epoch: service.Epoch)),
+            new("Display", Change: new("display-keep", "display", Epoch: service.Epoch)),
+            new("Display", Change: new("display-revert", "display", Epoch: service.Epoch)),
             new("Network", Change: new("wifi-connect", "adapter", "Saved profile", Epoch: service.Epoch)),
             new("Network", Change: new("wifi-disconnect", "adapter", Epoch: service.Epoch)),
             new("Network", Change: new("wifi-radio", "adapter", Enabled: true, Epoch: service.Epoch)),
@@ -75,6 +96,14 @@ internal static class SettingsChecks
         var hardware = new SettingsSnapshot(service.Epoch, "Sound", Sound: new(true, "output", "Speakers", .75f, false, [new("session", "Player", .5f, true)], ""));
         var roundTrip = RuntimeProtocol.Payload<SettingsSnapshot>(RuntimeProtocol.Body(hardware));
         Check(roundTrip.Epoch == hardware.Epoch && roundTrip.Sound!.Sessions[0].Muted && roundTrip.Sound.Volume == .75f, "Hardware snapshots must survive the framed JSON contract.");
+        var displayResult = new SettingsSnapshot(service.Epoch, "Display",
+            Displays: [new DisplayState("Screen", 1920, 1080, 60, true, @"\\.\DISPLAY1",
+                [new DisplayModeOption("1920x1080@60", 1920, 1080, 60)])],
+            Preview: new DisplayModePreview(@"\\.\DISPLAY1", "1920x1080@60", 12));
+        var displayRoundTrip = RuntimeProtocol.Payload<SettingsSnapshot>(RuntimeProtocol.Body(displayResult));
+        Check(displayRoundTrip.Preview is { SecondsRemaining: 12 }
+            && displayRoundTrip.Displays?.Single().Modes?.Single().Id == "1920x1080@60",
+            "Mode preview, selected adapter and typed resolutions must survive the Core IPC JSON contract.");
         var preferences = new ShellState { QuietNotifications = true, CompactDock = true, NativeGlass = false };
         Check(preferences.Snapshot().QuietNotifications && JsonSerializer.Deserialize<ShellState>(JsonSerializer.Serialize(preferences))!.QuietNotifications, "Quiet Nexus alerts must survive snapshot and restart.");
         Check(!JsonSerializer.Deserialize<ShellState>("{}")!.QuietNotifications, "Older profiles must keep normal alerts enabled.");
@@ -143,6 +172,9 @@ internal static class SettingsChecks
         Check(Marshal.SizeOf<BluetoothSettings.RadioInfo>() == 520 && Marshal.SizeOf<BluetoothSettings.DeviceInfo>() == 560, "Bluetooth info layouts");
         Check(Marshal.SizeOf<BluetoothSettings.DeviceSearch>() == 40 && Marshal.OffsetOf<BluetoothSettings.DeviceSearch>(nameof(BluetoothSettings.DeviceSearch.Radio)).ToInt32() == 32, "Bluetooth inquiry layout");
         Check(Marshal.SizeOf<DisplaySettings.Device>() == 840 && Marshal.SizeOf<DisplaySettings.Mode>() == 220, "DISPLAY_DEVICEW and DEVMODEW layouts");
+        Check(Marshal.OffsetOf<DisplaySettings.Mode>(nameof(DisplaySettings.Mode.Fields)).ToInt32() == 72
+            && Marshal.OffsetOf<DisplaySettings.Mode>(nameof(DisplaySettings.Mode.BitsPerPixel)).ToInt32() == 168,
+            "DEVMODEW change-field and color-depth offsets must be correct before native display writes.");
         Check(Marshal.SizeOf<PowerSettings.Status>() == 12, "SYSTEM_POWER_STATUS layout");
     }
     private static void WifiProfiles()

@@ -16,6 +16,7 @@
     <Compile Include="../../src/Nexus.Core/Settings/WifiProfile.cs" Link="Native/WifiProfile.cs" />
     <Compile Include="../../src/Nexus.Core/Settings/BluetoothSettings.cs" Link="Native/BluetoothSettings.cs" />
     <Compile Include="../../src/Nexus.Core/Settings/DisplaySettings.cs" Link="Native/DisplaySettings.cs" />
+    <Compile Include="../../src/Nexus.Core/Settings/DisplayModeCoordinator.cs" Link="Native/DisplayModeCoordinator.cs" />
     <Compile Include="../../src/Nexus.Core/Settings/PowerSettings.cs" Link="Native/PowerSettings.cs" />
     <Compile Include="../../src/Nexus.Core/Settings/WindowsSettingsBackend.cs" Link="Native/WindowsSettingsBackend.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/AudioController.cs" Link="Native/AudioController.cs" />

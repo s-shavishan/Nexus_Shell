@@ -21,6 +21,7 @@ internal sealed class WindowChrome : IDisposable
     [DllImport("dwmapi.dll")] private static extern int DwmSetWindowAttribute(IntPtr window, uint attribute, ref int value, uint size);
     private readonly IntPtr _handle;
     private readonly bool _resizable, _customClip;
+    private readonly Func<bool>? _resizeAllowed;
     private readonly int _minimumWidth, _minimumHeight;
     private readonly Action? _tuck;
     private readonly Action<bool>? _stateChanged;
@@ -45,11 +46,11 @@ internal sealed class WindowChrome : IDisposable
     internal bool RegionDecorationsEnabled => _regionsEnabled;
     internal bool? LastRegionRedraw { get; private set; }
     internal bool LiveResizeSuspended => _liveSizeUnclipped;
-    internal WindowChrome(IntPtr handle, bool resizable = false, bool customClip = false, Action? tuck = null, int minimumWidth = 480, int minimumHeight = 360, Action<bool>? stateChanged = null, Action? minimizeRequested = null, Action? closeRequested = null, string role = "Window")
+    internal WindowChrome(IntPtr handle, bool resizable = false, bool customClip = false, Action? tuck = null, int minimumWidth = 480, int minimumHeight = 360, Action<bool>? stateChanged = null, Action? minimizeRequested = null, Action? closeRequested = null, string role = "Window", Func<bool>? resizeAllowed = null)
     {
         _role = role;
         _minimumWidth = Math.Max(160, minimumWidth); _minimumHeight = Math.Max(160, minimumHeight);
-        _handle = handle; _resizable = resizable; _customClip = customClip; _tuck = tuck; _stateChanged = stateChanged; _minimizeRequested = minimizeRequested; _closeRequested = closeRequested; _callback = Message;
+        _handle = handle; _resizable = resizable; _resizeAllowed = resizeAllowed; _customClip = customClip; _tuck = tuck; _stateChanged = stateChanged; _minimizeRequested = minimizeRequested; _closeRequested = closeRequested; _callback = Message;
         if (!ShellLayerInterop.SetWindowSubclass(handle, _callback, _id, UIntPtr.Zero)) throw new Win32Exception("Could not attach the Nexus window frame.");
         // DWMNCRP_DISABLED removes Windows 10's bright non-client outline.
         int policy = 1; _ = DwmSetWindowAttribute(handle, 2, ref policy, 4);
@@ -139,7 +140,7 @@ internal sealed class WindowChrome : IDisposable
         _applying = true;
         try
         {
-            IntPtr region = clear ? IntPtr.Zero : CreateRoundRectRgn(rectangle.X, rectangle.Y, rectangle.Right + 1, rectangle.Bottom + 1, diameter, diameter);
+            IntPtr region = clear ? IntPtr.Zero : CreateRoundRectRgn(rectangle.X, rectangle.Y, rectangle.Right, rectangle.Bottom, diameter, diameter);
             if (!clear && region == IntPtr.Zero) throw new Win32Exception("Could not create the rounded Nexus window.");
             // SetWindowRgn transfers ownership to Windows only after success.
             LastRegionRedraw = LiveResizeRegionPolicy.RedrawAfterRestore;
@@ -153,7 +154,7 @@ internal sealed class WindowChrome : IDisposable
     }
     private IntPtr ResizeHit(IntPtr coordinates)
     {
-        if (!_resizable || _fullscreen || IsZoomed(_handle) || !GetWindowRect(_handle, out var rect)) return IntPtr.Zero;
+        if (!_resizable || _resizeAllowed?.Invoke() == false || _fullscreen || IsZoomed(_handle) || !GetWindowRect(_handle, out var rect)) return IntPtr.Zero;
         long value = coordinates.ToInt64();
         int x = unchecked((short)(value & 0xFFFF)), y = unchecked((short)((value >> 16) & 0xFFFF));
         int edge = Math.Max(4, (int)Math.Round(7 * ShellLayerInterop.Scale(_handle)));

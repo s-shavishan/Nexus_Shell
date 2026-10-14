@@ -73,11 +73,29 @@ public sealed class WindowLayouts
                 if (move.Maximized)
                 {
                     Validate(move.Window);
-                    if (!ShowWindowAsync(move.Window.Handle, 3)) throw new Win32Exception(Marshal.GetLastWin32Error());
+                    // ShowWindowAsync reports whether the window WAS visible,
+                    // not whether maximizing succeeded. A minimized/hidden app
+                    // legitimately returns false here; treating it as failure
+                    // caused false rollback and lost staged layouts.
+                    _ = ShowWindowAsync(move.Window.Handle, 3);
+                    Validate(move.Window);
                 }
             }
         }
-        catch { foreach (var entry in before) TryRestore(entry); throw; }
+        catch (Exception applyError)
+        {
+            // Restore in reverse native move order, retaining the exact HWND
+            // ownership guard. Do not claim success when a window closed or a
+            // foreign process replaced its handle midway through the batch.
+            int failed = 0;
+            for (int i = before.Count - 1; i >= 0; i--)
+                if (!TryRestore(before[i])) failed++;
+            if (failed > 0)
+                throw new InvalidOperationException(
+                    $"Placement interrupted; {failed} previous window positions could not be restored. Check the affected apps.",
+                    applyError);
+            throw;
+        }
         _undo.Clear(); _undo.AddRange(before); return moves.Count;
     }
     public int Undo()
