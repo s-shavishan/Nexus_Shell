@@ -1,7 +1,7 @@
 namespace Nexus.Shell.Services;
 
-// Only the observed Desktop Window Manager helper is excluded. This does
-// not blacklist an entire Windows process or legitimate user windows.
+// Only observed Window Manager helpers are excluded; ordinary windows must
+// remain discoverable regardless of their display name.
 public static class DockPinnedWindowPolicy
 {
     public static bool IsShellArtifact(string? title, string? process)
@@ -13,17 +13,36 @@ public static class DockPinnedWindowPolicy
         if (string.IsNullOrWhiteSpace(target) || string.IsNullOrWhiteSpace(process)) return false;
         if (target.StartsWith("nexus:", StringComparison.OrdinalIgnoreCase))
         {
+            // Nexus Files is a separate supervised Nexus.Shell.exe worker,
+            // not an in-process utility. Its native caption changes to
+            // "<folder> · Nexus Files" during navigation; the old policy
+            // expected a process named "nexus" and a fixed title "Files",
+            // so the pinned Files icon could NEVER own its running entry.
+            if (target.Equals("nexus:files", StringComparison.OrdinalIgnoreCase))
+                return string.Equals(process, "Nexus.Shell", StringComparison.OrdinalIgnoreCase)
+                    && (string.Equals(title, "Files · Nexus", StringComparison.OrdinalIgnoreCase)
+                        || (title?.EndsWith(" · Nexus Files", StringComparison.OrdinalIgnoreCase) ?? false));
             if (!string.Equals(process, "nexus", StringComparison.OrdinalIgnoreCase)) return false;
             string? expected = target.ToLowerInvariant() switch
             {
                 "nexus:calculator" => "Calculator", "nexus:notes" => "Notes",
-                "nexus:files" => "Files", "nexus:controls" => "Nexus Controls",
+                "nexus:controls" => "Nexus Controls",
                 "nexus:jobs" => "File jobs", _ => null
             };
             return expected is not null && string.Equals(expected, title, StringComparison.OrdinalIgnoreCase);
         }
         if (!target.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) return false;
         string last = target.Replace('\\', '/').Split('/').Last();
-        return last.Length > 4 && string.Equals(last[..^4], process, StringComparison.OrdinalIgnoreCase);
+        if (last.Length > 4 && string.Equals(last[..^4], process, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        // Windows 10/11 System32 calc.exe is a launcher, whereas its
+        // packaged window belongs to CalculatorApp.exe. Match this one known
+        // Windows identity translation; never use fuzzy title-only matching
+        // or a user-provided generic "calc.exe" from another directory.
+        string normalized = target.Replace('\\', '/');
+        return string.Equals(name, "Calculator", StringComparison.OrdinalIgnoreCase)
+            && normalized.EndsWith("/Windows/System32/calc.exe", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(process, "CalculatorApp", StringComparison.OrdinalIgnoreCase);
     }
 }
