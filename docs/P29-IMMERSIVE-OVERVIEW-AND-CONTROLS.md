@@ -192,3 +192,14 @@ This branch remains a **draft**. None of these source changes was verified on a 
 6. Confirm compatibility with negative-origin monitors, mixed DPI and a Windows 10 virtual GPU that exposes only one display mode.
 
 **Source-level check:** 11/11 targeted cross-file assertions passed for the new overview state, pointer-capture placement path, Runtime confirmation checks, and unchanged file context-menu integration. These are not .NET compiler or native UI acceptance results.
+
+
+## P2.9 continuation — retained preview geometry (2026-10-14)
+
+- Both the floating dock's preview card and the fullscreen overview use the same `WindowThumbnail` DWM wrapper. During rapid WinUI `LayoutUpdated` events, a fully attached thumbnail now avoids native source-size queries and property updates when its viewport is unchanged for less than **300 ms**. Windows' DWM composition keeps the thumbnail live; Nexus periodically queries source dimensions so external window resizing/aspect-ratio changes remain reflected.
+- Early eligibility checks for closed, minimized, hidden and cloaked HWNDs still run on every update, before the geometry cache. Source validation never accepts a stale process-owned HWND merely because the viewport was unchanged.
+- Resize, DPI/viewport changes, failure to attach, and disposal invalidate the cached geometry. The cache is per thumbnail instance and is never shared across user applications.
+- Portable `DockChecks` cover same-viewport reuse, timeout expiry, changed viewport, absent attachment, missing cache and negative tick deltas.
+- This should reduce unnecessary DWM API calls in the Windows 10 VM. **Performance impact, native thumbnail quality, and interaction correctness still require measured Windows tests.**
+
+**Latest source-level interaction gate:** after staging an overview window, clicking an app card does not silently discard the arrangement; drag-click suppression applies only to the card just dragged. Core also rejects a stale Display Keep confirmation if an external settings change altered the live resolution or reported Hz.
