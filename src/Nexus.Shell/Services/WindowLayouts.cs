@@ -73,7 +73,12 @@ public sealed class WindowLayouts
                 if (move.Maximized)
                 {
                     Validate(move.Window);
-                    if (!ShowWindowAsync(move.Window.Handle, 3)) throw new Win32Exception(Marshal.GetLastWin32Error());
+                    // ShowWindowAsync reports whether the window WAS visible,
+                    // not whether maximizing succeeded. A minimized/hidden app
+                    // legitimately returns false here; treating it as failure
+                    // caused false rollback and lost staged layouts.
+                    _ = ShowWindowAsync(move.Window.Handle, 3);
+                    Validate(move.Window);
                 }
             }
         }
