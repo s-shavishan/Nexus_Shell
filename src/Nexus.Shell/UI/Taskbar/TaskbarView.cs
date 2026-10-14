@@ -22,7 +22,7 @@ internal sealed class TaskbarView : Grid
     private readonly Border _launchIsland = new() { CornerRadius = new CornerRadius(17), BorderThickness = new Thickness(0), VerticalAlignment = VerticalAlignment.Center };
     private readonly Border _appsIsland = new() { CornerRadius = new CornerRadius(19), BorderThickness = new Thickness(0), VerticalAlignment = VerticalAlignment.Center };
     private readonly Border _utilityIsland = new() { CornerRadius = new CornerRadius(17), BorderThickness = new Thickness(0), VerticalAlignment = VerticalAlignment.Center };
-    private readonly Border _topGlint = new() { Height = 1, Opacity = .55, IsHitTestVisible = false, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(8, 0, 8, 0) };
+    private readonly Border _topGlint = new() { Height = 1, Opacity = .28, IsHitTestVisible = false, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(8, 0, 8, 0) };
     private bool _islandsEmphasized;
     private readonly StackPanel _pins = new() { Orientation = Orientation.Horizontal, Spacing = 7 };
     private readonly StackPanel _windows = new() { Orientation = Orientation.Horizontal, Spacing = 7 };
@@ -777,7 +777,8 @@ internal sealed class TaskbarView : Grid
         _motion?.SetEnabled(motionEnabled); _dockMotion?.SetEnabled(motionEnabled);
         ApplyFrameCorners();
         if (!MaterialOwnedByWindow) GlassPaintRetention.Edge(_frame, theme.Edge);
-        if (!_frame.BorderThickness.Equals(new Thickness(1))) _frame.BorderThickness = new Thickness(1);
+        if (!_frame.BorderThickness.Equals(new Thickness(theme.HighContrast ? 1 : 0)))
+            _frame.BorderThickness = new Thickness(theme.HighContrast ? 1 : 0);
         ApplyVisualIslands();
         var border = theme.Brush("NexusBorder"); var text = theme.Brush("NexusText"); var muted = theme.Brush("NexusMuted");
         if (!ReferenceEquals(_separator.Background, border)) _separator.Background = border;
@@ -803,9 +804,9 @@ internal sealed class TaskbarView : Grid
         // All materials are cached in ShellTheme. Applying the same look
         // never restarts an animation, re-enumerates HWNDs or edits Frame.
         var edge = emphasize ? theme.Edge : _transparent;
-        PaintIsland(_launchIsland, emphasize ? theme.Surface("Hero") : _transparent, edge, emphasize, 17);
-        PaintIsland(_appsIsland, emphasize ? theme.Surface("Sidebar") : _transparent, edge, emphasize, 19);
-        PaintIsland(_utilityIsland, emphasize ? theme.Surface("Sidebar") : _transparent, edge, emphasize, 17);
+        PaintIsland(_launchIsland, emphasize ? theme.Surface("Hero") : _transparent, edge, emphasize, 14);
+        PaintIsland(_appsIsland, emphasize ? theme.Surface("Sidebar") : _transparent, edge, emphasize, 15);
+        PaintIsland(_utilityIsland, emphasize ? theme.Surface("Sidebar") : _transparent, edge, emphasize, 14);
         var glintVisibility = emphasize ? Visibility.Visible : Visibility.Collapsed;
         if (_topGlint.Visibility != glintVisibility) _topGlint.Visibility = glintVisibility;
         if (emphasize && !ReferenceEquals(_topGlint.Background, edge))
@@ -817,7 +818,9 @@ internal sealed class TaskbarView : Grid
     {
         if (!ReferenceEquals(island.Background, background)) island.Background = background;
         if (!ReferenceEquals(island.BorderBrush, edge)) island.BorderBrush = edge;
-        var thickness = new Thickness(emphasized ? 1 : 0);
+        // The outer dock already owns the sole glass rim. Inset islands use
+        // tonal separation, not a second hard border around every icon.
+        var thickness = new Thickness(0);
         if (!island.BorderThickness.Equals(thickness)) island.BorderThickness = thickness;
         var corners = new CornerRadius(radius);
         if (!island.CornerRadius.Equals(corners)) island.CornerRadius = corners;
