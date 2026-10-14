@@ -57,7 +57,7 @@ internal sealed class QuickSettingsWindow : Window
         var bounds = new ShellRect(monitor.X, monitor.Y, monitor.Width, monitor.Height);
         var anchor = _environment.Snapshot.Desired.Anchor;
         var rect = _compact ? DesktopLayout.AnchoredQuickControlBounds(bounds, monitor.Scale, _environment.Snapshot.Desired.Section,
-            anchor is null ? null : new ShellRect(anchor.X, anchor.Y, anchor.Width, anchor.Height)) : DesktopLayout.PanelBounds(bounds, monitor.Scale, 540, 740);
+            anchor is null ? null : new ShellRect(anchor.X, anchor.Y, anchor.Width, anchor.Height)) : DesktopLayout.PanelBounds(bounds, monitor.Scale, 512, 656);
         ShellLayerInterop.SetWindowPos(_handle, ShellLayerInterop.Topmost, rect.X, rect.Y, rect.Width, rect.Height, 0x0010);
     }
     internal void HideSurface() { if (_closed || !IsOpen) return; IsOpen = false; _frame.IsHitTestVisible = false; _view.Hide(); _window.Hide(); _motion.Hide(); }
