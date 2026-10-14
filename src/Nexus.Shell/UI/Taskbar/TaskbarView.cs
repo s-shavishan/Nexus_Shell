@@ -16,6 +16,14 @@ internal sealed class TaskbarView : Grid
     private readonly Border _frame = new();
     private readonly SolidColorBrush _transparent = new(Microsoft.UI.Colors.Transparent);
     private readonly Grid _body = new() { ColumnSpacing = 14, Padding = new Thickness(18, 10, 18, 10) };
+    // Each inset island is *inside* the window-owned material surface. Never
+    // repaint Frame here: native acrylic and its opaque fallback remain owned
+    // exclusively by TaskbarWindow / WindowMaterial.
+    private readonly Border _launchIsland = new() { CornerRadius = new CornerRadius(17), BorderThickness = new Thickness(0), VerticalAlignment = VerticalAlignment.Center };
+    private readonly Border _appsIsland = new() { CornerRadius = new CornerRadius(19), BorderThickness = new Thickness(0), VerticalAlignment = VerticalAlignment.Center };
+    private readonly Border _utilityIsland = new() { CornerRadius = new CornerRadius(17), BorderThickness = new Thickness(0), VerticalAlignment = VerticalAlignment.Center };
+    private readonly Border _topGlint = new() { Height = 1, Opacity = .55, IsHitTestVisible = false, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(8, 0, 8, 0) };
+    private bool _islandsEmphasized;
     private readonly StackPanel _pins = new() { Orientation = Orientation.Horizontal, Spacing = 7 };
     private readonly StackPanel _windows = new() { Orientation = Orientation.Horizontal, Spacing = 7 };
     private readonly TextBlock _time = new() { FontSize = 12, TextAlignment = TextAlignment.Right };
@@ -85,14 +93,16 @@ internal sealed class TaskbarView : Grid
         _body.ColumnDefinitions.Add(new() { Width = GridLength.Auto }); _body.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) }); _body.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
         var start = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
         _start = IconButton("Launchpad", "Launchpad", () => environment.ShowMenu(), true); start.Children.Add(_start);
-        _body.Children.Add(start);
+        _launchIsland.Child = start;
+        _body.Children.Add(_launchIsland);
         var middle = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 16, VerticalAlignment = VerticalAlignment.Center };
         _separator = new Border { Width = 1, Height = 34, VerticalAlignment = VerticalAlignment.Center };
         middle.Children.Add(_pins); middle.Children.Add(_separator); middle.Children.Add(_windows);
         var scroll = new ScrollViewer { Content = middle, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
             HorizontalScrollMode = ScrollMode.Enabled, VerticalScrollMode = ScrollMode.Disabled, VerticalAlignment = VerticalAlignment.Center };
         scroll.ViewChanged += (_, _) => _environment.HideDockPreview();
-        Grid.SetColumn(scroll, 1); _body.Children.Add(scroll);
+        _appsIsland.Child = scroll;
+        Grid.SetColumn(_appsIsland, 1); _body.Children.Add(_appsIsland);
         var status = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
         _overview = IconButton("Windows", "Switch windows", environment.ShowWindowOverview, true); status.Children.Add(_overview);
         var clock = new StackPanel { Spacing = 2 }; clock.Children.Add(_time); clock.Children.Add(_date);
@@ -101,7 +111,9 @@ internal sealed class TaskbarView : Grid
         _desktopButton = new Button { Width = 24, Height = 40, Content = new FontIcon { FontFamily = new FontFamily("Segoe MDL2 Assets"), Glyph = "\uE740", FontSize = 13 }, Style = (Style)Application.Current.Resources["QuietButton"], Padding = new Thickness(0) };
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_desktopButton, "Show Nexus desktop"); ToolTipService.SetToolTip(_desktopButton, "Show Nexus desktop");
         _desktopButton.Click += (_, _) => environment.ShowDesktop(); status.Children.Add(_desktopButton);
-        Grid.SetColumn(status, 2); _body.Children.Add(status);
+        _utilityIsland.Child = status;
+        Grid.SetColumn(_utilityIsland, 2); _body.Children.Add(_utilityIsland);
+        Grid.SetColumnSpan(_topGlint, 3); _body.Children.Add(_topGlint);
         _hoverTick = (_, _) =>
         {
             _hoverTimer.Stop(); var item = _hoverItem; _hoverItem = null;
@@ -634,6 +646,10 @@ internal sealed class TaskbarView : Grid
         SetVisible(_clockButton, widthDip >= 480 && !_environment.Session.State.FloatingTaskbar);
         SetVisible(_desktopButton, widthDip >= 600);
         SetVisible(_date, widthDip >= 620);
+        // Avoid a blank decorative plate when all utility controls are hidden
+        // by narrow desktop widths. The running-app zone remains scrollable.
+        SetVisible(_utilityIsland, _overview.Visibility == Visibility.Visible
+            || _clockButton.Visibility == Visibility.Visible || _desktopButton.Visibility == Visibility.Visible);
     }
     internal void RefreshClock()
     {
@@ -658,6 +674,7 @@ internal sealed class TaskbarView : Grid
         ApplyFrameCorners();
         if (!MaterialOwnedByWindow) GlassPaintRetention.Edge(_frame, theme.Edge);
         if (!_frame.BorderThickness.Equals(new Thickness(1))) _frame.BorderThickness = new Thickness(1);
+        ApplyVisualIslands();
         var border = theme.Brush("NexusBorder"); var text = theme.Brush("NexusText"); var muted = theme.Brush("NexusMuted");
         if (!ReferenceEquals(_separator.Background, border)) _separator.Background = border;
         if (!ReferenceEquals(_time.Foreground, text)) _time.Foreground = text;
@@ -673,6 +690,61 @@ internal sealed class TaskbarView : Grid
         RefreshWindowStates();
         ApplyDensity(); RefreshClock();
     }
+    private void ApplyVisualIslands()
+    {
+        var theme = _environment.Theme;
+        bool emphasize = MidnightGlassMetrics.ReferenceEnabled(theme.Palette, theme.HighContrast)
+            && _environment.Session.State.FloatingTaskbar
+            && !theme.Simple;
+        // No extra compositor controllers or timers; retain all paints from
+        // ShellTheme's cache and skip identical assignments every refresh.
+        var edge = emphasize ? theme.Edge : _transparent;
+        var backgrounds = emphasize
+            ? new[] { theme.Surface("Hero"), theme.Surface("Sidebar"), theme.Surface("Sidebar") }
+            : new Microsoft.UI.Xaml.Media.Brush[] { _transparent, _transparent, _transparent };
+        Border[] islands = [_launchIsland, _appsIsland, _utilityIsland];
+        for (int index = 0; index < islands.Length; index++)
+        {
+            var island = islands[index];
+            if (!ReferenceEquals(island.Background, backgrounds[index])) island.Background = backgrounds[index];
+            if (!ReferenceEquals(island.BorderBrush, edge)) island.BorderBrush = edge;
+            var thickness = new Thickness(emphasize ? 1 : 0);
+            if (!island.BorderThickness.Equals(thickness)) island.BorderThickness = thickness;
+            var corners = new CornerRadius(theme.HighContrast ? 0 : index == 1 ? 19 : 17);
+            if (!island.CornerRadius.Equals(corners)) island.CornerRadius = corners;
+        }
+        var glintVisibility = emphasize ? Visibility.Visible : Visibility.Collapsed;
+        if (_topGlint.Visibility != glintVisibility) _topGlint.Visibility = glintVisibility;
+        if (emphasize && !ReferenceEquals(_topGlint.Background, theme.Edge))
+            _topGlint.Background = theme.Edge;
+        _islandsEmphasized = emphasize;
+    }
+
+    // Native test exercises actual production composition and retained
+    // properties, not a screenshot proxy or synthetic mock window.
+    internal void VerifyVisualIslands()
+    {
+        ApplyVisualIslands();
+        if (!ReferenceEquals(_body.Children[0], _launchIsland)
+            || !ReferenceEquals(_body.Children[1], _appsIsland)
+            || !ReferenceEquals(_body.Children[2], _utilityIsland)
+            || !ReferenceEquals(_launchIsland.Child, _start.Parent as StackPanel)
+            || _appsIsland.Child is not ScrollViewer
+            || _utilityIsland.Child is not StackPanel
+            || _topGlint.IsHitTestVisible
+            || _topGlint.Height != 1)
+            throw new InvalidOperationException("The floating dock lost its three functional glass zones.");
+        var brushes = new[] { _launchIsland.Background, _appsIsland.Background, _utilityIsland.Background };
+        var edges = new[] { _launchIsland.BorderBrush, _appsIsland.BorderBrush, _utilityIsland.BorderBrush };
+        for (int n = 0; n < 100; n++) ApplyVisualIslands();
+        for (int n = 0; n < 3; n++)
+            if (!ReferenceEquals(brushes[n], new[] { _launchIsland.Background, _appsIsland.Background, _utilityIsland.Background }[n])
+                || !ReferenceEquals(edges[n], new[] { _launchIsland.BorderBrush, _appsIsland.BorderBrush, _utilityIsland.BorderBrush }[n]))
+                throw new InvalidOperationException("Unchanged dock island appearance recreated paint resources.");
+        if (_islandsEmphasized && _topGlint.Visibility != Visibility.Visible)
+            throw new InvalidOperationException("Midnight floating dock lost its edge-lighting cue.");
+    }
+
     internal void Release()
     {
         if (_released) return; _released = true; CancelPreviewRequest(); _hoverTimer.Tick -= _hoverTick;
