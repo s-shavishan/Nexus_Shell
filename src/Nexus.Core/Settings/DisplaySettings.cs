@@ -42,7 +42,8 @@ internal static class DisplaySettings
     internal static string ModeId(Mode mode) => mode.Width + "x" + mode.Height + "@" + mode.Frequency;
     private static bool Accept(Mode mode)
         => mode.Width is >= 640 and <= 16384 && mode.Height is >= 480 and <= 16384
-        && mode.Frequency is >= 23 and <= 360;
+        && mode.Frequency is >= 23 and <= 360
+        && mode.BitsPerPixel >= 32;
 
     internal static Mode CurrentMode(string id)
     {
@@ -90,7 +91,7 @@ internal static class DisplaySettings
     }
     [StructLayout(LayoutKind.Explicit, Size = 220)] internal struct Mode
     { [FieldOffset(68)] public ushort Size; [FieldOffset(72)] public uint Fields;
-      [FieldOffset(172)] public uint Width; [FieldOffset(176)] public uint Height; [FieldOffset(184)] public uint Frequency; }
+      [FieldOffset(168)] public uint BitsPerPixel; [FieldOffset(172)] public uint Width; [FieldOffset(176)] public uint Height; [FieldOffset(184)] public uint Frequency; }
     [DllImport("user32.dll", EntryPoint = "EnumDisplayDevicesW", CharSet = CharSet.Unicode)] [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool EnumDisplayDevices(string? device, uint index, ref Device info, uint flags);
     [DllImport("user32.dll", EntryPoint = "EnumDisplaySettingsW", CharSet = CharSet.Unicode)] [return: MarshalAs(UnmanagedType.Bool)]
