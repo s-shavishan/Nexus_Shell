@@ -273,7 +273,7 @@ internal sealed class TaskbarView : Grid
     private DockItem CreateWindowButton(RunningWindow window)
     {
         var item = new DockItem(window) { NewlyOpened = _baselineReconciled };
-        string icon = window.ProcessId == Environment.ProcessId ? window.Title switch { "Sections" => "Apps", "Notes" => "Note", "Calculator" => "Calculator", _ => "Files" } : NexusIcons.ForProcess(window.ProcessName);
+        string icon = window.ProcessId == Environment.ProcessId ? window.Title switch { "Nexus Controls" => "Controls", "Notes" => "Note", "Calculator" => "Calculator", _ => "Files" } : NexusIcons.ForProcess(window.ProcessName);
         var face = new Grid(); var iconHost = new Grid(); item.Icon = NexusIcons.Image(icon, 46); iconHost.Children.Add(item.Icon); face.Children.Add(iconHost);
         item.Indicator = new Border { Width = 22, Height = 3, CornerRadius = new CornerRadius(2), VerticalAlignment = VerticalAlignment.Bottom, HorizontalAlignment = HorizontalAlignment.Center };
         face.Children.Add(item.Indicator);

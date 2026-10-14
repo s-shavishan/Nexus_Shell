@@ -73,8 +73,8 @@ internal sealed class SearchWindow : DesktopPanelWindow
         }
         QuickApp("Launchpad", "Launchpad", () => Environment.ShowMenu());
         QuickApp("Files", "Files", () => Environment.ShowFiles());
-        QuickApp("Explore", "Explore", () => Environment.ShowSections("Explore"));
-        QuickApp("Notes", "Note", () => Environment.ShowSections("Study"));
+        QuickApp("Controls", "Controls", () => Environment.ShowControls());
+        QuickApp("Notes", "Note", () => Environment.OpenTarget("nexus:notes"));
         QuickApp("Settings", "Settings", () => Environment.ShowQuickSettings());
         QuickApp("Windows", "Windows", () => Environment.ShowWindowOverview());
         _launchFrame.Child = new ScrollViewer

@@ -18,7 +18,7 @@ internal sealed class DesktopMenus(DesktopEnvironment environment)
         var sort = new MenuFlyoutSubItem { Text = "Sort desktop icons" };
         foreach (string order in new[] { "Name", "Kind", "Newest" }) { var choice = new ToggleMenuFlyoutItem { Text = order, IsChecked = environment.Session.State.DesktopIconOrder == order }; choice.Click += (_, _) => environment.SetDesktopOrder(order); sort.Items.Add(choice); } menu.Items.Add(sort);
         var icons = new ToggleMenuFlyoutItem { Text = "Show desktop icons", IsChecked = environment.Session.State.ShowDesktopIcons }; icons.Click += (_, _) => environment.ToggleDesktopIcons(); menu.Items.Add(icons);
-        menu.Items.Add(Item("Open Sections", () => environment.ShowSections()));
+        menu.Items.Add(Item("Nexus Controls…", () => environment.ShowControls()));
         menu.Items.Add(Item("Control Center", environment.ShowQuickSettings));
         menu.Items.Add(Item("Windows tools", environment.ShowWindowsTools));
         menu.Items.Add(Item("Launchpad", () => environment.ShowMenu()));
@@ -30,13 +30,13 @@ internal sealed class DesktopMenus(DesktopEnvironment environment)
         menu.Items.Add(Item("Window board", environment.ShowWindowOverview));
         menu.Items.Add(new MenuFlyoutSeparator());
         menu.Items.Add(Item("Open desktop folder", () => environment.OpenTarget(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory))));
-        menu.Items.Add(Item("Personalize", () => environment.ShowSections("Personalize")));
+        menu.Items.Add(Item("Personalize", () => environment.ShowControls("Personalize")));
         return menu;
     }
     internal MenuFlyout NexusMenu()
     {
-        var menu = new MenuFlyout(); menu.Items.Add(Item("About Nexus Shell", () => environment.ShowSections("Personalize")));
-        menu.Items.Add(Item("Nexus Settings…", () => environment.OpenTarget("nexus:settings")));
+        var menu = new MenuFlyout(); menu.Items.Add(Item("About this session", () => environment.ShowControls("core")));
+        menu.Items.Add(Item("Nexus Controls…", () => environment.OpenTarget("nexus:controls")));
         menu.Items.Add(Item("Session status…", environment.ShowSessionStatus));
         menu.Items.Add(Item("Windows tools & keep awake…", environment.ShowWindowsTools));
         menu.Items.Add(Item("Search…", environment.ShowSearch));
@@ -59,13 +59,13 @@ internal sealed class DesktopMenus(DesktopEnvironment environment)
         menu.Items.Add(Item("Clipboard shelf", environment.ShowClipboardShelf)); menu.Items.Add(Item("Session status", environment.ShowSessionStatus));
         menu.Items.Add(Item("Places", environment.ShowPlaces)); menu.Items.Add(Item("Desktop shortcuts", environment.ShowDesktopGuide));
         menu.Items.Add(Item("Windows tools", environment.ShowWindowsTools));
-        menu.Items.Add(Item("Desktop appearance…", () => environment.ShowSections("Personalize"))); menu.Items.Add(Item("Focus desktop", () => { environment.Session.State.FocusMode = !environment.Session.State.FocusMode; environment.SaveState(); })); return menu;
+        menu.Items.Add(Item("Desktop appearance…", () => environment.ShowControls("Personalize"))); menu.Items.Add(Item("Focus desktop", () => { environment.Session.State.FocusMode = !environment.Session.State.FocusMode; environment.SaveState(); })); return menu;
     }
     internal MenuFlyout WindowMenu()
     {
         var menu = new MenuFlyout(); menu.Items.Add(Item("Window board & layouts", environment.ShowWindowOverview)); menu.Items.Add(Item("Show desktop", environment.ShowDesktop));
         menu.Items.Add(Item("Repair maximized window layout", environment.RepairDesktopLayout));
-        menu.Items.Add(Item("Nexus Sections", () => environment.ShowSections())); return menu;
+        menu.Items.Add(Item("Nexus Controls", () => environment.ShowControls())); return menu;
     }
     internal MenuFlyout InputLanguageMenu()
     {
@@ -115,7 +115,7 @@ internal sealed class DesktopMenus(DesktopEnvironment environment)
             else
             {
                 menu.Items.Add(Item("Launchpad", () => environment.ShowMenu())); menu.Items.Add(Item("Control Center", environment.ShowQuickSettings));
-                menu.Items.Add(Item("Refresh desktop", environment.RefreshDesktop)); menu.Items.Add(Item("Personalize", () => environment.ShowSections("Personalize")));
+                menu.Items.Add(Item("Refresh desktop", environment.RefreshDesktop)); menu.Items.Add(Item("Personalize", () => environment.ShowControls("Personalize")));
             }
         };
         return menu;

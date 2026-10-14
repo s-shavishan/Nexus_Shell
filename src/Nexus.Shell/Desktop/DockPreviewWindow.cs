@@ -207,7 +207,7 @@ internal sealed class DockPreviewWindow : Window
     }
     private static string IconFor(RunningWindow window)
         => window.ProcessId == Environment.ProcessId
-            ? window.Title == "Sections" ? "Apps" : "Files"
+            ? window.Title == "Nexus Controls" ? "Controls" : "Files"
             : NexusIcons.ForProcess(window.ProcessName);
 
     internal void RefreshWindows(IReadOnlyList<RunningWindow> windows)

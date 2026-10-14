@@ -124,7 +124,7 @@ public partial class App : Application
             };
             _environment.Start(_startup.Report);
             _startup.Complete(); _startup = null;
-            Log.Write("Desktop and taskbar started; Sections opens on demand");
+            Log.Write("Desktop and taskbar started; Nexus Controls opens on demand");
         }
         catch (Exception ex)
         {

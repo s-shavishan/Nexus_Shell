@@ -13,7 +13,7 @@ public static class DesktopCatalog
     {
         var items = new List<DesktopShortcut>
         {
-            new("sections", "Sections", "ms-appx:///Assets/Icons/Apps.svg", "nexus:sections"),
+            new("controls", "Nexus Controls", "ms-appx:///Assets/Icons/Controls.svg", "nexus:controls"),
             new("files", "My files", "ms-appx:///Assets/Icons/Files.svg", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)),
             new("recycle", "Recycle Bin", "ms-appx:///Assets/Icons/Windows.svg", "nexus:recycle")
         };

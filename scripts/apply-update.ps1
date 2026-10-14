@@ -99,7 +99,7 @@ try {
     }
     Move-Item $stage $target
     Write-Host "Nexus $($manifest.AppVersion) is ready in: $target" -ForegroundColor Green
-    Write-Host 'Open Nexus.Shell.exe from the new folder to preview it. Select the new host in Personalize before your next sign-in.'
+    Write-Host 'Open Nexus.Shell.exe from the new folder to preview it. Select the new host in Nexus Controls → Startup & session before your next sign-in.'
 } finally {
     if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
 }

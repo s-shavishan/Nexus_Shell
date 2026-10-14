@@ -29,5 +29,5 @@ internal sealed partial class DesktopEnvironment
     private UtilityWindow? UtilityFor(RunningWindow window) => _utilities.Values.FirstOrDefault(w => w.Handle == window.Handle);
     private IEnumerable<RunningWindow> UtilityWindows() => _utilities.Values.Select(w => new RunningWindow(w.Handle, w.UtilityTitle, "nexus", Environment.ProcessId));
     private bool IsOwnAppWindow(IntPtr handle) => _utilities.Values.Any(w => w.Handle == handle)
-        || _sections is not null && WinRT.Interop.WindowNative.GetWindowHandle(_sections) == handle;
+        || _controlsWindow is not null && WinRT.Interop.WindowNative.GetWindowHandle(_controlsWindow) == handle;
 }

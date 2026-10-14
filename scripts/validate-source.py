@@ -16,8 +16,9 @@ required = [
     "Desktop/DesktopEnvironment.cs", "Desktop/DesktopWindow.cs", "Desktop/TaskbarWindow.cs", "Desktop/MenuWindow.cs",
     "UI/Desktop/DesktopSurface.cs", "UI/Taskbar/TaskbarView.cs", "UI/Menus/DesktopMenus.cs", "UI/Menus/StartMenuView.cs", "UI/ShellTheme.cs",
     "Services/ShellSession.cs", "Services/DesktopLayout.cs", "Services/DesktopCatalog.cs", "Interop/ShellLayerInterop.cs", "Interop/TaskbarRegistration.cs",
-    "MainWindow.Polish.cs", "MainWindow.PcControls.cs", "Services/AudioController.cs", "Services/PcMetrics.cs", "Services/WindowLayouts.cs",
-    "App.xaml", "App.xaml.cs", "MainWindow.xaml", "MainWindow.xaml.cs", "MainWindow.Workspaces.cs", "MainWindow.Orbit.cs", "MainWindow.Desktop.cs", "MainWindow.Appearance.cs", "MainWindow.Experience.cs", "MainWindow.Explore.cs", "MainWindow.Overview.cs", "Services/ExploreWorkspace.cs", "UI/SavedKindConverter.cs", "UI/NexusIcons.cs", "Services/NavigationTrail.cs", "Services/ShellExperience.cs", "Services/AuraPalette.cs", "Services/DesktopWorkspace.cs", "Interop/DesktopIntegration.cs",
+    "Services/AudioController.cs", "Services/PcMetrics.cs", "Services/WindowLayouts.cs",
+    "MainWindow.Controls.cs", "Services/NexusControlsCatalog.cs", "Assets/Icons/Controls.svg",
+    "App.xaml", "App.xaml.cs", "MainWindow.xaml", "MainWindow.xaml.cs", "Services/ExploreWorkspace.cs", "UI/SavedKindConverter.cs", "UI/NexusIcons.cs", "Services/NavigationTrail.cs", "Services/ShellExperience.cs", "Services/AuraPalette.cs", "Services/DesktopWorkspace.cs", "Interop/DesktopIntegration.cs",
     "Services/FocusSession.cs", "Services/CommandSearch.cs", "Services/WorkspaceState.cs",
     "Nexus.Shell.csproj", "app.manifest", "Assets/Nexus.ico",
     "Interop/NativeMethods.cs", "Models/ShellState.cs", "Services/AppCatalog.cs",
@@ -171,19 +172,22 @@ main_dictionary = application.find(pns + "Application.Resources/" + pns + "Resou
 fallback_keys = {node.attrib[xns + "Key"] for node in main_dictionary if xns + "Key" in node.attrib}
 assert used_theme_keys <= fallback_keys, f"Missing fallback resources: {used_theme_keys - fallback_keys}"
 
-# Guard the library's finite viewport; an outer ScrollViewer/StackPanel would
-# reintroduce full realization of all discovered application tiles.
+# Controls has bounded, static settings pages inside a finite viewport. The
+# removed Sections app/catalog grids must not remain as a second settings UI.
 parents = {child: parent for parent in window.iter() for child in parent}
-for grid_name in ["AppsGrid", "WindowsGrid", "ExploreGrid"]:
-    grid = next(node for node in window.iter() if node.attrib.get(xns + "Name") == grid_name)
-    ancestor = parents[grid]
-    while ancestor is not window:
-        assert ancestor.tag.rsplit("}", 1)[-1] not in {"ScrollViewer", "StackPanel"}, f"Unbounded {grid_name} viewport"
-        ancestor = parents[ancestor]
-page_host = next(node for node in window.iter() if node.attrib.get(xns + "Name") == "PageHost")
-overview = next(node for node in window.iter() if node.attrib.get(xns + "Name") == "WindowOverviewView")
-assert parents[overview] is page_host, "Window overview must be inside the page host"
-assert "AppsGrid.ItemsSource =" in code and "grid.Items.Add(AppButton" not in code
+assert not {"AppsGrid", "WindowsGrid", "ExploreGrid", "NavStudy", "NavExplore"} & set(names), "Retired Sections content remains"
+for name in ["Navigation", "CompactNavigation", "SettingsSearch", "PageScroll", "PageContent", "ControlsDragArea"]:
+    assert name in names, f"Controls navigation/content is missing: {name}"
+search = next(node for node in window.iter() if node.attrib.get(xns + "Name") == "SettingsSearch")
+assert search.attrib.get("MaxLength") == "160", "Controls search input must be bounded"
+scroll = next(node for node in window.iter() if node.attrib.get(xns + "Name") == "PageScroll")
+ancestor = parents[scroll]
+while ancestor is not window:
+    assert ancestor.tag.rsplit("}", 1)[-1] not in {"ScrollViewer", "StackPanel"}, "Unbounded Controls viewport"
+    ancestor = parents[ancestor]
+assert 'NativeWindowTitle = "Nexus Controls"' in code and "NexusControlsCatalog.Find" in code
+assert '"nexus:controls"' in (project / "Services/DesktopCatalog.cs").read_text()
+assert 'new MainWindow(environment, validation: true)' in (project / "UI/UiResourceProbe.cs").read_text(), "Controls needs a native construction probe"
 motion = (project / "UI/MotionController.cs").read_text(encoding="utf-8")
 assert "IterationBehavior.Forever" not in motion and "CompositionTarget.Rendering" not in motion
 for relative in ["UI/Taskbar/DockMotionController.cs", "Desktop/DockPreviewWindow.cs"]:
@@ -246,23 +250,24 @@ for mood in ["Solstice", "Ember", "Opal", "Lagoon", "Graphite", "Pearl"]:
 desktop = (project / "UI/Desktop/DesktopSurface.cs").read_text()
 assert "BitmapImage" in desktop and "Shapes.Path" not in desktop, "Desktop ribbons must use the cached asset"
 print("Cached wallpaper assets and publish wiring OK")
-# Desktop composition must not regress into the Sections XAML root.
+# Desktop composition must remain independent of Nexus Controls.
 assert not (project / "MainWindow.Canvas.cs").exists(), "Obsolete packed desktop partial remains"
-assert not {"MenuBar", "DockBorder", "DesktopCanvas", "DesktopClockCard", "DesktopWorkspaceCard", "WallpaperAccents"} & set(names), "Desktop UI must not be embedded in Sections"
+assert not {"MenuBar", "DockBorder", "DesktopCanvas", "DesktopClockCard", "DesktopWorkspaceCard", "WallpaperAccents"} & set(names), "Desktop UI must not be embedded in Controls"
 startup = (project / "App.xaml.cs").read_text()
-assert "new MainWindow(" not in startup and "DesktopEnvironment" in startup, "Startup must create the environment without Sections"
+assert "new MainWindow(" not in startup and "DesktopEnvironment" in startup, "Startup must create the environment without Controls"
 for layer in ["DesktopWindow", "TaskbarWindow", "MenuWindow", "QuickSettingsWindow", "MenuBarWindow", "NotificationWindow"]:
     body = (project / "Desktop" / (layer + ".cs")).read_text()
     assert re.search(r"class\s+" + layer + r"\s*:\s*Window", body), f"{layer} must own a native Window"
 closed = code[code.index("private void Window_Closed("):]
-assert "SaveFinal(" not in closed and "DetachSnapshot(" in closed, "Closing Sections must not finalize the desktop session"
+assert "SaveFinal(" not in closed and "Shutdown(" not in closed and "_timer.Stop()" in closed, "Closing Controls must release local work without finalizing the desktop session"
+assert "AttachSnapshot(" not in code, "Controls must edit shared state without replacing another window snapshot provider"
 build_files = [appveyor_file, root / "scripts/package.ps1", root / "scripts/build.ps1"]
 if workflow is not None:
     build_files.append(workflow_file)
 for file in build_files:
     body = file.read_text()
     assert "Nexus-Shell-" + ET.parse(project / "Nexus.Shell.csproj").findtext("PropertyGroup/Version") in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
-print("Independent desktop ownership, Sections lifetime and CI versions OK")
+print("Independent desktop ownership, Controls lifetime and CI versions OK")
 # Desktop replacement cannot silently instantiate Explorer or common picker UI.
 environment = (project / "Desktop/DesktopEnvironment.cs").read_text()
 assert "ExplorerDesktopPresent()" in environment and "DesktopSessionMode.DesktopShell" in environment

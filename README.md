@@ -2,6 +2,17 @@
 
 Nexus is a native C# / WinUI desktop environment on Windows. This release adds an integrated Search panel backed by Everything's local index, plus desktop controls and open-window results. Launchpad remains the app launcher.
 
+## Nexus Controls (draft)
+
+**Sections is replaced by Nexus Controls**, available from its desktop shortcut, Launchpad, Spotlight and the Nexus menu. A new resizable window brings together Home, Core & recovery, Personalize, Desktop & dock, Privacy, and Startup & session.
+
+- Search settings inside Controls with **Ctrl+F**, or find individual settings through Spotlight.
+- Apply **Midnight Glass, Quiet desktop or Compact desktop** presets with an undo action; choose palettes, glass quality and motion individually.
+- Check/reconnect Nexus services, request a settings save, repair desktop layout and open local data/logs.
+- Manage dock behavior, desktop icons, time format, notifications, local history and clipboard capture. Review existing supervised startup, sign-in and Windows recovery choices in one place.
+
+Old Sections shortcuts migrate to Controls. Existing saved content remains in settings; notes stay available in Notes. The former Sections Explore/Study/workspace screens are retired. Native Windows/AppVeyor acceptance is still pending. See [Controls behavior, migration and validation](docs/P29-NEXUS-CONTROLS.md).
+
 ## Windows integration pack (draft)
 
 - **Nexus menu → Windows tools** brings 14 Windows utilities/settings pages into a searchable desktop panel. Spotlight also finds individual tools, including screen snipping, Task Manager, display projection, volume mixer, startup apps and storage settings.
@@ -78,4 +89,4 @@ CI publishes `Nexus-Shell-3.6.0-win-x64.zip` and the smaller update ZIP. Keep th
 
 ## Next milestones
 
-The Control Center process is the first panel boundary. Launchpad/dock separation, dock per monitor, expanded file jobs/device controls, Windows app notifications and shell compatibility work remain in [the Session Core roadmap](docs/NEXT-DESKTOP-PACK.md), each with native acceptance gates. No new standalone app is added.
+The Control Center process is the first panel boundary. Launchpad/dock separation, dock per monitor, expanded file jobs/device controls, Windows app notifications and shell compatibility work remain in [the Session Core roadmap](docs/NEXT-DESKTOP-PACK.md), each with native acceptance gates. Nexus Controls is an independently closable window in the desktop process.

@@ -13,27 +13,27 @@ internal static class DesktopFoundationChecks
             var store = new StateStore(folder);
             var session = new ShellSession(store);
             var shared = session.State;
-            shared.QuickNote = "Before opening Sections";
+            shared.QuickNote = "Before opening a workspace window";
             int changes = 0;
             session.Changed += () => changes++;
             double remaining = 321;
             Func<ShellState> firstWindow = () => { shared.FocusRemainingSeconds = remaining; return shared.Snapshot(); };
             session.AttachSnapshot(firstWindow);
-            shared.QuickNote = "Edited in Sections";
+            shared.QuickNote = "Edited in a workspace window";
             session.NotifyChanged(); session.SaveAsync().GetAwaiter().GetResult();
-            check(new StateStore(folder).Load().FocusRemainingSeconds == 321, "A desktop save must capture the live Sections timer checkpoint.");
+            check(new StateStore(folder).Load().FocusRemainingSeconds == 321, "A desktop save must capture the live a workspace window timer checkpoint.");
             session.Capture(); session.DetachSnapshot(firstWindow);
             remaining = 0; // The closed window is no longer a snapshot provider.
             shared.CompactDock = true;
             session.NotifyChanged(); session.SaveAsync().GetAwaiter().GetResult();
             var afterClose = new StateStore(folder).Load();
-            check(changes == 2 && afterClose.QuickNote == "Edited in Sections" && afterClose.CompactDock && afterClose.FocusRemainingSeconds == 321,
-                "Closing Sections must leave the shared session writable and retain notes, timer checkpoint and taskbar preferences.");
+            check(changes == 2 && afterClose.QuickNote == "Edited in a workspace window" && afterClose.CompactDock && afterClose.FocusRemainingSeconds == 321,
+                "Closing a workspace window must leave the shared session writable and retain notes, timer checkpoint and taskbar preferences.");
             Func<ShellState> secondWindow = () => { shared.FocusRemainingSeconds = 222; return shared.Snapshot(); };
             session.AttachSnapshot(secondWindow);
             session.DetachSnapshot(firstWindow); // A stale close must not detach a newer window.
             check(session.Capture().FocusRemainingSeconds == 222, "A stale close must not detach the reopened window’s snapshot provider.");
-            shared.QuickNote = "Reopened Sections";
+            shared.QuickNote = "Reopened a workspace window";
             var pending = new List<Task>();
             for (int i = 0; i < 32; i++) { shared.DisplayName = "Draft " + i; pending.Add(session.SaveAsync()); }
             Task.WhenAll(pending).GetAwaiter().GetResult();
@@ -44,7 +44,7 @@ internal static class DesktopFoundationChecks
             Task.WhenAll(pending).GetAwaiter().GetResult();
             shared.DisplayName = "Too late"; session.NotifyChanged(); session.SaveAsync().GetAwaiter().GetResult();
             var final = new StateStore(folder).Load();
-            check(final.DisplayName == "Final desktop" && final.QuickNote == "Reopened Sections" && changes == 2,
+            check(final.DisplayName == "Final desktop" && final.QuickNote == "Reopened a workspace window" && changes == 2,
                 "Only desktop shutdown may finalize saving, and queued or later writes must not overwrite its final snapshot.");
         }
         finally { if (Directory.Exists(folder)) Directory.Delete(folder, true); }
@@ -62,8 +62,8 @@ internal static class DesktopFoundationChecks
             && Marshal.SizeOf<ShellLayerInterop.MonitorInfo>() == 40,
             "Native desktop and appbar structures must preserve Win32 pointer alignment.");
         var icons = DesktopCatalog.Read();
-        check(icons.Count <= 67 && icons[0].Id == "sections" && icons[0].Target == "nexus:sections" && icons.Select(i => i.Id).Distinct().Count() == icons.Count,
-            "The desktop must always expose Sections as a shortcut and bound external file discovery.");
-        Console.WriteLine("PASS: desktop session saves after Sections closes/reopens, ordered/final writes, scaled Start bounds, native appbar layout and desktop shortcuts.");
+        check(icons.Count <= 67 && icons[0].Id == "controls" && icons[0].Target == "nexus:controls" && icons.Select(i => i.Id).Distinct().Count() == icons.Count,
+            "The desktop must always expose Nexus Controls as a shortcut and bound external file discovery.");
+        Console.WriteLine("PASS: desktop session saves after a workspace window closes/reopens, ordered/final writes, scaled Start bounds, native appbar layout and desktop shortcuts.");
     }
 }

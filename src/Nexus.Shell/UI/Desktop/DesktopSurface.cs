@@ -126,15 +126,15 @@ internal sealed class DesktopSurface : Grid
     private void RefreshClock()
     {
         var now = DateTime.Now; _weekday.Text = now.ToString("dddd"); _day.Text = now.ToString("dd"); _month.Text = now.ToString("MMM yyyy");
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_calendar, now.ToString("D") + ". Today's tasks. Open Study.");
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_calendar, now.ToString("D") + ". Saved tasks. Open Notes.");
     }
     private void BuildCalendar()
     {
         var body = new Grid { ColumnSpacing = 16 }; body.ColumnDefinitions.Add(new() { Width = new GridLength(94) }); body.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) });
         var date = new StackPanel(); date.Children.Add(_weekday); date.Children.Add(_day); date.Children.Add(_month); body.Children.Add(date);
         Grid.SetColumn(_tasks, 1); body.Children.Add(_tasks); _calendar.Content = body;
-        _calendar.Click += (_, _) => _environment.ShowSections("Study");
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_calendar, "Today's date and tasks. Open Study.");
+        _calendar.Click += (_, _) => _environment.OpenTarget("nexus:notes");
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_calendar, "Today's date and saved tasks. Open Notes.");
     }
     private void BuildWidgetRail()
     {

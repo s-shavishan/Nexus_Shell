@@ -436,7 +436,7 @@ internal sealed class QuickSettingsView : Grid, IDisposable
         var signIn = Card("Desktop at sign-in", _environment.IsManagedDesktop
             ? "Nexus is managing this desktop session. Sign-in replacement and startup alongside Windows are separate choices."
             : "This is a preview alongside Windows. Use session mode to give the standalone Windows key to Nexus Launchpad.");
-        signIn.Children.Add(ActionButton("Review startup and sign-in setup…", () => _environment.ShowSections("Personalize")));
+        signIn.Children.Add(ActionButton("Review startup and sign-in setup…", () => _environment.ShowControls("startup")));
         ApplyAppearance();
     }
     private void Advanced() => _environment.Advanced(_section);

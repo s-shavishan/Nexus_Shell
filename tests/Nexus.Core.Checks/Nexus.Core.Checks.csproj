@@ -86,6 +86,7 @@
     <Compile Include="../../src/Nexus.Shell/Interop/WindowsPowerRequest.cs" Link="WindowsPowerRequest.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/WindowsInputLanguage.cs" Link="WindowsInputLanguage.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DesktopSearchCatalog.cs" Link="DesktopSearchCatalog.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/NexusControlsCatalog.cs" Link="NexusControlsCatalog.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/FileMutationHistory.cs" Link="FileMutationHistory.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DesktopFileMonitor.cs" Link="DesktopFileMonitor.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/ExclusiveTaskbarRegistration.cs" Link="ExclusiveTaskbarRegistration.cs" />

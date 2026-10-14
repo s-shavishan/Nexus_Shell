@@ -118,7 +118,7 @@ internal static class UiInteractionProbe
             RequestedCycles = requested, CompletedCycles = results.Count, ButtonClicks = buttonClicks, SearchClicks = searchClicks, MoveEnters = enters, MoveExits = exits,
             Windows = Environment.OSVersion.ToString(), Architecture = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString(), RasterizationScale = scale,
             Results = results, Failures = failures,
-            Limitations = "Injected Windows input against an isolated production-caption fixture. Does not certify physical devices, Alt+Tab, snap, multiple DPI monitors, actual Files/Sections controls, rendered black regions or performance." }, new JsonSerializerOptions { WriteIndented = true });
+            Limitations = "Injected Windows input against an isolated production-caption fixture. Does not certify physical devices, Alt+Tab, snap, multiple DPI monitors, actual Files/Nexus Controls widgets, rendered black regions or performance." }, new JsonSerializerOptions { WriteIndented = true });
         using (var stream = new FileStream(reportPath, FileMode.CreateNew, FileAccess.Write))
         using (var writer = new StreamWriter(stream)) writer.Write(json);
         if (failures.Count > 0 || results.Count != requested) throw new InvalidOperationException("Interactive input checks failed. See " + reportPath);

@@ -106,7 +106,7 @@ internal sealed class ControlCenterEnvironment
         catch (Exception error) { _window?.View.ShowError("The desktop action could not finish: " + error.Message); }
     }
     internal void LockScreen() => Action("lock");
-    internal void ShowSections(string? page = null) => Action("personalize");
+    internal void ShowControls(string? page = null) => Action("personalize");
     internal void Advanced(string section) => Action("advanced", section);
     internal void Expand() => Action("expand");
     internal void Stop()

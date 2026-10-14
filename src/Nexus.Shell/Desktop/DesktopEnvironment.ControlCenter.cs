@@ -57,7 +57,7 @@ internal sealed partial class DesktopEnvironment
                         switch (action.Action)
                         {
                             case "preference": ControlCenterPreferences.Set(Session.State, action); SaveState(); break;
-                            case "personalize": HideControlCenter(); ShowSections("Personalize"); break;
+                            case "personalize": HideControlCenter(); ShowControls("startup"); break;
                             case "lock": HideControlCenter(); LockScreen(); break;
                             case "expand": ShowControlCenter(_controlSection); break;
                             case "advanced": HideControlCenter(); OpenAdvancedWindowsSettings(action.Value switch

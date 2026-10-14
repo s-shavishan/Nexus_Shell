@@ -27,6 +27,7 @@ internal static class UiResourceProbe
         StartMenuView? launchpad = null;
         TaskbarView? dock = null;
         NotificationWindow? notifications = null;
+        MainWindow? controls = null;
         var panels = new List<DesktopPanelWindow>();
         int parsed = 0;
         var checks = new List<string>();
@@ -140,6 +141,17 @@ internal static class UiResourceProbe
             environment.Clipboard.Clear();
             checks.Add("Production window board, clipboard shelf, session status, Places, Search, desktop shortcuts and Windows tools panels at two native window sizes");
             stage = "notification-construction-and-layout";
+            controls = new MainWindow(environment, validation: true);
+            stage = "nexus-controls-construction-and-layout";
+            foreach (var page in NexusControlsCatalog.Pages)
+            foreach (var size in new[] { (Width: 1080, Height: 780), (Width: 620, Height: 520) })
+            {
+                controls.PrepareValidation(page.Id, size.Width, size.Height); await Task.Delay(80);
+                controls.ValidationRoot.UpdateLayout(); controls.VerifyValidationPage(page.Id);
+            }
+            controls.Close(); controls = null;
+            checks.Add("Nexus Controls: all six production pages, search destinations and compact navigation at two native sizes; no settings or policy actions executed");
+            stage = "notification-construction-and-layout";
             for (int i = 0; i < 25; i++) environment.Notifications.Publish("Construction sample " + i, "Temporary native UI fixture; no history is persisted.", i % 3 == 0 ? NoticeKind.Warning : NoticeKind.Information);
             notifications = new NotificationWindow(environment);
             foreach (var size in new[] { (Width: 440, Height: 700), (Width: 380, Height: 540) })
@@ -218,6 +230,7 @@ internal static class UiResourceProbe
         finally
         {
             _loaded = null; menu?.Dispose(); launchpad?.Dispose(); dock?.Release();
+            try { controls?.Close(); } catch (Exception error) { failures.Add("Controls cleanup: " + error.Message); }
             try { notifications?.Close(); } catch (Exception error) { failures.Add("Notification cleanup: " + error.Message); }
             foreach (var panel in panels) try { panel.Close(); } catch (Exception error) { failures.Add("Panel cleanup: " + error.Message); }
             try { window?.Close(); } catch (Exception error) { failures.Add("Window cleanup: " + error.Message); }

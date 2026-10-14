@@ -28,19 +28,22 @@ internal sealed partial class DesktopEnvironment
     internal void RunSearchCommand(string id)
     {
         if (id.StartsWith("system:", StringComparison.Ordinal)) { RunWindowsTool(id[7..]); return; }
+        if (id.StartsWith("nexus-controls:", StringComparison.Ordinal))
+        { var setting = NexusControlsCatalog.Settings.FirstOrDefault(item => item.Id == id["nexus-controls:".Length..]); if (setting is not null) ShowControls(setting.Page, setting.Id); return; }
         switch (id)
         {
             case "launchpad": ShowMenu(); break;
             case "files": ShowFiles(); break;
             case "places": ShowPlaces(); break;
             case "windows": ShowWindowOverview(); break;
-            case "controls": ShowQuickSettings(); break;
+            case "control-center": ShowQuickSettings(); break;
+            case "controls": ShowControls(); break;
             case "sound": ShowControlCenter("Sound"); break;
             case "network": ShowControlCenter("Network"); break;
             case "display": ShowControlCenter("Display"); break;
             case "bluetooth": ShowControlCenter("Bluetooth"); break;
             case "power": ShowControlCenter("Power"); break;
-            case "appearance": ShowSections("Personalize"); break;
+            case "appearance": ShowControls("Personalize"); break;
             case "notifications": ShowNotifications(); break;
             case "clipboard": ShowClipboardShelf(); break;
             case "status": ShowSessionStatus(); break;
