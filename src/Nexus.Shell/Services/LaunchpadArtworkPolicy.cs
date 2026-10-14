@@ -24,6 +24,11 @@ public static class LaunchpadArtworkPolicy
             : words[0][..2].ToUpperInvariant();
     }
 
+    // A High Contrast theme switch must also affect already realized
+    // Launchpad tiles; never leave a bright custom background behind.
+    public static string BackgroundForContrast(string? name, bool highContrast)
+        => highContrast ? "00000000" : Background(name);
+
     public static string Background(string? name)
     {
         uint hash = 2166136261;

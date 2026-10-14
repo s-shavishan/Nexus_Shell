@@ -72,3 +72,11 @@ The running P2.6 screenshot exposed a flat, indistinguishable middle file area a
 The native Launchpad uses a 760 × 740 DIP window. The previous 24-app page needed four 124-DIP rows plus search, category/collection controls, heading, footer and padding, causing a fourth row to require scrolling at reference size. The page now contains 18 apps (three six-column rows), preserving the existing category, collection, keyboard and icon-loading pipelines. Core regression assertions cover page boundaries, nonoverlap and the last partial page of the 600-app catalog.
 
 Native screenshot and AppVeyor validation remain pending; this is not a claim of visual parity.
+
+## Stage 4 — Control Center hierarchy and retained theme correctness (2026-10-14)
+
+The user-approved reference places strong emphasis on connectivity/media modules. Rather than six equally dominant tall service blocks, Nexus now presents four primary 68-DIP actions (Sound, Network, Bluetooth, Display) in a 2×2 card grid with clearer 36-DIP icon badges; Power and Desktop remain fully functional but appear in a secondary 52-DIP row with smaller 28-DIP badges. The existing section commands, scanning, device reads and accessibility labels are preserved. `ControlCenterTilePolicy` supplies the hierarchy and reusable geometry, with portable checks.
+
+A discovered application's colored Launchpad fallback previously captured High Contrast only at tile creation. Switching theme while the same page remained realized left the old saturated color in place. The existing `SolidColorBrush` now changes color in place during `StartMenuView.ApplyAppearance`, preserving the already-loaded native thumbnail and the retained page identity. Portable checks verify transparent High Contrast versus deterministic normal-theme colors.
+
+**Validation:** Core regression assertions are committed but not executed here. Native WinUI validation should verify Control Center card spacing, keyboard accessibility/selection, normal vs compact mode, live Sound/Network/Bluetooth/Display and Power/Desktop functionality. Launchpad must switch to/from Windows High Contrast while remaining open and must not flash/restart icon loading. No native AppVeyor or screenshot acceptance has run on this branch.

@@ -91,6 +91,14 @@ internal static class MidnightChecks
             && LaunchpadArtworkPolicy.Monogram("7-Zip") == "7Z"
             && LaunchpadArtworkPolicy.Monogram("") == "APP",
             "Discovered apps need distinct, stable monograms instead of repeated placeholders.");
+        check(LaunchpadArtworkPolicy.BackgroundForContrast("Everything", true) == "00000000"
+            && LaunchpadArtworkPolicy.BackgroundForContrast("Everything", false) == LaunchpadArtworkPolicy.Background("Everything"),
+            "Switching High Contrast must clear generated artwork without reloading native icons.");
+        check(ControlCenterTilePolicy.IsPrimary("Network") && ControlCenterTilePolicy.IsPrimary("Display")
+            && !ControlCenterTilePolicy.IsPrimary("Power") && !ControlCenterTilePolicy.IsPrimary("Desktop")
+            && ControlCenterTilePolicy.Height("Network") > ControlCenterTilePolicy.Height("Power")
+            && ControlCenterTilePolicy.Radius("Network") > ControlCenterTilePolicy.Radius("Desktop"),
+            "Control Center primary modules must remain visibly distinct from secondary actions.");
         check(LaunchpadArtworkPolicy.Background("Event Viewer") == LaunchpadArtworkPolicy.Background("Event Viewer")
             && LaunchpadArtworkPolicy.Background("Event Viewer").Length == 8,
             "Fallback application tile color must be stable and fully opaque.");

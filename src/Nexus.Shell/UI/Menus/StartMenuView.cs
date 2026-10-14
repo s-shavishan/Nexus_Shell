@@ -20,9 +20,13 @@ internal sealed class LaunchpadTile(AppEntry app, bool highContrast) : INotifyPr
     private Visibility _placeholder = LaunchpadArtworkPolicy.UsesNexusArtwork(app.Id)
         ? Visibility.Collapsed : Visibility.Visible;
     public string Monogram => LaunchpadArtworkPolicy.Monogram(app.Name);
-    public SolidColorBrush TileBrush { get; } = new(highContrast
-        ? Microsoft.UI.Colors.Transparent
-        : ShellTheme.Color(LaunchpadArtworkPolicy.Background(app.Name)));
+    public SolidColorBrush TileBrush { get; } =
+        new(ShellTheme.Color(LaunchpadArtworkPolicy.BackgroundForContrast(app.Name, highContrast)));
+    internal void UpdateContrast(bool highContrast)
+    {
+        var color = ShellTheme.Color(LaunchpadArtworkPolicy.BackgroundForContrast(app.Name, highContrast));
+        if (TileBrush.Color != color) TileBrush.Color = color;
+    }
     public Visibility PlaceholderVisibility { get => _placeholder; private set
         { if (_placeholder == value) return; _placeholder = value; PropertyChanged?.Invoke(this, new(nameof(PlaceholderVisibility))); } }
     public ImageSource? Icon
@@ -287,6 +291,10 @@ internal sealed class StartMenuView : Grid, IDisposable
     internal void ApplyAppearance()
     {
         var theme = _environment.Theme; RequestedTheme = theme.ElementTheme;
+        // Reuse realized tiles and loaded Windows thumbnails on theme changes.
+        // Update just the mutable brush; no catalog scan or item rebuild.
+        if (_apps.ItemsSource is IEnumerable<LaunchpadTile> realized)
+            foreach (var tile in realized) tile.UpdateContrast(theme.HighContrast);
         _title.Foreground = _apps.Foreground = _search.Foreground = theme.Brush("NexusText"); _hint.Foreground = _subtitle.Foreground = _searchIcon.Foreground = theme.Brush("NexusMuted");
         _searchFrame.Background = theme.Material("Input", _environment.Session.State.NativeGlass); _searchFrame.BorderBrush = _search.FocusState == FocusState.Unfocused ? theme.Edge : theme.Brush("NexusAccent"); _searchFrame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 13);
         foreach (var (category, button) in _categories) { button.Background = category == _category ? theme.Brush("NexusSelection") : theme.Material("Card", _environment.Session.State.NativeGlass); button.Foreground = theme.Brush("NexusText"); button.BorderBrush = theme.Edge; button.BorderThickness = new Thickness(1); button.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 10); }
