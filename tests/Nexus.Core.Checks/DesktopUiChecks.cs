@@ -12,6 +12,20 @@ internal static class DesktopUiChecks
     {
         Check(FileTypeContextCatalog.Initialize() && FileTypeContextCatalog.Reload(),
             "The shipped file context schema must parse before native UI builds.");
+        string fileTypeJson = File.ReadAllText(Path.Combine(AppContext.BaseDirectory,
+            "Assets", "Configuration", "file_context_profiles.json"));
+        Check(FileTypeContextCatalog.ValidateJson(fileTypeJson, out var schemaError) && schemaError.Length == 0,
+            "The shipped file-type profiles must pass pure schema validation.");
+        string duplicateExtension = fileTypeJson.Replace("\".mp4\"", "\".png\"", StringComparison.Ordinal);
+        Check(!FileTypeContextCatalog.ValidateJson(duplicateExtension, out var duplicateError)
+            && duplicateError.Contains("Ambiguous extension", StringComparison.Ordinal),
+            "Conflicting extension ownership must fail before it reaches the live menu cache.");
+        Check(!FileTypeContextCatalog.ValidateJson(fileTypeJson.Replace("\"primary\": \"open\"",
+                "\"primary\": \"decrypt\"", StringComparison.Ordinal), out _)
+            && !FileTypeContextCatalog.ValidateJson("{broken json", out _),
+            "Unknown action handlers and malformed JSON must never become executable menu entries.");
+        Check(FileTypeContextCatalog.Resolve(@"C:\Data\movie.mp4", false).Id == "video.general",
+            "Rejecting an invalid proposed catalog must preserve the last known-good live resolution.");
         Check(FileTypeContextCatalog.Resolve(@"C:\Data\movie.MP4", false).Id == "video.general"
             && FileTypeContextCatalog.Resolve(@"C:\Data\archive.TAR.GZ", false).Id == "archive.generic"
             && FileTypeContextCatalog.Resolve(@"C:\Data\project.TS", false).Id == "code.source"
