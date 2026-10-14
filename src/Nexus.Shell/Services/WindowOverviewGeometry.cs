@@ -42,3 +42,18 @@ public static class WindowOverviewGeometry
         return new(new LayoutRect(x, y, width, height), "Free position");
     }
 }
+
+
+public static class WindowOverviewInteractionPolicy
+{
+    // Prevent a card-click or Enter key from discarding uncommitted positions.
+    public static bool CanSwitch(int stagedWindowCount) => stagedWindowCount == 0;
+
+    // The synthetic click emitted after a drag belongs only to the card that
+    // was dragged; blocking other cards for the same 400 ms makes the entire
+    // overview feel unresponsive.
+    public static bool SuppressClick(string? draggedKey, string clickedKey, long until, long now)
+        => !string.IsNullOrEmpty(draggedKey)
+            && string.Equals(draggedKey, clickedKey, StringComparison.Ordinal)
+            && now < until;
+}
