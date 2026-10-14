@@ -155,11 +155,20 @@ internal static class UiResourceProbe
                 {
                     panel.PrepareValidation(owner, size.Width, size.Height); await Task.Delay(80); panel.ValidationRoot.UpdateLayout();
                     if (panel.ValidationRoot.ActualWidth <= 0 || panel.ValidationRoot.ActualHeight <= 0) throw new InvalidOperationException("A production desktop panel did not lay out.");
-                    if (panel is SwitcherWindow overview) overview.VerifyOverviewValidation();
+                    if (panel is SwitcherWindow overview)
+                    {
+                        overview.VerifyOverviewValidation();
+                        if (overview.UserResizeEnabledForValidation)
+                            throw new InvalidOperationException("Fullscreen overview must not expose manual resize handles.");
+                    }
+                    if (panel is WindowsToolsWindow && !panel.UserResizeEnabledForValidation)
+                        throw new InvalidOperationException("Windows Tools must support mouse-edge resizing.");
+                    if (panel is SearchWindow && panel.UserResizeEnabledForValidation)
+                        throw new InvalidOperationException("Spotlight must retain its automatic sizing.");
                 }
                 panel.Hide();
             }
-            checks.Add("Fullscreen window overview: native panel geometry, layout-map controls and immersive no-radius frame");
+            checks.Add("Fullscreen overview: native geometry, layout-map controls and no-radius frame; Windows Tools is manually resizable and Spotlight is auto-sized");
             environment.Clipboard.Clear();
             checks.Add("Production window board, clipboard shelf, session status, Places, Search, desktop shortcuts and Windows tools panels at two native window sizes");
             stage = "file-context-construction-and-layout";
