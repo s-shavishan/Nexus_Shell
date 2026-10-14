@@ -167,7 +167,14 @@ internal sealed class FilesView : Grid
                 view.RightTapped += (_, args) =>
                 {
                     var clicked = ItemAt(view, args.OriginalSource);
-                    if (clicked is not null && !view.SelectedItems.Contains(clicked)) view.SelectedItem = clicked;
+                    if (clicked is null)
+                    {
+                        // A right-click on empty canvas is the folder menu,
+                        // not a stale selection's single/multi-file menu.
+                        view.SelectedItems.Clear();
+                    }
+                    else if (!view.SelectedItems.Contains(clicked))
+                        view.SelectedItem = clicked;
                 };
             }
         }
