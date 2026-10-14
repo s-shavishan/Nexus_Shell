@@ -98,7 +98,7 @@ internal sealed class TaskbarView : Grid
         var middle = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 16, VerticalAlignment = VerticalAlignment.Center };
         _separator = new Border { Width = 1, Height = 34, VerticalAlignment = VerticalAlignment.Center };
         middle.Children.Add(_pins); middle.Children.Add(_separator); middle.Children.Add(_windows);
-        var scroll = new ScrollViewer { Content = middle, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
+        var scroll = new ScrollViewer { Content = middle, HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
             HorizontalScrollMode = ScrollMode.Enabled, VerticalScrollMode = ScrollMode.Disabled, VerticalAlignment = VerticalAlignment.Center };
         scroll.ViewChanged += (_, _) => _environment.HideDockPreview();
         _appsIsland.Child = scroll;

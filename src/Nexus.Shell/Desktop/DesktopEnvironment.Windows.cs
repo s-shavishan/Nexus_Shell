@@ -15,7 +15,17 @@ internal sealed partial class DesktopEnvironment
     internal event Action? ActiveWindowChanged;
     internal void ObserveForeground(IntPtr foreground)
     {
-        if (IsStopping || NativeMethods.IsOwnToolWindow(foreground) || IsControlCenterWindow(foreground)) return;
+        if (IsStopping) return;
+        if (NativeMethods.IsOwnToolWindow(foreground) || IsControlCenterWindow(foreground))
+        {
+            // A just-closed HWND must not leave stale menu-bar app commands.
+            if (ActiveWindow is { } previous && !NativeMethods.OwnsWindow(previous))
+            {
+                ActiveWindow = null; ActiveWindowMaximized = false;
+                ActiveWindowChanged?.Invoke();
+            }
+            return;
+        }
         // Keep a stable native identity while the HWND and enumerated task
         // snapshot are unchanged. Internal Nexus utility windows are resolved
         // afresh because they can change without the external window snapshot.
