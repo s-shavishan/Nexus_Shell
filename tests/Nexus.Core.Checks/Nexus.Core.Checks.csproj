@@ -120,6 +120,7 @@
     <Compile Include="../../src/Nexus.Shell/Services/ClipboardCaptureGate.cs" Link="ClipboardCaptureGate.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/ClipboardCapturePolicy.cs" Link="ClipboardCapturePolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/WindowBoardPolicy.cs" Link="WindowBoardPolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/WindowOverviewGeometry.cs" Link="WindowOverviewGeometry.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/DesktopWindowCatalog.cs" Link="DesktopWindowCatalog.cs" />
   </ItemGroup>
 </Project>
