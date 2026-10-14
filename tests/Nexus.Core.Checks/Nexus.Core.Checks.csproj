@@ -32,6 +32,7 @@
     <Compile Include="../../src/Nexus.Shell/Services/SelectionMarqueeGeometry.cs" Link="SelectionMarqueeGeometry.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/LaunchpadArtworkPolicy.cs" Link="LaunchpadArtworkPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/ControlCenterTilePolicy.cs" Link="ControlCenterTilePolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/NetworkPresentationPolicy.cs" Link="NetworkPresentationPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/FilesPaneLayoutPolicy.cs" Link="FilesPaneLayoutPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/GlassTintRetention.cs" Link="GlassTintRetention.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/GlassRimPolicy.cs" Link="GlassRimPolicy.cs" />
