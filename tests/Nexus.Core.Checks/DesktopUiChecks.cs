@@ -41,6 +41,12 @@ internal static class DesktopUiChecks
         Check(FileTypeContextCatalog.Resolve(@"C:\Data\shortcut.lnk", false).Id == "shortcuts.windows"
             && FileTypeContextCatalog.Resolve(@"C:\Data\demo.CUSTOM", false).Id == "fallback.unknown",
             "Shortcuts must not offer an unsuitable Open with command; unknown types remain usable.");
+        Check(FileTypeContextCatalog.Resolve(@"C:\Data\source.cs", false).Actions.Contains("edit")
+            && FileTypeContextCatalog.Resolve(@"C:\Data\settings.json", false).Actions.Contains("edit")
+            && !FileTypeContextCatalog.Resolve(@"C:\Data\installer.exe", false).Actions.Contains("edit")
+            && !FileTypeContextCatalog.Resolve(@"C:\Data\shortcut.lnk", false).Actions.Contains("edit")
+            && !FileTypeContextCatalog.Resolve(@"C:\Data\photo.png", false).Actions.Contains("edit"),
+            "Text editor fallback must only be offered for profiles with declared edit support.");
         Check(FileTypeContextCatalog.Plan([new(@"C:\Data\audio.mp3", false)]).Primary == "play"
             && FileContextPolicy.For(@"C:\Data\setup.exe", false).OpenLabel == "Run application"
             && FileContextPolicy.For(@"C:\Data\bundle.tar.gz", false).OpenLabel == "Open archive",
