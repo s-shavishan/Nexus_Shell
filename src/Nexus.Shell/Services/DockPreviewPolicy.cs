@@ -6,6 +6,18 @@ public static class DockPreviewPolicy
 {
     public const int HoverDelayMilliseconds = 280;
     public const int LeaveDelayMilliseconds = 240;
+    public const int ThumbnailGeometryRefreshMilliseconds = 300;
+
+    // DWM continues compositing a registered thumbnail without repeated
+    // property writes. Refresh its source aspect ratio occasionally, or
+    // immediately when the viewport changes; don't query native dimensions
+    // on every high-frequency WinUI LayoutUpdated notification.
+    public static bool ReuseThumbnailGeometry(
+        ShellRect viewport, ShellRect? lastViewport, bool hasDestination,
+        long lastQueryTick, long currentTick)
+        => hasDestination && lastViewport == viewport
+            && currentTick >= lastQueryTick
+            && currentTick - lastQueryTick < ThumbnailGeometryRefreshMilliseconds;
     // An open card may transition from minimized/cloaked to visible without
     // being reopened. Restore its DWM relationship only on that transition.
     public static bool ShouldAttachThumbnail(bool open, bool valid, bool minimized, bool cloaked, bool fastMode, bool attached)
