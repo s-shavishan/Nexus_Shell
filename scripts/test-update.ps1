@@ -1,6 +1,18 @@
 [CmdletBinding()]
 param()
 $ErrorActionPreference = 'Stop'
+# Windows PowerShell 5.1 interprets BOM-less UTF-8 scripts using the system
+# ANSI codepage. A multibyte arrow can become a curly quote and terminate
+# a string, which prevents the update installer from parsing at all.
+# The shipped updater must remain 7-bit ASCII unless its encoding contract
+# explicitly changes and is tested on Windows PowerShell 5.1.
+foreach ($name in @('apply-update.ps1', 'package-update.ps1')) {
+    foreach ($byte in [IO.File]::ReadAllBytes((Join-Path $PSScriptRoot $name))) {
+        if ($byte -gt 127) {
+            throw "$name contains non-ASCII bytes. Keep update scripts ASCII-safe for Windows PowerShell 5.1."
+        }
+    }
+}
 # Parse all shipped scripts with the actual PowerShell parser on the build host.
 $scripts = @(Get-ChildItem $PSScriptRoot -Filter '*.ps1')
 foreach ($script in $scripts) {
@@ -43,6 +55,7 @@ try {
     $zip = Join-Path $fixture 'Update.zip'
     & (Join-Path $PSScriptRoot 'package-update.ps1') -PublishDirectory $pub -OutputZip $zip -AppVersion '0.5.0'
     Expand-Archive $zip $unpacked
+    Assert-Check ((Get-Content (Join-Path $unpacked 'UPDATE-README.txt') -Raw).Contains('Nexus Controls > Startup & session')) 'Update README must preserve legible Startup and session guidance.'
     Assert-Check (-not (Test-Path (Join-Path $unpacked 'payload\coreclr.dll'))) 'Runtime bytes must be omitted from the update.'
     Copy-Item (Join-Path $pub 'coreclr.dll'), (Join-Path $pub 'Microsoft.UI.Xaml.dll') $base
     Set-Content (Join-Path $base 'Nexus.Shell.exe') 'old app' -Encoding ASCII
