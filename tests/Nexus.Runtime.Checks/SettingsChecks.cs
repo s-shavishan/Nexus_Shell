@@ -38,6 +38,11 @@ internal static class SettingsChecks
         foreach (string target in new[] { "", " ", new string('x', 513), "bad\0device" })
             await Reject("settings-target", () => service.ExecuteAsync(new("Sound", Change: new("volume", target, Value: 10, Epoch: service.Epoch)), CancellationToken.None));
         await Reject("settings-command", () => service.ExecuteAsync(new("Display", Change: new("volume", "output", Value: 30, Epoch: service.Epoch)), CancellationToken.None));
+        await Reject("settings-command", () => service.ExecuteAsync(new("Display", Change: new("display-preview", "display", "", Epoch: service.Epoch)), CancellationToken.None));
+        await Reject("settings-command", () => service.ExecuteAsync(new("Display", Change: new("display-preview", "display", "1920x1080@60", Enabled: true, Epoch: service.Epoch)), CancellationToken.None));
+        await Reject("settings-command", () => service.ExecuteAsync(new("Display", Change: new("display-preview", "display", "1920x1080@60", Value: 1, Epoch: service.Epoch)), CancellationToken.None));
+        await Reject("settings-command", () => service.ExecuteAsync(new("Display", Change: new("display-keep", "display", Value: 1, Epoch: service.Epoch)), CancellationToken.None));
+        await Reject("settings-command", () => service.ExecuteAsync(new("Display", Change: new("display-revert", "display", Enabled: false, Epoch: service.Epoch)), CancellationToken.None));
         await Reject("settings-command", () => service.ExecuteAsync(new("Power", Change: new("power-plan", "plan", Value: 30, Epoch: service.Epoch)), CancellationToken.None));
         await Reject("settings-command", () => service.ExecuteAsync(new("Network", Change: new("wifi-connect", "adapter", Epoch: service.Epoch)), CancellationToken.None));
         await Reject("settings-command", () => service.ExecuteAsync(new("Network", Change: new("wifi-radio", "adapter", Enabled: true, Epoch: service.Epoch), Scan: true), CancellationToken.None));
@@ -51,6 +56,9 @@ internal static class SettingsChecks
             new("Sound", Change: new("volume", "output", "session", Value: 100, Enabled: true, Epoch: service.Epoch)),
             new("Sound", Change: new("volume", "output", Enabled: false, Epoch: service.Epoch)),
             new("Display", Change: new("brightness", "display", Value: 65, Epoch: service.Epoch)),
+            new("Display", Change: new("display-preview", "display", "1280x720@60", Epoch: service.Epoch)),
+            new("Display", Change: new("display-keep", "display", Epoch: service.Epoch)),
+            new("Display", Change: new("display-revert", "display", Epoch: service.Epoch)),
             new("Network", Change: new("wifi-connect", "adapter", "Saved profile", Epoch: service.Epoch)),
             new("Network", Change: new("wifi-disconnect", "adapter", Epoch: service.Epoch)),
             new("Network", Change: new("wifi-radio", "adapter", Enabled: true, Epoch: service.Epoch)),
@@ -143,6 +151,9 @@ internal static class SettingsChecks
         Check(Marshal.SizeOf<BluetoothSettings.RadioInfo>() == 520 && Marshal.SizeOf<BluetoothSettings.DeviceInfo>() == 560, "Bluetooth info layouts");
         Check(Marshal.SizeOf<BluetoothSettings.DeviceSearch>() == 40 && Marshal.OffsetOf<BluetoothSettings.DeviceSearch>(nameof(BluetoothSettings.DeviceSearch.Radio)).ToInt32() == 32, "Bluetooth inquiry layout");
         Check(Marshal.SizeOf<DisplaySettings.Device>() == 840 && Marshal.SizeOf<DisplaySettings.Mode>() == 220, "DISPLAY_DEVICEW and DEVMODEW layouts");
+        Check(Marshal.OffsetOf<DisplaySettings.Mode>(nameof(DisplaySettings.Mode.Fields)).ToInt32() == 72
+            && Marshal.OffsetOf<DisplaySettings.Mode>(nameof(DisplaySettings.Mode.BitsPerPixel)).ToInt32() == 168,
+            "DEVMODEW change-field and color-depth offsets must be correct before native display writes.");
         Check(Marshal.SizeOf<PowerSettings.Status>() == 12, "SYSTEM_POWER_STATUS layout");
     }
     private static void WifiProfiles()
