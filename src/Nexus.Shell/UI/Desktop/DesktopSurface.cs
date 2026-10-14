@@ -16,7 +16,30 @@ internal sealed class DesktopSurface : Grid
     private readonly DesktopEnvironment _environment;
     private readonly Image _wallpaper = new() { Stretch = Stretch.UniformToFill, IsHitTestVisible = false };
     private readonly GridView _icons;
-    private readonly Button _calendar = new() { Width = 322, Padding = new Thickness(16), CornerRadius = new CornerRadius(21), BorderThickness = new Thickness(1), HorizontalAlignment = HorizontalAlignment.Right, HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(20, 20, 20, 106), Style = (Style)Application.Current.Resources["QuietButton"] };
+    private readonly StackPanel _widgetRail = new()
+    {
+        Width = 336, Spacing = 12,
+        HorizontalAlignment = HorizontalAlignment.Right,
+        VerticalAlignment = VerticalAlignment.Top,
+        Margin = new Thickness(20, 60, 24, 106)
+    };
+    private readonly Button _calendar = new()
+    {
+        Width = 336, Padding = new Thickness(20),
+        CornerRadius = new CornerRadius(21), BorderThickness = new Thickness(1),
+        HorizontalContentAlignment = HorizontalAlignment.Stretch,
+        Style = (Style)Application.Current.Resources["QuietButton"]
+    };
+    private readonly Border _quickFrame = new()
+    {
+        Width = 336, CornerRadius = new CornerRadius(MidnightGlassMetrics.CardRadius),
+        BorderThickness = new Thickness(1), Padding = new Thickness(12)
+    };
+    private readonly TextBlock _quickHeading = new()
+    {
+        Text = "QUICK ACCESS", FontSize = 11,
+        FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+    };
     private readonly TextBlock _weekday = new() { FontSize = 12, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis };
     private readonly TextBlock _day = new() { FontSize = 42, FontWeight = Microsoft.UI.Text.FontWeights.Light };
     private readonly TextBlock _month = new() { FontSize = 12 };
@@ -42,6 +65,7 @@ internal sealed class DesktopSurface : Grid
         };
         Children.Add(_wallpaper);
         BuildCalendar();
+        BuildWidgetRail();
         _icons = new GridView { Margin = new Thickness(20, 48, 20, 100), SelectionMode = ListViewSelectionMode.Single,
             IsItemClickEnabled = false, Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
             HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Stretch };
@@ -77,11 +101,15 @@ internal sealed class DesktopSurface : Grid
             _icons.SelectedItem = null;
             environment.Menus.DesktopMenu().ShowAt(this, new FlyoutShowOptions { Position = args.GetPosition(this) }); args.Handled = true;
         };
-        Children.Add(_icons); Children.Add(_calendar);  Children.Add(_status);
+        Children.Add(_icons); Children.Add(_widgetRail); Children.Add(_status);
         _clockTimer.Tick += (_, _) => RefreshClock();
         Loaded += (_, _) => { RefreshClock(); _clockTimer.Start(); };
         Unloaded += (_, _) => _clockTimer.Stop();
-        SizeChanged += (_, _) => { _calendar.MaxWidth = Math.Max(1, ActualWidth - 40); ApplyWidgetVisibility(); };
+        SizeChanged += (_, _) =>
+        {
+            _widgetRail.MaxWidth = Math.Max(1, ActualWidth - 48);
+            ApplyWidgetVisibility();
+        };
         var enter = new KeyboardAccelerator { Key = VirtualKey.K, Modifiers = VirtualKeyModifiers.Control };
         enter.Invoked += (_, args) => { environment.ShowMenu(true); args.Handled = true; }; KeyboardAccelerators.Add(enter);
         void Shortcut(UIElement owner, VirtualKey key, VirtualKeyModifiers modifiers, Action action)
@@ -108,6 +136,47 @@ internal sealed class DesktopSurface : Grid
         _calendar.Click += (_, _) => _environment.ShowSections("Study");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_calendar, "Today's date and tasks. Open Study.");
     }
+    private void BuildWidgetRail()
+    {
+        _widgetRail.Children.Add(_calendar);
+        var body = new StackPanel { Spacing = 12 };
+        body.Children.Add(_quickHeading);
+        var actions = new Grid { ColumnSpacing = 8 };
+        for (int i = 0; i < 3; i++) actions.ColumnDefinitions.Add(new());
+        void AddAction(int column, string title, string glyph, Action open)
+        {
+            var contents = new StackPanel
+            {
+                Spacing = 6, HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            contents.Children.Add(Nexus.Shell.UI.ShellControls.Icon(glyph, 22));
+            contents.Children.Add(new TextBlock
+            {
+                Text = title, FontSize = 12,
+                TextAlignment = TextAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            });
+            var button = new Button
+            {
+                Content = contents, MinHeight = 70, Padding = new Thickness(6),
+                CornerRadius = new CornerRadius(12),
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                Style = (Style)Application.Current.Resources["QuietButton"]
+            };
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, "Open " + title);
+            ToolTipService.SetToolTip(button, "Open " + title);
+            button.Click += (_, _) => open();
+            Grid.SetColumn(button, column);
+            actions.Children.Add(button);
+        }
+        AddAction(0, "Files", "\uE8B7", _environment.ShowFiles);
+        AddAction(1, "Search", "\uE721", _environment.ShowSearch);
+        AddAction(2, "Controls", "\uE713", _environment.ShowQuickSettings);
+        body.Children.Add(actions);
+        _quickFrame.Child = body;
+        _widgetRail.Children.Add(_quickFrame);
+    }
     internal void RefreshContent()
     {
         _icons.Visibility = _environment.Session.State.FocusMode || !_environment.Session.State.ShowDesktopIcons ? Visibility.Collapsed : Visibility.Visible;
@@ -125,7 +194,18 @@ internal sealed class DesktopSurface : Grid
         }
         RefreshClock();
     }
-    private void ApplyWidgetVisibility() => _calendar.Visibility = _environment.Session.State.ShowClockWidget && !_environment.Session.State.FocusMode && ActualWidth >= 300 ? Visibility.Visible : Visibility.Collapsed;
+    private void ApplyWidgetVisibility()
+    {
+        var placement = DesktopWidgetLayoutPolicy.Resolve(
+            ActualWidth, ActualHeight, _environment.Session.State.ShowClockWidget,
+            _environment.Session.State.FocusMode);
+        _widgetRail.Visibility = placement.ShowToday ? Visibility.Visible : Visibility.Collapsed;
+        _quickFrame.Visibility = placement.ShowActions ? Visibility.Visible : Visibility.Collapsed;
+        _widgetRail.VerticalAlignment = placement.AtTop ? VerticalAlignment.Top : VerticalAlignment.Bottom;
+        _widgetRail.Margin = placement.AtTop
+            ? new Thickness(20, 58, 24, 106)
+            : new Thickness(20, 20, 20, 106);
+    }
     private DesktopShortcut? ItemAt(object source)
     {
         var element = source as DependencyObject;
@@ -162,7 +242,19 @@ internal sealed class DesktopSurface : Grid
     internal void ApplyAppearance()
     {
         var theme = _environment.Theme; RequestedTheme = theme.ElementTheme;
-        _calendar.Background = theme.Material("Card", _environment.Session.State.NativeGlass); _calendar.BorderBrush = theme.Edge; _calendar.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 21); _weekday.Foreground = theme.Brush("NexusAccent"); _day.Foreground = theme.Brush("NexusText"); _month.Foreground = theme.Brush("NexusMuted");
+        bool reference = MidnightGlassMetrics.ReferenceEnabled(theme.Palette, theme.HighContrast);
+        _calendar.Background = reference
+            ? theme.Surface("Sidebar") : theme.Material("Card", _environment.Session.State.NativeGlass);
+        _calendar.BorderBrush = theme.Edge;
+        _calendar.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : MidnightGlassMetrics.CardRadius);
+        _quickFrame.Background = reference
+            ? theme.Surface("Dock") : theme.Material("Card", _environment.Session.State.NativeGlass);
+        _quickFrame.BorderBrush = theme.Edge;
+        _quickFrame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : MidnightGlassMetrics.CardRadius);
+        _quickHeading.Foreground = theme.Brush("NexusMuted");
+        _weekday.Foreground = theme.Brush("NexusAccent");
+        _day.Foreground = theme.Brush("NexusText");
+        _month.Foreground = theme.Brush("NexusMuted");
         _wallpaper.Visibility = theme.HighContrast || _environment.Session.State.ReducedEffects ? Visibility.Collapsed : Visibility.Visible;
         Background = theme.Surface("Canvas");
         if (_wallpaperName != theme.Palette.Name)

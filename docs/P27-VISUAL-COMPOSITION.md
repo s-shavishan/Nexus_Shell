@@ -80,3 +80,29 @@ The user-approved reference places strong emphasis on connectivity/media modules
 A discovered application's colored Launchpad fallback previously captured High Contrast only at tile creation. Switching theme while the same page remained realized left the old saturated color in place. The existing `SolidColorBrush` now changes color in place during `StartMenuView.ApplyAppearance`, preserving the already-loaded native thumbnail and the retained page identity. Portable checks verify transparent High Contrast versus deterministic normal-theme colors.
 
 **Validation:** Core regression assertions are committed but not executed here. Native WinUI validation should verify Control Center card spacing, keyboard accessibility/selection, normal vs compact mode, live Sound/Network/Bluetooth/Display and Power/Desktop functionality. Launchpad must switch to/from Windows High Contrast while remaining open and must not flash/restart icon loading. No native AppVeyor or screenshot acceptance has run on this branch.
+
+## Stage 5 — Desktop Today & Quick Access glass rail
+
+Screenshot-grounded update: the real desktop had a solitary Today button at the
+lower-right, while the reference has an intentional floating utility stack.
+`DesktopSurface` now groups its **existing live Today/tasks button** and a
+new, independently rendered **Quick Access** card along the right edge.
+Quick Access is not decorative: Files, Search and Controls buttons call the
+existing shell commands with usable accessible names/tooltips. Neither app
+catalog scans nor hardware polling are added.
+
+The pure `DesktopWidgetLayoutPolicy` uses actual desktop size and the existing
+`ShowClockWidget` and `FocusMode` settings. At 1649×928 the pair appears
+near the upper-right; on smaller work areas only the existing Today button
+remains at the lower-right; on very small displays or in Focus Mode both hide.
+This avoids new saved preferences and keeps older layouts usable. Normal
+Midnight material uses palette gradients, with solid/high-contrast fallback.
+Core regression checks cover the reference work area, narrow sizes, focus and
+disabled widgets. The source is committed and links are verified; no Windows
+build or pixel-level screenshot acceptance has run.
+
+**Native acceptance:** select Midnight, enable the existing clock widget,
+and compare the right-side stack with the reference. Verify 1649×928,
+1366×768, 800×600, 150% DPI and Focus Mode. Test all three actions and
+keyboard accessibility. Confirm the calendar still opens the real Study
+section, and the wallpaper and desktop icons remain unobstructed.

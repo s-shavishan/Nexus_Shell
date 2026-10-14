@@ -28,6 +28,24 @@ internal static class MidnightChecks
                 && AuraColor.Parse(glass.Fallback).A == 255,
                 "Reference glass must have finite translucent parameters and a fully opaque safety fallback.");
         }
+        // The desktop's new widget rail must remain accessible at the
+        // screenshot work area without intruding on small screens or Focus.
+        var roomy = DesktopWidgetLayoutPolicy.Resolve(1649, 928, true, false);
+        check(roomy.ShowToday && roomy.ShowActions && roomy.AtTop,
+            "The reference-size desktop should expose the Today and Quick Access glass cards.");
+        foreach (var size in new[] { (800d, 600d), (1119d, 739d), (400d, 480d) })
+        {
+            var compact = DesktopWidgetLayoutPolicy.Resolve(size.Item1, size.Item2, true, false);
+            check(compact.ShowToday && !compact.ShowActions && !compact.AtTop,
+                "Compact desktops must show only the existing calendar without additional action clutter.");
+        }
+        foreach (var (width, height) in new[] { (399d, 480d), (1649d, 479d), (double.NaN, 900d) })
+            check(!DesktopWidgetLayoutPolicy.Resolve(width, height, true, false).ShowToday,
+                "Tiny or invalid work areas must not produce an off-screen floating widget.");
+        check(!DesktopWidgetLayoutPolicy.Resolve(1649, 928, false, false).ShowToday
+            && !DesktopWidgetLayoutPolicy.Resolve(1649, 928, true, true).ShowActions
+            && !DesktopWidgetLayoutPolicy.Resolve(1649, 928, true, true).ShowToday,
+            "Widget settings and Focus Mode must remain authoritative.");
         var calculator = new CalculatorEngine();
         void Keys(params string[] keys) { foreach (string key in keys) calculator.Input(key); }
         Keys("0", ".", "1", "+", "0", ".", "2", "="); check(calculator.Display == "0.3", "Decimal sums must not expose binary floating point error.");
