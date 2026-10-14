@@ -55,7 +55,18 @@ public static class FileTypeContextCatalog
         if (Interlocked.Exchange(ref _reloadQueued, 1) != 0) return;
         _ = Task.Run(async () =>
         {
-            try { await Task.Delay(160).ConfigureAwait(false); Reload(); }
+            try
+            {
+                await Task.Delay(160).ConfigureAwait(false);
+                if (!Reload())
+                {
+                    // Editors often rename or truncate a JSON file before the
+                    // final write. Keep the previous snapshot and retry once
+                    // after the write has settled; never make a popup wait.
+                    await Task.Delay(420).ConfigureAwait(false);
+                    Reload();
+                }
+            }
             finally { Volatile.Write(ref _reloadQueued, 0); }
         });
     }
