@@ -55,6 +55,7 @@ internal sealed class FilesEnvironment
         Apply(await _client.CallAsync<AppearanceSettings>(RuntimeOperations.Pulse, new { }, TimeSpan.FromSeconds(3), _cancel.Token));
         var launch = _work.Launch;
         string folder = launch.Folder ?? Environment.GetFolderPath(launch.Request.Kind == FileSelectionKind.Browse ? Environment.SpecialFolder.UserProfile : Environment.SpecialFolder.MyDocuments);
+        _ = FileTypeContextCatalog.Initialize();
         _window = new(this, launch.Request, folder);
         _window.Closed += async (_, _) => await WindowClosedAsync();
         _timer.Tick += Pulse; _timer.Start();
@@ -126,6 +127,20 @@ internal sealed class FilesEnvironment
         if (_stopping) return;
         if (_window is not null) _window.Close();
         else { _stopping = true; _timer.Stop(); _cancel.Cancel(); _core.Dispose(); Stopped?.Invoke(); }
+    }
+    internal void EditTarget(string path)
+    {
+        if (_stopping || !Path.IsPathFullyQualified(path) || !File.Exists(path)) return;
+        try
+        {
+            using var process = Process.Start(new ProcessStartInfo(path) { Verb = "edit", UseShellExecute = true });
+            if (process is null) throw new InvalidOperationException("No registered Edit handler exists for this file type.");
+        }
+        catch (Exception error)
+        {
+            Log.Write("No registered native editor for " + Path.GetExtension(path), error);
+            _window?.View.ShowMessage("No editor is registered. Choose Open with… instead.");
+        }
     }
     internal void OpenTarget(string path)
     {
