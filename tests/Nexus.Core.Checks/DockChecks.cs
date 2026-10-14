@@ -7,6 +7,17 @@ internal static class DockChecks
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
     internal static void Run()
     {
+        Check(DockPinnedWindowPolicy.IsShellArtifact("DWM Notification Window", "dwm")
+            && !DockPinnedWindowPolicy.IsShellArtifact("Document", "dwm")
+            && !DockPinnedWindowPolicy.IsShellArtifact("DWM Notification Window", "anotherapp"),
+            "The DWM helper is a shell artifact, not a user dock window.");
+        Check(DockPinnedWindowPolicy.Matches("nexus:calculator", "Calculator", "Calculator", "nexus")
+            && DockPinnedWindowPolicy.Matches("nexus:notes", "Notes", "Notes", "nexus")
+            && DockPinnedWindowPolicy.Matches(@"C:\Apps\calc.exe", "Calculator", "Unrelated title", "calc")
+            && !DockPinnedWindowPolicy.Matches("nexus:calculator", "Calculator", "Notes", "nexus")
+            && !DockPinnedWindowPolicy.Matches("Tool.lnk", "Calculator", "Calculator", "Calculator")
+            && !DockPinnedWindowPolicy.Matches(@"C:\Apps\calc.exe", "Calculator", "Calculator", "explorer"),
+            "Pinned apps must claim only their matching running window identities.");
         var dock = new DockWindowSet();
         var windows = Enumerable.Range(1, 130).Select(i => new RunningWindow(new IntPtr(i), "App " + i, "app", i + 100)).ToArray();
         Check(dock.Reconcile(windows), "New app identities must change the dock snapshot.");

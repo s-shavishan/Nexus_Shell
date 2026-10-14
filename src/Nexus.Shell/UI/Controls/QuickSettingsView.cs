@@ -299,14 +299,32 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     {
         var brightness = state.Brightness;
         string signature = (brightness?.DeviceId ?? "") + "|" + brightness?.Available + "|" + string.Join("|", (state.Displays ?? []).Select(d => d.ToString()));
-        if (_signature != signature || _brightnessLabel is null)
+        if (_signature != signature || (brightness?.Available == true && _brightnessLabel is null))
         {
-            _signature = signature; ClearBody();
-            foreach (var display in state.Displays ?? []) Card(display.Primary ? "Primary display" : "Display", display.Name + $"\n{display.Width} × {display.Height} · {display.RefreshHz} Hz");
-            var card = Card("Brightness"); _brightnessLabel = Label(brightness?.Message ?? "Brightness is unavailable.", 12, true); card.Children.Add(_brightnessLabel);
-            var control = _brightness = new Slider { Minimum = 0, Maximum = 100, StepFrequency = 1, IsEnabled = brightness?.Available == true }; AutomationProperties.SetName(control, "Hardware brightness");
-            control.ValueChanged += (_, args) => { if (!_syncing && _section == "Display" && ReferenceEquals(control, _brightness) && brightness?.Available == true) { Queue(new("brightness", brightness.DeviceId, Value: args.NewValue)); _brightnessLabel!.Text = brightness.Device + " · " + Math.Round(args.NewValue) + "%"; } }; card.Children.Add(control);
-            Card("Display options", "Resolution, scaling, projection and night light remain in advanced Windows controls. Brightness needs a monitor and driver with hardware control support.");
+            _signature = signature; ClearBody(); _brightness = null; _brightnessLabel = null;
+            foreach (var display in state.Displays ?? [])
+                Card(display.Primary ? "Primary display" : "Display",
+                    display.Name + $"\n{display.Width} × {display.Height} · {display.RefreshHz} Hz");
+            if (brightness?.Available == true)
+            {
+                var card = Card("Brightness");
+                _brightnessLabel = Label(brightness.Device + " · " + brightness.Percent + "%", 12, true);
+                card.Children.Add(_brightnessLabel);
+                var control = _brightness = new Slider { Minimum = 0, Maximum = 100, StepFrequency = 1 };
+                AutomationProperties.SetName(control, "Hardware brightness");
+                control.ValueChanged += (_, args) =>
+                {
+                    if (!_syncing && _section == "Display" && ReferenceEquals(control, _brightness))
+                    {
+                        Queue(new("brightness", brightness.DeviceId, Value: args.NewValue));
+                        _brightnessLabel!.Text = brightness.Device + " · " + Math.Round(args.NewValue) + "%";
+                    }
+                };
+                card.Children.Add(control);
+            }
+            var options = Card("Display controls",
+                "Configure resolution, scaling, projection and night light in Windows.");
+            options.Children.Add(DeviceButton("Open display settings", Advanced));
         }
         _syncing = true;
         try { if (brightness?.Available == true && _brightness is not null) { double value = Pending("brightness", brightness.DeviceId)?.Value ?? brightness.Percent; _brightness.Value = value; _brightnessLabel!.Text = brightness.Device + " · " + Math.Round(value) + "%"; } else if (_brightnessLabel is not null) _brightnessLabel.Text = brightness?.Message ?? "Brightness is unavailable."; }
