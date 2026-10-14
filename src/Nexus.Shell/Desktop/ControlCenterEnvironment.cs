@@ -153,14 +153,18 @@ internal sealed class ControlCenterEnvironment
         }
         try
         {
-            var target = tool.Kind == WindowsToolKind.SystemExecutable
+            bool native = tool.Kind is WindowsToolKind.SystemExecutable or WindowsToolKind.ControlPanelApplet;
+            if (native && !WindowsToolCatalog.SafeNativeTarget(tool))
+                throw new InvalidOperationException("The Windows tool target was not allowlisted.");
+            if (!native && tool.Kind != WindowsToolKind.Settings)
+                throw new InvalidOperationException("Unsupported Windows tool category.");
+            var target = native
                 ? Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.System), tool.Target)
                 : tool.Target;
             var start = new ProcessStartInfo(target)
             {
                 UseShellExecute = true,
-                WorkingDirectory = tool.Kind == WindowsToolKind.SystemExecutable
-                    ? Path.GetDirectoryName(target)! : AppContext.BaseDirectory
+                WorkingDirectory = native ? Path.GetDirectoryName(target)! : AppContext.BaseDirectory
             };
             using var launched = Process.Start(start);
             if (launched is null) throw new InvalidOperationException("Windows did not start this control.");
