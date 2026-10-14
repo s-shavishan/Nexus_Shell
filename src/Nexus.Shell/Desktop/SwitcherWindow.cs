@@ -223,16 +223,21 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
         var fallback = new StackPanel { Spacing = 7, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
         fallback.Children.Add(NexusIcons.Image(NexusIcons.ForProcess(entry.Window.ProcessName), 34)); fallback.Children.Add(new TextBlock { Text = entry.Minimized ? "Minimized · click to restore" : "Click to switch", FontSize = 11, Foreground = theme.Brush("NexusMuted"), TextAlignment = TextAlignment.Center });
         var viewport = new Border { Child = fallback, Background = theme.Brush("NexusInput"), MinHeight = 45 };
-        var switchButton = new Button { Content = viewport, HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Stretch, Padding = new Thickness(0), BorderThickness = new Thickness(0), Background = theme.Brush("NexusInput"), Style = (Style)Application.Current.Resources["QuietButton"] };
-        AutomationProperties.SetName(switchButton, "Switch to or drag " + entry.Window.Title);
-        switchButton.Click += (_, _) =>
+        // A Button owns its own pointer capture and Click gesture. Attaching
+        // custom mouse-drag capture to that same Button caused drag cancellation
+        // or inadvertent window switching on ordinary pointer releases.
+        // A plain Grid owns the preview gesture; a separate real Button keeps
+        // switching and keyboard accessibility available.
+        var dragSurface = new Grid { Background = theme.Brush("NexusInput"), MinHeight = 45 };
+        dragSurface.Children.Add(viewport);
+        AutomationProperties.SetName(dragSurface, "Drag window to arrange " + entry.Window.Title);
+        dragSurface.Tapped += (_, _) =>
         {
-            if (WindowOverviewInteractionPolicy.SuppressClick(
+            if (!WindowOverviewInteractionPolicy.SuppressClick(
                 _suppressCardClickKey, entry.Key, _suppressCardClickUntil,
-                System.Environment.TickCount64)) return;
-            Commit(entry.Window);
+                System.Environment.TickCount64)) Commit(entry.Window);
         };
-        content.Children.Add(switchButton);
+        content.Children.Add(dragSurface);
         var label = new Grid { ColumnSpacing = 7 }; label.ColumnDefinitions.Add(new()); label.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
         var titles = new StackPanel { Spacing = 2 }; titles.Children.Add(new TextBlock { Text = entry.Window.Title, FontSize = 13, TextTrimming = TextTrimming.CharacterEllipsis, Foreground = theme.Brush("NexusText"), FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
         titles.Children.Add(new TextBlock { Text = entry.Window.ProcessName + (entry.Maximized ? " · maximized" : ""), FontSize = 11, Foreground = theme.Brush("NexusMuted"), TextTrimming = TextTrimming.CharacterEllipsis });
@@ -244,7 +249,10 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
             TextTrimming = TextTrimming.CharacterEllipsis
         };
         titles.Children.Add(placementNote);
-        AttachDrag(switchButton, entry, placementNote);
+        var switchAction = ActionButton("Switch to window", () => Commit(entry.Window));
+        switchAction.HorizontalAlignment = HorizontalAlignment.Left;
+        titles.Children.Add(switchAction);
+        AttachDrag(dragSurface, entry, placementNote);
         label.Children.Add(titles);
         var select = new CheckBox { IsChecked = _selected.Contains(entry.Key), IsEnabled = entry.CanArrange, MinWidth = 26, Padding = new Thickness(0), VerticalAlignment = VerticalAlignment.Center };
         AutomationProperties.SetName(select, "Select " + entry.Window.Title + " for layout"); select.Checked += (_, _) => { if (_selected.Count >= SavedWindowLayouts.MaximumWindows && !_selected.Contains(entry.Key)) { select.IsChecked = false; _message.Text = "Select up to twelve windows."; return; } _selected.Add(entry.Key); UpdateActions(); }; select.Unchecked += (_, _) => { _selected.Remove(entry.Key); UpdateActions(); }; Grid.SetColumn(select, 1); label.Children.Add(select); Grid.SetRow(label, 1); content.Children.Add(label);
@@ -281,8 +289,15 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
         try
         {
             var monitor = _monitors.FirstOrDefault(m => m.Id == MonitorId); if (monitor is null) return;
-            var moves = Selected().Select(entry => (Entry: entry, Position: DesktopWindowCatalog.Capture(entry, _monitors))).Where(item => item.Position is not null)
-                .Select(item => new WindowMove(item.Entry.Window, SavedWindowLayouts.Project(item.Position!, monitor.Work), item.Position!.Maximized)).ToArray();
+            var moves = Selected().Select(entry => (Entry: entry, Bounds: DesktopWindowCatalog.CurrentBounds(entry, _monitors)))
+                .Where(item => item.Bounds is not null)
+                .Select(item =>
+                {
+                    var origin = _monitors.First(m => m.Id == item.Entry.MonitorId);
+                    return new WindowMove(item.Entry.Window,
+                        WindowOverviewGeometry.ProjectBetween(item.Bounds!.Value, origin.Work, monitor.Work),
+                        item.Entry.Maximized);
+                }).ToArray();
             if (moves.Length == 0) { _message.Text = "These windows cannot be moved safely."; return; }
             Stage(moves); _message.Text = "Move staged for " + moves.Length + " windows. Apply to commit.";
         }
@@ -320,7 +335,7 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
         }
         finally { _applying = false; if (!IsClosed) UpdateActions(); }
     }
-    private void AttachDrag(Button button, DesktopWindowEntry entry, TextBlock note)
+    private void AttachDrag(Grid surface, DesktopWindowEntry entry, TextBlock note)
     {
         Point? start = null;
         LayoutRect? dragStartBounds = null;
@@ -328,7 +343,7 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
         WindowMove? candidate = null;
         bool dragging = false;
         var transform = new TranslateTransform();
-        button.RenderTransform = transform;
+        surface.RenderTransform = transform;
         void Reset(bool commit)
         {
             var finish = commit && dragging ? candidate : null;
@@ -341,7 +356,7 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
             dragStartBounds = null; dragMonitor = null;
             _dragCandidate = null;
             transform.X = transform.Y = 0;
-            button.ReleasePointerCaptures();
+            surface.ReleasePointerCaptures();
             // A stage rebuilds the card tree. Release native capture first;
             // never detach the actively captured Button during its handler.
             if (finish is { } move)
@@ -354,24 +369,26 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
                 catch (Exception error) { _message.Text = error.Message; }
             }
         }
-        button.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler((_, args) =>
+        surface.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler((_, args) =>
         {
             if (_applying || !entry.CanArrange || !NativeMethods.OwnsWindow(entry.Window)
                 || !args.GetCurrentPoint(Root).Properties.IsLeftButtonPressed) return;
             // Capture the original placement just ONCE when pointer contact
             // starts. Calling GetWindowPlacement + monitor projection on every
             // mouse-move event caused avoidable input latency and frame jitter.
-            var source = DesktopWindowCatalog.Capture(entry, _monitors);
+            var source = DesktopWindowCatalog.CurrentBounds(entry, _monitors);
             var target = _monitors.FirstOrDefault(m => m.Id == MonitorId)
                 ?? _monitors.FirstOrDefault(m => m.Id == entry.MonitorId);
-            if (source is null || target is null || !button.CapturePointer(args.Pointer)) return;
+            if (source is null || target is null || !surface.CapturePointer(args.Pointer)) return;
+            var origin = _monitors.FirstOrDefault(m => m.Id == entry.MonitorId);
+            if (origin is null) { surface.ReleasePointerCaptures(); return; }
             dragStartBounds = _staged.TryGetValue(entry.Key, out var staged)
-                ? staged.Bounds : SavedWindowLayouts.Project(source, target.Work);
+                ? staged.Bounds : WindowOverviewGeometry.ProjectBetween(source.Value, origin.Work, target.Work);
             dragMonitor = target;
             start = args.GetCurrentPoint(Root).Position;
             candidate = null; dragging = false;
         }), true);
-        button.AddHandler(UIElement.PointerMovedEvent, new PointerEventHandler((_, args) =>
+        surface.AddHandler(UIElement.PointerMovedEvent, new PointerEventHandler((_, args) =>
         {
             if (start is not { } origin || _applying || !entry.CanArrange) return;
             if (!args.GetCurrentPoint(Root).Properties.IsLeftButtonPressed) { Reset(false); return; }
@@ -396,7 +413,7 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
             }
             catch (Exception error) { _message.Text = error.Message; Reset(false); }
         }), true);
-        button.AddHandler(UIElement.PointerReleasedEvent, new PointerEventHandler((_, args) =>
+        surface.AddHandler(UIElement.PointerReleasedEvent, new PointerEventHandler((_, args) =>
         {
             if (start is null) return;
             bool wasDragging = dragging;
@@ -410,8 +427,8 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
             Reset(true);
             if (wasDragging) args.Handled = true;
         }), true);
-        button.PointerCanceled += (_, _) => Reset(false);
-        button.PointerCaptureLost += (_, _) => { if (start is not null) Reset(false); };
+        surface.PointerCanceled += (_, _) => Reset(false);
+        surface.PointerCaptureLost += (_, _) => { if (start is not null) Reset(false); };
     }
     private void SaveLayout()
     {
