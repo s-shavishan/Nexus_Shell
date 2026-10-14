@@ -39,6 +39,19 @@ internal static class WindowsSettingsChecks
                     { "Sound" => snapshot.Sound is not null, "Display" => snapshot.Brightness is not null && snapshot.Displays is not null,
                         "Network" => snapshot.Network is not null, "Bluetooth" => snapshot.Bluetooth is not null, "Power" => snapshot.Power is not null, _ => false };
                     if (!valid) throw new Exception("The native " + section + " read returned no capability state.");
+                    if (section == "Display" && snapshot.Displays is { } displays)
+                    {
+                        foreach (var display in displays)
+                        {
+                            if (string.IsNullOrWhiteSpace(display.DeviceId)
+                                || display.Modes is null
+                                || display.Modes.Any(mode => mode.Width < 640 || mode.Height < 480
+                                    || mode.RefreshHz < 23 || mode.RefreshHz > 360
+                                    || mode.Id != $"{mode.Width}x{mode.Height}@{mode.RefreshHz}")
+                                || display.Modes.Select(mode => mode.Id).Distinct().Count() != display.Modes.Length)
+                                throw new Exception("Native display enumeration returned an unsafe or duplicated mode.");
+                        }
+                    }
                     reads++;
                 }
                 catch (RuntimeFailure error) when (error.Code is "settings-device" or "settings-timeout")
