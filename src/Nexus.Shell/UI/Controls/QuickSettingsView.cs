@@ -178,6 +178,9 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     {
         if (_disposed) return; _compact = compact; _open = true; _poll.Start();
         _nav.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        if (_tabs.TryGetValue("Bluetooth", out var bluetooth))
+            bluetooth.Visibility = BluetoothRadioAvailability.ShowControls(BluetoothRadioAvailability.Detect())
+                ? Visibility.Visible : Visibility.Collapsed;
         _expand.Visibility = compact ? Visibility.Visible : Visibility.Collapsed;
         Navigate(section ?? _section);
     }
