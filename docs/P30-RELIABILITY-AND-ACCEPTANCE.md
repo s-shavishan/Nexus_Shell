@@ -1,6 +1,6 @@
 # P3.0 — Nexus Shell reliability-first acceptance tracker
 
-**Baseline:** `main` commit `5cd41d1259fe158eb7e227989f8b28b1371ea62c` (P2.9 squash merge). User reported P2.9 "implemented quite well but needs more attention"; **no blanket P2.9 acceptance** is implied. Main AppVeyor commit status was **error** at inspection; the build's first error message is not available through the linked GitHub status. Do not mark main clean without the actual successful main build.
+**Baseline:** `main` commit `5cd41d1259fe158eb7e227989f8b28b1371ea62c` (P2.9 squash merge). User reported P2.9 "implemented quite well but needs more attention"; **no blanket P2.9 acceptance** is implied. The latest observed AppVeyor **branch check succeeded** for this main commit (build 54897165); manual Windows 10/11 acceptance and artifact installation remain open.
 
 ## Prior progress must be preserved
 
@@ -17,7 +17,7 @@ The user's earlier Windows 10 VM test confirmed these specific improvements, **o
 
 | Priority | User-visible acceptance gate | Status |
 |---|---|---|
-| P0 | Restore AppVeyor main build to green, identify actual first failing stage and verify release package. | **Open:** GitHub main status reports error; need the AppVeyor console failure lines. |
+| P0 | Restore AppVeyor main build to green and verify the test archive is deployable. | **CI green** at build 54897165; artifact deployment and manual VM run still pending. |
 | P0 | Native overview: drag preview, all snap zones, stage before movement, Done moves original HWND, reopen/Undo restores, Escape/Cancel never apply. | **Unverified:** prior VM failure, P2.9 source corrections merged. |
 | P0 | Dock pin identity: built-in Files and Windows Calculator, no duplicate running icon; foreground indicator updates immediately; second app window remains accessible. | **Source fix in P3.0 draft**, native test pending. |
 | P1 | Dock DWM previews: correct windows/minimize and reliable fallback; avoid spurious "DWM Notification Window". | **Unverified**, VM/real Windows checks needed. |
