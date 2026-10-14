@@ -312,8 +312,15 @@ internal sealed class TaskbarView : Grid
             DockPinnedWindowPolicy.Matches(pin.Target, pin.Name, window.Title, window.ProcessName));
 
     private bool HasPinnedArtwork(RunningWindow window)
-        => _shownPins.Any(pin => DockPinnedWindowPolicy.Matches(
-            pin.Target, pin.Name, window.Title, window.ProcessName));
+        => _shownPins.Any(pin =>
+        {
+            // Only the representative window is integrated into the pin.
+            // Additional document/windows from the same process remain
+            // individually reachable as running entries.
+            var representative = FindPinnedWindow(pin);
+            return representative is not null
+                && DockWindowIdentity.Of(representative) == DockWindowIdentity.Of(window);
+        });
 
     private void RefreshPinnedIndicators()
     {
