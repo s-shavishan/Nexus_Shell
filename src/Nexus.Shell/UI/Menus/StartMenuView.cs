@@ -50,11 +50,15 @@ internal sealed class StartMenuView : Grid, IDisposable
     private readonly DesktopEnvironment _environment;
     private readonly TextBox _search = new() { PlaceholderText = "Find an app", FontSize = 15, CornerRadius = new CornerRadius(12), Padding = new Thickness(14, 10, 14, 10) };
     private readonly GridView _apps = new() { IsItemClickEnabled = true, SelectionMode = ListViewSelectionMode.Single, HorizontalAlignment = HorizontalAlignment.Stretch };
-    private readonly TextBlock _title = new() { Text = "Launchpad", FontSize = 27, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
-    private readonly TextBlock _subtitle = new() { Text = "Your apps, ready when you are.", FontSize = 12, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis };
+    private readonly TextBlock _title = new() { Text = "Launchpad", FontSize = 32, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
+    private readonly TextBlock _subtitle = new() { Text = "Everything on your desktop, beautifully organized.", FontSize = 12, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis };
     private readonly StackPanel _dots = new() { Orientation = Orientation.Horizontal, Spacing = 5, VerticalAlignment = VerticalAlignment.Center };
     private readonly Border _empty = new() { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-    private readonly Border _searchFrame = new() { CornerRadius = new CornerRadius(13), BorderThickness = new Thickness(1) };
+    private readonly Border _searchFrame = new() { CornerRadius = new CornerRadius(18), BorderThickness = new Thickness(1) };
+    private readonly Button _organizeButton = new() { Content = "Organize  ▾" };
+    private readonly Border _organizeFrame = new() { Padding = new Thickness(10), CornerRadius = new CornerRadius(14), BorderThickness = new Thickness(1), Visibility = Visibility.Collapsed };
+    private readonly Border _galleryFrame = new() { CornerRadius = new CornerRadius(22), BorderThickness = new Thickness(1), Padding = new Thickness(7) };
+    private bool _organizerOpen;
     private readonly FontIcon _searchIcon = ShellControls.Icon("\uE721", 18);
     private readonly TextBlock _hint = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
     private readonly Button _previous = new() { Content = "‹", Width = 38 }, _next = new() { Content = "›", Width = 38 };
@@ -77,7 +81,7 @@ internal sealed class StartMenuView : Grid, IDisposable
     internal StartMenuView(DesktopEnvironment environment)
     {
         _environment = environment; _catalog = new(Builtins());
-        Padding = new Thickness(30); RowSpacing = 18;
+        Padding = new Thickness(24, 22, 24, 20); RowSpacing = 14;
         SizeChanged += (_, _) => _subtitle.MaxWidth = Math.Max(140, ActualWidth - 176);
         KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden;
         foreach (var height in new[] { GridLength.Auto, GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto }) RowDefinitions.Add(new() { Height = height });
@@ -101,7 +105,24 @@ internal sealed class StartMenuView : Grid, IDisposable
             button.Click += (_, _) => { _category = category; _page = 0; RefreshCollections(); Render(); }; _categories.Add(category, button); tabs.Children.Add(button);
         }
         var organization = new StackPanel { Spacing = 9 };
-        organization.Children.Add(new ScrollViewer { Content = tabs, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled });
+        var topBar = new Grid { ColumnSpacing = 10 };
+        topBar.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) });
+        topBar.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
+        topBar.Children.Add(new ScrollViewer { Content = tabs, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled });
+        _organizeButton.Style = (Style)Application.Current.Resources["QuietButton"];
+        _organizeButton.Padding = new Thickness(13, 7, 13, 7);
+        _organizeButton.CornerRadius = new CornerRadius(12);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_organizeButton, "Show Launchpad organization options");
+        _organizeButton.Click += (_, _) =>
+        {
+            _organizerOpen = !_organizerOpen;
+            _organizeFrame.Visibility = _organizerOpen ? Visibility.Visible : Visibility.Collapsed;
+            _organizeButton.Content = _organizerOpen ? "Done  ▴" : "Organize  ▾";
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_organizeButton,
+                _organizerOpen ? "Hide Launchpad organization options" : "Show Launchpad organization options");
+        };
+        Grid.SetColumn(_organizeButton, 1); topBar.Children.Add(_organizeButton);
+        organization.Children.Add(topBar);
         var tools = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
         tools.Children.Add(_collections); _collections.SelectionChanged += (_, _) => { if (_organizing || _collections.SelectedItem is not CollectionChoice choice) return; _category = choice.Id.Length == 0 ? "All" : "collection:" + choice.Id; _page = 0; RefreshCollections(); Render(); };
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_collections, "App collection");
@@ -113,7 +134,12 @@ internal sealed class StartMenuView : Grid, IDisposable
         _order.SelectionChanged += (_, _) => { if (!_organizing) Organize(() => environment.Session.State.LaunchpadOrder = _order.SelectedIndex == 1 ? "Catalog" : "Name"); }; tools.Children.Add(_order);
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_order, "Launchpad app order");
         _restoreHidden.Click += (_, _) => Organize(() => environment.Session.State.HiddenAppTargets.Clear()); tools.Children.Add(_restoreHidden);
-        organization.Children.Add(new ScrollViewer { Content = tools, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled });
+        _organizeFrame.Child = new ScrollViewer
+        {
+            Content = tools, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Disabled
+        };
+        organization.Children.Add(_organizeFrame);
         Grid.SetRow(organization, 2); Children.Add(organization); RefreshCollections();
         _apps.ItemsPanel = (ItemsPanelTemplate)XamlReader.Load("""
             <ItemsPanelTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"><ItemsWrapGrid Orientation="Horizontal" ItemWidth="104" ItemHeight="124" /></ItemsPanelTemplate>
@@ -209,7 +235,10 @@ internal sealed class StartMenuView : Grid, IDisposable
     internal Task OpenAsync(bool search)
     {
         ++_epoch; _open = true; _title.Text = "Launchpad";
-        _category = "All"; _page = 0; _search.Text = ""; _filterTimer.Stop(); RefreshCollections();
+        _category = "All"; _page = 0; _search.Text = ""; _filterTimer.Stop();
+        _organizerOpen = false; _organizeFrame.Visibility = Visibility.Collapsed;
+        _organizeButton.Content = "Organize  ▾";
+        RefreshCollections();
         _catalog.Update(_environment.Session.State.PinnedApps); Render();
         return RefreshCatalogAsync();
     }
