@@ -1,5 +1,8 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
+using Windows.Foundation;
 using Microsoft.UI.Xaml.Automation;
 using Nexus.Shell.Interop;
 using Nexus.Shell.Models;
@@ -21,7 +24,11 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
     private readonly TextBox _layoutName = new() { PlaceholderText = "Layout name", MaxLength = 40, MinWidth = 90 };
     private readonly TextBlock _summary = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _message = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap };
-    private readonly Button _previous, _next, _undo, _restore, _delete, _save, _grid, _columns, _stack, _move;
+    private readonly Button _previous, _next, _undo, _restore, _delete, _save, _grid, _columns, _stack, _move, _apply, _discard;
+    private readonly Dictionary<string, WindowMove> _staged = [];
+    private long _suppressCardClickUntil;
+    protected override bool DismissOnDeactivate => false;
+    protected override ShellRect ResolveBounds(ShellRect work, ShellRect monitor, double scale) => monitor;
     private readonly Flyout _saveFlyout = new();
     private readonly WindowLayouts _placement = new();
     private readonly HashSet<string> _selected = [];
@@ -32,7 +39,7 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
     private IntPtr _current;
     private int _page, _columnCount = 3, _rowCount = 2, _previewQueued;
     private bool _refreshing, _refreshAgain, _binding, _applying;
-    internal SwitcherWindow(DesktopEnvironment environment) : base(environment, "Window board", new Grid(), 1060, 740, center: true, animateBody: false)
+    internal SwitcherWindow(DesktopEnvironment environment) : base(environment, "Window overview", new Grid(), 1060, 740, center: true, animateBody: false)
     {
         _body = (Grid)Root.Children[1]; _body.RowSpacing = 10;
         for (int i = 0; i < 5; i++) _body.RowDefinitions.Add(new() { Height = i == 3 ? new GridLength(1, GridUnitType.Star) : GridLength.Auto });
@@ -40,8 +47,10 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
         search.Children.Add(_query); Grid.SetColumn(_monitor, 1); search.Children.Add(_monitor); var refresh = ActionButton("Refresh", () => _ = RefreshAsync()); Grid.SetColumn(refresh, 2); search.Children.Add(refresh); _body.Children.Add(search);
         var tools = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
         _grid = ActionButton("Grid", () => Arrange("Grid")); _columns = ActionButton("Columns", () => Arrange("Columns")); _stack = ActionButton("Stack", () => Arrange("Stack"));
-        _move = ActionButton("Move to display", Move); _undo = ActionButton("Undo", Undo);
-        foreach (var button in new[] { _grid, _columns, _stack, _move, _undo }) tools.Children.Add(button);
+        _move = ActionButton("Stage on display", Move); _undo = ActionButton("Undo last arrangement", Undo);
+        _apply = ActionButton("Apply arrangement", ApplyStaged);
+        _discard = ActionButton("Cancel", Hide);
+        foreach (var button in new[] { _grid, _columns, _stack, _move, _undo, _apply, _discard }) tools.Children.Add(button);
         Grid.SetRow(tools, 1); _body.Children.Add(tools);
         var layouts = new Grid { ColumnSpacing = 6 }; foreach (var width in new[] { new GridLength(1, GridUnitType.Star), GridLength.Auto, GridLength.Auto, GridLength.Auto }) layouts.ColumnDefinitions.Add(new() { Width = width });
         layouts.Children.Add(_layouts);
@@ -66,7 +75,19 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
     private SavedWindowLayout? SelectedLayout => Environment.Session.State.WindowLayouts.FirstOrDefault(layout => layout.Id == ((_layouts.SelectedItem as ComboBoxItem)?.Tag as string));
     private string MonitorId => (_monitor.SelectedItem as ComboBoxItem)?.Tag as string ?? "";
     internal void Show(IReadOnlyList<RunningWindow> windows, IntPtr current)
-    { _current = current; ShowPanel(current); _query.Focus(FocusState.Programmatic); _ = RefreshAsync(windows); }
+    {
+        _staged.Clear(); _current = current; _query.Text = "";
+        ShowPanel(current); _query.Focus(FocusState.Programmatic); _ = RefreshAsync(windows);
+    }
+    internal override void ApplyAppearance()
+    {
+        base.ApplyAppearance();
+        // Overview must cover the entire monitor, not resemble another tool dialog.
+        Frame.CornerRadius = new CornerRadius(0);
+        Frame.BorderThickness = new Thickness(0);
+        Root.Padding = new Thickness(28, 22, 28, 24);
+        Render();
+    }
     internal void RefreshOpen() { if (IsOpen) _ = RefreshAsync(); }
     internal void PopulateValidation()
     {
@@ -85,6 +106,7 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
             string selected = MonitorId; _monitors = result.Monitors; _windows = result.Windows;
             if (unchanged) { UpdateActions(); return; }
             _selected.RemoveWhere(key => !_windows.Any(entry => entry.Key == key));
+            foreach (var key in _staged.Keys.Where(key => !_windows.Any(entry => entry.Key == key)).ToArray()) _staged.Remove(key);
             _binding = true; _monitor.Items.Clear(); _monitor.Items.Add(new ComboBoxItem { Content = "All displays", Tag = "" });
             foreach (var monitor in _monitors) _monitor.Items.Add(new ComboBoxItem { Content = monitor.Name, Tag = monitor.Id });
             _monitor.SelectedItem = _monitor.Items.Cast<ComboBoxItem>().FirstOrDefault(item => (string)item.Tag == selected) ?? _monitor.Items[0]; _binding = false;
@@ -124,24 +146,39 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
         fallback.Children.Add(NexusIcons.Image(NexusIcons.ForProcess(entry.Window.ProcessName), 34)); fallback.Children.Add(new TextBlock { Text = entry.Minimized ? "Minimized · click to restore" : "Click to switch", FontSize = 11, Foreground = theme.Brush("NexusMuted"), TextAlignment = TextAlignment.Center });
         var viewport = new Border { Child = fallback, Background = theme.Brush("NexusInput"), MinHeight = 45 };
         var switchButton = new Button { Content = viewport, HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Stretch, Padding = new Thickness(0), BorderThickness = new Thickness(0), Background = theme.Brush("NexusInput"), Style = (Style)Application.Current.Resources["QuietButton"] };
-        AutomationProperties.SetName(switchButton, "Switch to " + entry.Window.Title); switchButton.Click += (_, _) => Commit(entry.Window); content.Children.Add(switchButton);
+        AutomationProperties.SetName(switchButton, "Switch to or drag " + entry.Window.Title);
+        switchButton.Click += (_, _) => { if (System.Environment.TickCount64 >= _suppressCardClickUntil) Commit(entry.Window); };
+        content.Children.Add(switchButton);
         var label = new Grid { ColumnSpacing = 7 }; label.ColumnDefinitions.Add(new()); label.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
         var titles = new StackPanel { Spacing = 2 }; titles.Children.Add(new TextBlock { Text = entry.Window.Title, FontSize = 13, TextTrimming = TextTrimming.CharacterEllipsis, Foreground = theme.Brush("NexusText"), FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
-        titles.Children.Add(new TextBlock { Text = entry.Window.ProcessName + (entry.Maximized ? " · maximized" : ""), FontSize = 11, Foreground = theme.Brush("NexusMuted"), TextTrimming = TextTrimming.CharacterEllipsis }); label.Children.Add(titles);
+        titles.Children.Add(new TextBlock { Text = entry.Window.ProcessName + (entry.Maximized ? " · maximized" : ""), FontSize = 11, Foreground = theme.Brush("NexusMuted"), TextTrimming = TextTrimming.CharacterEllipsis });
+        var staged = _staged.TryGetValue(entry.Key, out var pending) ? pending : null;
+        var placementNote = new TextBlock
+        {
+            Text = staged is null ? "Drag preview to stage a position" : $"Staged → {staged.Bounds.X}, {staged.Bounds.Y} · {staged.Bounds.Width} × {staged.Bounds.Height}",
+            FontSize = 10, Foreground = theme.Brush(staged is null ? "NexusMuted" : "NexusAccent"),
+            TextTrimming = TextTrimming.CharacterEllipsis
+        };
+        titles.Children.Add(placementNote);
+        AttachDrag(switchButton, entry, placementNote);
+        label.Children.Add(titles);
         var select = new CheckBox { IsChecked = _selected.Contains(entry.Key), IsEnabled = entry.CanArrange, MinWidth = 26, Padding = new Thickness(0), VerticalAlignment = VerticalAlignment.Center };
         AutomationProperties.SetName(select, "Select " + entry.Window.Title + " for layout"); select.Checked += (_, _) => { if (_selected.Count >= SavedWindowLayouts.MaximumWindows && !_selected.Contains(entry.Key)) { select.IsChecked = false; _message.Text = "Select up to twelve windows."; return; } _selected.Add(entry.Key); UpdateActions(); }; select.Unchecked += (_, _) => { _selected.Remove(entry.Key); UpdateActions(); }; Grid.SetColumn(select, 1); label.Children.Add(select); Grid.SetRow(label, 1); content.Children.Add(label);
         _previews.Add(new(entry, viewport, fallback));
-        return new Border { Child = content, Background = theme.Material("Card", Environment.Session.State.NativeGlass), BorderBrush = theme.Edge, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 14) };
+        return new Border { Child = content, Background = theme.Material("Card", Environment.Session.State.NativeGlass), BorderBrush = theme.Edge, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 18) };
     }
     private void UpdateActions()
     {
         int count = _windows.Count(entry => _selected.Contains(entry.Key)); _grid.IsEnabled = _columns.IsEnabled = _stack.IsEnabled = !_applying && count is > 0 and <= 4;
-        _move.IsEnabled = !_applying && count is > 0 and <= SavedWindowLayouts.MaximumWindows && MonitorId.Length > 0; _undo.IsEnabled = !_applying && _placement.CanUndo;
+        _move.IsEnabled = !_applying && count is > 0 and <= SavedWindowLayouts.MaximumWindows && MonitorId.Length > 0;
+        _undo.IsEnabled = !_applying && (_staged.Count > 0 || _placement.CanUndo);
+        _apply.IsEnabled = !_applying && _staged.Count > 0;
+        _discard.IsEnabled = !_applying;
         _save.IsEnabled = !_applying && _windows.Any(entry => entry.CanArrange && entry.ProcessPath.Length > 0); _delete.IsEnabled = !_applying && SelectedLayout is not null;
         int matched = SelectedLayout is { } layout ? SavedWindowLayouts.Match(layout.Windows, _windows.Where(entry => entry.CanArrange).Select(entry => entry.Candidate).ToArray()).Count : 0;
         _restore.IsEnabled = !_applying && matched > 0; _restore.Content = matched > 0 ? "Restore " + matched : "Restore";
         _summary.Foreground = _message.Foreground = Environment.Theme.Brush("NexusMuted");
-        _summary.Text = _filtered.Count + " windows · " + count + " selected · page " + (_page + 1) + " · select up to 4 to arrange";
+        _summary.Text = _filtered.Count + " windows · " + _staged.Count + " staged · " + count + " selected · page " + (_page + 1) + " · drag a preview, then Apply";
     }
     private IReadOnlyList<DesktopWindowEntry> Selected() => _windows.Where(entry => _selected.Contains(entry.Key) && entry.CanArrange).ToArray();
     private void Arrange(string layout)
@@ -150,8 +187,8 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
         {
             var entries = Selected(); var monitor = _monitors.FirstOrDefault(m => m.Id == MonitorId) ?? _monitors.FirstOrDefault(m => m.Id == entries.FirstOrDefault()?.MonitorId);
             if (monitor is null) return; var work = monitor.Work; var plan = WindowLayouts.Plan(new(work.X, work.Y, work.Width, work.Height), entries.Count, layout);
-            _placement.Apply(entries.Select((entry, i) => new WindowMove(entry.Window, new(plan[i].X, plan[i].Y, plan[i].Width, plan[i].Height))).ToArray());
-            _message.Text = "Arrangement requested. Undo restores the previous positions."; UpdateActions(); Environment.UpdateTaskbar();
+            Stage(entries.Select((entry, i) => new WindowMove(entry.Window, new(plan[i].X, plan[i].Y, plan[i].Width, plan[i].Height))).ToArray());
+            _message.Text = "Arrangement staged. Apply to reposition all selected windows.";
         }
         catch (Exception error) { _message.Text = error.Message; }
     }
@@ -163,11 +200,109 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
             var moves = Selected().Select(entry => (Entry: entry, Position: DesktopWindowCatalog.Capture(entry, _monitors))).Where(item => item.Position is not null)
                 .Select(item => new WindowMove(item.Entry.Window, SavedWindowLayouts.Project(item.Position!, monitor.Work), item.Position!.Maximized)).ToArray();
             if (moves.Length == 0) { _message.Text = "These windows cannot be moved safely."; return; }
-            _placement.Apply(moves); _message.Text = "Move requested for " + moves.Length + " windows. Undo is available."; UpdateActions(); Environment.UpdateTaskbar();
+            Stage(moves); _message.Text = "Move staged for " + moves.Length + " windows. Apply to commit.";
         }
         catch (Exception error) { _message.Text = error.Message; }
     }
-    private void Undo() { _message.Text = _placement.Undo() + " previous window positions requested."; UpdateActions(); Environment.UpdateTaskbar(); }
+    private void Undo()
+    {
+        if (_staged.Count > 0) { _staged.Clear(); Render(); _message.Text = "Unapplied changes discarded."; }
+        else { _message.Text = _placement.Undo() + " previous window positions requested."; UpdateActions(); Environment.UpdateTaskbar(); }
+    }
+    private void Stage(IReadOnlyList<WindowMove> changes)
+    {
+        if (_staged.Keys.Union(changes.Select(m => m.Window.Handle.ToInt64() + ":" + m.Window.ProcessId)).Count() > SavedWindowLayouts.MaximumWindows)
+            throw new InvalidOperationException("Stage at most twelve windows per arrangement.");
+        foreach (var change in changes) _staged[change.Window.Handle.ToInt64() + ":" + change.Window.ProcessId] = change;
+        Render();
+    }
+    private void ApplyStaged()
+    {
+        if (_applying || _staged.Count == 0) return;
+        _applying = true;
+        try
+        {
+            var moves = _staged.Values.ToArray();
+            _placement.Apply(moves);
+            _staged.Clear();
+            Hide();
+            Environment.UpdateTaskbar();
+        }
+        catch (Exception error)
+        {
+            _message.Text = "Arrangement not applied. " + error.Message + " · Cancel leaves existing windows in place.";
+            Log.Write("Window overview apply failed", error);
+        }
+        finally { _applying = false; if (!IsClosed) UpdateActions(); }
+    }
+    private void AttachDrag(Button button, DesktopWindowEntry entry, TextBlock note)
+    {
+        Point? start = null;
+        WindowMove? candidate = null;
+        bool dragging = false;
+        var transform = new TranslateTransform();
+        button.RenderTransform = transform;
+        void Reset(bool commit)
+        {
+            if (commit && dragging && candidate is { } move)
+            {
+                try
+                {
+                    Stage([move]);
+                    _message.Text = "Window position staged · Apply to commit or Cancel to discard.";
+                }
+                catch (Exception error) { _message.Text = error.Message; }
+                _suppressCardClickUntil = System.Environment.TickCount64 + 400;
+            }
+            start = null; candidate = null; dragging = false;
+            transform.X = transform.Y = 0;
+            button.ReleasePointerCaptures();
+        }
+        button.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler((_, args) =>
+        {
+            if (_applying || !entry.CanArrange || !NativeMethods.OwnsWindow(entry.Window)
+                || !args.GetCurrentPoint(Root).Properties.IsLeftButtonPressed) return;
+            start = args.GetCurrentPoint(Root).Position;
+            candidate = null; dragging = false;
+        }), true);
+        button.AddHandler(UIElement.PointerMovedEvent, new PointerEventHandler((_, args) =>
+        {
+            if (start is not { } origin || _applying || !entry.CanArrange) return;
+            if (!args.GetCurrentPoint(Root).Properties.IsLeftButtonPressed) { Reset(false); return; }
+            var current = args.GetCurrentPoint(Root).Position;
+            double dx = current.X - origin.X, dy = current.Y - origin.Y;
+            if (!dragging && !SelectionMarqueeGeometry.HasStarted(origin.X, origin.Y, current.X, current.Y)) return;
+            dragging = true;
+            var originMonitor = _monitors.FirstOrDefault(m => m.Id == entry.MonitorId);
+            var target = _monitors.FirstOrDefault(m => m.Id == MonitorId) ?? originMonitor;
+            if (target is null) return;
+            try
+            {
+                var saved = DesktopWindowCatalog.Capture(entry, _monitors);
+                if (saved is null) { Reset(false); return; }
+                var original = _staged.TryGetValue(entry.Key, out var pending)
+                    ? pending.Bounds : SavedWindowLayouts.Project(saved, target.Work);
+                double scale = ShellLayerInterop.Scale(Handle);
+                int cursorX = target.Work.X + (int)Math.Round(Math.Clamp(current.X / Math.Max(1, Root.ActualWidth), 0, 1) * target.Work.Width);
+                int cursorY = target.Work.Y + (int)Math.Round(Math.Clamp(current.Y / Math.Max(1, Root.ActualHeight), 0, 1) * target.Work.Height);
+                var drop = WindowOverviewGeometry.Drag(target.Work, original, dx, dy, cursorX, cursorY, scale);
+                candidate = new WindowMove(entry.Window, drop.Bounds);
+                note.Text = drop.Zone + $" → {drop.Bounds.X}, {drop.Bounds.Y} · {drop.Bounds.Width} × {drop.Bounds.Height}";
+                transform.X = dx; transform.Y = dy;
+                args.Handled = true;
+            }
+            catch (Exception error) { _message.Text = error.Message; Reset(false); }
+        }), true);
+        button.AddHandler(UIElement.PointerReleasedEvent, new PointerEventHandler((_, args) =>
+        {
+            if (start is null) return;
+            bool wasDragging = dragging;
+            Reset(true);
+            if (wasDragging) args.Handled = true;
+        }), true);
+        button.PointerCanceled += (_, _) => Reset(false);
+        button.PointerCaptureLost += (_, _) => { if (start is not null) Reset(false); };
+    }
     private void SaveLayout()
     {
         try
@@ -201,7 +336,7 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
                 if (monitor is not null) moves.Add(new(entry.Window, SavedWindowLayouts.Project(position, monitor.Work), position.Maximized));
             }
             if (moves.Count == 0) { _message.Text = "No windows can be matched safely. Open the saved apps and try again."; return; }
-            _placement.Apply(moves); _message.Text = "Restore requested for " + moves.Count + " windows · " + (layout.Windows.Count - moves.Count) + " unmatched or unavailable. Undo is available."; Environment.UpdateTaskbar();
+            Stage(moves); _message.Text = "Saved layout staged for " + moves.Count + " windows · " + (layout.Windows.Count - moves.Count) + " unmatched. Apply to commit.";
         }
         catch (Exception error) { _message.Text = error.Message; }
         finally { _applying = false; if (!IsClosed) UpdateActions(); }
@@ -232,7 +367,6 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
     private void ReleasePreviews() { foreach (var preview in _previews) preview.Thumbnail?.Dispose(); _previews.Clear(); }
     private void Commit(RunningWindow window) { Hide(); Environment.RestoreDockWindow(window); }
     internal void CommitSelection() { if (!IsOpen) return; var entry = _filtered.FirstOrDefault(item => item.Window.Handle == _current) ?? _filtered.FirstOrDefault(); if (entry is not null) Commit(entry.Window); else Hide(); }
-    internal override void ApplyAppearance() { base.ApplyAppearance(); Render(); }
-    protected override void OnHidden() { _saveFlyout.Hide(); ReleasePreviews(); }
+    protected override void OnHidden() { _staged.Clear(); _saveFlyout.Hide(); ReleasePreviews(); }
     protected override void OnClosed() => Environment.SwitcherClosed(this);
 }
