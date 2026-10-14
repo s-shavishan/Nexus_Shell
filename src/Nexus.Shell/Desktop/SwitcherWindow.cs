@@ -26,6 +26,9 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
     private readonly TextBlock _message = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap };
     private readonly Button _previous, _next, _undo, _restore, _delete, _save, _grid, _columns, _stack, _move, _apply, _discard;
     private readonly Dictionary<string, WindowMove> _staged = [];
+    private readonly Canvas _layoutMap = new() { Width = 264, Height = 128 };
+    private WindowMove? _dragCandidate;
+    private long _lastMapPaint;
     private long _suppressCardClickUntil;
     protected override bool DismissOnDeactivate => false;
     protected override bool IsImmersive => true;
@@ -62,10 +65,23 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
         _saveFlyout.Opening += (_, _) => { foreach (var preview in _previews) { preview.Thumbnail?.Dispose(); preview.Thumbnail = null; preview.Attempted = true; preview.Fallback.Visibility = Visibility.Visible; } };
         _saveFlyout.Closed += (_, _) => { if (IsOpen) Render(); };
         Grid.SetRow(_cards, 3); _body.Children.Add(_cards);
-        var footer = new Grid { ColumnSpacing = 6 }; footer.ColumnDefinitions.Add(new()); footer.ColumnDefinitions.Add(new() { Width = GridLength.Auto }); footer.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
+        var footer = new Grid { ColumnSpacing = 10 };
+        footer.ColumnDefinitions.Add(new());
+        footer.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
+        footer.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
+        footer.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
         var hints = new StackPanel { Spacing = 4 }; hints.Children.Add(_summary); hints.Children.Add(_message); footer.Children.Add(hints);
         _previous = ActionButton("‹", () => { _page--; Render(); }); _next = ActionButton("›", () => { _page++; Render(); }); AutomationProperties.SetName(_previous, "Previous windows"); AutomationProperties.SetName(_next, "Next windows");
-        Grid.SetColumn(_previous, 1); footer.Children.Add(_previous); Grid.SetColumn(_next, 2); footer.Children.Add(_next); Grid.SetRow(footer, 4); _body.Children.Add(footer);
+        Grid.SetColumn(_previous, 1); footer.Children.Add(_previous); Grid.SetColumn(_next, 2); footer.Children.Add(_next);
+        var miniPanel = new Border
+        {
+            Child = _layoutMap, Padding = new Thickness(9), CornerRadius = new CornerRadius(12),
+            BorderThickness = new Thickness(1), BorderBrush = environment.Theme.Edge,
+            Background = environment.Theme.Material("Card", environment.Session.State.NativeGlass)
+        };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(miniPanel, "Preview of staged window positions");
+        Grid.SetColumn(miniPanel, 3); footer.Children.Add(miniPanel);
+        Grid.SetRow(footer, 4); _body.Children.Add(footer);
         _query.TextChanged += (_, _) => { _page = 0; Render(); };
         _monitor.SelectionChanged += (_, _) => { if (!_binding) { _page = 0; Render(); } };
         _layouts.SelectionChanged += (_, _) => { if (!_binding && SelectedLayout is { } layout) _layoutName.Text = layout.Name; UpdateActions(); };
@@ -138,8 +154,61 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
             var empty = new TextBlock { Text = _windows.Count == 0 ? "Open an app to see it here." : "No windows match this view.", Foreground = Environment.Theme.Brush("NexusMuted"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
             Grid.SetColumnSpan(empty, _columnCount); Grid.SetRowSpan(empty, _rowCount); _cards.Children.Add(empty);
         }
-        _previous.IsEnabled = paging.Previous; _next.IsEnabled = paging.Next; UpdateActions(); QueuePreviews();
+        _previous.IsEnabled = paging.Previous; _next.IsEnabled = paging.Next;
+        UpdateActions(); RenderLayoutMap(); QueuePreviews();
     }
+    private void RenderLayoutMap()
+    {
+        if (IsClosed) return;
+        _layoutMap.Children.Clear();
+        var display = _monitors.FirstOrDefault(item => item.Id == MonitorId)
+            ?? _monitors.FirstOrDefault(item => item.Id == _filtered.FirstOrDefault()?.MonitorId)
+            ?? _monitors.FirstOrDefault();
+        if (display is null) return;
+        var area = display.Work;
+        if (area.Width <= 0 || area.Height <= 0) return;
+        double width = _layoutMap.Width, height = _layoutMap.Height;
+        foreach (var entry in _filtered.Take(SavedWindowLayouts.MaximumWindows))
+        {
+            if (MonitorId.Length == 0 && entry.MonitorId != display.Id && !_staged.ContainsKey(entry.Key))
+                continue;
+            LayoutRect bounds;
+            if (_dragCandidate is { } dragging && dragging.Window.Handle == entry.Window.Handle
+                && dragging.Window.ProcessId == entry.Window.ProcessId)
+                bounds = dragging.Bounds;
+            else if (_staged.TryGetValue(entry.Key, out var staged))
+                bounds = staged.Bounds;
+            else
+            {
+                if (!NativeMethods.OwnsWindow(entry.Window)
+                    || !NativeMethods.GetWindowRect(entry.Window.Handle, out var native)) continue;
+                bounds = DesktopWindowCatalog.Convert(native.Bounds);
+            }
+            double left = Math.Clamp((bounds.X - area.X) / (double)area.Width * width, 0, Math.Max(0, width - 8));
+            double top = Math.Clamp((bounds.Y - area.Y) / (double)area.Height * height, 0, Math.Max(0, height - 8));
+            double w = Math.Clamp(bounds.Width / (double)area.Width * width, 8, width - left);
+            double h = Math.Clamp(bounds.Height / (double)area.Height * height, 8, height - top);
+            bool pending = _staged.ContainsKey(entry.Key)
+                || (_dragCandidate is { } live && live.Window.Handle == entry.Window.Handle);
+            var tile = new Border
+            {
+                Width = w, Height = h,
+                BorderThickness = new Thickness(pending ? 2 : 1),
+                BorderBrush = Environment.Theme.Brush(pending ? "NexusAccent" : "NexusBorder"),
+                Background = Environment.Theme.Brush(pending ? "NexusSelection" : "NexusSidebar"),
+                CornerRadius = new CornerRadius(4), IsHitTestVisible = false
+            };
+            tile.Child = new TextBlock
+            {
+                Text = entry.Window.Title, Margin = new Thickness(3), FontSize = 9,
+                Foreground = Environment.Theme.Brush("NexusText"),
+                TextTrimming = TextTrimming.CharacterEllipsis
+            };
+            Canvas.SetLeft(tile, left); Canvas.SetTop(tile, top);
+            _layoutMap.Children.Add(tile);
+        }
+    }
+
     private Border Card(DesktopWindowEntry entry)
     {
         var theme = Environment.Theme; var content = new Grid { RowSpacing = 7, Padding = new Thickness(10) }; content.RowDefinitions.Add(new()); content.RowDefinitions.Add(new() { Height = GridLength.Auto });
@@ -215,6 +284,7 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
         if (_staged.Keys.Union(changes.Select(m => m.Window.Handle.ToInt64() + ":" + m.Window.ProcessId)).Count() > SavedWindowLayouts.MaximumWindows)
             throw new InvalidOperationException("Stage at most twelve windows per arrangement.");
         foreach (var change in changes) _staged[change.Window.Handle.ToInt64() + ":" + change.Window.ProcessId] = change;
+        _dragCandidate = null;
         Render();
     }
     private void ApplyStaged()
@@ -225,7 +295,7 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
         {
             var moves = _staged.Values.ToArray();
             _placement.Apply(moves);
-            _staged.Clear();
+            _staged.Clear(); _dragCandidate = null;
             Hide();
             Environment.UpdateTaskbar();
         }
@@ -248,6 +318,7 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
             var finish = commit && dragging ? candidate : null;
             if (dragging) _suppressCardClickUntil = System.Environment.TickCount64 + 400;
             start = null; candidate = null; dragging = false;
+            _dragCandidate = null;
             transform.X = transform.Y = 0;
             button.ReleasePointerCaptures();
             // A stage rebuilds the card tree. Release native capture first;
@@ -292,6 +363,9 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
                 int cursorY = target.Work.Y + (int)Math.Round(Math.Clamp(current.Y / Math.Max(1, Root.ActualHeight), 0, 1) * target.Work.Height);
                 var drop = WindowOverviewGeometry.Drag(target.Work, original, dx, dy, cursorX, cursorY, scale);
                 candidate = new WindowMove(entry.Window, drop.Bounds);
+                _dragCandidate = candidate;
+                long now = System.Environment.TickCount64;
+                if (now - _lastMapPaint >= 65) { _lastMapPaint = now; RenderLayoutMap(); }
                 note.Text = drop.Zone + $" → {drop.Bounds.X}, {drop.Bounds.Y} · {drop.Bounds.Width} × {drop.Bounds.Height}";
                 transform.X = dx; transform.Y = dy;
                 args.Handled = true;
@@ -372,6 +446,6 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
     private void ReleasePreviews() { foreach (var preview in _previews) preview.Thumbnail?.Dispose(); _previews.Clear(); }
     private void Commit(RunningWindow window) { Hide(); Environment.RestoreDockWindow(window); }
     internal void CommitSelection() { if (!IsOpen) return; var entry = _filtered.FirstOrDefault(item => item.Window.Handle == _current) ?? _filtered.FirstOrDefault(); if (entry is not null) Commit(entry.Window); else Hide(); }
-    protected override void OnHidden() { _staged.Clear(); _saveFlyout.Hide(); ReleasePreviews(); }
+    protected override void OnHidden() { _staged.Clear(); _dragCandidate = null; _saveFlyout.Hide(); ReleasePreviews(); }
     protected override void OnClosed() => Environment.SwitcherClosed(this);
 }
