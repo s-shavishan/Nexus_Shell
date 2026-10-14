@@ -101,11 +101,18 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
         base.ApplyAppearance();
         // Overview must cover the entire monitor, not resemble another tool dialog.
         Frame.CornerRadius = new CornerRadius(0);
-        Frame.BorderThickness = new Thickness(0);
+        Frame.BorderThickness = new Thickness(Environment.Theme.HighContrast ? 1 : 0);
         Root.Padding = new Thickness(28, 22, 28, 24);
         Render();
     }
     internal void RefreshOpen() { if (IsOpen) _ = RefreshAsync(); }
+    internal void VerifyOverviewValidation()
+    {
+        if (!IsImmersive || Frame.CornerRadius.TopLeft != 0 || _layoutMap.Width <= 0
+            || _layoutMap.Height <= 0 || _apply is null || _discard is null
+            || _staged.Count > SavedWindowLayouts.MaximumWindows)
+            throw new InvalidOperationException("Fullscreen window overview presentation or staging controls were not constructed.");
+    }
     internal void PopulateValidation()
     {
         _windows = Enumerable.Range(1, 7).Select(i => new DesktopWindowEntry(new RunningWindow(IntPtr.Zero, "Production window card " + i, "nexus", 0), "", "", false, false, false)).ToArray();
