@@ -246,9 +246,8 @@ internal sealed class TaskbarView : Grid
             openWindows.Items.Clear();
             string target = _shortcutTargets.TryGetValue(app.Target, out var resolved)
                 ? resolved : app.Target;
-            var matching = _windowSet.Windows.Where(w =>
-                DockPinnedWindowPolicy.Matches(target, app.Name, w.Title, w.ProcessName)
-                && NativeMethods.OwnsWindow(w)).Take(12).ToArray();
+            var matching = DockPinnedWindowPolicy.MatchingWindows(
+                target, app.Name, _windowSet.Windows.Where(NativeMethods.OwnsWindow));
             openWindows.Visibility = matching.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
             foreach (var window in matching)
             {
