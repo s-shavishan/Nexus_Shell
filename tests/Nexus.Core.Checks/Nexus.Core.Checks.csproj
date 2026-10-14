@@ -86,6 +86,7 @@
     <Compile Include="../../src/Nexus.Shell/Services/BluetoothRadioAvailability.cs" Link="BluetoothRadioAvailability.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/WindowsShellPolicy.cs" Link="WindowsShellPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/FileContextPolicy.cs" Link="FileContextPolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/FileTypeContextCatalog.cs" Link="FileTypeContextCatalog.cs" />
     <Compile Include="../../src/Nexus.Shell/Interop/WindowsShellBridge.cs" Link="WindowsShellBridge.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/KeepAwakeSession.cs" Link="KeepAwakeSession.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/WindowsDesktopEvents.cs" Link="WindowsDesktopEvents.cs" />
