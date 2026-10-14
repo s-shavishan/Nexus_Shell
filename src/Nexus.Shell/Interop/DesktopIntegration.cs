@@ -128,11 +128,16 @@ internal sealed class DesktopIntegration : IDisposable
                     else if (action is 0x0205 or 0x007B) ShowTrayMenu(); // right button up / context menu
                     return IntPtr.Zero;
                 }
-                if (_taskbarCreated != 0 && message == _taskbarCreated && _trayRequested)
+                if (_taskbarCreated != 0 && message == _taskbarCreated)
                 {
-                    // Explorer discarded the old icon; a new registration is needed.
-                    TrayAvailable = false;
-                    if (!SetResident(true)) _dispatch("tray-lost");
+                    // Managed sessions do not request a tray icon, but still
+                    // need desktop anchoring and work-area recovery after Explorer.
+                    _systemChanged?.Invoke(Services.WindowsDesktopChange.Shell);
+                    if (_trayRequested)
+                    {
+                        TrayAvailable = false;
+                        if (!SetResident(true)) _dispatch("tray-lost");
+                    }
                 }
             }
         }

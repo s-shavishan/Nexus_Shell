@@ -14,6 +14,7 @@ internal sealed class TaskbarWindow : Window, IDisposable
     internal AppWindow NativeWindow { get; }
     internal TaskbarView View { get; }
     internal ShellRect BarBounds => _registration.Bounds;
+    internal ShellRect DesiredWorkArea => _registration.WorkArea;
     private readonly DesktopEnvironment _environment;
     private readonly ITaskbarLayer _registration;
     private readonly WindowChrome _chrome;
@@ -114,6 +115,12 @@ internal sealed class TaskbarWindow : Window, IDisposable
             _environment.PositionDesktopPanels();
         }
         RefreshVisibility();
+    }
+    internal void VerifyWorkAreaAfterShellChange()
+    {
+        // Reuse the one-shot startup check after the host has hidden a newly
+        // created Explorer taskbar. Bursts do not postpone a pending check.
+        if (!_disposed && _environment.IsManagedDesktop && !_startupAreaCheck.IsEnabled) _startupAreaCheck.Start();
     }
     private void QueuePosition()
     {

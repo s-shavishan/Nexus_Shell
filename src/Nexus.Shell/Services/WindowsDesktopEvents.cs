@@ -4,7 +4,7 @@ namespace Nexus.Shell.Services;
 public enum WindowsDesktopChange
 {
     None = 0, Suspend = 1, Resume = 2, Displays = 4, Devices = 8,
-    Clock = 16, Appearance = 32, Power = 64, InputLanguage = 128
+    Clock = 16, Appearance = 32, Power = 64, InputLanguage = 128, Shell = 256
 }
 
 public static class WindowsDesktopEvents

@@ -270,9 +270,13 @@ for file in build_files:
     body = file.read_text()
     assert "Nexus-Shell-" + ET.parse(project / "Nexus.Shell.csproj").findtext("PropertyGroup/Version") in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
 print("Independent desktop ownership, Controls lifetime and CI versions OK")
-# Desktop replacement cannot silently instantiate Explorer or common picker UI.
+# Managed desktop entry must retain host authentication while allowing Explorer
+# to provide Windows services. Common picker UI remains outside the desktop lane.
 environment = (project / "Desktop/DesktopEnvironment.cs").read_text()
-assert "ExplorerDesktopPresent()" in environment and "DesktopSessionMode.DesktopShell" in environment
+assert 'Guid.TryParseExact(hostToken, "N"' in environment and '_host.SessionId != Process.GetCurrentProcess().SessionId' in environment
+assert 'Path.Combine(AppContext.BaseDirectory, "Nexus.DesktopHost.exe")' in environment and 'EventWaitHandle.OpenExisting' in environment
+assert "ExplorerDesktopPresent()" not in environment, "A supervised sign-in session must coexist with Explorer"
+assert (project / "Services/WindowsShellRecoveryGate.cs").is_file()
 for source in project.rglob("*.cs"):
     body = source.read_text()
     assert "Shell.Application" not in body, f"Explorer automation remains: {source}"

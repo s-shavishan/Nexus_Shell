@@ -46,6 +46,25 @@ internal static class DesktopModeChecks
             "Takeover must hide the taskbar while preserving visible/hidden Explorer desktop windows and unrelated apps.");
         for (int i = 0; i < 1000; i++) lease.Maintain();
         Check(surfaces.VisibilityWrites == 1, "Steady session maintenance must not repeatedly hide an unchanged taskbar or any desktop window.");
+        var restarted = new Surfaces();
+        IReadOnlyList<WindowsDesktopSurface> journal = [];
+        int journalWrites = 0;
+        var restartLease = new DesktopSurfaceLease(restarted, saved => { journal = saved.ToArray(); journalWrites++; });
+        restartLease.TakeOver();
+        for (int i = 1; i <= 600; i++)
+        {
+            restarted.Values.Clear(); restarted.Values[i] = new(i, 100 + i, "Shell_TrayWnd", true);
+            restartLease.Maintain();
+            Check(journal.Count == 1 && journal[0].Visible && journal[0].ProcessId == 100 + i && !restarted.Values[i].Visible,
+                "Each Explorer restart must replace obsolete recovery identities before hiding its new taskbar.");
+        }
+        restartLease.Maintain();
+        Check(journalWrites == 600, "An unchanged hidden taskbar must not rewrite the recovery journal.");
+        restartLease.Restore();
+        Check(restarted.Values[600].Visible, "The latest Explorer taskbar must restore after many process replacements.");
+        restarted.Values.Clear(); restarted.Values[700] = new(700, 800, "Shell_TrayWnd", false);
+        restartLease.TakeOver(); restartLease.Maintain(); restartLease.Restore();
+        Check(!restarted.Values[700].Visible, "A live taskbar that was originally hidden must retain that original state.");
         surfaces.Values[3] = new(3, 101, "Shell_SecondaryTrayWnd", true); lease.Maintain();
         surfaces.Values[1] = surfaces.Values[1] with { Visible = true }; lease.Maintain();
         Check(!surfaces.Values[1].Visible && !surfaces.Values[3].Visible && surfaces.VisibilityWrites == 3,

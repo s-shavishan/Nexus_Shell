@@ -143,7 +143,7 @@ internal static class Program
             // Recover an interrupted old session before replacing its saved state.
             if (SessionRecord.Read(SessionId) is not null && RestoreWindows(false, null, null, false) != 0)
                 throw new InvalidOperationException("The previous desktop session still needs recovery.");
-            WindowsDesktopSurfaces.EnsureExplorer();
+            if (!WindowsDesktopSurfaces.EnsureExplorer()) Log("Windows shell surfaces are still starting; Nexus connection status will expose availability and recovery.");
             original = Monitor();
             var snapshot = new DesktopSessionSnapshot(1, SessionId, Environment.ProcessPath!, Rectangle(original.Value.Monitor), Rectangle(original.Value.Work), [], WindowsMinimizedMetrics.Read());
             SessionRecord.Save(snapshot);

@@ -44,6 +44,8 @@ internal sealed class WindowsDesktopSurfaces : IWindowsDesktopSurfaces, IDisposa
     }
     public IReadOnlyList<WindowsDesktopSurface> Read()
     {
+        foreach (var known in _explorers.ToList())
+            if (known.Value.HasExited) { known.Value.Dispose(); _explorers.Remove(known.Key); }
         List<WindowsDesktopSurface> result = []; Dictionary<int, bool> owners = []; int visited = 0;
         Exception? denied = null;
         bool enumerated = EnumWindows((window, _) =>
@@ -92,11 +94,22 @@ internal sealed class WindowsDesktopSurfaces : IWindowsDesktopSurfaces, IDisposa
     internal static bool DesktopExists => GetShellWindow() != IntPtr.Zero;
     // A Winlogon shell replacement can start without Explorer. Keep Windows
     // shell services available; never terminate Explorer to hide its taskbar.
-    internal static void EnsureExplorer()
+    internal static bool EnsureExplorer()
     {
-        if (DesktopExists) return;
-        using var process = Process.Start(new ProcessStartInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe")) { UseShellExecute = true });
-        if (process is null) throw new InvalidOperationException("The Windows shell could not be started.");
+        if (!DesktopExists && FindWindow("Shell_TrayWnd", null) == IntPtr.Zero)
+        {
+            using var process = Process.Start(new ProcessStartInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe")) { UseShellExecute = false });
+            if (process is null) throw new InvalidOperationException("The Windows shell could not be started.");
+        }
+        // Observe shell surfaces, not an arbitrary process becoming idle. This
+        // lets the host capture the actual Windows work area before takeover.
+        var deadline = Stopwatch.StartNew();
+        while (deadline.Elapsed < TimeSpan.FromSeconds(8))
+        {
+            if (DesktopExists && FindWindow("Shell_TrayWnd", null) != IntPtr.Zero) return true;
+            Thread.Sleep(100);
+        }
+        return false;
     }
     internal static bool NexusExists => FindWindow(null, "White Dreams Nexus Desktop") != IntPtr.Zero;
     public void Dispose() { foreach (var process in _explorers.Values) process.Dispose(); _explorers.Clear(); }

@@ -12,6 +12,12 @@ Nexus is a native C# / WinUI desktop environment on Windows. This release adds a
 
 Nexus service alerts remain under **Nexus activity**. See [shell behavior, limits and Windows acceptance](docs/P211-WINDOWS-SHELL-MENUS.md).
 
+### Windows connection and recovery
+
+**Nexus Controls → Core & recovery → Windows connection** now shows observed shell availability, starts Explorer when both shell surfaces are absent, exposes native calendar/notifications/quick settings and their Windows settings fallbacks, and copies connection/work-area diagnostics. Clock and bell context menus link here directly.
+
+Supervised desktops accept Explorer at sign-in and attempt bounded recovery when it disappears. Taskbar recreation reanchors Nexus and schedules a one-shot work-area check; old Explorer recovery records and process handles are released. Preview mode uses explicit recovery only. See [behavior and Windows acceptance](docs/P212-WINDOWS-CONNECTION-RECOVERY.md).
+
 ## Nexus File Jobs (pending Windows validation)
 
 Nexus Workspaces is removed. Its profile model, resume state, launch planner and workspace commands are retired. **File Jobs** replaces that direction with a practical copy/move queue owned by Nexus Core.
@@ -47,7 +53,7 @@ The pack includes the pending P2.7 UI work. Portable checks pass; native Windows
 ## Changes in 3.6.0
 
 - Search files by category and scope in a glass desktop panel. Use My files by default or explicitly include indexed local drives; open results, open their folder in Nexus Files, or copy a path.
-- Search 15 existing desktop controls and switch open windows even when Everything is unavailable.
+- Search 16 desktop controls, including Windows connection recovery, and switch open windows even when Everything is unavailable.
 - Open Search from the menu bar, desktop/Nexus/File menus, Ctrl+Alt+Space across apps when available, or Ctrl+Shift+F on the desktop. Arrow keys, Enter, Ctrl+Enter, Ctrl+Shift+C, Ctrl+L and Escape keep it usable from the keyboard.
 - Bound native IPC inside Core, cancel obsolete queries, reject malformed/out-of-scope results, preserve selection as results arrive and show clear dependency/readiness/timeout states.
 - Keep queries in memory only while the panel is open. No duplicate index, SDK DLL or third-party binary is bundled; Session status reports the engine's last observed status.

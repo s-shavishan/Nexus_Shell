@@ -14,6 +14,7 @@ GlassUiDispatchChecks.Run();
 GlassStateDispatchChecks.Run();
 WindowsIntegrationChecks.Run();
 ShellIntegrationChecks.Run();
+WindowsShellRecoveryChecks.Run();
 NexusControlsChecks.Run();
 
 static void Check(bool condition, string message)

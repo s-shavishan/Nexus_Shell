@@ -249,7 +249,7 @@ internal sealed class TaskbarView : Grid
                 ? resolved : app.Target;
             var matching = DockPinnedWindowPolicy.MatchingWindows(
                 target, app.Name, _windowSet.Windows.Where(NativeMethods.OwnsWindow));
-            openWindows.Visibility = matching.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+            openWindows.Visibility = matching.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
             foreach (var window in matching)
             {
                 var chosen = window;

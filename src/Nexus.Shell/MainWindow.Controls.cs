@@ -122,6 +122,18 @@ public sealed partial class MainWindow
             ActionButton("Repair desktop layout", () => { _environment.RepairDesktopLayout(); ShowStatus("Desktop layout repair requested."); })));
         actions.Children.Add(ActionButton("Refresh desktop", () => { _environment.RefreshDesktop(); ShowStatus("Desktop refresh requested."); }));
         PageContent.Children.Add(Card(actions, "repair"));
+        var windows = Group("Windows connection", "Explorer provides Windows calendar, notifications and other native panels. Nexus keeps it running behind your desktop.");
+        windows.Children.Add(BoundText(() => _environment.WindowsShellStatus));
+        var startWindows = AsyncButton("Start Windows shell", async () => ShowStatus(await _environment.StartWindowsShellAsync()));
+        _bindings.Add(() => startWindows.IsEnabled = !_validation && _environment.CanStartWindowsShell);
+        windows.Children.Add(Tiles(ActionButton("Check Windows connection", () => ShowStatus(_environment.CheckWindowsShellConnection())), startWindows));
+        windows.Children.Add(Tiles(ActionButton("Calendar & date", () => _environment.OpenWindowsSurface(WindowsShellSurface.Calendar)),
+            ActionButton("Windows notifications", () => _environment.OpenWindowsSurface(WindowsShellSurface.Notifications)),
+            ActionButton("Windows quick settings", () => _environment.OpenWindowsSurface(WindowsShellSurface.QuickSettings))));
+        windows.Children.Add(Tiles(AsyncButton("Date & time settings", () => AppCatalog.OpenSettingsAsync(_environment.WindowsRoute(WindowsShellSurface.Calendar).Fallback)),
+            AsyncButton("Notification settings", () => AppCatalog.OpenSettingsAsync(_environment.WindowsRoute(WindowsShellSurface.Notifications).Fallback))));
+        windows.Children.Add(AsyncButton("Copy Windows diagnostics", async () => ShowStatus(await _environment.CopyClipboardAsync(_environment.WindowsShellDiagnostics()) ? "Windows connection diagnostics copied." : "The clipboard is busy or unavailable. Try again.")));
+        PageContent.Children.Add(Card(windows, "windows"));
         var persistence = Group("Your settings", "Nexus saves changes automatically. You can also request a snapshot now.");
         persistence.Children.Add(BoundText(() => Service("Settings persistence")));
         persistence.Children.Add(AsyncButton("Save settings now", async () => { ShowStatus("Saving settings through Nexus Core…"); await _environment.Session.SaveAsync(); ShowStatus("Settings snapshot saved through Nexus Core."); }));

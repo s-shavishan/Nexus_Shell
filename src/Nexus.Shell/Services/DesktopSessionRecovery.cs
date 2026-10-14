@@ -22,12 +22,18 @@ public sealed class DesktopSurfaceLease(IWindowsDesktopSurfaces surfaces, Action
         if (!Active) return;
         var currentSurfaces = surfaces.Read()
             .Where(s => s.ClassName is "Shell_TrayWnd" or "Shell_SecondaryTrayWnd").ToList();
+        // Explorer restarts replace HWNDs and PIDs. Retaining every historical
+        // taskbar would eventually exceed the durable session record's limit.
+        // Prune only identities Windows no longer owns, never a hidden live bar.
+        foreach (var saved in _original.Values.ToList())
+            if (!surfaces.Matches(saved)) { _original.Remove(saved.Handle); _pending = true; }
         foreach (var current in currentSurfaces)
         {
             if (!_original.TryGetValue(current.Handle, out var saved)
                 || saved.ProcessId != current.ProcessId || saved.ClassName != current.ClassName)
             { _original[current.Handle] = current; _pending = true; }
         }
+        if (_original.Count > 256) throw new InvalidOperationException("The desktop taskbar recovery record exceeded its session limit.");
         // Persist the original visibility before making any new surface invisible.
         if (_pending) { beforeHide?.Invoke(_original.Values.ToList()); _pending = false; }
         foreach (var current in currentSurfaces)

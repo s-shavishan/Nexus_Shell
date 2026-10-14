@@ -24,6 +24,7 @@ internal sealed partial class DesktopEnvironment
     {
         _systemRefreshTimer.Tick += FlushSystemChanges;
         ActiveWindowChanged += RefreshSystemStatus;
+        ObserveWindowsShell();
     }
     private void RefreshSystemStatus() { if (!IsStopping) SystemStatusChanged?.Invoke(); }
     // Called on the owning HWND thread. Immediate suspend cleanup is small;
@@ -71,6 +72,15 @@ internal sealed partial class DesktopEnvironment
             if (changes.HasFlag(WindowsDesktopChange.Devices))
             { RefreshDesktop(); CheckDesktopServices(); }
             if (changes.HasFlag(WindowsDesktopChange.Power)) CheckDesktopServices();
+            if (changes.HasFlag(WindowsDesktopChange.Shell))
+            {
+                ObserveWindowsShell();
+                if (WindowsSessionAvailable)
+                {
+                    HideDockPreview(); Desktop.ShowSurface(); Taskbar.Position();
+                    Taskbar.VerifyWorkAreaAfterShellChange(); PositionDesktopPanels(); UpdateTaskbar();
+                }
+            }
             if ((changes & (WindowsDesktopChange.Resume | WindowsDesktopChange.Appearance)) != 0) RefreshAppearance();
             if ((changes & (WindowsDesktopChange.Resume | WindowsDesktopChange.Clock)) != 0)
             { Notifications.RefreshDue(); Taskbar.View.RefreshClock(); }
@@ -88,11 +98,16 @@ internal sealed partial class DesktopEnvironment
         ResetUsageSample();
         if (suspended)
         { StopKeepAwake("Stopped while locked or disconnected."); HideMenu(); }
-        else QueueSystemChange(WindowsDesktopChange.Displays | WindowsDesktopChange.Power | WindowsDesktopChange.Clock);
+        else QueueSystemChange(WindowsDesktopChange.Displays | WindowsDesktopChange.Power | WindowsDesktopChange.Clock | WindowsDesktopChange.Shell);
     }
     private void SystemIntegrationTick()
     {
         KeepAwake.Tick();
+        ObserveWindowsShell();
+        // Preview never launches Explorer automatically. Managed desktops give
+        // Windows a grace period, then use the bounded recovery gate.
+        if (IsManagedDesktop && !_shellRecovery.Starting && _shellRecovery.Presence.Absent)
+            _ = StartWindowsShellAsync(automatic: true);
         if (_pendingSystemChanges != WindowsDesktopChange.None && !_systemSleeping && !_systemRefreshTimer.IsEnabled)
             _systemRefreshTimer.Start();
         // Uses the existing desktop heartbeat; no input hook or new poll loop.

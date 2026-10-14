@@ -25,7 +25,7 @@ internal sealed class AboutNexusWindow : DesktopPanelWindow
         var links = new Grid { ColumnSpacing = 8 }; links.ColumnDefinitions.Add(new()); links.ColumnDefinitions.Add(new());
         links.Children.Add(ActionButton("Project & releases", () => environment.OpenTarget("https://github.com/s-shavishan/Nexus_Shell")));
         var status = ActionButton("Session diagnostics", environment.ShowSessionStatus); Grid.SetColumn(status, 1); links.Children.Add(status); _body.Children.Add(links);
-        var copy = ActionButton("Copy diagnostics", async () => _copied.Text = await environment.CopyClipboardAsync("Nexus Shell " + Version + "\n" + RuntimeInformation.OSDescription + "\nArchitecture: " + RuntimeInformation.ProcessArchitecture + "\nRuntime protocol: " + RuntimeProtocol.Version + "\nMode: " + (environment.IsManagedDesktop ? "Supervised desktop" : "Preview") + "\n" + environment.WindowsShellStatus) ? "Diagnostics copied." : "The clipboard is busy. Try again.");
+        var copy = ActionButton("Copy diagnostics", async () => _copied.Text = await environment.CopyClipboardAsync(environment.WindowsShellDiagnostics() + "\nRuntime protocol: " + RuntimeProtocol.Version) ? "Diagnostics copied." : "The clipboard is busy. Try again.");
         _body.Children.Add(copy); _body.Children.Add(_copied); ApplyAppearance();
     }
     internal void Show() => ShowPanel();

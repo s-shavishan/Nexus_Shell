@@ -6,7 +6,8 @@ namespace Nexus.Shell.Interop;
 internal sealed class WindowsShellBridge : IWindowsShortcutSender
 {
     private static readonly UIntPtr Marker = new(0x4E585346);
-    public bool ShellAvailable => GetShellWindow() != IntPtr.Zero && FindWindow("Shell_TrayWnd", null) != IntPtr.Zero;
+    internal WindowsShellPresence Observe() => new(GetShellWindow().ToInt64(), FindWindow("Shell_TrayWnd", null).ToInt64());
+    public bool ShellAvailable => Observe().Ready;
     public bool ModifiersUp => new[] { 0x10, 0x11, 0x12, 0x5B, 0x5C }.All(key => (GetAsyncKeyState(key) & 0x8000) == 0);
     public bool KeyUp(ushort key) => (GetAsyncKeyState(key) & 0x8000) == 0;
     public int Send(IReadOnlyList<ShellKey> keys)

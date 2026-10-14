@@ -19,6 +19,7 @@ public static class NexusControlsCatalog
         new("services", "core", "Service health", "Core, file workers, search and desktop status", "diagnostics reconnect repair"),
         new("save", "core", "Save settings now", "Write a settings snapshot through Nexus Core", "persistence backup disk"),
         new("repair", "core", "Repair desktop layout", "Recalculate the work area, menu bar and dock", "display monitor screen geometry"),
+        new("windows", "core", "Windows connection", "Check or recover Explorer and open native calendar and notifications", "shell date time action center quick settings diagnostics"),
         new("presets", "personalize", "Desktop presets", "Midnight Glass, Quiet desktop and Compact desktop, with undo", "appearance look theme reset"),
         new("palette", "personalize", "Wallpaper & palette", "Choose the colors used across your desktop", "mood background color personalize"),
         new("glass", "personalize", "Glass & motion", "Material style, quality, animations and reduced effects", "transparency performance acrylic"),

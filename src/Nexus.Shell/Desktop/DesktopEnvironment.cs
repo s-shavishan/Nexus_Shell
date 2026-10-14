@@ -87,8 +87,9 @@ internal sealed partial class DesktopEnvironment
     {
         try
         {
-            if (Mode == DesktopSessionMode.DesktopShell && ShellLayerInterop.ExplorerDesktopPresent())
-                throw new InvalidOperationException("Windows Explorer is already providing this desktop. Use preview mode, or sign in after configuring Nexus in Personalize.");
+            // Both managed modes were authenticated against DesktopHost in the
+            // constructor. Explorer is their Windows-services companion, including
+            // at sign-in; its presence must not reject the supervised desktop.
             if (!Session.State.CatalogInitialized)
             { Session.State.PinnedApps = AppCatalog.Defaults(); Session.State.CatalogInitialized = true; _dirty = true; }
             for (int i = 0; i < Session.State.PinnedApps.Count; i++)

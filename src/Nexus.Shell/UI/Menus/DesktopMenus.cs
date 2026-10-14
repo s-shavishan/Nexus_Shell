@@ -144,6 +144,7 @@ internal sealed class DesktopMenus(DesktopEnvironment environment)
         var menu = ShellMenu.Create(); var calendar = environment.WindowsRoute(WindowsShellSurface.Calendar);
         menu.Items.Add(ShellMenu.Action("Open Windows calendar", () => environment.OpenWindowsSurface(WindowsShellSurface.Calendar), "\uE787", calendar.Shortcut));
         menu.Items.Add(Item("Date & time settings…", () => environment.RunWindowsTool("date-time")));
+        menu.Items.Add(Item("Windows connection…", () => environment.ShowControls("core", "windows")));
         var clock = ShellMenu.Toggle("24-hour time", environment.Session.State.Clock24Hour, () => { environment.Session.State.Clock24Hour = !environment.Session.State.Clock24Hour; environment.SaveState(); }); menu.Items.Add(clock); menu.Opening += (_, _) => clock.IsChecked = environment.Session.State.Clock24Hour; return menu;
     }
     internal MenuFlyout NotificationsMenu()
@@ -151,6 +152,7 @@ internal sealed class DesktopMenus(DesktopEnvironment environment)
         var menu = ShellMenu.Create(); var route = environment.WindowsRoute(WindowsShellSurface.Notifications);
         menu.Items.Add(ShellMenu.Action(route.Name, () => environment.OpenWindowsSurface(WindowsShellSurface.Notifications), "\uE7E7", route.Shortcut));
         menu.Items.Add(Item("Windows notification settings…", () => environment.RunWindowsTool("notifications")));
+        menu.Items.Add(Item("Windows connection…", () => environment.ShowControls("core", "windows")));
         menu.Items.Add(new MenuFlyoutSeparator()); menu.Items.Add(Item("Nexus activity…", environment.ShowNotifications)); return menu;
     }
     internal MenuFlyout MenuBarMenu()
