@@ -30,6 +30,7 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
     private WindowMove? _dragCandidate;
     private long _lastMapPaint;
     private long _suppressCardClickUntil;
+    private string? _suppressCardClickKey;
     protected override bool DismissOnDeactivate => false;
     protected override bool IsImmersive => true;
     protected override ShellRect ResolveBounds(ShellRect work, ShellRect monitor, double scale) => monitor;
@@ -224,7 +225,12 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
         var viewport = new Border { Child = fallback, Background = theme.Brush("NexusInput"), MinHeight = 45 };
         var switchButton = new Button { Content = viewport, HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Stretch, Padding = new Thickness(0), BorderThickness = new Thickness(0), Background = theme.Brush("NexusInput"), Style = (Style)Application.Current.Resources["QuietButton"] };
         AutomationProperties.SetName(switchButton, "Switch to or drag " + entry.Window.Title);
-        switchButton.Click += (_, _) => { if (System.Environment.TickCount64 >= _suppressCardClickUntil) Commit(entry.Window); };
+        switchButton.Click += (_, _) =>
+        {
+            if (_suppressCardClickKey == entry.Key
+                && System.Environment.TickCount64 < _suppressCardClickUntil) return;
+            Commit(entry.Window);
+        };
         content.Children.Add(switchButton);
         var label = new Grid { ColumnSpacing = 7 }; label.ColumnDefinitions.Add(new()); label.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
         var titles = new StackPanel { Spacing = 2 }; titles.Children.Add(new TextBlock { Text = entry.Window.Title, FontSize = 13, TextTrimming = TextTrimming.CharacterEllipsis, Foreground = theme.Brush("NexusText"), FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
@@ -325,7 +331,11 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
         void Reset(bool commit)
         {
             var finish = commit && dragging ? candidate : null;
-            if (dragging) _suppressCardClickUntil = System.Environment.TickCount64 + 400;
+            if (dragging)
+            {
+                _suppressCardClickKey = entry.Key;
+                _suppressCardClickUntil = System.Environment.TickCount64 + 400;
+            }
             start = null; candidate = null; dragging = false;
             dragStartBounds = null; dragMonitor = null;
             _dragCandidate = null;
@@ -464,7 +474,19 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
         }
     }
     private void ReleasePreviews() { foreach (var preview in _previews) preview.Thumbnail?.Dispose(); _previews.Clear(); }
-    private void Commit(RunningWindow window) { Hide(); Environment.RestoreDockWindow(window); }
+    private void Commit(RunningWindow window)
+    {
+        if (_staged.Count > 0)
+        {
+            // Switching to a window must not silently throw away a layout the
+            // user carefully staged. Keep the overlay open for an explicit
+            // Apply or Cancel decision.
+            _message.Text = "You have staged window positions. Choose Done to apply or Cancel to discard them before switching.";
+            return;
+        }
+        Hide();
+        Environment.RestoreDockWindow(window);
+    }
     internal void CommitSelection() { if (!IsOpen) return; var entry = _filtered.FirstOrDefault(item => item.Window.Handle == _current) ?? _filtered.FirstOrDefault(); if (entry is not null) Commit(entry.Window); else Hide(); }
     protected override void OnHidden() { _staged.Clear(); _dragCandidate = null; _saveFlyout.Hide(); ReleasePreviews(); }
     protected override void OnClosed() => Environment.SwitcherClosed(this);
