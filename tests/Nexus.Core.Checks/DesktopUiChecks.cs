@@ -24,6 +24,9 @@ internal static class DesktopUiChecks
         Check(mixedFileContext.SelectionCount == 2 && mixedFileContext.Primary.Length == 0
             && mixedFileContext.CommonActions.SequenceEqual(["open_with"]),
             "Mixed selections retain only common type capabilities and never mass-run applications.");
+        Check(FileTypeContextCatalog.Resolve(@"C:\Data\shortcut.lnk", false).Id == "shortcuts.windows"
+            && FileTypeContextCatalog.Resolve(@"C:\Data\demo.CUSTOM", false).Id == "fallback.unknown",
+            "Shortcuts must not offer an unsuitable Open with command; unknown types remain usable.");
         Check(FileTypeContextCatalog.Plan([new(@"C:\Data\audio.mp3", false)]).Primary == "play"
             && FileContextPolicy.For(@"C:\Data\setup.exe", false).OpenLabel == "Run application"
             && FileContextPolicy.For(@"C:\Data\bundle.tar.gz", false).OpenLabel == "Open archive",
