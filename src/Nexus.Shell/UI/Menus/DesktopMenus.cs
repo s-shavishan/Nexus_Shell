@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml.Controls;
 using Nexus.Shell.Desktop;
 using Nexus.Shell.Services;
+using Nexus.Shell.Interop;
 
 namespace Nexus.Shell.UI.Menus;
 
@@ -19,6 +20,7 @@ internal sealed class DesktopMenus(DesktopEnvironment environment)
         var icons = new ToggleMenuFlyoutItem { Text = "Show desktop icons", IsChecked = environment.Session.State.ShowDesktopIcons }; icons.Click += (_, _) => environment.ToggleDesktopIcons(); menu.Items.Add(icons);
         menu.Items.Add(Item("Open Sections", () => environment.ShowSections()));
         menu.Items.Add(Item("Control Center", environment.ShowQuickSettings));
+        menu.Items.Add(Item("Windows tools", environment.ShowWindowsTools));
         menu.Items.Add(Item("Launchpad", () => environment.ShowMenu()));
         menu.Items.Add(Item("Notifications", environment.ShowNotifications));
         menu.Items.Add(Item("Nexus Search", environment.ShowSearch));
@@ -36,6 +38,7 @@ internal sealed class DesktopMenus(DesktopEnvironment environment)
         var menu = new MenuFlyout(); menu.Items.Add(Item("About Nexus Shell", () => environment.ShowSections("Personalize")));
         menu.Items.Add(Item("Nexus Settings…", () => environment.OpenTarget("nexus:settings")));
         menu.Items.Add(Item("Session status…", environment.ShowSessionStatus));
+        menu.Items.Add(Item("Windows tools & keep awake…", environment.ShowWindowsTools));
         menu.Items.Add(Item("Search…", environment.ShowSearch));
         menu.Items.Add(Item("Desktop shortcuts…", environment.ShowDesktopGuide));
         menu.Items.Add(Item("Launchpad…", () => environment.ShowMenu())); menu.Items.Add(new MenuFlyoutSeparator());
@@ -55,6 +58,7 @@ internal sealed class DesktopMenus(DesktopEnvironment environment)
         var menu = new MenuFlyout(); menu.Items.Add(Item("Launchpad", () => environment.ShowMenu())); menu.Items.Add(Item("Control Center", environment.ShowQuickSettings)); menu.Items.Add(Item("Notifications", environment.ShowNotifications));
         menu.Items.Add(Item("Clipboard shelf", environment.ShowClipboardShelf)); menu.Items.Add(Item("Session status", environment.ShowSessionStatus));
         menu.Items.Add(Item("Places", environment.ShowPlaces)); menu.Items.Add(Item("Desktop shortcuts", environment.ShowDesktopGuide));
+        menu.Items.Add(Item("Windows tools", environment.ShowWindowsTools));
         menu.Items.Add(Item("Desktop appearance…", () => environment.ShowSections("Personalize"))); menu.Items.Add(Item("Focus desktop", () => { environment.Session.State.FocusMode = !environment.Session.State.FocusMode; environment.SaveState(); })); return menu;
     }
     internal MenuFlyout WindowMenu()
@@ -62,6 +66,35 @@ internal sealed class DesktopMenus(DesktopEnvironment environment)
         var menu = new MenuFlyout(); menu.Items.Add(Item("Window board & layouts", environment.ShowWindowOverview)); menu.Items.Add(Item("Show desktop", environment.ShowDesktop));
         menu.Items.Add(Item("Repair maximized window layout", environment.RepairDesktopLayout));
         menu.Items.Add(Item("Nexus Sections", () => environment.ShowSections())); return menu;
+    }
+    internal MenuFlyout InputLanguageMenu()
+    {
+        var menu = new MenuFlyout();
+        menu.Opening += (_, _) =>
+        {
+            menu.Items.Clear();
+            var target = environment.ActiveWindow;
+            try
+            {
+                var current = environment.CurrentInputLanguage();
+                var layouts = WindowsInputLanguage.Installed();
+                foreach (var layout in layouts)
+                {
+                    string suffix = layouts.Count(item => item.Name == layout.Name) > 1 ? " · " + unchecked((uint)layout.Handle.ToInt64()).ToString("X8") : "";
+                    var item = new ToggleMenuFlyoutItem { Text = layout.Name + suffix, IsChecked = layout.Handle == current.Handle,
+                        IsEnabled = target is not null };
+                    item.Click += (_, _) => { if (target is not null) environment.RequestInputLanguage(target, layout.Handle); };
+                    menu.Items.Add(item);
+                }
+                if (layouts.Count == 0) menu.Items.Add(new MenuFlyoutItem { Text = "No input methods available", IsEnabled = false });
+                if (target is null) menu.Items.Add(new MenuFlyoutItem { Text = "Focus an app to change its language", IsEnabled = false });
+            }
+            catch (Exception error) { Log.Write("Input language menu unavailable", error); }
+            menu.Items.Add(new MenuFlyoutSeparator());
+            menu.Items.Add(Item("Language & keyboard settings…", () => environment.RunWindowsTool("language")));
+            menu.Items.Add(new MenuFlyoutItem { Text = "Win+Space · Windows input switcher", IsEnabled = false });
+        };
+        return menu;
     }
     internal MenuFlyout ActiveWindowMenu()
     {

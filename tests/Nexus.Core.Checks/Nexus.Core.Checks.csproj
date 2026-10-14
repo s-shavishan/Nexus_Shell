@@ -78,6 +78,11 @@
     <Compile Include="../../src/Nexus.Shell/Services/DesktopSessionRecord.cs" Link="DesktopSessionRecord.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/FileCatalog.cs" Link="FileCatalog.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/LatestWorkQueue.cs" Link="LatestWorkQueue.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/WindowsToolCatalog.cs" Link="WindowsToolCatalog.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/KeepAwakeSession.cs" Link="KeepAwakeSession.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/WindowsDesktopEvents.cs" Link="WindowsDesktopEvents.cs" />
+    <Compile Include="../../src/Nexus.Shell/Interop/WindowsPowerRequest.cs" Link="WindowsPowerRequest.cs" />
+    <Compile Include="../../src/Nexus.Shell/Interop/WindowsInputLanguage.cs" Link="WindowsInputLanguage.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DesktopSearchCatalog.cs" Link="DesktopSearchCatalog.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/FileMutationHistory.cs" Link="FileMutationHistory.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DesktopFileMonitor.cs" Link="DesktopFileMonitor.cs" />

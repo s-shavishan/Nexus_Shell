@@ -12,6 +12,7 @@ NativeUiDispatchChecks.Run();
 GlassAttachmentGateChecks.Run();
 GlassUiDispatchChecks.Run();
 GlassStateDispatchChecks.Run();
+WindowsIntegrationChecks.Run();
 
 static void Check(bool condition, string message)
 {
@@ -286,8 +287,8 @@ UiTraceChecks.Run();
 DesktopCommandChecks.Run();
 EverydayDesktopChecks.Run();
 await StabilityPhaseOneChecks.RunAsync();
-Check(DesktopSearchCatalog.Find("speaker").Single().Id == "sound", "Search must find desktop controls by familiar terms.");
+Check(DesktopSearchCatalog.Find("speaker").Any(command => command.Id == "sound"), "Search must find desktop controls by familiar terms alongside related Windows tools.");
 Check(DesktopSearchCatalog.Find("copy text").Single().Id == "clipboard", "Search must match all words across labels and keywords.");
-Check(DesktopSearchCatalog.Find("not-a-desktop-command").Count == 0 && DesktopSearchCatalog.Find("").Count == 15 && DesktopSearchCatalog.Find("settings").Single().Id == "controls", "Desktop search must be bounded and useful without an indexer.");
+Check(DesktopSearchCatalog.Find("not-a-desktop-command").Count == 0 && DesktopSearchCatalog.Find("").Count <= 40 && DesktopSearchCatalog.Find("settings").Any(command => command.Id == "controls"), "Desktop search must remain bounded and useful without an indexer.");
 Check(DesktopSearchCatalog.Matches("සිංහල NOTES", "සිංහල notes.txt") && !DesktopSearchCatalog.Matches("missing", "notes.txt"), "Local search must handle Unicode and case consistently.");
 Console.WriteLine("PASS: desktop migration, bounded profiles, launch-plan deduplication, nested snapshots, native structure layout, and atomic persistence.");

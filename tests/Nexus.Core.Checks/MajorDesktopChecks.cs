@@ -57,8 +57,8 @@ internal static class MajorDesktopChecks
         var builtin = new AppEntry("notes", "Notes", "nexus:notes", "", "Utility");
         var apps = LaunchpadCatalog.Build([builtin], [builtin with { Name = "Pinned duplicate", Target = "NEXUS:NOTES" }], Enumerable.Range(0, 70).Select(i => new AppEntry("app" + i, "App " + i, "/app/" + i, "", i % 2 == 0 ? "Game" : "Development")));
         Check(apps.Count == 71 && apps[0] == builtin, "Launchpad must deduplicate a pinned builtin while retaining catalogue order.");
-        Check(LaunchpadCatalog.Page(apps, 0).Count == 24 && LaunchpadCatalog.Page(apps, 2).Count == 23, "Launchpad must realize only one bounded page.");
-        Check(LaunchpadCatalog.Page(apps, int.MaxValue).SequenceEqual(LaunchpadCatalog.Page(apps, 2)), "Stale page selection must clamp after a filter change.");
+        Check(LaunchpadCatalog.Page(apps, 0).Count == 18 && LaunchpadCatalog.Page(apps, 3).Count == 17, "Launchpad must realize three complete rows per page and retain the final partial page.");
+        Check(LaunchpadCatalog.Page(apps, int.MaxValue).SequenceEqual(LaunchpadCatalog.Page(apps, 3)), "Stale page selection must clamp after a filter change.");
         Check(LaunchpadCatalog.Filter(apps, "APP 2", "Games").All(app => app.Category == "Game"), "Query and category filtering must compose.");
         Check(LaunchpadCatalog.Filter(apps, "no matching app", "All").Count == 0, "Empty searches must remain empty.");
         foreach (var monitor in new[] { new ShellRect(-1920, -200, 1920, 1080), new ShellRect(0, 0, 320, 480), new ShellRect(20, 20, 1, 1) })

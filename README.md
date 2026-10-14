@@ -2,6 +2,15 @@
 
 Nexus is a native C# / WinUI desktop environment on Windows. This release adds an integrated Search panel backed by Everything's local index, plus desktop controls and open-window results. Launchpad remains the app launcher.
 
+## Windows integration pack (draft)
+
+- **Nexus menu → Windows tools** brings 14 Windows utilities/settings pages into a searchable desktop panel. Spotlight also finds individual tools, including screen snipping, Task Manager, display projection, volume mixer, startup apps and storage settings.
+- **Keep awake** requests 15, 30, 60 or 120 minutes without changing your power plan, with an optional display-on request and a menu-bar indicator. It ends on lock, disconnect, sleep, expiry or Nexus shutdown.
+- **Input language** in the menu bar shows the observed app language and requests an installed layout for that app. Windows retains its own input switching and permission rules.
+- **Windows lifecycle recovery** responds to wake, display/device changes and clock/appearance notifications. Session status reports the integration; usage sampling pauses while asleep, locked or disconnected.
+
+The pack includes the pending P2.7 UI work. Portable checks pass; native Windows/AppVeyor and visual acceptance are still required. See [behavior, limits and Windows tests](docs/P28-WINDOWS-INTEGRATION.md).
+
 ## Changes in 3.6.0
 
 - Search files by category and scope in a glass desktop panel. Use My files by default or explicitly include indexed local drives; open results, open their folder in Nexus Files, or copy a path.

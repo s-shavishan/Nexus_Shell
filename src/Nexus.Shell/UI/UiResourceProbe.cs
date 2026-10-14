@@ -124,6 +124,7 @@ internal static class UiResourceProbe
             var places = new PlacesWindow(environment); places.PopulateValidation(); panels.Add(places);
             var search = new SearchWindow(environment); search.PopulateValidation(); panels.Add(search);
             panels.Add(new DesktopGuideWindow(environment));
+            panels.Add(new WindowsToolsWindow(environment));
             IntPtr owner = WinRT.Interop.WindowNative.GetWindowHandle(window);
             foreach (var panel in panels)
             {
@@ -135,7 +136,7 @@ internal static class UiResourceProbe
                 panel.Hide();
             }
             environment.Clipboard.Clear();
-            checks.Add("Production window board with cards, clipboard shelf, session status, Places, Search with file/command rows and desktop-shortcuts panels at two native window sizes");
+            checks.Add("Production window board, clipboard shelf, session status, Places, Search, desktop shortcuts and Windows tools panels at two native window sizes");
             stage = "notification-construction-and-layout";
             for (int i = 0; i < 25; i++) environment.Notifications.Publish("Construction sample " + i, "Temporary native UI fixture; no history is persisted.", i % 3 == 0 ? NoticeKind.Warning : NoticeKind.Information);
             notifications = new NotificationWindow(environment);

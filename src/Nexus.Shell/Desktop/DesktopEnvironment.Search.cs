@@ -27,6 +27,7 @@ internal sealed partial class DesktopEnvironment
     }
     internal void RunSearchCommand(string id)
     {
+        if (id.StartsWith("system:", StringComparison.Ordinal)) { RunWindowsTool(id[7..]); return; }
         switch (id)
         {
             case "launchpad": ShowMenu(); break;
@@ -44,6 +45,7 @@ internal sealed partial class DesktopEnvironment
             case "clipboard": ShowClipboardShelf(); break;
             case "status": ShowSessionStatus(); break;
             case "guide": ShowDesktopGuide(); break;
+            case "system": ShowWindowsTools(); break;
         }
     }
 }

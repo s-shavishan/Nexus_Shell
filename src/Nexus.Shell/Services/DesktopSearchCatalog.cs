@@ -19,9 +19,12 @@ public static class DesktopSearchCatalog
         new("notifications", "Notifications", "Read and manage your alerts", "inbox messages alerts"),
         new("clipboard", "Clipboard shelf", "Your captured text", "copy paste history"),
         new("status", "Session status", "Desktop health and recovery", "services diagnostics core stability"),
-        new("guide", "Desktop shortcuts", "Nexus keyboard guide", "help keyboard hotkeys")
+        new("guide", "Desktop shortcuts", "Nexus keyboard guide", "help keyboard hotkeys"),
+        new("system", "Windows tools", "Windows utilities and temporary keep-awake controls", "system integration keep awake sleep timer")
     ];
-    public static IReadOnlyList<DesktopSearchCommand> Find(string query) => Commands.Where(command => Matches(query, command.Name + " " + command.Detail + " " + command.Keywords))
+    public static IReadOnlyList<DesktopSearchCommand> Find(string query) => Commands.Concat(WindowsToolCatalog.All.Select(tool =>
+        new DesktopSearchCommand("system:" + tool.Id, tool.Name, tool.Detail, tool.Keywords)))
+        .Where(command => Matches(query, command.Name + " " + command.Detail + " " + command.Keywords))
         .OrderByDescending(command => query.Trim().Length > 0 && command.Name.StartsWith(query.Trim(), StringComparison.OrdinalIgnoreCase)).ToArray();
     public static bool Matches(string query, string text) => query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).All(word => text.Contains(word, StringComparison.OrdinalIgnoreCase));
 }

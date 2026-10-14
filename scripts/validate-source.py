@@ -371,7 +371,9 @@ assert '"--control-center-worker"' in (project / "App.xaml.cs").read_text() and 
 assert '"controlcenter"' in panel and "CoreProcessSession" not in panel and "CommitState" not in panel and "StateStore(" not in panel
 assert "ControlCenterPreferences.Set" in (project / "Desktop/DesktopEnvironment.ControlCenter.cs").read_text()
 assert "_retiring" in coordinator and "RuntimeRestartBudget" in coordinator and "ExpireActions" in coordinator
-assert "MenuBarLayout.Attached" in (project / "Desktop/TaskbarWindow.cs").read_text() and "MenuBarLayout.ClientBounds" in (project / "Interop/WindowChrome.cs").read_text()
+assert "DockForegroundGeometryPolicy.Classify" in (project / "Desktop/TaskbarWindow.cs").read_text()
+assert "MenuBarLayout.Attached" in (project / "Services/DockForegroundGeometryPolicy.cs").read_text()
+assert "MenuBarLayout.ClientBounds" in (project / "Interop/WindowChrome.cs").read_text()
 assert "NotificationHistory = [.. NotificationHistory]" in (project / "Models/ShellState.cs").read_text()
 print("Supervised Control Center, preference ownership, attached-bar framing and durable alert history wiring OK")
 if options.syntax:

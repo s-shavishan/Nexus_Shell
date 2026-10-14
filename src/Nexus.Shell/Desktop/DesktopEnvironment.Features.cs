@@ -25,6 +25,7 @@ internal sealed partial class DesktopEnvironment
         {
             _clipboardFeed = new(Desktop.Handle, Clipboard, action => Desktop.DispatcherQueue.TryEnqueue(action.Invoke));
             _clipboardFeed.Changed += ClipboardFeedChanged;
+            _clipboardFeed.SessionAvailabilityChanged += SessionAvailabilityChanged;
             RefreshClipboardPreference();
         }
         catch (Exception error) { _clipboardFeed?.Dispose(); _clipboardFeed = null; Clipboard.SetEnabled(false); Log.Write("Clipboard notifications unavailable; capture stays off", error); }
@@ -88,6 +89,7 @@ internal sealed partial class DesktopEnvironment
         string save = _saving ? "Saving the current workspace through Nexus Core." : _dirty ? "Changes are queued for saving" + (_saveFailures > 0 ? "; a bounded retry is pending." : ".") : "No desktop changes are queued for saving.";
         return [new("Desktop session", Mode + " · active for " + Math.Max(0, (int)(DateTimeOffset.Now - _sessionStarted).TotalMinutes) + " minutes · " + _windows.Count + " app windows"),
             new("Nexus Core", core), new("Control Center", panel), new("Search", SearchServiceStatus), new("Workspace persistence", save),
+            new("Windows integration", WindowsIntegrationStatus),
             new("Desktop folder updates", _desktopMonitor is null ? "Starting folder observation. F5 always refreshes manually." : _desktopMonitor.HadError ? "Some folder notifications were unavailable. F5 refreshes manually; Check services retries observation." : "Watching " + _desktopMonitor.FolderCount + " desktop folders with coalesced updates."),
             new("Clipboard capture", ClipboardStatus + " · " + Clipboard.Items.Count + " retained text entries"),
             new("Windows foundation", "Windows owns sign-in, app processes, graphics, drivers and system services. Nexus supervises its own desktop services.")];
