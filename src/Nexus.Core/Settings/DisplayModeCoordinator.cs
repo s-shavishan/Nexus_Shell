@@ -7,7 +7,6 @@ namespace Nexus.Core.Settings;
 // it. Nexus never persists an unconfirmed mode to the Windows registry.
 internal sealed class DisplayModeCoordinator(Action<Exception>? report = null) : IDisposable
 {
-    private const int TimeoutSeconds = 18;
     private sealed class Pending(string device, string id, DisplaySettings.Mode previous, DisplaySettings.Mode selected, DateTimeOffset until)
     {
         internal string Device { get; } = device;
@@ -28,7 +27,7 @@ internal sealed class DisplayModeCoordinator(Action<Exception>? report = null) :
         {
             if (_pending is not { } pending || _disposed) return null;
             return new(pending.Device, pending.Id,
-                Math.Max(0, (int)Math.Ceiling((pending.Until - DateTimeOffset.UtcNow).TotalSeconds)));
+                DisplayModePreviewPolicy.Remaining(pending.Until, DateTimeOffset.UtcNow));
         }
     }
 
@@ -49,12 +48,12 @@ internal sealed class DisplayModeCoordinator(Action<Exception>? report = null) :
 
                     DisplaySettings.Apply(change.DeviceId, ref selected, persist: false);
                     var pending = new Pending(change.DeviceId, change.ItemId, previous, selected,
-                        DateTimeOffset.UtcNow.AddSeconds(TimeoutSeconds));
+                        DateTimeOffset.UtcNow.AddSeconds(DisplayModePreviewPolicy.TimeoutSeconds));
                     _pending = pending;
                     try
                     {
                         pending.Timer = new Timer(_ => OnTimeout(pending), null,
-                            TimeSpan.FromSeconds(TimeoutSeconds), System.Threading.Timeout.InfiniteTimeSpan);
+                            TimeSpan.FromSeconds(DisplayModePreviewPolicy.TimeoutSeconds), System.Threading.Timeout.InfiniteTimeSpan);
                     }
                     catch
                     {
@@ -69,7 +68,7 @@ internal sealed class DisplayModeCoordinator(Action<Exception>? report = null) :
                 {
                     if (_pending is not { } pending || pending.Device != change.DeviceId)
                         throw new InvalidOperationException("The display preview already expired. Refresh first.");
-                    if (pending.Until <= DateTimeOffset.UtcNow)
+                    if (DisplayModePreviewPolicy.Expired(pending.Until, DateTimeOffset.UtcNow))
                     {
                         bool restored = Restore(pending);
                         throw new InvalidOperationException(restored
