@@ -106,3 +106,32 @@ and compare the right-side stack with the reference. Verify 1649×928,
 1366×768, 800×600, 150% DPI and Focus Mode. Test all three actions and
 keyboard accessibility. Confirm the calendar still opens the real Study
 section, and the wallpaper and desktop icons remain unobstructed.
+
+## Stage 6 — Launchpad gallery-first Midnight Glass composition (UI team)
+
+This patch is **visual architecture only**. It does not change the control
+plane, system devices, Windows integration, app enumeration, pin persistence,
+shell takeover, or file operations. Launchpad retains the 18-item page
+policy and real asynchronously loaded Windows thumbnails.
+
+- Launchpad opens in a clean **app-first mode**: the 2-row collection editing
+  toolbar moves behind an accessible *Organize* disclosure button. The full
+  create/rename/remove/restore/order controls remain usable on demand.
+- The central app area is now a **single large material-framed glass gallery**
+  instead of unframed tiles floating directly in the view.
+- App art occupies an **88×88 DIP layered well**, with 72px real/monogram
+  artwork, spaced tile names and retained real icon loading.
+- Search gains a rounded 18-DIP focal surface; the glass gallery uses a
+  dedicated Midnight gradient while High Contrast respects solid fallbacks.
+- Native MenuWindow frame and Win32 clip use the same 24-DIP geometry.
+- The existing native WinUI preflight calls
+  `StartMenuView.VerifyGalleryComposition()`, confirming the gallery owns
+  both the app grid and empty state and the organizer starts closed.
+- Opening Launchpad resets its organizer state but **does not rescan icons**;
+  the cached icon/load and original search/page controls stay intact.
+
+**Unverified:** no native Windows compile or visual comparison was run for
+this UI revision. Before releasing, check 1649×928 and smaller 1366×768,
+theme changes including High Contrast, 18-app pagination and keyboard
+navigation, all organizer controls, image-loading latency, pointer actions,
+and window material fallback. Source review is not proof of smoothness.

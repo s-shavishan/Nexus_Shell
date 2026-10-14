@@ -78,6 +78,8 @@ internal static class UiResourceProbe
             checks.Add("100 unchanged menu bar refreshes retain native title and clock XAML properties");
             stage = "retained-launchpad-rendering";
             launchpad.VerifyRetainedRendering();
+            launchpad.VerifyGalleryComposition();
+            checks.Add("Launchpad glass gallery and default collapsed organization hierarchy are retained.");
             checks.Add("Twenty unchanged Launchpad renders retain item source and page-control identities");
             stage = "retained-dock-indicator-layout";
             dock.VerifyRetainedIndicatorLayout();
