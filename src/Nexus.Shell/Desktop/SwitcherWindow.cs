@@ -316,6 +316,8 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
     private void AttachDrag(Button button, DesktopWindowEntry entry, TextBlock note)
     {
         Point? start = null;
+        LayoutRect? dragStartBounds = null;
+        DesktopMonitor? dragMonitor = null;
         WindowMove? candidate = null;
         bool dragging = false;
         var transform = new TranslateTransform();
@@ -325,6 +327,7 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
             var finish = commit && dragging ? candidate : null;
             if (dragging) _suppressCardClickUntil = System.Environment.TickCount64 + 400;
             start = null; candidate = null; dragging = false;
+            dragStartBounds = null; dragMonitor = null;
             _dragCandidate = null;
             transform.X = transform.Y = 0;
             button.ReleasePointerCaptures();
@@ -344,8 +347,17 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
         {
             if (_applying || !entry.CanArrange || !NativeMethods.OwnsWindow(entry.Window)
                 || !args.GetCurrentPoint(Root).Properties.IsLeftButtonPressed) return;
+            // Capture the original placement just ONCE when pointer contact
+            // starts. Calling GetWindowPlacement + monitor projection on every
+            // mouse-move event caused avoidable input latency and frame jitter.
+            var source = DesktopWindowCatalog.Capture(entry, _monitors);
+            var target = _monitors.FirstOrDefault(m => m.Id == MonitorId)
+                ?? _monitors.FirstOrDefault(m => m.Id == entry.MonitorId);
+            if (source is null || target is null || !button.CapturePointer(args.Pointer)) return;
+            dragStartBounds = _staged.TryGetValue(entry.Key, out var staged)
+                ? staged.Bounds : SavedWindowLayouts.Project(source, target.Work);
+            dragMonitor = target;
             start = args.GetCurrentPoint(Root).Position;
-            _ = button.CapturePointer(args.Pointer);
             candidate = null; dragging = false;
         }), true);
         button.AddHandler(UIElement.PointerMovedEvent, new PointerEventHandler((_, args) =>
@@ -356,15 +368,9 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
             double dx = current.X - origin.X, dy = current.Y - origin.Y;
             if (!dragging && !SelectionMarqueeGeometry.HasStarted(origin.X, origin.Y, current.X, current.Y)) return;
             dragging = true;
-            var originMonitor = _monitors.FirstOrDefault(m => m.Id == entry.MonitorId);
-            var target = _monitors.FirstOrDefault(m => m.Id == MonitorId) ?? originMonitor;
-            if (target is null) return;
+            if (dragMonitor is not { } target || dragStartBounds is not { } original) { Reset(false); return; }
             try
             {
-                var saved = DesktopWindowCatalog.Capture(entry, _monitors);
-                if (saved is null) { Reset(false); return; }
-                var original = _staged.TryGetValue(entry.Key, out var pending)
-                    ? pending.Bounds : SavedWindowLayouts.Project(saved, target.Work);
                 double scale = ShellLayerInterop.Scale(Handle);
                 int cursorX = target.Work.X + (int)Math.Round(Math.Clamp(current.X / Math.Max(1, Root.ActualWidth), 0, 1) * target.Work.Width);
                 int cursorY = target.Work.Y + (int)Math.Round(Math.Clamp(current.Y / Math.Max(1, Root.ActualHeight), 0, 1) * target.Work.Height);
@@ -383,6 +389,13 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
         {
             if (start is null) return;
             bool wasDragging = dragging;
+            if (wasDragging && !NativeMethods.OwnsWindow(entry.Window))
+            {
+                _message.Text = "That window closed during the drag. Refresh the overview.";
+                Reset(false);
+                args.Handled = true;
+                return;
+            }
             Reset(true);
             if (wasDragging) args.Handled = true;
         }), true);
