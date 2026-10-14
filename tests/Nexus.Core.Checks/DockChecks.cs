@@ -7,6 +7,14 @@ internal static class DockChecks
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
     internal static void Run()
     {
+        var stableViewport = new ShellRect(-1400, 40, 350, 210);
+        Check(DockPreviewPolicy.ReuseThumbnailGeometry(stableViewport, stableViewport, true, 1000, 1190)
+            && !DockPreviewPolicy.ReuseThumbnailGeometry(stableViewport, stableViewport, true, 1000, 1300)
+            && !DockPreviewPolicy.ReuseThumbnailGeometry(stableViewport, stableViewport, false, 1000, 1100)
+            && !DockPreviewPolicy.ReuseThumbnailGeometry(stableViewport, null, true, 1000, 1100)
+            && !DockPreviewPolicy.ReuseThumbnailGeometry(stableViewport, new ShellRect(-1400, 40, 310, 210), true, 1000, 1100)
+            && !DockPreviewPolicy.ReuseThumbnailGeometry(stableViewport, stableViewport, true, 1200, 1100),
+            "A live DWM thumbnail should reuse native geometry only for identical short-lived viewport updates.");
         Check(DockPinnedWindowPolicy.IsShellArtifact("DWM Notification Window", "dwm")
             && !DockPinnedWindowPolicy.IsShellArtifact("Document", "dwm")
             && !DockPinnedWindowPolicy.IsShellArtifact("DWM Notification Window", "anotherapp"),
