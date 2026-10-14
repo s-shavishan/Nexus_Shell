@@ -245,7 +245,14 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
         button.RenderTransform = transform;
         void Reset(bool commit)
         {
-            if (commit && dragging && candidate is { } move)
+            var finish = commit && dragging ? candidate : null;
+            if (dragging) _suppressCardClickUntil = System.Environment.TickCount64 + 400;
+            start = null; candidate = null; dragging = false;
+            transform.X = transform.Y = 0;
+            button.ReleasePointerCaptures();
+            // A stage rebuilds the card tree. Release native capture first;
+            // never detach the actively captured Button during its handler.
+            if (finish is { } move)
             {
                 try
                 {
@@ -253,11 +260,7 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
                     _message.Text = "Window position staged · Apply to commit or Cancel to discard.";
                 }
                 catch (Exception error) { _message.Text = error.Message; }
-                _suppressCardClickUntil = System.Environment.TickCount64 + 400;
             }
-            start = null; candidate = null; dragging = false;
-            transform.X = transform.Y = 0;
-            button.ReleasePointerCaptures();
         }
         button.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler((_, args) =>
         {
