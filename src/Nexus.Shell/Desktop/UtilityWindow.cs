@@ -46,7 +46,7 @@ internal sealed class UtilityWindow : Window
         Handle = WinRT.Interop.WindowNative.GetWindowHandle(this); NativeWindow = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(Handle)); NativeWindow.Title = title + " · Nexus";
         if (NativeWindow.Presenter is OverlappedPresenter presenter) presenter.SetBorderAndTitleBar(false, false);
         _transition = new(_frame, () => environment.Theme.Animations && !environment.Theme.HighContrast && environment.Session.State.SurfaceAnimations && !environment.Session.State.ReducedEffects);
-        _chrome = new(Handle, resizable: true, minimumWidth: Math.Min(width, 480), minimumHeight: Math.Min(height, 360), stateChanged: maximized => { _frame.CornerRadius = new CornerRadius(maximized || environment.Theme.HighContrast ? 0 : 14); _frame.BorderThickness = new Thickness(maximized ? 0 : 1); }, minimizeRequested: Minimize, closeRequested: RequestClose, role: "Utility"); _transition.BindRestore(_chrome); _motion = new(_frame, () => environment.Theme.Animations && !environment.Theme.HighContrast && environment.Session.State.SurfaceAnimations && !environment.Session.State.ReducedEffects);
+        _chrome = new(Handle, resizable: true, minimumWidth: Math.Min(width, 480), minimumHeight: Math.Min(height, 360), stateChanged: maximized => { _frame.CornerRadius = new CornerRadius(maximized || environment.Theme.HighContrast ? 0 : 14); _frame.BorderThickness = new Thickness(maximized || !environment.Theme.HighContrast ? 0 : 1); }, minimizeRequested: Minimize, closeRequested: RequestClose, role: "Utility"); _transition.BindRestore(_chrome); _motion = new(_frame, () => environment.Theme.Animations && !environment.Theme.HighContrast && environment.Session.State.SurfaceAnimations && !environment.Session.State.ReducedEffects);
         _caption = new(NativeWindow, _chrome, dragArea);
         var work = ShellLayerInterop.Monitor(Handle).Work.Bounds; double scale = ShellLayerInterop.Scale(Handle);
         int w = Math.Min(work.Width, (int)(width * scale)), h = Math.Min(work.Height, (int)(height * scale));
@@ -63,5 +63,7 @@ internal sealed class UtilityWindow : Window
     private void ToggleMaximize()
     { _transition.Restore(); if (NativeWindow.Presenter is OverlappedPresenter presenter) { if (presenter.State == OverlappedPresenterState.Maximized) presenter.Restore(); else presenter.Maximize(); } }
     internal void ApplyAppearance()
-    { _frame.CornerRadius = new CornerRadius(_environment.Theme.HighContrast || _chrome.IsAttached ? 0 : 14); _frame.RequestedTheme = _environment.Theme.ElementTheme; _frame.BorderBrush = _environment.Theme.Brush("NexusBorder"); _title.Foreground = _environment.Theme.Brush("NexusText"); _material.Apply(this, _frame, _environment); _chrome.SetCorners(_environment.Theme.HighContrast); _motion.Refresh(); _apply(); }
+    { _frame.CornerRadius = new CornerRadius(_environment.Theme.HighContrast || _chrome.IsAttached ? 0 : MidnightGlassMetrics.FrameRadius);
+      _frame.BorderThickness = new Thickness(_environment.Theme.HighContrast && !_chrome.IsAttached ? 1 : 0);
+      _frame.RequestedTheme = _environment.Theme.ElementTheme; _frame.BorderBrush = _environment.Theme.Brush("NexusBorder"); _title.Foreground = _environment.Theme.Brush("NexusText"); _material.Apply(this, _frame, _environment); _chrome.SetCorners(_environment.Theme.HighContrast); _motion.Refresh(); _apply(); }
 }
