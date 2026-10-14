@@ -111,7 +111,7 @@ internal sealed class FilesView : Grid
         _placesCard.Child = new ScrollViewer { Content = places, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
         body.Children.Add(_placesCard);
         _list.SelectionMode = request.Kind is FileSelectionKind.OpenFiles or FileSelectionKind.Browse
-            ? ListViewSelectionMode.Multiple : ListViewSelectionMode.Single;
+            ? ListViewSelectionMode.Extended : ListViewSelectionMode.Single;
         _tiles.SelectionMode = _list.SelectionMode;
         _tiles.ItemsPanel = (ItemsPanelTemplate)XamlReader.Load("<ItemsPanelTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'><ItemsWrapGrid ItemWidth='116' ItemHeight='136' Orientation='Horizontal'/></ItemsPanelTemplate>");
         _tiles.ItemTemplate = (DataTemplate)XamlReader.Load("""
@@ -184,6 +184,15 @@ internal sealed class FilesView : Grid
         Grid.SetColumn(viewScroll, 1); contentHeader.Children.Add(viewScroll);
         contents.Children.Add(contentHeader);
         Grid.SetRow(_list, 1); Grid.SetRow(_tiles, 1); contents.Children.Add(_list); contents.Children.Add(_tiles);
+        if (request.Kind == FileSelectionKind.Browse)
+        {
+            var selectionLayer = new Canvas { IsHitTestVisible = false };
+            Grid.SetRow(selectionLayer, 1); contents.Children.Add(selectionLayer);
+            foreach (var view in new ListViewBase[] { _list, _tiles })
+                _ = new SelectionMarquee(view, view, selectionLayer,
+                    () => !_rendering && !_navigating && !_recycle && view.Visibility == Visibility.Visible,
+                    source => ItemAt(view, source!) is null);
+        }
         _contentsCard.Child = contents; Grid.SetColumn(_contentsCard, 1); body.Children.Add(_contentsCard);
         Grid.SetColumn(_loading, 1); body.Children.Add(_loading);
         var details = new StackPanel { Spacing = 14 };
@@ -434,8 +443,8 @@ internal sealed class FilesView : Grid
     internal void VerifyValidationContexts()
     {
         if (!_environment.Validation) throw new InvalidOperationException("Context-menu validation requires an isolated Files fixture.");
-        if (_list.SelectionMode != ListViewSelectionMode.Multiple
-            || _tiles.SelectionMode != ListViewSelectionMode.Multiple)
+        if (_list.SelectionMode != ListViewSelectionMode.Extended
+            || _tiles.SelectionMode != ListViewSelectionMode.Extended)
             throw new InvalidOperationException("Files browse must enable native multiple selection in list and grid.");
         foreach (var (path, folder) in new[] { (@"C:\Example\Folder", true), (@"C:\Example\photo.png", false), (@"C:\Example\music.flac", false), (@"C:\Example\archive.zip", false), (@"C:\Example\setup.exe", false), (@"C:\Example\unknown.custom", false) })
         {
