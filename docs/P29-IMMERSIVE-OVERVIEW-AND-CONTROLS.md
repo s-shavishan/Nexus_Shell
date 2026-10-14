@@ -203,3 +203,31 @@ This branch remains a **draft**. None of these source changes was verified on a 
 - This should reduce unnecessary DWM API calls in the Windows 10 VM. **Performance impact, native thumbnail quality, and interaction correctness still require measured Windows tests.**
 
 **Latest source-level interaction gate:** after staging an overview window, clicking an app card does not silently discard the arrangement; drag-click suppression applies only to the card just dragged. Core also rejects a stale Display Keep confirmation if an external settings change altered the live resolution or reported Hz.
+
+
+## User-reported failure — drag/snap/stage/Apply/Undo (2026-10-14)
+
+**Acceptance status: FAILED in the user's tested build.** The user explicitly reported that drag, snap, staging, Apply, and Undo do not work. Do not represent these as completed or working; do not accept other P2.9 features until a MAIN-BRANCH test is run.
+
+### Source corrections on draft PR #32
+
+1. The preview gesture previously used a WinUI `Button`, which has its own press/capture/click lifecycle; this can compete with custom mouse drag handling. The preview now uses a dedicated native WinUI `Grid` pointer surface, with a separate keyboard-accessible **Switch to window** button. Drag no longer depends on Button.Click capture behavior.
+2. `DesktopWindowCatalog.Capture` required a readable executable path, so even a perfectly valid resizable HWND could silently fail to stage if `OpenProcess/QueryFullProcessImageName` was denied. The new `CurrentBounds` reads validated HWND placement without app identity; persistent saved-layout matching **still** requires a stable path.
+3. Live cross-monitor staging now uses the path-independent `WindowOverviewGeometry.ProjectBetween`, including work-area origins, negative monitor positions, and minimum size. The **Stage on display** command uses the same path-independent geometry.
+4. The overview initially selects up to two visible, resizable windows so Grid/Columns/Stack are not all disabled on first open. It still requires a deliberate stage and Done; selecting/unselecting checkboxes remains supported.
+5. The Undo button now distinguishes **Discard staged changes** from **Undo last arrangement** and reports when a native restoration could not be completed. Failed pointer capture and unreadable window rectangles surface a visible reason.
+6. Added portable projection tests (same-monitor identity, negative origins, tiny destination, missing destination), and extended the Windows native test fixture to exercise the exact `WindowLayouts.Apply` staging path and `Undo` after Apply, not only `WindowLayouts.Arrange`.
+7. The current 11/11 cross-file checks are static source assertions, not a substitute for actual pointer or window-manager acceptance.
+
+### Required release gate — Main branch acceptance
+
+First obtain a successful AppVeyor Windows Core/Runtime, WinUI x64 publish, resource and portable package build for the latest feature-branch commit. **No automatic merge:** the developer must receive explicit permission to merge. When the user approves the main-branch test, use a reviewed/squashed merge and start the main AppVeyor build.
+
+After main-build success, use Windows 10 19045 VirtualBox:
+
+- Open two ordinary movable/resizable applications (e.g., Notepad and Explorer). Open fullscreen overview. Verify two checkboxes selected, Grid/Columns/Stack enabled and the real windows do not move yet.
+- Drag a *preview*, confirm staged count and mini-map update, drop near left/right/corners/top and verify the correct snap zone. Repeat with 100% and 150% DPI.
+- Click **Done · arrange windows**; verify the real HWNDs moved and the overview closes. Reopen overview and click **Undo last arrangement**; verify exact previous positions and sizes.
+- Stage another arrangement, click **Discard staged changes**; verify real apps never moved. Escape/Cancel also leaves app positions unchanged.
+- Test one app whose executable path cannot be queried; live HWND movement should still work; saving a named reusable layout may remain unavailable.
+- If any step fails, capture the first visible overview message and the test logs; do not certify P2.9.
