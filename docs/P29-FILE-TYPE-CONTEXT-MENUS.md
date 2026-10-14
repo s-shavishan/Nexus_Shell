@@ -116,3 +116,26 @@ acceptance. No automatic merge into `main`.
 **Additional window-overview fix:** Do not interpret `ShowWindowAsync`'s return value as success. Windows documents its return as *previous window visibility*, so a previously hidden/minimized app can return zero after a valid maximize request. The command is now issued with a fresh HWND ownership check, rather than triggering spurious full-layout rollback.
 
 No native Windows compilation was available during this pass. PR #32 must remain draft and `main` unchanged.
+
+
+## Stabilization continuation — safe editor fallback
+
+The reference-driven Source/Text/Structured-data menus can declare a real **Edit**
+handler even when an individual Windows 10 installation has no registered
+`edit` shell verb. The Files worker now first attempts the installed native
+Windows Edit association, and if that fails launches the trusted Windows
+System32 `notepad.exe` directly with `ProcessStartInfo.ArgumentList` containing
+exactly the original captured path. The implementation does **not** invoke
+`cmd.exe`, use a configurable executable, or concatenate a shell command.
+Missing files or editor launch failure are reported through Nexus Files instead
+of being silent.
+
+A portable catalog regression check ensures Edit is declared for `.cs` and
+`.json` but not for images, shortcuts or executables. This is **source-only**
+until the first Windows 10/11 build tests both a registered Edit verb and a
+system without such a verb.
+
+Additional native acceptance: right-click a path with spaces, Unicode and
+parentheses; open in the registered editor where available; otherwise verify
+Notepad launches that exact file; repeat with missing/locked files. Test a
+non-Edit profile to confirm the menu never offers an editor action.
