@@ -12,6 +12,7 @@ namespace Nexus.Core.Settings;
 internal sealed class WindowsSettingsBackend(int desktopProcessId, Action<Exception>? report = null) : ISystemSettingsBackend, IDisposable
 {
     private readonly Lazy<AudioController> _audio = new(() => new());
+    private readonly DisplayModeCoordinator _displayModes = new(report);
     public async Task<SettingsSnapshot> ExecuteAsync(SettingsRequest request, CancellationToken cancellation)
     {
         cancellation.ThrowIfCancellationRequested();
@@ -30,12 +31,16 @@ internal sealed class WindowsSettingsBackend(int desktopProcessId, Action<Except
                     var window = new IntPtr(request.Window);
                     if (window == IntPtr.Zero || GetWindowThreadProcessId(window, out uint owner) == 0 || owner != desktopProcessId)
                         throw new RuntimeFailure("settings-window", "Refresh from the Nexus desktop to select its display.");
+                    if (request.Change is { Kind: not "brightness" } change)
+                        await Task.Run(() => _displayModes.Change(change), cancellation).ConfigureAwait(false);
                     var brightness = new BrightnessController(window);
-                    var level = request.Change is { } display
+                    var level = request.Change is { Kind: "brightness" } display
                         ? await brightness.ChangeAsync(display.DeviceId, display.Value!.Value, cancellation).ConfigureAwait(false)
                         : await brightness.ReadAsync().ConfigureAwait(false);
                     var displays = await Task.Run(DisplaySettings.Read, cancellation).ConfigureAwait(false);
-                    return new(default, "Display", Brightness: new(level.Available, level.DeviceId, level.Device, level.Percent, level.Message), Displays: displays);
+                    return new(default, "Display",
+                        Brightness: new(level.Available, level.DeviceId, level.Device, level.Percent, level.Message),
+                        Displays: displays, Preview: _displayModes.Snapshot());
                 case "Network": return await Task.Run(() => new SettingsSnapshot(default, "Network", Network: NetworkSettings.Execute(request, cancellation)), cancellation).ConfigureAwait(false);
                 case "Bluetooth": return await Task.Run(() => new SettingsSnapshot(default, "Bluetooth", Bluetooth: BluetoothSettings.Execute(request, cancellation)), cancellation).ConfigureAwait(false);
                 case "Power": return await Task.Run(() => new SettingsSnapshot(default, "Power", Power: PowerSettings.Execute(request.Change, cancellation)), cancellation).ConfigureAwait(false);
@@ -47,6 +52,10 @@ internal sealed class WindowsSettingsBackend(int desktopProcessId, Action<Except
         catch (Exception error) when (error is DllNotFoundException or EntryPointNotFoundException)
         { report?.Invoke(error); throw new RuntimeFailure("settings-device", "Windows did not provide the " + request.Section + " device API. Other Control Center sections remain available."); }
     }
-    public void Dispose() { if (_audio.IsValueCreated) _audio.Value.Dispose(); }
+    public void Dispose()
+    {
+        _displayModes.Dispose();
+        if (_audio.IsValueCreated) _audio.Value.Dispose();
+    }
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
 }
