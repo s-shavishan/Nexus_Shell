@@ -114,7 +114,7 @@ internal sealed class ControlCenterEnvironment
         // native executable, command-line argument or settings URI.
         var tool = WindowsToolCatalog.Find(id);
         if (tool is null || tool.Id is not
-            ("project-display" or "night-light" or "network-settings" or "network-adapters" or "bluetooth-settings"))
+            ("project-display" or "night-light" or "network-settings" or "network-adapters" or "bluetooth-settings" or "task-manager" or "volume-mixer"))
         {
             _window?.View.ShowError("This Windows control is unavailable.");
             return;
