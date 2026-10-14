@@ -135,3 +135,41 @@ this UI revision. Before releasing, check 1649×928 and smaller 1366×768,
 theme changes including High Contrast, 18-app pagination and keyboard
 navigation, all organizer controls, image-loading latency, pointer actions,
 and window material fallback. Source review is not proof of smoothness.
+
+## Stage 7 — Floating dock glass-island composition (UI-only)
+
+**Visual concern:** the native dock was one uninterrupted strip of buttons,
+despite the reference requiring clearer depth, a visually identifiable
+launcher, a coherent application group and intentional system controls.
+
+The updated `TaskbarView` preserves the single `WindowMaterial`-owned
+native backdrop and its opaque fallback, **without introducing a new
+composition controller, timer, worker, data scan or Windows hook**. Its
+interior now has three separately rounded translucent plates:
+
+1. **Launcher island** — gentle blue/violet hero material behind Launchpad.
+2. **Applications island** — dark inset surface around the *same* retained
+   pinned and running-app collections, scrolling and separator.
+3. **Utilities island** — independent quick window overview/clock/desktop
+   controls, hidden altogether when all its buttons are unavailable.
+
+A one-DIP noninteractive top-lighting line frames the islands without
+intercepting pointer input. Islands are emphasized only on floating
+Midnight-style, non-High-Contrast, non-Solid presentation; attached dock,
+non-Midnight palettes and accessibility fallback keep unadorned zones.
+The launch/windows click handlers, native HWND identities, pinned icon async
+fetch, dock hover previews and active app indicators are unchanged. Island
+brushes reuse the palette's cached `Surface` and `Edge` resources and
+skip redundant dependency-property writes.
+
+**Regression:** the production WinUI native UI preflight calls
+`TaskbarView.VerifyVisualIslands` to inspect actual view tree ownership,
+scrolling, pointer-safe rim and 100 stable paint reapplications. Existing
+native dock material ownership and retained geometry probes continue to
+apply.
+
+**Outstanding validation:** AppVeyor x64/WinUI compile and native probe
+execution; screenshots at 1649×928 and 1366×768; normal/compact and
+floating/attached modes; alt+tab/focus, fullscreen dock auto-hide, app
+overflow, 100/150% DPI, keyboard focus and High Contrast. Passing the
+source-level inspection does NOT certify visual fidelity or GPU frame pacing.

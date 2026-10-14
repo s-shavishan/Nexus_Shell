@@ -87,6 +87,8 @@ internal static class UiResourceProbe
             checks.Add("100 unchanged dock indicator frames retain size/opacity, while real state changes repaint");
             stage = "retained-dock-appearance";
             dock.VerifyRetainedAppearance();
+            dock.VerifyVisualIslands();
+            checks.Add("Three functional Midnight dock islands retain their paint resources across 100 stable visual refreshes");
             checks.Add("100 native dock appearance refreshes preserve launcher and clock brushes");
             stage = "retained-dock-density";
             dock.VerifyRetainedDensity();
