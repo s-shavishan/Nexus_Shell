@@ -27,6 +27,11 @@ internal static class SettingsChecks
             var state = await service.ExecuteAsync(new(section), CancellationToken.None);
             Check(state.Section == section && state.Epoch == service.Epoch && state.Epoch != Guid.Empty, "The service must own the snapshot epoch.");
         }
+        Check(DisplayModePreviewPolicy.IsRequestedModeActive("1920x1080@60", "1920x1080@60")
+            && !DisplayModePreviewPolicy.IsRequestedModeActive("1920x1080@60", "1280x720@60")
+            && !DisplayModePreviewPolicy.IsRequestedModeActive("1920x1080@60", "1920x1080@59")
+            && !DisplayModePreviewPolicy.IsRequestedModeActive("", "1920x1080@60"),
+            "A Display Keep must persist only the still-active previewed mode; hotplug and driver resets invalidate confirmation.");
         Check(DisplayModePreviewPolicy.TimeoutSeconds == 18
             && DisplayModePreviewPolicy.Remaining(new DateTimeOffset(2026, 10, 14, 12, 0, 18, TimeSpan.Zero),
                 new DateTimeOffset(2026, 10, 14, 12, 0, 0, TimeSpan.Zero)) == 18
