@@ -65,26 +65,43 @@ internal static class DesktopWindowCatalog
         try { uint size = 4096; var path = new StringBuilder((int)size); return QueryFullProcessImageName(handle, 0, path, ref size) ? path.ToString() : ""; }
         finally { CloseHandle(handle); }
     }
-    internal static SavedWindowPosition? Capture(DesktopWindowEntry entry, IReadOnlyList<DesktopMonitor> monitors)
+    // Moving an already-open HWND must never depend on whether Windows
+    // permits querying its executable path. Process path is required ONLY
+    // for persistent saved-layout matching, not live window arrangement.
+    internal static LayoutRect? CurrentBounds(DesktopWindowEntry entry, IReadOnlyList<DesktopMonitor> monitors)
     {
-        if (!entry.CanArrange || string.IsNullOrEmpty(entry.ProcessPath) || !NativeMethods.OwnsWindow(entry.Window)) return null;
-        var monitor = monitors.FirstOrDefault(m => m.Id == entry.MonitorId); if (monitor is null) return null;
+        if (!entry.CanArrange || !NativeMethods.OwnsWindow(entry.Window)) return null;
+        var monitor = monitors.FirstOrDefault(m => m.Id == entry.MonitorId);
+        if (monitor is null) return null;
         LayoutRect bounds;
         if (NativeMethods.IsMinimized(entry.Window.Handle) || NativeMethods.IsZoomed(entry.Window.Handle))
         {
             var placement = new Placement { Length = (uint)Marshal.SizeOf<Placement>() };
             if (!GetWindowPlacement(entry.Window.Handle, ref placement)) return null;
-            // WINDOWPLACEMENT is in workspace coordinates, SetWindowPos in screen coordinates.
-            bool toolWindow = (GetWindowLongPtr(entry.Window.Handle, -20).ToInt64() & 0x80) != 0;
-            bounds = new(placement.Normal.Left + (toolWindow ? 0 : monitor.Work.X - monitor.Bounds.X), placement.Normal.Top + (toolWindow ? 0 : monitor.Work.Y - monitor.Bounds.Y),
+            // WINDOWPLACEMENT normal rectangles use workspace coordinates.
+            bool tool = (GetWindowLongPtr(entry.Window.Handle, -20).ToInt64() & 0x80) != 0;
+            bounds = new(placement.Normal.Left + (tool ? 0 : monitor.Work.X - monitor.Bounds.X),
+                placement.Normal.Top + (tool ? 0 : monitor.Work.Y - monitor.Bounds.Y),
                 placement.Normal.Right - placement.Normal.Left, placement.Normal.Bottom - placement.Normal.Top);
         }
         else
         {
-            if (!NativeMethods.GetWindowRect(entry.Window.Handle, out var rect)) return null;
-            bounds = Convert(rect.Bounds);
+            if (!NativeMethods.GetWindowRect(entry.Window.Handle, out var rectangle)) return null;
+            bounds = Convert(rectangle.Bounds);
         }
-        if (bounds.Width < 1 || bounds.Height < 1 || !NativeMethods.OwnsWindow(entry.Window)) return null;
-        return SavedWindowLayouts.Capture(entry.ProcessPath, entry.Window.Title, monitor.Id, bounds, monitor.Work, NativeMethods.IsZoomed(entry.Window.Handle));
+        return bounds.Width > 0 && bounds.Height > 0 && NativeMethods.OwnsWindow(entry.Window) ? bounds : null;
+    }
+
+    internal static SavedWindowPosition? Capture(DesktopWindowEntry entry, IReadOnlyList<DesktopMonitor> monitors)
+    {
+        // Saved layouts intentionally require a stable executable identity.
+        // Live movement does not; see CurrentBounds above.
+        if (string.IsNullOrWhiteSpace(entry.ProcessPath)) return null;
+        var bounds = CurrentBounds(entry, monitors);
+        var monitor = monitors.FirstOrDefault(m => m.Id == entry.MonitorId);
+        return bounds is { } actual && monitor is not null
+            ? SavedWindowLayouts.Capture(entry.ProcessPath, entry.Window.Title,
+                monitor.Id, actual, monitor.Work, NativeMethods.IsZoomed(entry.Window.Handle))
+            : null;
     }
 }
