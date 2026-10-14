@@ -155,9 +155,11 @@ internal static class UiResourceProbe
                 {
                     panel.PrepareValidation(owner, size.Width, size.Height); await Task.Delay(80); panel.ValidationRoot.UpdateLayout();
                     if (panel.ValidationRoot.ActualWidth <= 0 || panel.ValidationRoot.ActualHeight <= 0) throw new InvalidOperationException("A production desktop panel did not lay out.");
+                    if (panel is SwitcherWindow overview) overview.VerifyOverviewValidation();
                 }
                 panel.Hide();
             }
+            checks.Add("Fullscreen window overview: native panel geometry, layout-map controls and immersive no-radius frame");
             environment.Clipboard.Clear();
             checks.Add("Production window board, clipboard shelf, session status, Places, Search, desktop shortcuts and Windows tools panels at two native window sizes");
             stage = "file-context-construction-and-layout";
