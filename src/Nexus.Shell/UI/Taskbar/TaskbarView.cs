@@ -696,54 +696,80 @@ internal sealed class TaskbarView : Grid
         bool emphasize = MidnightGlassMetrics.ReferenceEnabled(theme.Palette, theme.HighContrast)
             && _environment.Session.State.FloatingTaskbar
             && !theme.Simple;
-        // No extra compositor controllers or timers; retain all paints from
-        // ShellTheme's cache and skip identical assignments every refresh.
+        // All materials are cached in ShellTheme. Applying the same look
+        // never restarts an animation, re-enumerates HWNDs or edits Frame.
         var edge = emphasize ? theme.Edge : _transparent;
-        var backgrounds = emphasize
-            ? new[] { theme.Surface("Hero"), theme.Surface("Sidebar"), theme.Surface("Sidebar") }
-            : new Microsoft.UI.Xaml.Media.Brush[] { _transparent, _transparent, _transparent };
-        Border[] islands = [_launchIsland, _appsIsland, _utilityIsland];
-        for (int index = 0; index < islands.Length; index++)
-        {
-            var island = islands[index];
-            if (!ReferenceEquals(island.Background, backgrounds[index])) island.Background = backgrounds[index];
-            if (!ReferenceEquals(island.BorderBrush, edge)) island.BorderBrush = edge;
-            var thickness = new Thickness(emphasize ? 1 : 0);
-            if (!island.BorderThickness.Equals(thickness)) island.BorderThickness = thickness;
-            var corners = new CornerRadius(theme.HighContrast ? 0 : index == 1 ? 19 : 17);
-            if (!island.CornerRadius.Equals(corners)) island.CornerRadius = corners;
-        }
+        PaintIsland(_launchIsland, emphasize ? theme.Surface("Hero") : _transparent, edge, emphasize, 17);
+        PaintIsland(_appsIsland, emphasize ? theme.Surface("Sidebar") : _transparent, edge, emphasize, 19);
+        PaintIsland(_utilityIsland, emphasize ? theme.Surface("Sidebar") : _transparent, edge, emphasize, 17);
         var glintVisibility = emphasize ? Visibility.Visible : Visibility.Collapsed;
         if (_topGlint.Visibility != glintVisibility) _topGlint.Visibility = glintVisibility;
-        if (emphasize && !ReferenceEquals(_topGlint.Background, theme.Edge))
-            _topGlint.Background = theme.Edge;
+        if (emphasize && !ReferenceEquals(_topGlint.Background, edge))
+            _topGlint.Background = edge;
         _islandsEmphasized = emphasize;
     }
 
-    // Native test exercises actual production composition and retained
-    // properties, not a screenshot proxy or synthetic mock window.
+    private static void PaintIsland(Border island, Brush background, Brush edge, bool emphasized, double radius)
+    {
+        if (!ReferenceEquals(island.Background, background)) island.Background = background;
+        if (!ReferenceEquals(island.BorderBrush, edge)) island.BorderBrush = edge;
+        var thickness = new Thickness(emphasized ? 1 : 0);
+        if (!island.BorderThickness.Equals(thickness)) island.BorderThickness = thickness;
+        var corners = new CornerRadius(radius);
+        if (!island.CornerRadius.Equals(corners)) island.CornerRadius = corners;
+    }
+
+    // This runs in the real native UI preflight against production WinUI
+    // elements, checking hierarchy, stable paints and accessibility fallback.
     internal void VerifyVisualIslands()
     {
         ApplyVisualIslands();
-        if (!ReferenceEquals(_body.Children[0], _launchIsland)
+        if (_galleryInvalid())
+            throw new InvalidOperationException("The floating dock lost its three functional glass zones.");
+        var originalFloating = _environment.Session.State.FloatingTaskbar;
+        try
+        {
+            _environment.Session.State.FloatingTaskbar = true;
+            ApplyVisualIslands();
+            bool expected = MidnightGlassMetrics.ReferenceEnabled(
+                _environment.Theme.Palette, _environment.Theme.HighContrast)
+                && !_environment.Theme.Simple;
+            if (_islandsEmphasized != expected
+                || _topGlint.Visibility != (expected ? Visibility.Visible : Visibility.Collapsed))
+                throw new InvalidOperationException("Floating Midnight materials did not honor accessibility mode.");
+            var launcher = _launchIsland.Background;
+            var apps = _appsIsland.Background;
+            var utility = _utilityIsland.Background;
+            var edge = _appsIsland.BorderBrush;
+            for (int n = 0; n < 100; n++) ApplyVisualIslands();
+            if (!ReferenceEquals(launcher, _launchIsland.Background)
+                || !ReferenceEquals(apps, _appsIsland.Background)
+                || !ReferenceEquals(utility, _utilityIsland.Background)
+                || !ReferenceEquals(edge, _appsIsland.BorderBrush))
+                throw new InvalidOperationException("Stable dock composition recreated inset material paints.");
+            _environment.Session.State.FloatingTaskbar = false;
+            ApplyVisualIslands();
+            if (_islandsEmphasized || _topGlint.Visibility != Visibility.Collapsed
+                || _launchIsland.BorderThickness.Left != 0)
+                throw new InvalidOperationException("Attached dock retained floating-only visual decoration.");
+        }
+        finally
+        {
+            _environment.Session.State.FloatingTaskbar = originalFloating;
+            ApplyVisualIslands();
+        }
+    }
+
+    private bool _galleryInvalid()
+        => _body.Children.Count != 4
+            || !ReferenceEquals(_body.Children[0], _launchIsland)
             || !ReferenceEquals(_body.Children[1], _appsIsland)
             || !ReferenceEquals(_body.Children[2], _utilityIsland)
-            || !ReferenceEquals(_launchIsland.Child, _start.Parent as StackPanel)
+            || _launchIsland.Child is not StackPanel launcher
+            || launcher.Children.Count != 1 || !ReferenceEquals(launcher.Children[0], _start)
             || _appsIsland.Child is not ScrollViewer
             || _utilityIsland.Child is not StackPanel
-            || _topGlint.IsHitTestVisible
-            || _topGlint.Height != 1)
-            throw new InvalidOperationException("The floating dock lost its three functional glass zones.");
-        var brushes = new[] { _launchIsland.Background, _appsIsland.Background, _utilityIsland.Background };
-        var edges = new[] { _launchIsland.BorderBrush, _appsIsland.BorderBrush, _utilityIsland.BorderBrush };
-        for (int n = 0; n < 100; n++) ApplyVisualIslands();
-        for (int n = 0; n < 3; n++)
-            if (!ReferenceEquals(brushes[n], new[] { _launchIsland.Background, _appsIsland.Background, _utilityIsland.Background }[n])
-                || !ReferenceEquals(edges[n], new[] { _launchIsland.BorderBrush, _appsIsland.BorderBrush, _utilityIsland.BorderBrush }[n]))
-                throw new InvalidOperationException("Unchanged dock island appearance recreated paint resources.");
-        if (_islandsEmphasized && _topGlint.Visibility != Visibility.Visible)
-            throw new InvalidOperationException("Midnight floating dock lost its edge-lighting cue.");
-    }
+            || _topGlint.IsHitTestVisible || _topGlint.Height != 1;
 
     internal void Release()
     {
