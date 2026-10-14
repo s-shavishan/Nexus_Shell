@@ -9,6 +9,23 @@ internal static class DesktopUiChecks
         && inner.X >= outer.X && inner.Y >= outer.Y && inner.Right <= outer.Right && inner.Bottom <= outer.Bottom;
     internal static void Run()
     {
+        // A selection box must follow mouse motion in every direction, and
+        // must never activate unrelated desktop items in empty space.
+        Check(!SelectionMarqueeGeometry.HasStarted(10, 10, 13, 13)
+            && SelectionMarqueeGeometry.HasStarted(10, 10, 14, 10)
+            && SelectionMarqueeGeometry.HasStarted(10, 10, 10, 14),
+            "Marquee should begin only after the mouse passes its drag threshold.");
+        var backwards = SelectionMarqueeGeometry.Between(150, 170, 40, 60);
+        Check(backwards == new SelectionMarqueeRect(40, 60, 110, 110),
+            "Backwards mouse dragging must normalize selection geometry.");
+        Check(SelectionMarqueeGeometry.Intersects(backwards, new(100, 100, 50, 50))
+            && !SelectionMarqueeGeometry.Intersects(backwards, new(151, 175, 30, 30))
+            && !SelectionMarqueeGeometry.Intersects(backwards, new(0, 0, 35, 35)),
+            "Marquee selection should include overlapping icons and exclude non-overlapping ones.");
+        var horizontal = SelectionMarqueeGeometry.Between(-400, -100, -120, -100);
+        Check(horizontal.Width == 280 && horizontal.Height == 1
+            && SelectionMarqueeGeometry.Intersects(horizontal, new(-200, -110, 40, 20)),
+            "Horizontal/negative-origin drag boxes must remain selectable.");
         var monitors = new[] { new ShellRect(0, 0, 1920, 1080), new ShellRect(-1920, -180, 1920, 1080), new ShellRect(2400, 0, 2560, 1440), new ShellRect(0, 0, 320, 480) };
         var scales = new[] { .5, 1, 1.25, 1.5, 2, 4, double.NaN, double.PositiveInfinity, -1 };
         var widths = new[] { 280d, 640, 900, 2400, -100, double.NaN, double.PositiveInfinity };
