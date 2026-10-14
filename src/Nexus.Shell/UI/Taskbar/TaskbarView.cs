@@ -333,7 +333,12 @@ internal sealed class TaskbarView : Grid
                 _pendingShortcuts.Remove(target);
                 if (_released) return;
                 _shortcutTargets[target] = resolved;
-                RefreshWindowStates(); // Update pinned/running identity, not the XAML tree.
+                // Window visibility is controlled by ApplyDensity, not the
+                // indicator refresh. Reconcile both after a shortcut resolves:
+                // otherwise a pinned app can still have a duplicate running
+                // button until a later native structural event.
+                ApplyDensity();
+                RefreshWindowStates();
             });
         }) { IsBackground = true, Name = "Nexus dock shortcut identity" };
         thread.SetApartmentState(ApartmentState.STA);
