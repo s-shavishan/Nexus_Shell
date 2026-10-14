@@ -108,6 +108,38 @@ internal sealed class ControlCenterEnvironment
     internal void LockScreen() => Action("lock");
     internal void ShowControls(string? page = null) => Action("personalize");
     internal void Advanced(string section) => Action("advanced", section);
+    internal void SetProjection(string mode)
+    {
+        // DisplaySwitch supports fixed Windows projection profiles. Do not
+        // pass arbitrary commands or treat this as a brightness controller.
+        string option = mode switch
+        {
+            "Internal" => "/internal",
+            "Duplicate" => "/clone",
+            "Extend" => "/extend",
+            "External" => "/external",
+            _ => ""
+        };
+        if (option.Length == 0) { _window?.View.ShowError("Unknown projection mode."); return; }
+        try
+        {
+            string executable = Path.Combine(System.Environment.GetFolderPath(
+                System.Environment.SpecialFolder.System), "DisplaySwitch.exe");
+            var start = new ProcessStartInfo(executable)
+            {
+                UseShellExecute = false,
+                WorkingDirectory = Path.GetDirectoryName(executable)!
+            };
+            start.ArgumentList.Add(option);
+            using var launched = Process.Start(start);
+            if (launched is null) throw new InvalidOperationException("Windows rejected this display projection.");
+        }
+        catch (Exception error)
+        {
+            Log.Write("Native projection change unavailable: " + mode, error);
+            _window?.View.ShowError("Windows could not apply the projection. Use Display settings.");
+        }
+    }
     internal void OpenWindowsTool(string id)
     {
         // A deliberately closed allowlist; no textbox value may become a
