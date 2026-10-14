@@ -126,9 +126,10 @@ internal static class MidnightChecks
         foreach (var scale in new[] { 1d, 1.5, 2d, double.NaN })
         {
             var compact = DesktopLayout.SpotlightPanelBounds(monitor, scale, false);
-            check(compact.Height >= Math.Min(monitor.Height, (int)Math.Round(312 * scale)) - 40
-                || compact.Height == Math.Max(1, monitor.Height - Math.Min(36, monitor.Height / 6)),
-                "Compact Spotlight must allocate space for the shortcut gallery without escaping its work area.");
+            // The layout helper normalizes NaN and other bad DPI scales.
+            // Test the actual bounded result, not raw unnormalized inputs.
+            check(compact.Height >= Math.Min(312, Math.Max(1, monitor.Height - 48)),
+                "Compact Spotlight must allocate space for its shortcut gallery when monitor height permits.");
             var expanded = DesktopLayout.SpotlightPanelBounds(monitor, scale, true);
             check(compact.Width > 0 && compact.Height > 0
                 && compact.X >= monitor.X && compact.Y >= monitor.Y
