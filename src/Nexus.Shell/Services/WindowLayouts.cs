@@ -77,7 +77,20 @@ public sealed class WindowLayouts
                 }
             }
         }
-        catch { foreach (var entry in before) TryRestore(entry); throw; }
+        catch (Exception applyError)
+        {
+            // Restore in reverse native move order, retaining the exact HWND
+            // ownership guard. Do not claim success when a window closed or a
+            // foreign process replaced its handle midway through the batch.
+            int failed = 0;
+            for (int i = before.Count - 1; i >= 0; i--)
+                if (!TryRestore(before[i])) failed++;
+            if (failed > 0)
+                throw new InvalidOperationException(
+                    $"Placement interrupted; {failed} previous window positions could not be restored. Check the affected apps.",
+                    applyError);
+            throw;
+        }
         _undo.Clear(); _undo.AddRange(before); return moves.Count;
     }
     public int Undo()
