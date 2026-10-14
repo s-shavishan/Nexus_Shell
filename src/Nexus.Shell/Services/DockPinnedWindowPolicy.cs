@@ -10,6 +10,12 @@ public static class DockPinnedWindowPolicy
         => string.Equals(process, "dwm", StringComparison.OrdinalIgnoreCase)
         && string.Equals(title?.Trim(), "DWM Notification Window", StringComparison.OrdinalIgnoreCase);
 
+    public static string ActionLabel(string name, bool running, bool foreground, bool minimized)
+        => !running ? "Open " + name
+            : minimized ? "Restore " + name
+            : foreground ? "Minimize " + name
+            : "Switch to " + name;
+
     // The pin represents one app, but each additional document HWND must
     // remain reachable from its context menu. Deduplicate by native identity
     // and cap the flyout without making a broad process-name-only claim.
