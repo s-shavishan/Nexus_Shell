@@ -26,6 +26,35 @@ internal static class DockChecks
             && !DockPinnedWindowPolicy.Matches("Tool.lnk", "Calculator", "Calculator", "Calculator")
             && !DockPinnedWindowPolicy.Matches(@"C:\Apps\calc.exe", "Calculator", "Calculator", "explorer"),
             "Pinned apps must claim only their matching running window identities.");
+        // Regression from P2.8/P2.9: Nexus Files is a supervised
+        // Nexus.Shell worker and its title changes with folder navigation.
+        // A pinned built-in Files icon must claim its ONE representative HWND,
+        // not create an additional running icon on every directory change.
+        Check(DockPinnedWindowPolicy.Matches("nexus:files", "Files",
+                "Files · Nexus", "Nexus.Shell")
+            && DockPinnedWindowPolicy.Matches("nexus:files", "Files",
+                "Documents · Nexus Files", "Nexus.Shell")
+            && DockPinnedWindowPolicy.Matches("nexus:files", "Files",
+                @"C:\\Data · Nexus Files", "Nexus.Shell")
+            && !DockPinnedWindowPolicy.Matches("nexus:files", "Files",
+                "Choose files · Nexus", "Nexus.Shell")
+            && !DockPinnedWindowPolicy.Matches("nexus:files", "Files",
+                "Documents · Nexus Files", "explorer")
+            && !DockPinnedWindowPolicy.Matches("nexus:calculator", "Calculator",
+                "Documents · Nexus Files", "Nexus.Shell"),
+            "Files pin must follow only the real Nexus Files worker and folder titles, not pickers, Explorer or other Nexus utilities.");
+
+        Check(DockPinnedWindowPolicy.Matches(@"C:\\Windows\\System32\\calc.exe",
+                "Calculator", "Calculator", "CalculatorApp")
+            && DockPinnedWindowPolicy.Matches(@"C:\\Windows\\System32\\calc.exe",
+                "Calculator", "Calculator", "calc")
+            && !DockPinnedWindowPolicy.Matches(@"C:\\Apps\\calc.exe",
+                "Calculator", "Calculator", "CalculatorApp")
+            && !DockPinnedWindowPolicy.Matches(@"C:\\Windows\\System32\\calc.exe",
+                "Unrelated", "Calculator", "CalculatorApp")
+            && !DockPinnedWindowPolicy.Matches(@"C:\\Windows\\System32\\calc.exe",
+                "Calculator", "Calculator", "explorer"),
+            "Only the real Windows Calculator launcher may pair a packaged CalculatorApp window; never fuse unrelated processes.");
         var dock = new DockWindowSet();
         var windows = Enumerable.Range(1, 130).Select(i => new RunningWindow(new IntPtr(i), "App " + i, "app", i + 100)).ToArray();
         Check(dock.Reconcile(windows), "New app identities must change the dock snapshot.");
