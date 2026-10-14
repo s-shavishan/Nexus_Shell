@@ -17,14 +17,37 @@ internal sealed class SelectionMarquee
     private readonly Canvas _layer;
     private readonly Func<bool> _enabled;
     private readonly Func<object?, bool> _canStart;
+    // A subdued glass-like marquee: one luminous hairline and a translucent
+    // gradient, not the opaque Windows blue selection box. Keep this completely
+    // hit-test transparent so the drag is still owned by the desktop/list.
     private readonly Border _outline = new()
     {
         IsHitTestVisible = false,
         Visibility = Visibility.Collapsed,
+        CornerRadius = new CornerRadius(7),
         BorderThickness = new Thickness(1),
-        BorderBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(220, 95, 174, 255)),
-        Background = new SolidColorBrush(Windows.UI.Color.FromArgb(38, 95, 174, 255))
+        BorderBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(155, 197, 225, 255)),
+        Background = GlassFill()
     };
+    private static LinearGradientBrush GlassFill()
+    {
+        var brush = new LinearGradientBrush
+        {
+            StartPoint = new Point(0, 0),
+            EndPoint = new Point(1, 1)
+        };
+        brush.GradientStops.Add(new GradientStop
+        {
+            Color = Windows.UI.Color.FromArgb(65, 167, 206, 255),
+            Offset = 0
+        });
+        brush.GradientStops.Add(new GradientStop
+        {
+            Color = Windows.UI.Color.FromArgb(19, 81, 145, 231),
+            Offset = 1
+        });
+        return brush;
+    }
     private Point? _start;
     private uint _pointerId;
     private bool _dragging;
@@ -102,7 +125,14 @@ internal sealed class SelectionMarquee
     {
         if (_start is null || _pointerId != args.Pointer.PointerId) return;
         bool hadSelection = _dragging;
+        bool emptyClick = !hadSelection && _enabled();
         Reset();
+        if (emptyClick && _items.SelectedItems.Count > 0)
+        {
+            // Empty-space click matches Explorer: clear selection only after
+            // the user releases; clicking a card, item or overlay stays native.
+            _items.SelectedItems.Clear();
+        }
         if (hadSelection) args.Handled = true;
     }
 
