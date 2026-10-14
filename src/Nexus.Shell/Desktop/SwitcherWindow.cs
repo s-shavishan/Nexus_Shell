@@ -263,6 +263,7 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
             if (_applying || !entry.CanArrange || !NativeMethods.OwnsWindow(entry.Window)
                 || !args.GetCurrentPoint(Root).Properties.IsLeftButtonPressed) return;
             start = args.GetCurrentPoint(Root).Position;
+            _ = button.CapturePointer(args.Pointer);
             candidate = null; dragging = false;
         }), true);
         button.AddHandler(UIElement.PointerMovedEvent, new PointerEventHandler((_, args) =>
