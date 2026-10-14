@@ -28,6 +28,7 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
     private readonly Dictionary<string, WindowMove> _staged = [];
     private long _suppressCardClickUntil;
     protected override bool DismissOnDeactivate => false;
+    protected override bool IsImmersive => true;
     protected override ShellRect ResolveBounds(ShellRect work, ShellRect monitor, double scale) => monitor;
     private readonly Flyout _saveFlyout = new();
     private readonly WindowLayouts _placement = new();
@@ -48,7 +49,7 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
         var tools = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
         _grid = ActionButton("Grid", () => Arrange("Grid")); _columns = ActionButton("Columns", () => Arrange("Columns")); _stack = ActionButton("Stack", () => Arrange("Stack"));
         _move = ActionButton("Stage on display", Move); _undo = ActionButton("Undo last arrangement", Undo);
-        _apply = ActionButton("Apply arrangement", ApplyStaged);
+        _apply = ActionButton("Done · arrange windows", ApplyStaged);
         _discard = ActionButton("Cancel", Hide);
         foreach (var button in new[] { _grid, _columns, _stack, _move, _undo, _apply, _discard }) tools.Children.Add(button);
         Grid.SetRow(tools, 1); _body.Children.Add(tools);
