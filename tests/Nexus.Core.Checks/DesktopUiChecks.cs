@@ -1,5 +1,6 @@
 using Nexus.Shell.Models;
 using Nexus.Shell.Services;
+using Nexus.Runtime;
 using System.Text.Json;
 
 internal static class DesktopUiChecks
@@ -9,6 +10,23 @@ internal static class DesktopUiChecks
         && inner.X >= outer.X && inner.Y >= outer.Y && inner.Right <= outer.Right && inner.Bottom <= outer.Bottom;
     internal static void Run()
     {
+        var displayEpoch = Guid.NewGuid();
+        SettingsRules.Validate(new SettingsRequest("Display", 17,
+            new SettingsChange("display-preview", "DISPLAY1", "1280x720@60", Epoch: displayEpoch)), displayEpoch);
+        SettingsRules.Validate(new SettingsRequest("Display", 17,
+            new SettingsChange("display-keep", "DISPLAY1", Epoch: displayEpoch)), displayEpoch);
+        SettingsRules.Validate(new SettingsRequest("Display", 17,
+            new SettingsChange("display-revert", "DISPLAY1", Epoch: displayEpoch)), displayEpoch);
+        bool badDisplayRejected = false;
+        try { SettingsRules.Validate(new SettingsRequest("Display", 17,
+            new SettingsChange("display-preview", "DISPLAY1", "", Epoch: displayEpoch)), displayEpoch); }
+        catch (RuntimeFailure) { badDisplayRejected = true; }
+        Check(badDisplayRejected, "Mode changes must reject empty mode IDs.");
+        badDisplayRejected = false;
+        try { SettingsRules.Validate(new SettingsRequest("Display", 17,
+            new SettingsChange("display-keep", "DISPLAY1", Enabled: true, Epoch: displayEpoch)), displayEpoch); }
+        catch (RuntimeFailure) { badDisplayRejected = true; }
+        Check(badDisplayRejected, "Confirmation cannot carry unvalidated toggle values.");
         Check(new[] { 0, 2, 55, 259, 433, 1168 }.All(BluetoothRadioAvailability.NoRadioError)
             && !BluetoothRadioAvailability.NoRadioError(5)
             && !BluetoothRadioAvailability.NoRadioError(31),
