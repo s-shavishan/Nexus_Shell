@@ -44,6 +44,19 @@ internal sealed class ExclusiveTaskbarRegistration : ITaskbarLayer
         Reservation = reservation; Bounds = DesktopLayout.TaskbarBounds(reservation, floating, preferredWidthDip, scale);
         if (moved) ShellLayerInterop.SetWindowPos(_handle, ShellLayerInterop.Topmost, reservation.X, reservation.Y, reservation.Width, reservation.Height, 0x0010);
     }
+    // Explorer can update the effective native work area after Nexus's first
+    // logon reservation. Verify it once after session startup has settled;
+    // never poll or fight the Explorer appbar manager on every dock frame.
+    internal bool ReconcileStartupWorkArea()
+    {
+        if (_disposed || WorkArea.Width <= 0 || WorkArea.Height <= 0) return false;
+        var observed = ShellLayerInterop.Monitor(_handle).Work.Bounds;
+        if (observed == WorkArea) return false;
+        Log.Write($"Startup work-area drift: expected {WorkArea}, observed {observed}; attempting one repair.");
+        _workArea.Invalidate();
+        _workArea.Apply(WorkArea, DesktopWorkArea.Apply);
+        return true;
+    }
     private IntPtr Message(IntPtr window, uint message, UIntPtr wp, IntPtr lp, UIntPtr id, UIntPtr data)
     {
         try
