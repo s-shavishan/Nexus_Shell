@@ -119,3 +119,23 @@ The user **did not accept** Bluetooth capability hiding, visual Network menu imp
 - **Bluetooth:** Confirm device-absence returns 2/259/1168 on VBox and completely hides menu bar + full Control Center Bluetooth tile; verify an actual Bluetooth radio is still shown and functional.
 - **Network and Dock:** Copy a legitimate IP and inspect/expand details. Launch pinned native Calculator and a local .lnk app, verifying one combined indicator and correct running entry hide.
 - **Safety:** Do not merge until native mode rollback and UI tests pass; fallback Windows recovery should remain available.
+
+
+## P2.9 integration-hardening continuation — 2026-10-14
+
+**User-requested workflow:** continue on the draft branch only; the owner's AppVeyor setup builds from `main`, so do not merge simply to trigger a build.
+
+### Code consistency repairs
+
+- A source-only compile dependency was found: `WindowsSettingsBackend` now references `DisplayModeCoordinator`, but `tests/Nexus.Runtime.Checks/Nexus.Runtime.Checks.csproj` did **not** compile the new Core source file. It is now explicitly linked alongside `DisplaySettings` and `WindowsSettingsBackend`.
+- Disambiguated the Core timer callback name from `System.Threading.Timeout.InfiniteTimeSpan`. This prevents name resolution problems in the unbuilt Display coordinator.
+- Introduced a shared `DisplayModePreviewPolicy` in Nexus.Runtime: the same 18-second deadline and inclusive expiry semantics are used by Core and the UI. No device changes are attempted from portable regression tests.
+- Display-mode UI no longer rebuilds its buttons simply because the remaining preview seconds changed. It updates its text in place while retaining Keep/Revert controls and focus. Newly enumerated adapter modes remain eligible to refresh after monitor/driver change.
+- Expanded Runtime checks to cover accepted/rejected mode intents; x64 DEVMODE field offsets and fixed-size layout; JSON IPC snapshots carrying mode options and preview metadata; and deterministic expiry.
+- Expanded existing Windows-only read-only device preflight to validate the current device IDs and advertised choice lists for duplicates/out-of-range options, without changing CI host display settings.
+
+### Honest release status
+
+No hosted or local native Windows compile was run as part of this branch-only continuation. The project's current AppVeyor source selection still requires a user-directed merge or a configuration change to build this branch. **No safe conclusion of 'build passes' or 'hardware rollback works' is warranted.**
+
+Open concerns: dual-monitor positioning and hotplug, forced Core termination mid-preview, device driver refusal to revert, Windows 10 GDI/DWM native round corners, and actual Control Center native mouse sizing. All require a Windows 10/11 test run after a successful build.
