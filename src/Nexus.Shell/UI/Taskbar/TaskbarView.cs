@@ -240,9 +240,10 @@ internal sealed class TaskbarView : Grid
         foreach (var (label, direction) in new[] { ("Move left", -1), ("Move right", 1) })
         { position.Items.Add(Menus.ShellMenu.Action(label, () => { if (!_released && DesktopOrganization.MovePin(_environment.Session.State.PinnedApps, app.Target, direction)) _environment.SaveState(); })); } menu.Items.Add(position);
         if (Path.IsPathFullyQualified(app.Target)) menu.Items.Add(Menus.ShellMenu.Action("Windows file options…", () => _environment.WindowsFileAction(app.Target), "\uE713"));
-        menu.Opened += (_, _) =>
+        menu.Opening += (_, _) =>
         {
-            _environment.HideDockPreview(); _openContextMenus.Add(menu);
+            // Populate before native flyout measure/placement to avoid a
+            // late expanding submenu, scrollbar jumps and focus loss.
             openWindows.Items.Clear();
             string target = _shortcutTargets.TryGetValue(app.Target, out var resolved)
                 ? resolved : app.Target;
@@ -257,6 +258,10 @@ internal sealed class TaskbarView : Grid
                 openWindows.Items.Add(Menus.ShellMenu.Action(label,
                     () => _environment.RestoreDockWindow(chosen), "\uE8A7"));
             }
+        };
+        menu.Opened += (_, _) =>
+        {
+            _environment.HideDockPreview(); _openContextMenus.Add(menu);
             _environment.Taskbar.RefreshVisibility();
         };
         menu.Closed += (_, _) => { _openContextMenus.Remove(menu); if (!_released) _environment.Taskbar.RefreshVisibility(); }; button.ContextFlyout = menu;
