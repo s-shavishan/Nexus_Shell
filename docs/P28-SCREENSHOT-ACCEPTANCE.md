@@ -30,23 +30,35 @@ weak Liquid Glass depth, and the need for an Apple-style fullscreen draggable wi
   classic Bluetooth snapshot reports zero usable radios; compact Bluetooth
   requests can still explain the missing adapter. Network, Power, Display and
   unavailable-Bluetooth panels use shorter geometry, with scrollable content.
-- Files Browse enables standard Ctrl/Shift/ Ctrl+A selection for ListView and
-  GridView. Multiple selection has an inspector summary; single-item rename
-  and targeted right-click actions are disabled when several items are selected.
-- Portable dock-policy checks and native WinUI preflight checks cover identity,
-  scrollbar behavior and real Browse selection mode.
+- Desktop and Files Browse use native Extended selection (Ctrl-click, Shift-click,
+  Ctrl+A) without unwanted toggle-on-every-click behavior. A shared non-hit-testable
+  selection marquee draws on empty space in both Files list/grid and desktop,
+  with direction-independent intersection checks. Desktop selection is preserved
+  when icon preferences rebind; Files has a multi-selection inspector. The marquee
+  implementation is a first WinUI pass, not pointer-tested on Windows yet.
+- Single-item rename and targeted right-click actions are restricted when
+  multiple Files entries are selected.
+- Managed desktop verifies its expected Windows work area **once**, 1.4 seconds
+  after dock initialization, and re-applies the intended area only when a
+  differing effective work area is observed. This is a bounded startup repair,
+  not a guarantee against Explorer re-reserving the taskbar.
+- Portable dock-policy and marquee geometry checks plus native WinUI preflight
+  checks cover identity, scrollbar behavior and Extended Browse selection mode.
 
 ## Still open — do not claim completed
 
-1. Floating dock bottom work-area gap on first session. Requires actual
-   Explorer-managed vs Nexus-managed appbar work-area measurements; avoid
-   silently resetting SPI_SETWORKAREA while Explorer owns the taskbar.
+1. Floating dock first-session gap is **not yet confirmed fixed**. The one-shot
+   retry must be measured against Explorer-managed appbar behavior, physical
+   monitor bounds and both managed/preview sessions. Do not add polling writes
+   or silently reset SPI_SETWORKAREA while Explorer owns the taskbar.
 2. Native dock thumbnail rendering failure, including minimized-window
    fallback quality; DWM helper filtering is not a fix for preview rendering.
 3. Genuine Apple-like fullscreen window overview with drag-to-position and
    atomic commit on exit, plus undo/rollback for any closed/replaced HWND.
-4. Rubber-band mouse-drag selection on desktop and in Files. Native Ctrl/Shift
-   selection is an intermediate improvement, not a completed rectangle selector.
+4. New desktop/Files rubber-band behavior is **source only**. Verify pointer
+   capture/loss, reversed drag, empty-space hit testing, virtualized lists,
+   auto-scroll edges, 100/150% DPI, selection persistence and context menus.
+   File batch actions beyond safe selection are not yet implemented.
 5. Complete Bluetooth capability discovery (including the menu-bar icon),
    broader Display shortcuts, consistent native Windows notification surfaces,
    tooltip investigations and substantially higher-fidelity Liquid Glass 3.
@@ -59,8 +71,10 @@ Boot a fresh Windows 10 session *without changing the Floating Dock option*.
 Observe native work area vs monitor bottom, minimize/maximize two apps, open and
 close Windows Tools (including Escape), click Calculator pinned before/after it
 is running, hover a real running app, open Display on an unsupported VM adapter,
-open/close Control Center and Bluetooth, verify Files Ctrl+A/Ctrl/Shift click,
-then drag on empty desktop/Files and record the still-unimplemented behavior.
+open/close Control Center and Bluetooth, verify Ctrl+A/Ctrl-click/Shift-click on
+Files and Desktop, then drag a selection box from empty desktop and Files list/grid
+background in all four directions. Check only intersecting icons become selected,
+and verify button clicks/double-clicks remain functional.
 Confirm no visible dock scrollbar with >20 windows and verify overflow still
 scrolls. Repeat at 100% and 150% scale and compare with Midnight reference.
 
