@@ -402,8 +402,22 @@ internal sealed class QuickSettingsView : Grid, IDisposable
             var info = Label($"Address: {link.Address}\nGateway: {link.Gateway}\nDNS: {link.Dns}", 11, true);
             info.IsTextSelectionEnabled = true; info.Visibility = Visibility.Collapsed;
             card.Children.Add(info);
-            card.Children.Add(ActionButton("Details", () => info.Visibility =
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+            row.Children.Add(ActionButton("Details", () => info.Visibility =
                 info.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible));
+            if (!string.IsNullOrWhiteSpace(link.Address))
+                row.Children.Add(ActionButton("Copy IP", () =>
+                {
+                    try
+                    {
+                        var data = new Windows.ApplicationModel.DataTransfer.DataPackage();
+                        data.SetText(link.Address);
+                        Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(data);
+                        _status.Text = "IP address copied.";
+                    }
+                    catch (Exception error) { ShowError("Could not copy the address: " + error.Message); }
+                }));
+            card.Children.Add(row);
         }
         foreach (var adapter in state.Wifi)
         {
