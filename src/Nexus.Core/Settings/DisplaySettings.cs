@@ -69,6 +69,9 @@ internal static class DisplaySettings
 
     internal static void Apply(string deviceId, ref Mode mode, bool persist)
     {
+        // Never transplant driver-enumerated monitor position/orientation flags
+        // into a new mode. Change only geometry and frequency on this adapter.
+        mode.Fields = 0x00080000u | 0x00100000u | 0x00400000u;
         int test = ChangeDisplaySettingsEx(deviceId, ref mode, IntPtr.Zero, 0x00000002, IntPtr.Zero);
         if (test != 0) throw new InvalidOperationException("Windows rejected the selected display mode (test " + test + ").");
         int result = ChangeDisplaySettingsEx(deviceId, ref mode, IntPtr.Zero, persist ? 0x00000001u : 0u, IntPtr.Zero);
@@ -86,7 +89,8 @@ internal static class DisplaySettings
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)] public string Key;
     }
     [StructLayout(LayoutKind.Explicit, Size = 220)] internal struct Mode
-    { [FieldOffset(68)] public ushort Size; [FieldOffset(172)] public uint Width; [FieldOffset(176)] public uint Height; [FieldOffset(184)] public uint Frequency; }
+    { [FieldOffset(68)] public ushort Size; [FieldOffset(72)] public uint Fields;
+      [FieldOffset(172)] public uint Width; [FieldOffset(176)] public uint Height; [FieldOffset(184)] public uint Frequency; }
     [DllImport("user32.dll", EntryPoint = "EnumDisplayDevicesW", CharSet = CharSet.Unicode)] [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool EnumDisplayDevices(string? device, uint index, ref Device info, uint flags);
     [DllImport("user32.dll", EntryPoint = "EnumDisplaySettingsW", CharSet = CharSet.Unicode)] [return: MarshalAs(UnmanagedType.Bool)]
