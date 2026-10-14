@@ -54,7 +54,7 @@ public static class SettingsRules
             "Display" => (change.Kind == "brightness" && change.Value is not null && change.Enabled is null && change.ItemId.Length == 0)
                 || (change.Kind == "display-preview" && change.Value is null && change.Enabled is null
                     && !string.IsNullOrWhiteSpace(change.ItemId) && change.ItemId.Length <= 64)
-                || (change.Kind is "display-keep" or "display-revert" && change.Value is null && change.Enabled is null
+                || ((change.Kind == "display-keep" || change.Kind == "display-revert") && change.Value is null && change.Enabled is null
                     && change.ItemId.Length == 0),
             "Network" => change.Value is null && (change.Kind == "wifi-connect" && change.Enabled is null && !string.IsNullOrWhiteSpace(change.ItemId) && change.ItemId.Length <= 256
                 || change.Kind == "wifi-join" && change.Enabled is null && !string.IsNullOrWhiteSpace(change.ItemId)
