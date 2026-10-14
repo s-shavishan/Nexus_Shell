@@ -91,3 +91,31 @@ The user **did not accept** Bluetooth capability hiding, visual Network menu imp
 - True OS-level pixel-perfect Liquid Glass/DWM depth is not solved by removing duplicate lines. VM GPU, DesktopAcrylic availability, per-pixel antialiasing of Win10 GDI regions and compositor fallback must be profiled.
 - A complete direct resolution/refresh-rate/orientation settings transaction with preflight and timed revert is **not implemented**. Native Windows Settings routes are not a replacement for it.
 - App layout transition animations and cross-monitor drag staging, unusual Ctrl+F-style keyboard hint popup root cause, broader file batch operations and universal packaged/UWP pin identity still require separate native validation and further source work.
+
+## Follow-up while P2.9 remains unmerged — native display and Bluetooth reliability
+
+**Branch-only work:** The project owner cannot run their current AppVeyor release workflow until source reaches `main`, but requested that development continue instead of merging an unfinished pull request. Keep PR #32 a draft; no merge should be issued without explicit direction.
+
+### Actual Display controls (not Settings links)
+
+- Core now enumerates the **display driver's own** 32-bpp-or-better available screen modes (resolution + refresh rate) and returns typed `DisplayModeOption` values with each connected adapter. Modes are restricted by enumeration, not user-provided shell commands.
+- Expanded and compact Display surfaces expose a resolution/Hz picker **only where alternatives exist**. Display-mode changes go through the authenticated Nexus Core Settings operation, not a new app/service or an arbitrary Settings link.
+- Choosing **Preview** tests the requested DEVMODE and applies it temporarily using `ChangeDisplaySettingsExW` (no Registry write). It starts an **18-second automatic revert** timer owned by Core. **Keep** explicitly persists only the selected mode, **Revert** restores the prior mode immediately, and shutdown/disposal attempts restore. If Windows rejects rollback, the pending state remains and a 3-second retry is scheduled; do not falsely claim restoration.
+- Native mode changes set **only** width/height/refresh DEVMODE flags; no orientation, monitor position, DPI setting or primary-monitor assignment is requested. The user may still need Windows Settings for scaling, orientation, HDR and night light. Drivers/VMs can report zero usable alternative modes.
+- Warning: If the Core process is forcibly terminated, display drivers or the GPU reset unexpectedly, the timeout is not a guarantee of restoration; Windows Recovery/Display settings may be required. A real Windows 10/11 full-screen hardware acceptance run is mandatory before release. Do not test novel display modes on a production machine before the VM passes.
+- Microsoft documents `CDS_TEST` for preflight, `CDS_UPDATEREGISTRY` for persisting, and 0 for a temporary dynamic change: https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-changedisplaysettingsexw
+
+### Remaining network/Bluetooth/pinned-app fixes
+
+- Bluetooth shell probe and Core radio enumeration both recognize Windows 10 "no adapter" error codes including `ERROR_FILE_NOT_FOUND` (2), while access denied/driver failures remain "unknown" rather than silently hiding hardware. The absence policy is now located in `Nexus.Runtime` so Core and Shell do not reference each other's executables.
+- Network Ethernet card shows a one-click copy of the real IP address and expandable IP/Gateway/DNS details.
+- Resolved pinned `.lnk` executable identity now updates running-window visibility via `ApplyDensity()` immediately, not merely the active indicator. Ordinary additional windows of the same process are still accessible.
+- Portable typed Settings rules validate `display-preview`, `display-keep` and `display-revert` intents and reject malformed settings and dangerous toggles.
+
+### Additional validation required
+
+- **AppVeyor (once a build can be run):** .NET 8 Runtime/Core project compilation and checks, Windows x64 Shell/WinUI compile, native XAML preflight, packaging.
+- **Display:** On a single-display Windows 10 VBox instance, enumerate real supported modes, preview a non-current one, let timeout expire and verify exact mode restored. Repeat Keep (including Windows restart), Revert, switch between disconnected monitors and Core shutdown during an active preview. On a dual-monitor setup verify no monitor moves or primary-display changes.
+- **Bluetooth:** Confirm device-absence returns 2/259/1168 on VBox and completely hides menu bar + full Control Center Bluetooth tile; verify an actual Bluetooth radio is still shown and functional.
+- **Network and Dock:** Copy a legitimate IP and inspect/expand details. Launch pinned native Calculator and a local .lnk app, verifying one combined indicator and correct running entry hide.
+- **Safety:** Do not merge until native mode rollback and UI tests pass; fallback Windows recovery should remain available.
