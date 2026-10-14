@@ -362,9 +362,11 @@ internal sealed class TaskbarView : Grid
                 && DockWindowIdentity.Of(representative) == DockWindowIdentity.Of(window);
         });
 
-    private void RefreshPinnedIndicators()
+    private void RefreshPinnedIndicators(IntPtr? observedForeground = null)
     {
-        var foreground = NativeMethods.ForegroundTaskWindow();
+        // Use the caller's already-observed foreground HWND to avoid a
+        // second user32 query on every WinEvent-driven dock repaint.
+        var foreground = observedForeground ?? NativeMethods.ForegroundTaskWindow();
         foreach (var (button, marker) in _pinMarkers)
         {
             var running = FindPinnedWindow(marker.App);
@@ -469,6 +471,10 @@ internal sealed class TaskbarView : Grid
         foreach (var item in _items.Values)
             if (DockStateRefreshPolicy.ShouldInspect(item.Window.Handle, previous, foreground))
                 RefreshWindowState(item, foreground);
+        // Pinned representative windows are hidden from the running icon
+        // strip. The foreground-only path MUST update their indicators too,
+        // otherwise the dock appears to stop following active applications.
+        RefreshPinnedIndicators(foreground);
     }
 
     internal void RefreshWindowStates(IntPtr? observedForeground = null)
@@ -476,7 +482,7 @@ internal sealed class TaskbarView : Grid
         if (_released) return;
         var foreground = observedForeground ?? NativeMethods.ForegroundTaskWindow();
         foreach (var item in _items.Values) RefreshWindowState(item, foreground);
-        RefreshPinnedIndicators();
+        RefreshPinnedIndicators(foreground);
     }
 
     private void RefreshWindowState(DockItem item, IntPtr foreground)
