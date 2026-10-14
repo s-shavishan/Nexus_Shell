@@ -35,7 +35,7 @@ internal static class DockChecks
             && DockPinnedWindowPolicy.Matches("nexus:files", "Files",
                 "Documents · Nexus Files", "Nexus.Shell")
             && DockPinnedWindowPolicy.Matches("nexus:files", "Files",
-                @"C:\\Data · Nexus Files", "Nexus.Shell")
+                @"C:\Data · Nexus Files", "Nexus.Shell")
             && !DockPinnedWindowPolicy.Matches("nexus:files", "Files",
                 "Choose files · Nexus", "Nexus.Shell")
             && !DockPinnedWindowPolicy.Matches("nexus:files", "Files",
@@ -44,15 +44,15 @@ internal static class DockChecks
                 "Documents · Nexus Files", "Nexus.Shell"),
             "Files pin must follow only the real Nexus Files worker and folder titles, not pickers, Explorer or other Nexus utilities.");
 
-        Check(DockPinnedWindowPolicy.Matches(@"C:\\Windows\\System32\\calc.exe",
+        Check(DockPinnedWindowPolicy.Matches(@"C:\Windows\System32\calc.exe",
                 "Calculator", "Calculator", "CalculatorApp")
-            && DockPinnedWindowPolicy.Matches(@"C:\\Windows\\System32\\calc.exe",
+            && DockPinnedWindowPolicy.Matches(@"C:\Windows\System32\calc.exe",
                 "Calculator", "Calculator", "calc")
-            && !DockPinnedWindowPolicy.Matches(@"C:\\Apps\\calc.exe",
+            && !DockPinnedWindowPolicy.Matches(@"C:\Apps\calc.exe",
                 "Calculator", "Calculator", "CalculatorApp")
-            && !DockPinnedWindowPolicy.Matches(@"C:\\Windows\\System32\\calc.exe",
+            && !DockPinnedWindowPolicy.Matches(@"C:\Windows\System32\calc.exe",
                 "Unrelated", "Calculator", "CalculatorApp")
-            && !DockPinnedWindowPolicy.Matches(@"C:\\Windows\\System32\\calc.exe",
+            && !DockPinnedWindowPolicy.Matches(@"C:\Windows\System32\calc.exe",
                 "Calculator", "Calculator", "explorer"),
             "Only the real Windows Calculator launcher may pair a packaged CalculatorApp window; never fuse unrelated processes.");
         var dock = new DockWindowSet();
