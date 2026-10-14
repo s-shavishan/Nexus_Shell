@@ -248,7 +248,13 @@ internal sealed class DesktopSurface : Grid
         catch (Exception ex) { _environment.Report("Could not refresh desktop icons", ex); }
         finally { _refreshing = false; if (_refreshAgain && !_environment.IsStopping) { _refreshAgain = false; _ = RefreshAsync(); } }
     }
-    internal void SelectPath(string path) { _selectPath = path; ApplyIconPreferences(); _icons.Focus(FocusState.Programmatic); }
+    internal void SelectPath(string path)
+    {
+        _icons.SelectedItems.Clear();
+        _selectPath = path;
+        ApplyIconPreferences();
+        _icons.Focus(FocusState.Programmatic);
+    }
     internal void ApplyIconPreferences()
     {
         var selected = _icons.SelectedItems.OfType<DesktopShortcut>()
