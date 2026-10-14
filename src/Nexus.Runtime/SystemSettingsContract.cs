@@ -30,6 +30,9 @@ public static class DisplayModePreviewPolicy
     public static int Remaining(DateTimeOffset expiry, DateTimeOffset now)
         => Math.Max(0, (int)Math.Ceiling((expiry - now).TotalSeconds));
     public static bool Expired(DateTimeOffset expiry, DateTimeOffset now) => now >= expiry;
+    public static bool IsRequestedModeActive(string requestedId, string activeId)
+        => requestedId.Length > 0
+            && string.Equals(requestedId, activeId, StringComparison.Ordinal);
 }
 public sealed record SettingsChange(string Kind, string DeviceId = "", string ItemId = "", double? Value = null, bool? Enabled = null, Guid Epoch = default, string Secret = "")
 { public override string ToString() => "SettingsChange { Kind = " + Kind + ", Epoch = " + Epoch + ", connection details redacted }"; }
