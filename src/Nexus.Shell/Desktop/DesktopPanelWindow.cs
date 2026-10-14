@@ -29,6 +29,7 @@ internal abstract class DesktopPanelWindow : Window
     protected bool IsClosed { get; private set; }
     internal bool IsOpen { get; private set; }
     protected virtual bool DismissOnDeactivate => true;
+    protected virtual bool IsImmersive => false;
     internal string MaterialStatus => _material.Status;
     internal FrameworkElement ValidationRoot => Root;
     internal void PrepareValidation(IntPtr owner, int width, int height)
@@ -83,8 +84,11 @@ internal abstract class DesktopPanelWindow : Window
     internal virtual void ApplyAppearance()
     {
         var theme = Environment.Theme; Root.RequestedTheme = theme.ElementTheme;
-        _material.Apply(this, Frame, Environment); Frame.BorderBrush = theme.Edge; Frame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : MidnightGlassMetrics.FrameRadius);
-        _title.Foreground = theme.Brush("NexusText"); _chrome.SetCorners(theme.HighContrast, MidnightGlassMetrics.FrameRadius); _motion.Refresh();
+        _material.Apply(this, Frame, Environment); Frame.BorderBrush = theme.Edge;
+        Frame.CornerRadius = new CornerRadius(theme.HighContrast || IsImmersive ? 0 : MidnightGlassMetrics.FrameRadius);
+        _title.Foreground = theme.Brush("NexusText");
+        _chrome.SetCorners(theme.HighContrast || IsImmersive, IsImmersive ? 0 : MidnightGlassMetrics.FrameRadius);
+        _motion.Refresh();
     }
     protected virtual void OnHidden() { }
     protected virtual void OnShown() { }
