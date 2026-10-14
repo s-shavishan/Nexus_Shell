@@ -14,12 +14,16 @@ public sealed record BluetoothRadioState(string Id, string Name, bool Discoverab
 public sealed record BluetoothState(BluetoothRadioState[] Radios, string Message);
 public sealed record PowerPlan(string Id, string Name, bool Active);
 public sealed record PowerState(PowerPlan[] Plans, string Status, string Message);
-public sealed record DisplayState(string Name, int Width, int Height, int RefreshHz, bool Primary);
+public sealed record DisplayModeOption(string Id, int Width, int Height, int RefreshHz);
+public sealed record DisplayState(string Name, int Width, int Height, int RefreshHz, bool Primary,
+    string DeviceId = "", DisplayModeOption[]? Modes = null);
+public sealed record DisplayModePreview(string DeviceId, string ModeId, int SecondsRemaining);
 public sealed record SettingsChange(string Kind, string DeviceId = "", string ItemId = "", double? Value = null, bool? Enabled = null, Guid Epoch = default, string Secret = "")
 { public override string ToString() => "SettingsChange { Kind = " + Kind + ", Epoch = " + Epoch + ", connection details redacted }"; }
 public sealed record SettingsRequest(string Section, long Window = 0, SettingsChange? Change = null, bool Scan = false);
 public sealed record SettingsSnapshot(Guid Epoch, string Section, SoundState? Sound = null, BrightnessState? Brightness = null,
-    NetworkState? Network = null, BluetoothState? Bluetooth = null, PowerState? Power = null, DisplayState[]? Displays = null, string Message = "");
+    NetworkState? Network = null, BluetoothState? Bluetooth = null, PowerState? Power = null, DisplayState[]? Displays = null, string Message = "",
+    DisplayModePreview? Preview = null);
 public interface ISystemSettingsBackend
 { Task<SettingsSnapshot> ExecuteAsync(SettingsRequest request, CancellationToken cancellation); }
 
@@ -41,7 +45,11 @@ public static class SettingsRules
         bool allowed = request.Section switch
         {
             "Sound" => change.Kind == "volume" && (change.Value is not null || change.Enabled is not null),
-            "Display" => change.Kind == "brightness" && change.Value is not null && change.Enabled is null && change.ItemId.Length == 0,
+            "Display" => (change.Kind == "brightness" && change.Value is not null && change.Enabled is null && change.ItemId.Length == 0)
+                || (change.Kind == "display-preview" && change.Value is null && change.Enabled is null
+                    && !string.IsNullOrWhiteSpace(change.ItemId) && change.ItemId.Length <= 64)
+                || (change.Kind is "display-keep" or "display-revert" && change.Value is null && change.Enabled is null
+                    && change.ItemId.Length == 0),
             "Network" => change.Value is null && (change.Kind == "wifi-connect" && change.Enabled is null && !string.IsNullOrWhiteSpace(change.ItemId) && change.ItemId.Length <= 256
                 || change.Kind == "wifi-join" && change.Enabled is null && !string.IsNullOrWhiteSpace(change.ItemId)
                 || change.Kind == "wifi-forget" && change.Enabled is null && !string.IsNullOrWhiteSpace(change.ItemId) && change.ItemId.Length <= 256
