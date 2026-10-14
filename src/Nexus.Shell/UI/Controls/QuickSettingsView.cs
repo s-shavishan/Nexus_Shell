@@ -295,13 +295,57 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     private void RenderDisplay(SettingsSnapshot state)
     {
         var brightness = state.Brightness;
-        string signature = (brightness?.DeviceId ?? "") + "|" + brightness?.Available + "|" + string.Join("|", (state.Displays ?? []).Select(d => d.ToString()));
+        string signature = (brightness?.DeviceId ?? "") + "|" + brightness?.Available + "|"
+            + string.Join("|", (state.Displays ?? []).Select(d => d.ToString())) + "|"
+            + state.Preview?.ToString();
         if (_signature != signature || (brightness?.Available == true && _brightnessLabel is null))
         {
             _signature = signature; ClearBody(); _brightness = null; _brightnessLabel = null;
             foreach (var display in state.Displays ?? [])
-                Card(display.Primary ? "Primary display" : "Display",
-                    display.Name + $"\n{display.Width} × {display.Height} · {display.RefreshHz} Hz");
+            {
+                var card = Card(display.Primary ? "Primary display" : "Display",
+                    display.Name + $" · {display.Width} × {display.Height} at {display.RefreshHz} Hz");
+                if (state.Preview is { } preview && preview.DeviceId == display.DeviceId)
+                {
+                    card.Children.Add(Label($"Preview active · {preview.SecondsRemaining} seconds to confirm or auto-revert", 12));
+                    var confirmation = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+                    confirmation.Children.Add(DeviceButton("Keep this display mode", () =>
+                        Queue(new("display-keep", display.DeviceId), true)));
+                    confirmation.Children.Add(DeviceButton("Revert now", () =>
+                        Queue(new("display-revert", display.DeviceId), true)));
+                    card.Children.Add(confirmation);
+                }
+                else if (state.Preview is null && display.Modes is { Length: > 1 } modes)
+                {
+                    // These modes are driver-enumerated by Core: Nexus never
+                    // invents display frequencies or screen resolutions.
+                    var picker = new ComboBox
+                    {
+                        Header = "Resolution and refresh rate",
+                        MinWidth = 200,
+                        HorizontalAlignment = HorizontalAlignment.Stretch
+                    };
+                    foreach (var mode in modes)
+                    {
+                        picker.Items.Add(new ComboBoxItem
+                        {
+                            Content = $"{mode.Width} × {mode.Height} · {mode.RefreshHz} Hz",
+                            Tag = mode.Id
+                        });
+                    }
+                    string current = display.Width + "x" + display.Height + "@" + display.RefreshHz;
+                    picker.SelectedItem = picker.Items.OfType<ComboBoxItem>()
+                        .FirstOrDefault(item => string.Equals(item.Tag as string, current, StringComparison.Ordinal));
+                    if (picker.SelectedItem is null) picker.SelectedIndex = 0;
+                    card.Children.Add(picker);
+                    card.Children.Add(DeviceButton("Preview selected mode · auto-revert after 18s", () =>
+                    {
+                        if (picker.SelectedItem is not ComboBoxItem { Tag: string id }) return;
+                        if (id == current) { _status.Text = "This display mode is already active."; return; }
+                        Queue(new("display-preview", display.DeviceId, id), true);
+                    }));
+                }
+            }
             if (brightness?.Available == true)
             {
                 var card = Card("Brightness");
