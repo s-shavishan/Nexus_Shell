@@ -139,7 +139,7 @@ internal sealed class WindowChrome : IDisposable
         _applying = true;
         try
         {
-            IntPtr region = clear ? IntPtr.Zero : CreateRoundRectRgn(rectangle.X, rectangle.Y, rectangle.Right + 1, rectangle.Bottom + 1, diameter, diameter);
+            IntPtr region = clear ? IntPtr.Zero : CreateRoundRectRgn(rectangle.X, rectangle.Y, rectangle.Right, rectangle.Bottom, diameter, diameter);
             if (!clear && region == IntPtr.Zero) throw new Win32Exception("Could not create the rounded Nexus window.");
             // SetWindowRgn transfers ownership to Windows only after success.
             LastRegionRedraw = LiveResizeRegionPolicy.RedrawAfterRestore;
