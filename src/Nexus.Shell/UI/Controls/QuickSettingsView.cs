@@ -263,6 +263,7 @@ internal sealed class QuickSettingsView : Grid, IDisposable
                 AddMixer(output, "", "Output volume", sound.DeviceId);
                 var mixer = Card("Volume mixer", sound.Sessions.Length == 0 ? "Play audio in an application to see its controls here." : "Levels follow the applications’ current audio sessions.");
                 foreach (var session in sound.Sessions) AddMixer(mixer, session.Id, session.Name, sound.DeviceId);
+                mixer.Children.Add(DeviceButton("Windows volume mixer…", () => _environment.OpenWindowsTool("volume-mixer")));
             }
         }
         _syncing = true;
@@ -409,7 +410,9 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     {
         Card("Power status", state.Status); var plans = Card("Power plans", "Choose an existing Windows power plan. Nexus applies it directly.");
         foreach (var plan in state.Plans) plans.Children.Add(DeviceButton((plan.Active ? "✓ " : "") + plan.Name, () => Queue(new("power-plan", plan.Id), true), !plan.Active));
-        if (state.Message.Length != 0) plans.Children.Add(Label(state.Message, 12, true)); plans.Children.Add(ActionButton("Lock desktop", _environment.LockScreen));
+        if (state.Message.Length != 0) plans.Children.Add(Label(state.Message, 12, true));
+        plans.Children.Add(DeviceButton("Task Manager…", () => _environment.OpenWindowsTool("task-manager")));
+        plans.Children.Add(ActionButton("Lock desktop", _environment.LockScreen));
     }
     internal void ShowError(string message) { if (!_disposed && _open) { _error.Message = message; _error.IsOpen = true; _status.Text = "Review the message or refresh the current state."; } }
     private void Preference(StackPanel card, string name, DesktopPreference preference, Func<bool> read)
