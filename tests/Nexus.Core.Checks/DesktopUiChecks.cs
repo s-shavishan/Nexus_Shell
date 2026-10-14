@@ -9,6 +9,14 @@ internal static class DesktopUiChecks
         && inner.X >= outer.X && inner.Y >= outer.Y && inner.Right <= outer.Right && inner.Bottom <= outer.Bottom;
     internal static void Run()
     {
+        Check(!BluetoothRadioAvailability.ShowControls(false)
+            && BluetoothRadioAvailability.ShowControls(true)
+            && BluetoothRadioAvailability.ShowControls(null),
+            "Bluetooth UI must disappear only for positively confirmed absent radios.");
+        Check(WindowsToolCatalog.Find("night-light")?.Target == "ms-settings:nightlight"
+            && WindowsToolCatalog.Find("network-adapters")?.Target == "ncpa.cpl"
+            && WindowsToolCatalog.Find("project-display")?.Target == "DisplaySwitch.exe",
+            "Advanced Control Center actions must use fixed audited Windows routes.");
         // Fullscreen overview moves are only geometry until the user applies.
         var workspace = new LayoutRect(-1920, -80, 1920, 1080);
         var beforeOverview = new LayoutRect(-1700, 0, 800, 600);
