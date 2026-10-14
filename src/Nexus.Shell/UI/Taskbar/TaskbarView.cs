@@ -40,6 +40,7 @@ internal sealed class TaskbarView : Grid
     private readonly DispatcherTimer _hoverTimer = new() { Interval = TimeSpan.FromMilliseconds(DockPreviewPolicy.HoverDelayMilliseconds) };
     private readonly EventHandler<object> _hoverTick;
     private DockItem? _hoverItem;
+    private (Button Button, AppEntry App)? _hoverPin;
     private bool _baselineReconciled, _released, _refreshIncomplete;
     private bool? _appliedCompactDock;
     internal bool ContextMenuOpen => _openContextMenus.Count > 0;
@@ -128,10 +129,19 @@ internal sealed class TaskbarView : Grid
         Grid.SetColumnSpan(_topGlint, 3); _body.Children.Add(_topGlint);
         _hoverTick = (_, _) =>
         {
-            _hoverTimer.Stop(); var item = _hoverItem; _hoverItem = null;
-            if (_released || item is null || !_environment.CanShowDockPreview || ContextMenuOpen || !NativeMethods.Visible(_environment.Taskbar.Handle)) return;
-            if (TryGetAnchor(item.Button, out var anchor) && NativeMethods.GetCursorPos(out var point)
-                && DockPreviewPolicy.Contains(anchor, point.X, point.Y)) _environment.ShowDockPreview(item.Window, anchor);
+            _hoverTimer.Stop();
+            var item = _hoverItem; var pin = _hoverPin;
+            _hoverItem = null; _hoverPin = null;
+            if (_released || !_environment.CanShowDockPreview || ContextMenuOpen
+                || !NativeMethods.Visible(_environment.Taskbar.Handle)) return;
+            // The representative running icon is hidden when paired with a
+            // pin; resolve the live HWND on hover instead of showing nothing.
+            var button = item?.Button ?? pin?.Button;
+            var target = item?.Window ?? (pin is { } current ? FindPinnedWindow(current.App) : null);
+            if (button is not null && target is not null && NativeMethods.OwnsWindow(target)
+                && TryGetAnchor(button, out var anchor) && NativeMethods.GetCursorPos(out var point)
+                && DockPreviewPolicy.Contains(anchor, point.X, point.Y))
+                _environment.ShowDockPreview(target, anchor);
         };
         _hoverTimer.Tick += _hoverTick;
         Loaded += (_, _) =>
@@ -260,6 +270,8 @@ internal sealed class TaskbarView : Grid
         bool pinsChanged = !_shownPins.SequenceEqual(pins);
         if (pinsChanged)
         {
+            // Old pinned buttons may still hold a delayed hover request.
+            CancelPreviewRequest();
             foreach (var button in _pins.Children.OfType<Button>()) { if (button.ContextFlyout is MenuFlyout menu) { menu.Hide(); _openContextMenus.Remove(menu); } _motion?.DetachHover(button); if (_pinImages.TryGetValue(button, out var icon)) _dockMotion?.Detach(icon); }
             _pinImages.Clear(); _pinMarkers.Clear();
             _pins.Children.Clear(); foreach (var pin in pins) _pins.Children.Add(PinButton(pin)); _shownPins = pins;
@@ -455,7 +467,7 @@ internal sealed class TaskbarView : Grid
         {
             if (e.Pointer.PointerDeviceType != Microsoft.UI.Input.PointerDeviceType.Mouse) return;
             if (!_environment.CanShowDockPreview || ContextMenuOpen || _released) return;
-            _hoverTimer.Stop(); _hoverItem = item; _hoverTimer.Start();
+            _hoverTimer.Stop(); _hoverPin = null; _hoverItem = item; _hoverTimer.Start();
         };
         item.Button.PointerExited += (_, _) => { if (ReferenceEquals(_hoverItem, item)) CancelPreviewRequest(); };
         item.Button.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler((_, _) => _environment.HideDockPreview()), true);
@@ -564,7 +576,10 @@ internal sealed class TaskbarView : Grid
             item.PendingCue = DockMotionCue.None;
         }
     }
-    internal void CancelPreviewRequest() { _hoverTimer.Stop(); _hoverItem = null; }
+    internal void CancelPreviewRequest()
+    {
+        _hoverTimer.Stop(); _hoverItem = null; _hoverPin = null;
+    }
     private bool TryGetAnchor(Button button, out ShellRect anchor)
     {
         anchor = default;
