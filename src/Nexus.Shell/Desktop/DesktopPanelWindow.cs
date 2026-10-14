@@ -33,6 +33,8 @@ internal abstract class DesktopPanelWindow : Window
     protected virtual bool AllowUserResize => !IsImmersive;
     internal string MaterialStatus => _material.Status;
     internal FrameworkElement ValidationRoot => Root;
+    internal bool UserResizeEnabledForValidation => AllowUserResize
+        && Native.Presenter is OverlappedPresenter { IsResizable: true };
     internal void PrepareValidation(IntPtr owner, int width, int height)
     { ShowPanel(owner); double scale = ShellLayerInterop.Scale(owner); Native.MoveAndResize(new RectInt32(0, 0, (int)Math.Round(width * scale), (int)Math.Round(height * scale))); }
     protected DesktopPanelWindow(DesktopEnvironment environment, string title, FrameworkElement body, int width, int height, bool center = false, bool animateBody = true)
