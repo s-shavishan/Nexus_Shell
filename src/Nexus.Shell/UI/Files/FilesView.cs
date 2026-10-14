@@ -434,6 +434,9 @@ internal sealed class FilesView : Grid
     internal void VerifyValidationContexts()
     {
         if (!_environment.Validation) throw new InvalidOperationException("Context-menu validation requires an isolated Files fixture.");
+        if (_list.SelectionMode != ListViewSelectionMode.Multiple
+            || _tiles.SelectionMode != ListViewSelectionMode.Multiple)
+            throw new InvalidOperationException("Files browse must enable native multiple selection in list and grid.");
         foreach (var (path, folder) in new[] { (@"C:\Example\Folder", true), (@"C:\Example\photo.png", false), (@"C:\Example\music.flac", false), (@"C:\Example\archive.zip", false), (@"C:\Example\setup.exe", false), (@"C:\Example\unknown.custom", false) })
         {
             var menu = ShellMenu.Create(); BuildContext(menu, new FileEntry(Path.GetFileName(path), path, folder, "Fixture"));

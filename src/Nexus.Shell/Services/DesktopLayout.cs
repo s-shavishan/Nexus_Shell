@@ -55,7 +55,8 @@ public static class DesktopLayout
 
     public static ShellRect QuickControlBounds(ShellRect monitor, double scale, string section)
         => PanelBounds(monitor, scale, section is "Network" or "Bluetooth" ? 440 : 410,
-            section switch { "Sound" => 490, "Display" => 430, "Power" => 480, _ => 590 });
+            section switch { "Sound" => 490, "Display" => 400, "Power" => 445,
+                "Bluetooth" => 350, "Network" => 490, _ => 445 });
     public static ShellRect AnchoredQuickControlBounds(ShellRect monitor, double scale, string section, ShellRect? anchor)
     {
         var panel = QuickControlBounds(monitor, scale, section);

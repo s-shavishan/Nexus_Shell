@@ -373,6 +373,17 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     }
     private void RenderBluetooth(BluetoothState state)
     {
+        // Remove an unavailable Bluetooth option from the full hub. Direct
+        // compact requests can still show why their adapter is unavailable.
+        bool supported = state.Radios.Length > 0;
+        if (_tabs.TryGetValue("Bluetooth", out var tile))
+        {
+            tile.Visibility = supported ? Visibility.Visible : Visibility.Collapsed;
+            if (_tabs.TryGetValue("Display", out var display))
+                Grid.SetColumn(display, supported ? 1 : 0);
+        }
+        _scan.Visibility = _section == "Bluetooth" && !supported
+            ? Visibility.Collapsed : _scan.Visibility;
         foreach (var radio in state.Radios)
         {
             var card = Card(radio.Name, radio.Discoverable ? "Visible to nearby devices" : "Hidden from nearby devices");
@@ -380,7 +391,8 @@ internal sealed class QuickSettingsView : Grid, IDisposable
             if (radio.Devices.Length == 0) card.Children.Add(Label("No cached classic Bluetooth devices. Choose Scan to search nearby.", 12, true));
             foreach (var device in radio.Devices) card.Children.Add(Label(device.Name + (device.Connected ? " · connected" : " · disconnected") + (device.Paired ? " · paired" : " · unpaired"), 12));
         }
-        Card("Bluetooth support", state.Message);
+        if (state.Message.Length > 0)
+            Card(supported ? "Bluetooth status" : "Bluetooth unavailable", state.Message);
     }
     private void RenderPower(Nexus.Runtime.PowerState state)
     {

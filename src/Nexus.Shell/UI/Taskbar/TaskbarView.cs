@@ -786,6 +786,10 @@ internal sealed class TaskbarView : Grid
     internal void VerifyVisualIslands()
     {
         ApplyVisualIslands();
+        if (_appsIsland.Child is not ScrollViewer overflow
+            || overflow.HorizontalScrollBarVisibility != ScrollBarVisibility.Hidden
+            || overflow.HorizontalScrollMode != ScrollMode.Enabled)
+            throw new InvalidOperationException("Dock overflow must stay scrollable without a visible scrollbar.");
         if (_galleryInvalid())
             throw new InvalidOperationException("The floating dock lost its three functional glass zones.");
         var originalFloating = _environment.Session.State.FloatingTaskbar;
