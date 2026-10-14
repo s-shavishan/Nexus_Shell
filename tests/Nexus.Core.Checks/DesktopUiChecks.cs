@@ -9,6 +9,25 @@ internal static class DesktopUiChecks
         && inner.X >= outer.X && inner.Y >= outer.Y && inner.Right <= outer.Right && inner.Bottom <= outer.Bottom;
     internal static void Run()
     {
+        // Fullscreen overview moves are only geometry until the user applies.
+        var workspace = new LayoutRect(-1920, -80, 1920, 1080);
+        var beforeOverview = new LayoutRect(-1700, 0, 800, 600);
+        var free = WindowOverviewGeometry.Drag(workspace, beforeOverview, 50, 90, -1200, 440, 1);
+        Check(free.Zone == "Free position" && free.Bounds.X == -1650 && free.Bounds.Y == 90,
+            "Overview should stage free movement using physical negative-origin geometry.");
+        var leftSnap = WindowOverviewGeometry.Drag(workspace, beforeOverview, 0, 0, workspace.X + 10, 420, 1);
+        Check(leftSnap.Zone == "Left half" && leftSnap.Bounds.X == -1920 && leftSnap.Bounds.Width == 960,
+            "Overview left-edge drag should preview an exact half-screen snap.");
+        var quarter = WindowOverviewGeometry.Drag(workspace, beforeOverview, 0, 0, workspace.X + 2, workspace.Y + 2, 1.5);
+        Check(quarter.Zone == "Quarter snap" && quarter.Bounds.Width == 960 && quarter.Bounds.Height == 540,
+            "Overview corner drag should stage a quarter-screen tile at scaled DPI.");
+        var opposite = WindowOverviewGeometry.Drag(workspace, beforeOverview, 0, 0, workspace.X + workspace.Width - 1, 420, 1);
+        Check(opposite.Zone == "Right half" && opposite.Bounds.X == -960,
+            "Overview right-edge drop must position windows on the correct monitor half.");
+        var edgeClamp = WindowOverviewGeometry.Drag(workspace, beforeOverview, 40000, 40000, -1200, 440, 1);
+        Check(edgeClamp.Bounds.Right == workspace.X + workspace.Width
+            && edgeClamp.Bounds.Bottom == workspace.Y + workspace.Height,
+            "Overview free placement must clamp off-screen drags to the monitor work area.");
         // A selection box must follow mouse motion in every direction, and
         // must never activate unrelated desktop items in empty space.
         Check(!SelectionMarqueeGeometry.HasStarted(10, 10, 13, 13)
