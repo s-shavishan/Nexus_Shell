@@ -80,6 +80,15 @@ internal static class DesktopUiChecks
             && WindowsToolCatalog.Find("network-adapters")?.Target == "ncpa.cpl"
             && WindowsToolCatalog.Find("project-display")?.Target == "DisplaySwitch.exe",
             "Advanced Control Center actions must use fixed audited Windows routes.");
+        Check(WindowOverviewInteractionPolicy.CanSwitch(0)
+            && !WindowOverviewInteractionPolicy.CanSwitch(1)
+            && !WindowOverviewInteractionPolicy.CanSwitch(12),
+            "The overview cannot silently discard a staged arrangement when switching cards.");
+        Check(WindowOverviewInteractionPolicy.SuppressClick("hwnd:1", "hwnd:1", 1400, 1300)
+            && !WindowOverviewInteractionPolicy.SuppressClick("hwnd:1", "hwnd:2", 1400, 1300)
+            && !WindowOverviewInteractionPolicy.SuppressClick("hwnd:1", "hwnd:1", 1400, 1400)
+            && !WindowOverviewInteractionPolicy.SuppressClick(null, "hwnd:1", 1400, 1300),
+            "Drag-click suppression must affect only the dragged card until its deadline.");
         // Fullscreen overview moves are only geometry until the user applies.
         var workspace = new LayoutRect(-1920, -80, 1920, 1080);
         var beforeOverview = new LayoutRect(-1700, 0, 800, 600);
