@@ -170,7 +170,9 @@ internal sealed class DesktopSurface : Grid
             Grid.SetColumn(button, column);
             actions.Children.Add(button);
         }
-        AddAction(0, "Files", "\uE8B7", _environment.ShowFiles);
+        // ShowFiles has an optional path argument: use an explicit
+        // zero-argument delegate to keep the launcher call type-safe.
+        AddAction(0, "Files", "\uE8B7", () => _environment.ShowFiles());
         AddAction(1, "Search", "\uE721", _environment.ShowSearch);
         AddAction(2, "Controls", "\uE713", _environment.ShowQuickSettings);
         body.Children.Add(actions);
