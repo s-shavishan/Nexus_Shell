@@ -103,3 +103,16 @@ The common menu path performs no file I/O, but the reference's strict
 
 **Release gate:** keep PR #32 a draft until user-directed build and Windows
 acceptance. No automatic merge into `main`.
+
+## Source hardening and release packaging review — 2026-10-14
+
+- Moved JSON validation into a pure `ValidateDocument` function so live `Reload()` only swaps a fully validated immutable snapshot. `ValidateJson` allows deterministic rejection tests without changing live profiles.
+- Added a one-time delayed retry for editor writes that are temporarily truncated/renamed. The previous good snapshot remains active throughout a failed reload; the UI thread never waits on the watcher.
+- Constrained primary action IDs to `open`, `play`, `run`; optional handlers to `edit` and `open_with`. Unknown action IDs, duplicate optional handlers, duplicate extensions, unsafe fallbacks and malformed JSON are rejected.
+- Expanded portable tests to reject collision `.png` vs `.mp4`, unauthorized `decrypt`, and malformed JSON while verifying the original `.mp4` map remains available.
+- The **full release packaging script** now checks for the JSON under `Assets/Configuration/` both before zipping and inside the generated archive. The update builder already includes all `Assets/*` files and its existing test fixture remains compatible.
+- Completed a **13/13 source-level cross-file consistency check** covering catalog parsing and uniqueness, known handler IDs, JSON deployment, Core tests, native Files/Desktop integration, runtime Display test inclusion and Win32 maximize return semantics. This is source inspection, not a C#/WinUI compiler or runtime pass.
+
+**Additional window-overview fix:** Do not interpret `ShowWindowAsync`'s return value as success. Windows documents its return as *previous window visibility*, so a previously hidden/minimized app can return zero after a valid maximize request. The command is now issued with a fresh HWND ownership check, rather than triggering spurious full-layout rollback.
+
+No native Windows compilation was available during this pass. PR #32 must remain draft and `main` unchanged.
