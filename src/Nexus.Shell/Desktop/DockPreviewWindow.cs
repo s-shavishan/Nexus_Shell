@@ -226,7 +226,6 @@ internal sealed class DockPreviewWindow : Window
             _iconKey = icon;
             if (_header.Children.Count > 1) _header.Children.RemoveAt(1);
             _header.Children.Add(NexusIcons.Image(icon, 28));
-            BuildFallback(icon, current.Title);
         }
         BuildFallback(icon, current.Title);
         RefreshState();
