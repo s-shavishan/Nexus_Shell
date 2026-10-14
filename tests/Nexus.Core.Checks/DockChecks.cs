@@ -55,6 +55,23 @@ internal static class DockChecks
             && !DockPinnedWindowPolicy.Matches(@"C:\Windows\System32\calc.exe",
                 "Calculator", "Calculator", "explorer"),
             "Only the real Windows Calculator launcher may pair a packaged CalculatorApp window; never fuse unrelated processes.");
+        var multipleFiles = Enumerable.Range(1, 18).Select(index =>
+            new RunningWindow(new IntPtr(7000 + index),
+                "Document " + index + " · Nexus Files", "Nexus.Shell", 4421)).ToArray();
+        var grouped = DockPinnedWindowPolicy.MatchingWindows("nexus:files", "Files",
+            [multipleFiles[0], .. multipleFiles, new RunningWindow(
+                new IntPtr(9000), "Document 19 · Nexus Files", "explorer", 900)]);
+        Check(grouped.Count == 12 && grouped[0].Handle == multipleFiles[0].Handle
+            && grouped.Select(window => (window.Handle, window.ProcessId)).Distinct().Count() == 12
+            && grouped.All(window => window.ProcessName == "Nexus.Shell"),
+            "A pinned Files icon must list up to twelve unique real document windows without foreign-process matches.");
+        Check(DockPinnedWindowPolicy.MatchingWindows("nexus:files", "Files",
+                [new RunningWindow(new IntPtr(9000), "Document · Nexus Files", "explorer", 900)]).Count == 0,
+            "A spoofed file window must not appear in the pinned Files context flyout.");
+        bool invalidCapacityRejected = false;
+        try { _ = DockPinnedWindowPolicy.MatchingWindows("nexus:files", "Files", multipleFiles, 13); }
+        catch (ArgumentOutOfRangeException) { invalidCapacityRejected = true; }
+        Check(invalidCapacityRejected, "A flyout cannot allocate unbounded native menu entries.");
         var dock = new DockWindowSet();
         var windows = Enumerable.Range(1, 130).Select(i => new RunningWindow(new IntPtr(i), "App " + i, "app", i + 100)).ToArray();
         Check(dock.Reconcile(windows), "New app identities must change the dock snapshot.");
