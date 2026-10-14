@@ -117,8 +117,13 @@ internal static class WindowPolishChecks
             var rim = GlassRimAppearance.For(quality, contrast, simple);
             Check(rim.Visible == (!contrast && !simple && (quality is "Ultra" or "Balanced")),
                 "Only native glass quality without accessibility overrides should display a bevel.");
-            Check(rim.Opacity == (quality == "Ultra" ? .85 : .65),
-                "The Ultra bevel must have the stronger opacity without changing fallback colors.");
+            // P2.9 intentionally reduced the decorative rim from the old
+            // .85/.65 values to .48/.30 to avoid harsh double-looking borders
+            // on Windows 10 and low-end/VM composition. The assertion must
+            // validate that new visual contract, not revive the old artwork.
+            Check(rim.Opacity == (quality == "Ultra" ? .48 : .30)
+                && rim.Opacity is > 0 and <= .5,
+                "The restrained Ultra bevel must stay stronger than Balanced without creating a heavy outline.");
         }
         Check(!GlassRimAppearance.For(null, false, false).Visible
             && !GlassRimAppearance.For("Essential", false, false).Visible,
