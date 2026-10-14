@@ -15,10 +15,11 @@ public static class RuntimeOperations
     public const string Search = "search.query";
     public const string PanelSync = "panel.sync", PanelPulse = "panel.pulse", PanelReady = "panel.ready", PanelHide = "panel.hide", PanelAction = "panel.action";
     public const string PanelWait = "panel.wait";
+    public const string FileJobs = "jobs.list", SubmitFileJob = "jobs.submit", ControlFileJob = "jobs.control";
     public static bool Allows(string role, string operation) => role switch
     {
-        "desktop" => operation is Health or Stop or ReadState or CommitState or OpenFiles or Settings or PanelSync or Search,
-        "files" => operation is Work or Next or Ready or Complete or Pulse,
+        "desktop" => operation is Health or Stop or ReadState or CommitState or OpenFiles or Settings or PanelSync or Search or FileJobs or SubmitFileJob or ControlFileJob,
+        "files" => operation is Work or Next or Ready or Complete or Pulse or OpenFiles or FileJobs or SubmitFileJob,
         "controlcenter" => operation is PanelPulse or PanelWait or PanelReady or PanelHide or PanelAction or Settings,
         _ => false
     };

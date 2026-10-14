@@ -1,4 +1,5 @@
 using Nexus.Runtime;
+using Nexus.Runtime.Transfers;
 using Nexus.Shell.Models;
 using System.Diagnostics;
 
@@ -21,7 +22,7 @@ internal sealed class CoreProcessSession : IAsyncDisposable
         var client = await ClientAsync().ConfigureAwait(false);
         progress?.Invoke(StartupStep.Core);
         var loaded = await client.CallAsync<StateReadResult>(RuntimeOperations.ReadState, new { }, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
-        progress?.Invoke(StartupStep.Workspace);
+        progress?.Invoke(StartupStep.State);
         _writer = new(loaded.State.PersistenceRevision, ReadStateAsync, CommitAsync); return loaded;
     }
     private async Task<RuntimeClient> ClientAsync()
@@ -144,6 +145,12 @@ internal sealed class CoreProcessSession : IAsyncDisposable
         var client = await ClientAsync().ConfigureAwait(false);
         linked.Token.ThrowIfCancellationRequested();
         return await client.CallAsync<SearchReply>(RuntimeOperations.Search, request, TimeSpan.FromSeconds(6), linked.Token).ConfigureAwait(false);
+    }
+    internal async Task<FileJobsSnapshot> FileJobsAsync(string operation, object payload, CancellationToken cancellation)
+    {
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellation, _operations.Token);
+        var client = await ClientAsync().ConfigureAwait(false);
+        return await client.CallAsync<FileJobsSnapshot>(operation, payload, TimeSpan.FromSeconds(5), linked.Token).ConfigureAwait(false);
     }
     public async ValueTask DisposeAsync()
     {

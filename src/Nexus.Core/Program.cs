@@ -1,4 +1,5 @@
 using Nexus.Runtime;
+using Nexus.Runtime.Transfers;
 using Nexus.Shell.Services;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -65,7 +66,8 @@ internal static class Program
             }, (window, processId) => GetWindowThreadProcessId(new IntPtr(window), out uint actual) != 0 && actual == processId);
             using var settingsBackend = new Nexus.Core.Settings.WindowsSettingsBackend(parentId, error => Log("Core device settings failed", error));
             var search = new SearchCoordinator(new Nexus.Core.Search.EverythingSearchBackend(), Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
-            var router = new CoreRouter(repository, files, new SystemSettingsCoordinator(settingsBackend), panels, search);
+            await using var transfers = new FileJobCoordinator(new FileTransferEngine(Nexus.Core.Transfers.WindowsTransferSource.Open), new FileJobsJournal(StateStore.DirectoryPath));
+            var router = new CoreRouter(repository, files, new SystemSettingsCoordinator(settingsBackend), panels, search, transfers);
             using var stop = new CancellationTokenSource();
             var server = new RuntimeServer(pipeName, (pipe, request) => PipePeer.IsClient(pipe, request.ProcessId)
                 && (request.Role switch { "desktop" => request.ProcessId == parentId && !parent.HasExited, "files" => files.IsWorker(request.ProcessId), "controlcenter" => panels.IsWorker(request.ProcessId), _ => false }), router.DispatchAsync,

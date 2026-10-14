@@ -114,7 +114,7 @@ var shellEntries = new[] {
     new CommandEntry("Control center", "Action", "", "Action", "controls"),
     new CommandEntry("Notes - Notepad", "Open window", "", "Window", "123") };
 Check(ShellExperience.Search(shellEntries, "", "Apps", null, true).Single().Kind == "App", "Apps category must exclude workspace pages.");
-Check(ShellExperience.Search(shellEntries, "", "Workspaces", null, true).Length == 2, "Workspaces category includes pages and profiles.");
+Check(!ShellExperience.Categories.Contains("Workspaces") && ShellExperience.Search(shellEntries, "", "All", null, true).All(entry => entry.Kind is not ("Workspace" or "Profile")), "Retired workspace categories and commands must not appear in search.");
 Check(ShellExperience.Search(shellEntries, "notes", "Windows", null, true).Single().Kind == "Window", "Open-window titles must be searchable within their category.");
 Check(ShellExperience.Search(shellEntries, "nothing", "Saved", null, true).Length == 0, "No category match should produce an empty result.");
 var recentState = new ShellState();
@@ -125,7 +125,7 @@ ShellExperience.Remember(recentState, shellEntries[5]); ShellExperience.Remember
 Check(recentState.RecentCommands.Count == 2, "Actions and ephemeral window handles must never enter recent-item persistence.");
 recentState.RecentCommands.Insert(0, new("App", "no-longer-installed"));
 var recentResults = ShellExperience.Search(shellEntries.Concat(shellEntries), "", "All", recentState.RecentCommands, true);
-Check(recentResults[0].Title == "Firefox" && recentResults.Length == shellEntries.Length && recentResults.Count(e => e.Target == "firefox") == 1,
+Check(recentResults[0].Title == "Firefox" && recentResults.Length == shellEntries.Length - 2 && recentResults.Count(e => e.Target == "firefox") == 1,
     "Recent references must resolve against current entries, omit stale targets and avoid duplicate results.");
 Check(ShellExperience.Search(shellEntries, "ICT", "All", recentState.RecentCommands, true).Single().Target == "notes",
     "Typing must search relevant matches instead of preferring unrelated recent items.");
@@ -137,12 +137,10 @@ Check(recentState.RecentCommands.Count == 0, "Disabling recent items must clear 
 Check(ShellExperience.NormalizeRecent(new[] { new RecentCommand("Action", "exit"), new RecentCommand("App", ""), new RecentCommand("App", new string('x', 4097)) }).Count == 0,
     "Invalid persisted references must be rejected.");
 var personal = new ShellState { Clock24Hour = false, CompactDock = true, ShowHomeNotes = false, ShowClockWidget = false,
-    LastPage = "Personalize", RecentCommands = [new("Saved", "notes")] };
+    RecentCommands = [new("Saved", "notes")] };
 var personalCopy = personal.Snapshot(); personal.RecentCommands.Clear();
 Check(!personalCopy.Clock24Hour && personalCopy.CompactDock && !personalCopy.ShowHomeNotes && !personalCopy.ShowClockWidget && personalCopy.RecentCommands.Count == 1,
     "Personalization and recent references must survive an isolated snapshot.");
-DesktopWorkspace.Normalize(personalCopy);
-Check(personalCopy.LastPage == "Personalize", "Resume should preserve the Personalize page.");
 var personalRoundTrip = JsonSerializer.Deserialize<ShellState>(JsonSerializer.Serialize(personalCopy))!;
 Check(personalRoundTrip.CompactDock && !personalRoundTrip.Clock24Hour && personalRoundTrip.RecentCommands.Count == 1,
     "New shell preferences must round-trip through JSON.");
@@ -229,35 +227,16 @@ Check(migrated.SavedItems[0].Favorite && migrated.SavedItems[0].Collection == "S
 var taskSnapshot = migrated.Snapshot(); migrated.Tasks.Clear(); migrated.FocusTaskId = "";
 Check(taskSnapshot.Tasks.Count == 100 && taskSnapshot.FocusTaskId.Length > 0,
     "A save snapshot must own its task list and focus selection.");
-Console.WriteLine("PASS: timing, paused recovery, command search, legacy migration, bounded workspace data, JSON round-trip, and independent snapshots.");
+Console.WriteLine("PASS: timing, paused recovery, command search, legacy migration, bounded saved content, JSON round-trip, and independent snapshots.");
 
 var desktop = JsonSerializer.Deserialize<ShellState>("""
     {"QuickNote":"legacy notes","SavedItems":[{"Id":"lesson","Title":"Lesson","Target":"https://example.com","Kind":"Link"}]}
     """)!;
-WorkspaceState.Normalize(desktop); DesktopWorkspace.Normalize(desktop);
-Check(desktop.Profiles.Count == 4 && desktop.ActiveProfileId == "personal" && !desktop.KeepAvailable && desktop.DesktopLayout,
-    "Older settings should get starter workspaces and desktop layout; resident mode must remain off.");
-var profile = desktop.Profiles[1] with {
-    Apps = [new("browser", "Lesson", "https://example.com", "x"), new("bad", "Unsafe scheme", "javascript:alert(1)", "x")],
-    SavedItemIds = ["lesson", "missing", "lesson"] };
-desktop.Profiles[1] = profile; desktop.ActiveProfileId = profile.Id;
-DesktopWorkspace.Normalize(desktop);
-profile = desktop.Profiles[1];
-Check(profile.Apps.Count == 1 && profile.SavedItemIds.SequenceEqual(new[] {"lesson"}),
-    "Workspace migration must reject unsafe app schemes and prune missing or duplicate saved IDs.");
-Check(DesktopWorkspace.Plan(profile, desktop.SavedItems).Length == 1,
-    "The launch plan must deduplicate a target shared by an app and a saved item.");
-Check(desktop.Activity.Count == 0, "Planning a workspace must not record or launch activity.");
-var profileSnapshot = desktop.Snapshot(); desktop.Profiles[1].Apps.Clear(); desktop.Profiles[1].SavedItemIds.Clear();
-Check(profileSnapshot.Profiles[1].Apps.Count == 1 && profileSnapshot.Profiles[1].SavedItemIds.Count == 1,
-    "An in-flight save must own each profile's nested collections.");
-desktop.Profiles = Enumerable.Range(0, 20).Select(i => new WorkspaceProfile(i.ToString(), "Workspace", "", "bad-page", "x",
-    Enumerable.Range(0, 20).Select(j => new AppEntry(j.ToString(), "App", "https://example.com/" + j, "x")).ToList(), [])).ToList();
-desktop.LastPage = "unknown"; desktop.ActiveProfileId = "missing";
-DesktopWorkspace.Normalize(desktop);
-Check(desktop.Profiles.Count == 8 && desktop.Profiles[0].Apps.Count == 8 && desktop.Profiles.All(p => p.Page == "Home") && desktop.LastPage == "Home",
-    "Malformed workspace data must remain bounded and return to valid navigation.");
-Check(desktop.Profiles.Any(p => p.Id == desktop.ActiveProfileId), "An active workspace must always resolve.");
+WorkspaceState.Normalize(desktop);
+Check(!desktop.KeepAvailable && desktop.DesktopLayout && desktop.QuickNote == "legacy notes", "Removing workspaces must preserve notes and desktop preferences.");
+var retired = JsonSerializer.Deserialize<ShellState>("{\"Profiles\":[{\"Id\":\"coding\",\"Name\":\"Coding\"}],\"ActiveProfileId\":\"coding\",\"LastPage\":\"Workspaces\",\"QuickNote\":\"keep\"}")!;
+string cleaned = JsonSerializer.Serialize(StateStore.NormalizeState(retired));
+Check(retired.QuickNote == "keep" && !cleaned.Contains("Profiles") && !cleaned.Contains("ActiveProfileId") && !cleaned.Contains("LastPage"), "Old workspace fields must be retired without removing independent notes.");
 Check(DesktopIntegration.NotificationDataSize == (IntPtr.Size == 8 ? 976 : 956) &&
     DesktopIntegration.NotificationIconOffset == (IntPtr.Size == 8 ? 32 : 20),
     "The notification-area interop structure must use Windows Unicode buffers and correct pointer alignment.");
@@ -268,12 +247,12 @@ try
     var store = new StateStore(settingsDirectory);
     File.WriteAllText(store.FilePath, "{\"QuickNote\":\"keep my notes\",\"PinnedApps\":[]}");
     var upgraded = store.Load();
-    Check(upgraded.QuickNote == "keep my notes" && upgraded.Profiles.Count == 4 &&
-        File.Exists(Path.Combine(settingsDirectory, "settings.before-0.5.0.json")),
+    Check(upgraded.QuickNote == "keep my notes" &&
+        File.Exists(Path.Combine(settingsDirectory, "settings.before-0.8.0.json")),
         "Loading pre-desktop settings must preserve notes and create a migration backup.");
     store.Save(upgraded);
     var reloaded = store.Load();
-    Check(reloaded.Profiles.Count == 4 && reloaded.QuickNote == "keep my notes", "Desktop settings must round-trip through actual atomic persistence.");
+    Check(reloaded.QuickNote == "keep my notes", "Desktop settings must round-trip through actual atomic persistence.");
 }
 finally { if (Directory.Exists(settingsDirectory)) Directory.Delete(settingsDirectory, true); }
 if (OperatingSystem.IsWindows()) DesktopNativeChecks.Run();
@@ -292,4 +271,4 @@ Check(DesktopSearchCatalog.Find("speaker").Any(command => command.Id == "sound")
 Check(DesktopSearchCatalog.Find("copy text").Any(command => command.Id == "clipboard") && DesktopSearchCatalog.Find("copy text").Any(command => command.Id == "nexus-controls:clipboard"), "Search must find both the clipboard shelf and its Controls preferences by matching all query words.");
 Check(DesktopSearchCatalog.Find("not-a-desktop-command").Count == 0 && DesktopSearchCatalog.Find("").Count <= 64 && DesktopSearchCatalog.Find("settings").Any(command => command.Id == "controls"), "Desktop search must remain bounded and useful without an indexer.");
 Check(DesktopSearchCatalog.Matches("සිංහල NOTES", "සිංහල notes.txt") && !DesktopSearchCatalog.Matches("missing", "notes.txt"), "Local search must handle Unicode and case consistently.");
-Console.WriteLine("PASS: desktop migration, bounded profiles, launch-plan deduplication, nested snapshots, native structure layout, and atomic persistence.");
+Console.WriteLine("PASS: retired workspace migration, preserved notes, nested snapshots, native structure layout, and atomic persistence.");

@@ -28,7 +28,6 @@ internal static class NexusControlsChecks
         var state = StateStore.NormalizeState(new ShellState {
             PinnedApps = [legacy, unrelated, new("controls", "Nexus Controls", "nexus:controls", "")], RecentApps = [legacy],
             AppCollections = [new(Guid.NewGuid().ToString("N"), "Tools", ["nexus:sections", "nexus:files"])], HiddenAppTargets = ["nexus:sections"],
-            Profiles = [new("personal", "Personal", "Keep my apps", "Home", "", [legacy], [])],
             RecentCommands = [new("App", "nexus:sections"), new("Saved", "nexus:sections")],
             QuickNote = "Keep this note", SavedItems = [new("kept-note", "Saved note", "", "Note", Note: "Do not delete"), new("kept-link", "Docs", "https://example.com", "Link")],
             UsageTracking = true, ClipboardShelf = true, KeepAvailable = true, QuietNotifications = true,
@@ -40,7 +39,7 @@ internal static class NexusControlsChecks
         Check(NexusControlsCatalog.MigrateShortcuts(state), "The legacy app must migrate.");
         Check(state.PinnedApps.Count == 2 && state.PinnedApps[0].Name == "Nexus Controls" && state.PinnedApps[1] == preservedApp, "Migration must deduplicate Controls and preserve unrelated applications.");
         Check(state.RecentApps.Single().Target == "nexus:controls" && state.HiddenAppTargets.Single() == "nexus:controls"
-            && state.AppCollections.Single().Targets.Contains("nexus:controls") && state.Profiles.First().Apps.Single().Target == "nexus:controls", "Pinned, recent, hidden, collection and workspace references must migrate together.");
+            && state.AppCollections.Single().Targets.Contains("nexus:controls"), "Pinned, recent, hidden, collection references must migrate together.");
         Check(state.RecentCommands.Contains(new("App", "nexus:controls")) && state.RecentCommands.Contains(new("Saved", "nexus:sections")), "Migration must not reinterpret saved-item IDs as app targets.");
         Check(!NexusControlsCatalog.MigrateShortcuts(state), "Migration must be idempotent.");
         var original = NexusAppearance.Capture(state);

@@ -7,6 +7,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../src/Nexus.Core/Transfers/WindowsTransferSource.cs" Link="WindowsTransferSource.cs" />
     <ProjectReference Include="../../src/Nexus.Runtime/Nexus.Runtime.csproj" />
     <Compile Include="../../src/Nexus.Core/FilesProcessJob.cs" Link="FilesProcessJob.cs" />
     <Compile Include="../../src/Nexus.Core/Search/EverythingSearchBackend.cs" Link="Native/EverythingSearchBackend.cs" />

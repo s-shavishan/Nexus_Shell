@@ -7,6 +7,7 @@ public static class DesktopSearchCatalog
     [
         new("launchpad", "Launchpad", "Find and launch your apps", "apps start programs"),
         new("files", "Nexus Files", "Browse folders and drives", "explorer documents downloads"),
+        new("jobs", "File jobs", "Queue copies and moves with content verification", "transfer copy move queue progress cancel sha256"),
         new("places", "Places", "Favorite folders and a quick look inside", "favorites pinned folders"),
         new("windows", "Window board", "Switch windows and restore layouts", "arrange snap layout workspace"),
         new("control-center", "Control Center", "Sound, network, display and desktop preferences", "settings system pc"),

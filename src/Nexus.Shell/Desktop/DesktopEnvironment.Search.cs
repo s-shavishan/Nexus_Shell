@@ -34,6 +34,7 @@ internal sealed partial class DesktopEnvironment
         {
             case "launchpad": ShowMenu(); break;
             case "files": ShowFiles(); break;
+            case "jobs": ShowUtility("File jobs"); break;
             case "places": ShowPlaces(); break;
             case "windows": ShowWindowOverview(); break;
             case "control-center": ShowQuickSettings(); break;

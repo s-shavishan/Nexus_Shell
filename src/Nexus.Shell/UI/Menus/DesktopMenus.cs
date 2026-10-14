@@ -19,6 +19,7 @@ internal sealed class DesktopMenus(DesktopEnvironment environment)
         foreach (string order in new[] { "Name", "Kind", "Newest" }) { var choice = new ToggleMenuFlyoutItem { Text = order, IsChecked = environment.Session.State.DesktopIconOrder == order }; choice.Click += (_, _) => environment.SetDesktopOrder(order); sort.Items.Add(choice); } menu.Items.Add(sort);
         var icons = new ToggleMenuFlyoutItem { Text = "Show desktop icons", IsChecked = environment.Session.State.ShowDesktopIcons }; icons.Click += (_, _) => environment.ToggleDesktopIcons(); menu.Items.Add(icons);
         menu.Items.Add(Item("Nexus Controls…", () => environment.ShowControls()));
+        menu.Items.Add(Item("File jobs", () => environment.ShowUtility("File jobs")));
         menu.Items.Add(Item("Control Center", environment.ShowQuickSettings));
         menu.Items.Add(Item("Windows tools", environment.ShowWindowsTools));
         menu.Items.Add(Item("Launchpad", () => environment.ShowMenu()));
@@ -37,6 +38,7 @@ internal sealed class DesktopMenus(DesktopEnvironment environment)
     {
         var menu = new MenuFlyout(); menu.Items.Add(Item("About this session", () => environment.ShowControls("core")));
         menu.Items.Add(Item("Nexus Controls…", () => environment.OpenTarget("nexus:controls")));
+        menu.Items.Add(Item("File jobs…", () => environment.ShowUtility("File jobs")));
         menu.Items.Add(Item("Session status…", environment.ShowSessionStatus));
         menu.Items.Add(Item("Windows tools & keep awake…", environment.ShowWindowsTools));
         menu.Items.Add(Item("Search…", environment.ShowSearch));

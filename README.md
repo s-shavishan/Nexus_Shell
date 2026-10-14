@@ -2,7 +2,19 @@
 
 Nexus is a native C# / WinUI desktop environment on Windows. This release adds an integrated Search panel backed by Everything's local index, plus desktop controls and open-window results. Launchpad remains the app launcher.
 
-## Nexus Controls (draft)
+## Nexus File Jobs (pending Windows validation)
+
+Nexus Workspaces is removed. Its profile model, resume state, launch planner and workspace commands are retired. **File Jobs** replaces that direction with a practical copy/move queue owned by Nexus Core.
+
+- Add files or folders, choose a destination, and track bytes, committed files and skipped items.
+- Keep both names or skip collisions; existing destination items are never overwritten. Copied contents are verified with SHA-256 by default.
+- Pause the next job, cancel work, open its destination, or load finished/interrupted jobs into the form for review.
+- Open File Jobs from the Nexus menu, Launchpad, Spotlight or Controls. Nexus Files gains **Copy to…** and **Move to…** context actions.
+- Closing the utility window leaves accepted jobs running. Closing Nexus stops them; a restart marks unfinished jobs interrupted for manual review.
+
+Folder moves require the same drive; choose Copy across drives. Notes and independent saved content remain. See [behavior, recovery and Windows acceptance](docs/P210-FILE-JOBS.md).
+
+## Nexus Controls (pending Windows validation)
 
 **Sections is replaced by Nexus Controls**, available from its desktop shortcut, Launchpad, Spotlight and the Nexus menu. A new resizable window brings together Home, Core & recovery, Personalize, Desktop & dock, Privacy, and Startup & session.
 
@@ -13,7 +25,7 @@ Nexus is a native C# / WinUI desktop environment on Windows. This release adds a
 
 Old Sections shortcuts migrate to Controls. Existing saved content remains in settings; notes stay available in Notes. The former Sections Explore/Study/workspace screens are retired. Native Windows/AppVeyor acceptance is still pending. See [Controls behavior, migration and validation](docs/P29-NEXUS-CONTROLS.md).
 
-## Windows integration pack (draft)
+## Windows integration pack (pending Windows validation)
 
 - **Nexus menu → Windows tools** brings 14 Windows utilities/settings pages into a searchable desktop panel. Spotlight also finds individual tools, including screen snipping, Task Manager, display projection, volume mixer, startup apps and storage settings.
 - **Keep awake** requests 15, 30, 60 or 120 minutes without changing your power plan, with an optional display-on request and a menu-bar indicator. It ends on lock, disconnect, sleep, expiry or Nexus shutdown.

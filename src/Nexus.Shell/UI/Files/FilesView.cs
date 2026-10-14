@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Media.Imaging;
 using Nexus.Shell.Desktop;
 using Nexus.Shell.Interop;
 using Nexus.Shell.Services;
+using Nexus.Runtime.Transfers;
 using Windows.System;
 
 namespace Nexus.Shell.UI.Files;
@@ -150,6 +151,9 @@ internal sealed class FilesView : Grid
                 var undoKey = new KeyboardAccelerator { Key = VirtualKey.Z, Modifiers = VirtualKeyModifiers.Control }; undoKey.Invoked += async (_, e) => { e.Handled = true; try { await UndoAsync(); } catch (Exception error) { ShowError(error); } }; view.KeyboardAccelerators.Add(undoKey);
                 var context = new MenuFlyout(); var rename = new MenuFlyoutItem { Text = "Rename…" }; var undo = new MenuFlyoutItem { Text = "Undo file edit" };
                 rename.Click += async (_, _) => { try { await RenameAsync(); } catch (Exception error) { ShowError(error); } }; undo.Click += async (_, _) => { try { await UndoAsync(); } catch (Exception error) { ShowError(error); } }; context.Items.Add(rename); context.Items.Add(undo);
+                var copy = new MenuFlyoutItem { Text = "Copy to…" }; var move = new MenuFlyoutItem { Text = "Move to…" };
+                copy.Click += async (_, _) => await TransferAsync(FileJobKind.Copy); move.Click += async (_, _) => await TransferAsync(FileJobKind.Move); context.Items.Add(copy); context.Items.Add(move);
+                context.Opening += (_, _) => copy.IsEnabled = move.IsEnabled = !_dialog && !_navigating && !_recycle && ActiveList.SelectedItem is FileEntry;
                 context.Opening += (_, _) => { rename.IsEnabled = !_dialog && !_navigating && !_recycle && ActiveList.SelectedItem is FileEntry; undo.Text = _edits.UndoLabel; undo.IsEnabled = !_dialog && !_navigating && _edits.CanUndo; }; view.ContextFlyout = context;
                 view.RightTapped += (_, args) => view.SelectedItem = ItemAt(view, args.OriginalSource);
             }
@@ -375,6 +379,15 @@ internal sealed class FilesView : Grid
         await NavigateAsync("nexus:recycle");
     }
     internal void ShowMessage(string message) { if (!_closed) _status.Text = message; }
+    private async Task TransferAsync(FileJobKind kind)
+    {
+        if (_closed || _dialog || _navigating || _recycle || ActiveList.SelectedItem is not FileEntry item) return;
+        _dialog = true;
+        try { await _environment.QueueTransferAsync([item.Path], kind); }
+        catch (OperationCanceledException) when (_closed) { }
+        catch (Exception error) { if (!_closed) ShowError(error); }
+        finally { _dialog = false; UpdateActions(); }
+    }
     private ContentDialog Dialog(string title, object content, string primary) => new() { XamlRoot = XamlRoot, RequestedTheme = RequestedTheme, Title = title, Content = content,
         PrimaryButtonText = primary, CloseButtonText = "Cancel", DefaultButton = ContentDialogButton.Close };
     private async Task<bool> ConfirmAsync(string title, string content, string primary)

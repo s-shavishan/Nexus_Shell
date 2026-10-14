@@ -86,9 +86,9 @@ internal sealed partial class DesktopEnvironment
             : status.ProcessId > 0 ? "Process " + status.ProcessId + " · " + (status.Visible ? "visible" : "ready in the background") + " · observed " + Math.Max(0, (int)(DateTimeOffset.Now - _panelHealthAt).TotalSeconds) + "s ago"
             : "Idle · starts when a system control is opened." : "Waiting for the supervisor's first status reply.";
         if (_controlFailure) panel = "The desktop is reconnecting to the Control Center supervisor.";
-        string save = _saving ? "Saving the current workspace through Nexus Core." : _dirty ? "Changes are queued for saving" + (_saveFailures > 0 ? "; a bounded retry is pending." : ".") : "No desktop changes are queued for saving.";
+        string save = _saving ? "Saving the current settings through Nexus Core." : _dirty ? "Changes are queued for saving" + (_saveFailures > 0 ? "; a bounded retry is pending." : ".") : "No desktop changes are queued for saving.";
         return [new("Desktop session", Mode + " · active for " + Math.Max(0, (int)(DateTimeOffset.Now - _sessionStarted).TotalMinutes) + " minutes · " + _windows.Count + " app windows"),
-            new("Nexus Core", core), new("Control Center", panel), new("Search", SearchServiceStatus), new("Workspace persistence", save),
+            new("Nexus Core", core), new("Control Center", panel), new("Search", SearchServiceStatus), new("Settings persistence", save),
             new("Windows integration", WindowsIntegrationStatus),
             new("Desktop folder updates", _desktopMonitor is null ? "Starting folder observation. F5 always refreshes manually." : _desktopMonitor.HadError ? "Some folder notifications were unavailable. F5 refreshes manually; Check services retries observation." : "Watching " + _desktopMonitor.FolderCount + " desktop folders with coalesced updates."),
             new("Clipboard capture", ClipboardStatus + " · " + Clipboard.Items.Count + " retained text entries"),

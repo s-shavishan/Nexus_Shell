@@ -3,9 +3,11 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Markup;
 using Nexus.Shell.Desktop;
+using Nexus.Shell.Interop;
 using Nexus.Shell.Models;
 using Nexus.Shell.Services;
 using Nexus.Shell.UI.Desktop;
+using Nexus.Shell.UI.Controls;
 using Nexus.Shell.UI.Menus;
 using Nexus.Shell.UI.Taskbar;
 
@@ -28,6 +30,8 @@ internal static class UiResourceProbe
         TaskbarView? dock = null;
         NotificationWindow? notifications = null;
         MainWindow? controls = null;
+        Window? jobsWindow = null;
+        FileJobsView? jobsView = null;
         var panels = new List<DesktopPanelWindow>();
         int parsed = 0;
         var checks = new List<string>();
@@ -153,6 +157,19 @@ internal static class UiResourceProbe
             }
             controls.Close(); controls = null;
             checks.Add("Nexus Controls: all six production pages, search destinations and compact navigation at two native sizes; no settings or policy actions executed");
+            stage = "file-jobs-construction-and-layout";
+            jobsView = new FileJobsView(environment, validation: true);
+            jobsWindow = new Window { Content = jobsView }; jobsWindow.Activate();
+            IntPtr jobsHandle = WinRT.Interop.WindowNative.GetWindowHandle(jobsWindow);
+            var jobsNative = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(Microsoft.UI.Win32Interop.GetWindowIdFromWindow(jobsHandle));
+            double jobsScale = ShellLayerInterop.Scale(jobsHandle);
+            foreach (var size in new[] { (Width: 970, Height: 740), (Width: 620, Height: 520) })
+            {
+                jobsNative.Resize(new Windows.Graphics.SizeInt32((int)(size.Width * jobsScale), (int)(size.Height * jobsScale)));
+                await Task.Delay(80); jobsView.UpdateLayout(); jobsView.VerifyValidationLayout(size.Width < 780);
+            }
+            jobsView.Release(); jobsWindow.Close(); jobsView = null; jobsWindow = null;
+            checks.Add("Production File Jobs form, queue progress and responsive columns at two native sizes; isolated fixture with polling, pickers and transfer actions disabled");
             stage = "notification-construction-and-layout";
             for (int i = 0; i < 25; i++) environment.Notifications.Publish("Construction sample " + i, "Temporary native UI fixture; no history is persisted.", i % 3 == 0 ? NoticeKind.Warning : NoticeKind.Information);
             notifications = new NotificationWindow(environment);
@@ -233,6 +250,8 @@ internal static class UiResourceProbe
         {
             _loaded = null; menu?.Dispose(); launchpad?.Dispose(); dock?.Release();
             try { controls?.Close(); } catch (Exception error) { failures.Add("Controls cleanup: " + error.Message); }
+            jobsView?.Release();
+            try { jobsWindow?.Close(); } catch (Exception error) { failures.Add("File Jobs cleanup: " + error.Message); }
             try { notifications?.Close(); } catch (Exception error) { failures.Add("Notification cleanup: " + error.Message); }
             foreach (var panel in panels) try { panel.Close(); } catch (Exception error) { failures.Add("Panel cleanup: " + error.Message); }
             try { window?.Close(); } catch (Exception error) { failures.Add("Window cleanup: " + error.Message); }

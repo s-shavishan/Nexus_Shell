@@ -12,7 +12,7 @@
     </StackPanel>
     <Border x:Name="ControlsDragArea" Grid.Column="1" Background="Transparent"><TextBlock Text="Nexus Controls" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource NexusText}" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"/></Border>
    </Grid>
-   <Grid Grid.Row="1" x:Name="Workspace">
+   <Grid Grid.Row="1" x:Name="ControlsBody">
     <Grid.ColumnDefinitions><ColumnDefinition x:Name="SidebarColumn" Width="216"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
     <Border x:Name="Sidebar" Padding="14,22,14,16" BorderThickness="0,0,1,0" BorderBrush="{ThemeResource NexusBorder}">
      <Grid RowSpacing="20"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>

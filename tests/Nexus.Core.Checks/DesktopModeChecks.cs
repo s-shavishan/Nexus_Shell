@@ -71,7 +71,6 @@ internal static class DesktopModeChecks
         Check(new DesktopCapabilities(true, "Professional", 22631).SupportsCustomInterface, "Windows Pro must use the custom interface route.");
         Check(!new DesktopCapabilities(true, "Core", 22631).SupportsCustomInterface, "Windows Home cannot be selected as supported.");
         Check(!new DesktopCapabilities(false, "Professional", 22631).SupportsCustomInterface, "A Linux host cannot configure sign-in.");
-        Check(DesktopWorkspace.IsAppTarget("nexus:files") && !DesktopWorkspace.IsAppTarget("nexus:unknown"), "Workspace plans must retain owned Nexus launchers and reject unknown commands.");
         Check(!new DesktopCapabilities(true, "Professional", 19041, 1201).SupportsCustomInterface && new DesktopCapabilities(true, "Professional", 19041, 1202).SupportsCustomInterface,
             "The documented Windows 10 policy patch floor must be checked.");
         string root = Path.Combine(Path.GetTempPath(), "Nexus-desktop-check-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);

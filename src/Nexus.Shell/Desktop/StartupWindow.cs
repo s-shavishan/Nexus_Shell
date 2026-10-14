@@ -26,7 +26,7 @@ internal sealed class StartupWindow : Window
         var content = new StackPanel { Spacing = 19, Margin = new Thickness(34) };
         content.Children.Add(new TextBlock { Text = "NEXUS", FontSize = 38, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Foreground = Color(241, 245, 255) });
         content.Children.Add(new TextBlock { Text = "Your space is coming together", FontSize = 18, Foreground = Color(210, 221, 244) });
-        string[] names = ["Nexus Core", "Saved workspace", "Desktop", "Dock"];
+        string[] names = ["Nexus Core", "Saved settings", "Desktop", "Dock"];
         for (int i = 0; i < names.Length; i++)
         {
             var row = new Grid { ColumnSpacing = 16 };
@@ -62,7 +62,7 @@ internal sealed class StartupWindow : Window
             if (_closed) return;
             int current = (int)step; _status[current].Text = "Ready"; _status[current].Foreground = Color(152, 226, 206);
             if (current + 1 < _status.Length) _status[current + 1].Text = "Starting";
-            _detail.Text = step switch { StartupStep.Core => "Loading your saved workspace", StartupStep.Workspace => "Preparing your desktop", StartupStep.Desktop => "Preparing your dock", _ => "Your Nexus desktop is ready" };
+            _detail.Text = step switch { StartupStep.Core => "Loading your settings", StartupStep.State => "Preparing your desktop", StartupStep.Desktop => "Preparing your dock", _ => "Your Nexus desktop is ready" };
         });
     }
     internal void Complete()

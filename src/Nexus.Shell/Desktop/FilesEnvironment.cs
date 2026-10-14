@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Nexus.Runtime;
+using Nexus.Runtime.Transfers;
 using Nexus.Shell.Models;
 using Nexus.Shell.Services;
 using Nexus.Shell.UI;
@@ -125,5 +126,22 @@ internal sealed class FilesEnvironment
     {
         try { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); }
         catch (Exception ex) { Log.Write("Files could not open the selected item", ex); _window?.View.ShowMessage("Could not open this item: " + ex.Message); }
+    }
+    internal async Task QueueTransferAsync(string[] sources, FileJobKind kind)
+    {
+        var destination = await _client.CallAsync<FilesResult>(RuntimeOperations.OpenFiles, new FilesLaunch(new(FileSelectionKind.Folder, kind == FileJobKind.Copy ? "Copy selection to…" : "Move selection to…")), null, _cancel.Token);
+        if (_stopping || destination.Paths.Length == 0) return;
+        var snapshot = await _client.CallAsync<FileJobsSnapshot>(RuntimeOperations.FileJobs, new { }, TimeSpan.FromSeconds(5), _cancel.Token);
+        var spec = FileJobRules.Validate(new(Guid.NewGuid(), kind, sources, destination.Paths[0]));
+        try
+        {
+            await _client.CallAsync<FileJobsSnapshot>(RuntimeOperations.SubmitFileJob, new FileJobSubmit(snapshot.Epoch, spec), TimeSpan.FromSeconds(5), _cancel.Token);
+            if (!_stopping) _window?.View.ShowMessage("Transfer accepted by Core. Open Nexus menu → File jobs for progress and cancellation.");
+        }
+        catch (Exception error) when (error is IOException or TimeoutException)
+        {
+            // Submission is not retried with a new ID after a lost reply.
+            if (!_stopping) _window?.View.ShowMessage("Transfer acknowledgement was lost. Review File Jobs before queuing it again.");
+        }
     }
 }

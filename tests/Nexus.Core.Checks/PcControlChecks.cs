@@ -27,8 +27,6 @@ internal static class PcControlChecks
         try { service.Arrange([new RunningWindow(IntPtr.Zero, "Closed app", "old", 123)], "Columns"); }
         catch (InvalidOperationException) { rejected = true; }
         check(rejected && !service.CanUndo, "A stale window must be rejected before any native placement or undo mutation.");
-        var state = new ShellState { LastPage = "PC controls" }; DesktopWorkspace.Normalize(state);
-        check(state.LastPage == "PC controls" && state.Snapshot().LastPage == "PC controls", "The new workspace must survive normalization and snapshots.");
         Console.WriteLine("PASS: PC CPU counter semantics, bounded monitor layouts, stale-window rejection and workspace recovery.");
         if (OperatingSystem.IsWindows()) NativeReadChecks(check);
     }

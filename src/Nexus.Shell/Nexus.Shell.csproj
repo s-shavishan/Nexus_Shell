@@ -27,7 +27,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Nexus.Runtime/Nexus.Runtime.csproj" />
-    <Compile Remove="Models/ShellState.cs;Models/DesktopNotice.cs;Services/StateStore.cs;Services/RecentApplications.cs;Services/GlassStyle.cs;Services/GlassQuality.cs;Services/SavedWindowLayouts.cs;Services/DesktopOrganization.cs;Services/AuraPalette.cs;Services/WorkspaceState.cs;Services/ExploreWorkspace.cs;Services/DesktopWorkspace.cs;Services/ShellExperience.cs;Services/CommandSearch.cs;Services/Log.cs" />
+    <Compile Remove="Models/ShellState.cs;Models/DesktopNotice.cs;Services/StateStore.cs;Services/RecentApplications.cs;Services/GlassStyle.cs;Services/GlassQuality.cs;Services/SavedWindowLayouts.cs;Services/DesktopOrganization.cs;Services/AuraPalette.cs;Services/WorkspaceState.cs;Services/ExploreWorkspace.cs;Services/ShellExperience.cs;Services/CommandSearch.cs;Services/Log.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="1.8.260803003" />

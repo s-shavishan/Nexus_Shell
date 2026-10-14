@@ -34,6 +34,7 @@ internal static class RuntimeChecks
     {
         GlassPreferenceChecks.Run();
         GlassQualityChecks.Run();
+        await FileJobsChecks.RunAsync();
         await SearchChecks.RunAsync();
         await WindowsSearchChecks.RunAsync();
         await StateWriterStabilityChecks.RunAsync();

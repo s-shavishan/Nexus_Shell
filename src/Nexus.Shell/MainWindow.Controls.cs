@@ -96,6 +96,7 @@ public sealed partial class MainWindow
         shortcuts.Children.Add(Tiles(ActionButton("Sound & audio", () => _environment.ShowControlCenter("Sound")), ActionButton("Network & Wi-Fi", () => _environment.ShowControlCenter("Network")),
             ActionButton("Display & brightness", () => _environment.ShowControlCenter("Display")), ActionButton("Bluetooth devices", () => _environment.ShowControlCenter("Bluetooth")),
             ActionButton("Power & battery", () => _environment.ShowControlCenter("Power")), ActionButton("Windows tools & Keep awake", _environment.ShowWindowsTools)));
+        shortcuts.Children.Add(ActionButton("File jobs · copy, move and verify", () => _environment.ShowUtility("File jobs")));
         PageContent.Children.Add(Card(shortcuts));
     }
     private FrameworkElement DesktopPreview()
@@ -122,7 +123,7 @@ public sealed partial class MainWindow
         actions.Children.Add(ActionButton("Refresh desktop", () => { _environment.RefreshDesktop(); ShowStatus("Desktop refresh requested."); }));
         PageContent.Children.Add(Card(actions, "repair"));
         var persistence = Group("Your settings", "Nexus saves changes automatically. You can also request a snapshot now.");
-        persistence.Children.Add(BoundText(() => Service("Workspace persistence")));
+        persistence.Children.Add(BoundText(() => Service("Settings persistence")));
         persistence.Children.Add(AsyncButton("Save settings now", async () => { ShowStatus("Saving settings through Nexus Core…"); await _environment.Session.SaveAsync(); ShowStatus("Settings snapshot saved through Nexus Core."); }));
         persistence.Children.Add(ActionButton("Open data & logs folder", OpenDataFolder)); PageContent.Children.Add(Card(persistence, "save"));
         var health = Group("Observed service status");
@@ -197,7 +198,7 @@ public sealed partial class MainWindow
         clipboard.Children.Add(Toggle("Capture copied text", "Capture starts only when enabled and pauses when the session is locked.", () => _state.ClipboardShelf, _environment.SetClipboardShelf, savesItself: true));
         clipboard.Children.Add(BoundText(() => _environment.ClipboardStatus + " · " + _environment.Clipboard.Items.Count + " retained entries"));
         clipboard.Children.Add(ActionButton("Clear captured text", () => { _environment.ClearClipboardShelf(); RefreshBindings(); ShowStatus("Nexus clipboard history cleared."); })); PageContent.Children.Add(Card(clipboard, "clipboard"));
-        var saved = Group("Your saved content", "Existing notes and saved workspace data are retained when upgrading to Nexus Controls.");
+        var saved = Group("Your saved content", "Existing notes and saved content are retained when upgrading to Nexus Controls.");
         saved.Children.Add(ActionButton("Open Notes", () => _environment.OpenTarget("nexus:notes"))); saved.Children.Add(ActionButton("Open local data folder", OpenDataFolder)); PageContent.Children.Add(Card(saved));
     }
     private async Task<bool> ConfirmAsync(string title, string detail, string action)

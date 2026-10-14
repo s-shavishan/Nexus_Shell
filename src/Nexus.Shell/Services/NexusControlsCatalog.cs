@@ -74,7 +74,6 @@ public static class NexusControlsCatalog
         state.RecentApps = state.RecentApps.Select(App).DistinctBy(a => a.Target, StringComparer.OrdinalIgnoreCase).ToList();
         state.HiddenAppTargets = state.HiddenAppTargets.Select(Target).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         state.AppCollections = state.AppCollections.Select(g => g with { Targets = g.Targets.Select(Target).Distinct(StringComparer.OrdinalIgnoreCase).ToList() }).ToList();
-        state.Profiles = state.Profiles.Select(p => p with { Apps = p.Apps.Select(App).DistinctBy(a => a.Target, StringComparer.OrdinalIgnoreCase).ToList() }).ToList();
         state.RecentCommands = state.RecentCommands.Select(r => r.Kind == "App" ? r with { Target = Target(r.Target) } : r).Distinct().ToList();
         return changed;
     }

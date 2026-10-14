@@ -18,7 +18,8 @@ required = [
     "Services/ShellSession.cs", "Services/DesktopLayout.cs", "Services/DesktopCatalog.cs", "Interop/ShellLayerInterop.cs", "Interop/TaskbarRegistration.cs",
     "Services/AudioController.cs", "Services/PcMetrics.cs", "Services/WindowLayouts.cs",
     "MainWindow.Controls.cs", "Services/NexusControlsCatalog.cs", "Assets/Icons/Controls.svg",
-    "App.xaml", "App.xaml.cs", "MainWindow.xaml", "MainWindow.xaml.cs", "Services/ExploreWorkspace.cs", "UI/SavedKindConverter.cs", "UI/NexusIcons.cs", "Services/NavigationTrail.cs", "Services/ShellExperience.cs", "Services/AuraPalette.cs", "Services/DesktopWorkspace.cs", "Interop/DesktopIntegration.cs",
+    "UI/Controls/FileJobsView.cs", "Assets/Icons/Jobs.svg",
+    "App.xaml", "App.xaml.cs", "MainWindow.xaml", "MainWindow.xaml.cs", "Services/ExploreWorkspace.cs", "UI/SavedKindConverter.cs", "UI/NexusIcons.cs", "Services/NavigationTrail.cs", "Services/ShellExperience.cs", "Services/AuraPalette.cs", "Interop/DesktopIntegration.cs",
     "Services/FocusSession.cs", "Services/CommandSearch.cs", "Services/WorkspaceState.cs",
     "Nexus.Shell.csproj", "app.manifest", "Assets/Nexus.ico",
     "Interop/NativeMethods.cs", "Models/ShellState.cs", "Services/AppCatalog.cs",
@@ -348,6 +349,17 @@ for relative in ["scripts/package-update.ps1", "scripts/apply-update.ps1"]:
     body = (root / relative).read_text()
     assert "Nexus.Core.*" in body and "Nexus.Runtime.*" in body, f"Core/protocol must be app-owned update files: {relative}"
 print("Isolated Files ownership, shared runtime projects, Core publish and update ownership OK")
+for relative in ["src/Nexus.Runtime/Transfers/FileJobContract.cs", "src/Nexus.Runtime/Transfers/FileJobCoordinator.cs", "src/Nexus.Runtime/Transfers/FileTransferEngine.cs", "src/Nexus.Runtime/Transfers/FileJobsJournal.cs", "src/Nexus.Core/Transfers/WindowsTransferSource.cs", "tests/Nexus.Runtime.Checks/FileJobsChecks.cs"]:
+    assert (root / relative).is_file(), f"Missing File Jobs component: {relative}"
+for relative in ["Services/DesktopWorkspace.cs", "MainWindow.Workspaces.cs"]:
+    assert not (project / relative).exists(), f"Retired workspace source remains: {relative}"
+state_model = (project / "Models/ShellState.cs").read_text()
+assert not re.search(r"\b(?:WorkspaceProfile|WorkspaceLaunchItem|ActiveProfileId|ResumeWorkspace|LastPage|Profiles)\b", state_model), "Retired workspace state remains active"
+jobs_view = (project / "UI/Controls/FileJobsView.cs").read_text()
+assert "FileJobsAsync" in jobs_view and "File.Copy(" not in jobs_view and "File.Delete(" not in jobs_view, "Transfers belong to Core, not the UI"
+assert "FileJobCoordinator" in (root / "src/Nexus.Core/Program.cs").read_text() and "WindowsTransferSource.Open" in (root / "src/Nexus.Core/Program.cs").read_text()
+assert "file-jobs-construction-and-layout" in (project / "UI/UiResourceProbe.cs").read_text() and "VerifyValidationLayout" in jobs_view
+print("Workspace retirement, Core-owned File Jobs and isolated native UI probe wiring OK")
 runtime_version = ET.parse(root / "src/Nexus.Runtime/Nexus.Runtime.csproj").findtext("PropertyGroup/Version")
 for packages in json.loads((project / "packages.lock.json").read_text())["dependencies"].values():
     for package, entry in packages.items():

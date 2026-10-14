@@ -5,15 +5,15 @@ namespace Nexus.Shell.Services;
 public static class ShellExperience
 {
     public const int RecentLimit = 8;
-    public static readonly string[] Categories = ["All", "Apps", "Saved", "Workspaces", "Actions", "Tasks", "Windows"];
+    public static readonly string[] Categories = ["All", "Apps", "Saved", "Actions", "Tasks", "Windows"];
     public static bool MatchesCategory(CommandEntry entry, string category) => category switch
     {
         "Apps" => entry.Kind == "App", "Saved" => entry.Kind is "Saved" or "Space",
-        "Workspaces" => entry.Kind is "Workspace" or "Profile", "Actions" => entry.Kind == "Action",
+        "Actions" => entry.Kind == "Action",
         "Tasks" => entry.Kind == "Task", "Windows" => entry.Kind == "Window", _ => true
     };
     private static bool CanRemember(RecentCommand? entry) => entry is not null &&
-        entry.Kind is "App" or "Saved" or "Space" or "Workspace" or "Profile" &&
+        entry.Kind is "App" or "Saved" or "Space" &&
         !string.IsNullOrWhiteSpace(entry.Target) && entry.Target.Length <= 4096;
     public static List<RecentCommand> NormalizeRecent(IEnumerable<RecentCommand>? entries) =>
         (entries ?? []).Where(CanRemember).Distinct().Take(RecentLimit).ToList();
@@ -31,7 +31,7 @@ public static class ShellExperience
         IEnumerable<RecentCommand>? recent, bool remember, int limit = 30)
     {
         if (limit <= 0) return [];
-        var entries = source.DistinctBy(e => new RecentCommand(e.Kind, e.Target)).ToArray();
+        var entries = source.Where(entry => entry.Kind is not ("Workspace" or "Profile")).DistinctBy(e => new RecentCommand(e.Kind, e.Target)).ToArray();
         var filtered = entries.Where(e => MatchesCategory(e, category));
         if (!remember || !string.IsNullOrWhiteSpace(query) || category != "All")
             return CommandSearch.Filter(filtered, query, limit);

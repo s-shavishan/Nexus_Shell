@@ -1,6 +1,7 @@
+using Nexus.Runtime.Transfers;
 namespace Nexus.Runtime;
 
-public sealed class CoreRouter(CoreStateRepository state, FilesCoordinator files, SystemSettingsCoordinator? settings = null, ControlCenterCoordinator? panels = null, SearchCoordinator? search = null)
+public sealed class CoreRouter(CoreStateRepository state, FilesCoordinator files, SystemSettingsCoordinator? settings = null, ControlCenterCoordinator? panels = null, SearchCoordinator? search = null, FileJobCoordinator? jobs = null)
 {
     private int _stop;
     public bool StopRequested => Volatile.Read(ref _stop) != 0;
@@ -23,7 +24,12 @@ public sealed class CoreRouter(CoreStateRepository state, FilesCoordinator files
                 catch (Exception error) when (error is InvalidDataException or System.Text.Json.JsonException)
                 { throw new RuntimeFailure("state-rejected", error.Message); }
             case RuntimeOperations.OpenFiles:
+                if (request.Role == "files" && RuntimeProtocol.Payload<FilesLaunch>(request.Payload).Request.Kind != Nexus.Shell.Services.FileSelectionKind.Folder)
+                    throw new RuntimeFailure("file-picker", "Files can open only a destination-folder picker for transfers.");
                 return RuntimeProtocol.Success(request.Id, await files.OpenAsync(request.Id, RuntimeProtocol.Payload<FilesLaunch>(request.Payload), cancellation).ConfigureAwait(false));
+            case RuntimeOperations.FileJobs: return RuntimeProtocol.Success(request.Id, JobService().Snapshot());
+            case RuntimeOperations.SubmitFileJob: return RuntimeProtocol.Success(request.Id, JobService().Submit(RuntimeProtocol.Payload<FileJobSubmit>(request.Payload)));
+            case RuntimeOperations.ControlFileJob: return RuntimeProtocol.Success(request.Id, JobService().Control(RuntimeProtocol.Payload<FileJobControl>(request.Payload)));
             case RuntimeOperations.Settings:
                 if (settings is null) throw new RuntimeFailure("settings-unavailable", "This Core has no settings service. Keep the complete Nexus build together.");
                 var settingsRequest = RuntimeProtocol.Payload<SettingsRequest>(request.Payload);
@@ -52,5 +58,6 @@ public sealed class CoreRouter(CoreStateRepository state, FilesCoordinator files
         }
     }
     private ControlCenterCoordinator PanelService() => panels ?? throw new RuntimeFailure("panel-unavailable", "This Core has no panel supervisor. Keep the complete build together.");
+    private FileJobCoordinator JobService() => jobs ?? throw new RuntimeFailure("file-jobs", "This Core has no File Jobs service. Keep the complete build together.");
 }
 public sealed record FilesNext(FilesCommand? Command);
