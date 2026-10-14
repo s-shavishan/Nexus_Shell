@@ -55,6 +55,12 @@ internal static class DockChecks
             && !DockPinnedWindowPolicy.Matches(@"C:\Windows\System32\calc.exe",
                 "Calculator", "Calculator", "explorer"),
             "Only the real Windows Calculator launcher may pair a packaged CalculatorApp window; never fuse unrelated processes.");
+        Check(DockPinnedWindowPolicy.ActionLabel("Files", false, false, false) == "Open Files"
+            && DockPinnedWindowPolicy.ActionLabel("Files", true, false, false) == "Switch to Files"
+            && DockPinnedWindowPolicy.ActionLabel("Files", true, true, false) == "Minimize Files"
+            && DockPinnedWindowPolicy.ActionLabel("Files", true, false, true) == "Restore Files"
+            && DockPinnedWindowPolicy.ActionLabel("Files", true, true, true) == "Restore Files",
+            "Pinned apps must expose truthful open/switch/minimize/restore commands for screen readers and fallback tooltips.");
         var multipleFiles = Enumerable.Range(1, 18).Select(index =>
             new RunningWindow(new IntPtr(7000 + index),
                 "Document " + index + " · Nexus Files", "Nexus.Shell", 4421)).ToArray();
