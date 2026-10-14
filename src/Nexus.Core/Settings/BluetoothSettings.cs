@@ -1,4 +1,5 @@
 using Nexus.Runtime;
+using Nexus.Shell.Services;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 
@@ -14,7 +15,7 @@ internal static class BluetoothSettings
         if (find == IntPtr.Zero)
         {
             int error = Marshal.GetLastWin32Error();
-            if (error is not (0 or 259 or 1168)) throw new Win32Exception(error, "Could not enumerate Bluetooth radios.");
+            if (!BluetoothRadioAvailability.NoRadioError(error)) throw new Win32Exception(error, "Could not enumerate Bluetooth radios.");
             if (request.Change is not null) throw new RuntimeFailure("settings-device", "No Bluetooth radio is available. Refresh after connecting one.");
             return new([], "No classic Bluetooth radio is available. A VM usually needs a passed-through Bluetooth adapter.");
         }
