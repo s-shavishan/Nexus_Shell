@@ -85,6 +85,7 @@ internal abstract class DesktopPanelWindow : Window
     {
         var theme = Environment.Theme; Root.RequestedTheme = theme.ElementTheme;
         _material.Apply(this, Frame, Environment); Frame.BorderBrush = theme.Edge;
+        Frame.BorderThickness = new Thickness(theme.HighContrast ? 1 : 0);
         Frame.CornerRadius = new CornerRadius(theme.HighContrast || IsImmersive ? 0 : MidnightGlassMetrics.FrameRadius);
         _title.Foreground = theme.Brush("NexusText");
         _chrome.SetCorners(theme.HighContrast || IsImmersive, IsImmersive ? 0 : MidnightGlassMetrics.FrameRadius);
