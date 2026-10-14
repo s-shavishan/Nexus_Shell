@@ -173,3 +173,32 @@ execution; screenshots at 1649×928 and 1366×768; normal/compact and
 floating/attached modes; alt+tab/focus, fullscreen dock auto-hide, app
 overflow, 100/150% DPI, keyboard focus and High Contrast. Passing the
 source-level inspection does NOT certify visual fidelity or GPU frame pacing.
+
+## Stage 8 — Spotlight search hero, quick-launch art and result hierarchy (UI-only)
+
+Reconstructed the *existing* Spotlight visual tree, retaining a single
+native SearchWindow and its current Everything engine, scope filters, keyboard
+accelerators, Core requests, paging/cancellation, Win32 positioning and all
+six executable shortcuts. The compact launcher now uses an accent-lined
+search hero with large search glyph, a passive Ctrl K keycap and six
+54-DIP artwork wells instead of a plain text input and flat icon row.
+A framed **QUICK ACCESS** section separates launch shortcuts from search.
+
+When typing, Spotlight expands to the existing results mode. Results now
+occupy a dedicated inset material stage, with a section header and live
+result count. Each result gets a readable 42-DIP icon well, two-line
+hierarchy and FILE/WINDOW/ACTION type label. The actual selection, result
+Tag, keyboard/double-click and primary/open-folder/copy-path actions remain
+unchanged. The compact window has 312 instead of 260 DIP of vertical
+space so the enlarged launcher fits without compressing the app grid;
+expanded window remains 630 DIP and uses the original responsive bounds.
+
+Midnight palette materials reuse ShellTheme's cached surfaces; High
+Contrast and no-glass modes remain solid. Native UI preflight verifies
+that the original query, six action buttons and selection list remain
+under their new visual parents, and that stable appearances reuse
+artwork brushes. Portable Core checks guard the compact bounds.
+
+**Not yet verified**: AppVeyor/native WinUI compilation, Windows 10/11
+keyboard focus, shortcut visibility at 1366x768 and scaled monitors,
+Everything result paging, high contrast, motion smoothness and screenshots.

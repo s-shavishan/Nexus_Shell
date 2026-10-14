@@ -47,7 +47,7 @@ public static class DesktopLayout
         int width = Math.Min(Math.Max(1, work.Width - gap * 2),
             Math.Max(1, (int)Math.Round(760 * scale)));
         int height = Math.Min(Math.Max(1, work.Height - gap * 2),
-            Math.Max(1, (int)Math.Round((expanded ? 630 : 260) * scale)));
+            Math.Max(1, (int)Math.Round((expanded ? 630 : 312) * scale)));
         int offset = Math.Max(gap, (int)Math.Round(56 * scale));
         int y = Math.Clamp(work.Y + offset, work.Y, Math.Max(work.Y, work.Bottom - height));
         return new(work.X + (work.Width - width) / 2, y, width, height);

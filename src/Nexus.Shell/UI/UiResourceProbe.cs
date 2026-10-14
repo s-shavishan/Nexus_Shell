@@ -131,7 +131,7 @@ internal static class UiResourceProbe
             var clipboard = new ClipboardShelfWindow(environment); panels.Add(clipboard);
             panels.Add(new SessionStatusWindow(environment));
             var places = new PlacesWindow(environment); places.PopulateValidation(); panels.Add(places);
-            var search = new SearchWindow(environment); search.PopulateValidation(); panels.Add(search);
+            var search = new SearchWindow(environment); search.PopulateValidation(); search.VerifySpotlightComposition(); panels.Add(search);
             panels.Add(new DesktopGuideWindow(environment));
             panels.Add(new WindowsToolsWindow(environment));
             IntPtr owner = WinRT.Interop.WindowNative.GetWindowHandle(window);
