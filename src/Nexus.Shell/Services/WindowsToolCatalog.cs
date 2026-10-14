@@ -1,6 +1,6 @@
 namespace Nexus.Shell.Services;
 
-public enum WindowsToolKind { Settings, SystemExecutable, ScreenSnip }
+public enum WindowsToolKind { Settings, SystemExecutable, ScreenSnip, ControlPanelApplet }
 
 public sealed record WindowsTool(string Id, string Name, string Detail, string Group,
     string Keywords, WindowsToolKind Kind, string Target);
@@ -16,7 +16,7 @@ public static class WindowsToolCatalog
         new("project-display", "Project display", "Choose a Windows display projection mode", "Everyday", "monitor duplicate extend second screen", WindowsToolKind.SystemExecutable, "DisplaySwitch.exe"),
         new("night-light", "Night light", "Configure color temperature and scheduled night light", "Display", "warm color screen blue light", WindowsToolKind.Settings, "ms-settings:nightlight"),
         new("network-settings", "Network settings", "Manage Ethernet, Wi-Fi and connection details", "Connections", "network connectivity internet", WindowsToolKind.Settings, "ms-settings:network-status"),
-        new("network-adapters", "Network adapters", "Open classic Windows network connections", "Connections", "network ethernet control panel connections", WindowsToolKind.SystemExecutable, "ncpa.cpl"),
+        new("network-adapters", "Network adapters", "Open classic Windows network connections", "Connections", "network ethernet control panel connections", WindowsToolKind.ControlPanelApplet, "ncpa.cpl"),
         new("bluetooth-settings", "Bluetooth & devices", "Pair devices and manage Bluetooth hardware in Windows", "Connections", "wireless radio pairing devices", WindowsToolKind.Settings, "ms-settings:bluetooth"),
         new("volume-mixer", "Volume mixer", "Open the classic Windows app volume mixer", "Everyday", "sound audio speaker", WindowsToolKind.SystemExecutable, "SndVol.exe"),
         new("installed-apps", "Installed apps", "Manage apps in Windows Settings", "Windows settings", "uninstall programs software", WindowsToolKind.Settings, "ms-settings:appsfeatures"),
@@ -32,6 +32,25 @@ public static class WindowsToolCatalog
         new("system-information", "System Information", "Inspect hardware and Windows configuration", "System tools", "specs bios drivers version", WindowsToolKind.SystemExecutable, "msinfo32.exe"),
         new("control-panel", "Control Panel", "Open classic Windows configuration", "System tools", "advanced settings devices", WindowsToolKind.SystemExecutable, "control.exe")
     });
+
+    // Keep native launch targets entirely closed: a plain System32 executable
+    // or the one explicitly registered Windows Control Panel applet. User input
+    // is never interpreted as an executable, argument or arbitrary CPL path.
+    public static bool SafeNativeTarget(WindowsTool tool)
+    {
+        string target = tool.Target;
+        if (string.IsNullOrWhiteSpace(target)
+            || !target.All(c => char.IsAsciiLetterOrDigit(c) || c == '.')) return false;
+        return tool.Kind switch
+        {
+            WindowsToolKind.SystemExecutable
+                => target.EndsWith(".exe", StringComparison.OrdinalIgnoreCase),
+            WindowsToolKind.ControlPanelApplet
+                => tool.Id == "network-adapters"
+                    && string.Equals(target, "ncpa.cpl", StringComparison.OrdinalIgnoreCase),
+            _ => false
+        };
+    }
 
     public static WindowsTool? Find(string id) => All.FirstOrDefault(tool => tool.Id == id);
     public static IEnumerable<WindowsTool> Search(string query) => All.Where(tool =>
