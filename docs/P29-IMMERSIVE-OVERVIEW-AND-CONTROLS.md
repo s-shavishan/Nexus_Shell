@@ -139,3 +139,29 @@ The user **did not accept** Bluetooth capability hiding, visual Network menu imp
 No hosted or local native Windows compile was run as part of this branch-only continuation. The project's current AppVeyor source selection still requires a user-directed merge or a configuration change to build this branch. **No safe conclusion of 'build passes' or 'hardware rollback works' is warranted.**
 
 Open concerns: dual-monitor positioning and hotplug, forced Core termination mid-preview, device driver refusal to revert, Windows 10 GDI/DWM native round corners, and actual Control Center native mouse sizing. All require a Windows 10/11 test run after a successful build.
+
+## Next stabilization pass — file Edit and display error recovery (2026-10-14)
+
+- The Files worker's **Edit** route now first attempts the registered Windows
+  Edit verb. If that association is absent or fails, it starts
+  `%SystemRoot%/System32/notepad.exe` using a fixed executable and
+  `ProcessStartInfo.ArgumentList` with the *captured file path* as a single
+  argument. It never uses a command interpreter, executable name supplied by
+  the JSON, or string-concatenated shell command. A missing file and an
+  unavailable fallback editor generate user-facing status messages. Portable
+  catalog checks assert that only supported text/source/config types declare
+  the Edit capability; image, executable and shortcut profiles do not.
+- Control Center's **Display** request-error path previously discarded the
+  entire device view, which could hide Keep/Revert while a temporary display
+  mode was still in effect. It now retains the previous Display controls and
+  keeps Keep/Revert visible when the last snapshot still contains an active
+  preview. It displays the error and requests a fresh Core snapshot once the
+  failed request settles. The Core-owned rollback timer is unchanged and
+  remains independent of UI visibility.
+- Neither change is native Windows-verified. Test registered and unregistered
+  Edit associations, filenames containing Unicode/spaces, direct Revert
+  failure, failed Keep after timeout, disconnected monitor during preview,
+  and forced Core disconnect. Do not claim display rollback is guaranteed
+  after a forced process termination or driver failure.
+
+The latest draft is still intentionally isolated from `main`.
