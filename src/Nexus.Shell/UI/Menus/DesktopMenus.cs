@@ -116,19 +116,27 @@ internal sealed class DesktopMenus(DesktopEnvironment environment)
     }
     internal MenuFlyout DesktopItemMenu(DesktopShortcut shortcut)
     {
-        var capabilities = FileContextPolicy.For(shortcut.Target, shortcut.IsFolder);
-        var menu = ShellMenu.Create(); menu.Items.Add(ShellMenu.Action(shortcut.IsFileSystem ? capabilities.OpenLabel : "Open", () => environment.OpenDesktopItem(shortcut), capabilities.Icon));
-        if (shortcut.IsFileSystem)
+        var menu = ShellMenu.Create();
+        if (!shortcut.IsFileSystem)
         {
-            if (capabilities.OpenWith) menu.Items.Add(Item("Open with…", () => environment.WindowsFileAction(shortcut.Target, "open-with")));
-            menu.Items.Add(ShellMenu.Action("Rename…", () => environment.RenameDesktopItem(shortcut), "\uE8AC", "F2"));
-            var more = ShellMenu.Group("More", "\uE712");
-            more.Items.Add(Item("Copy path", () => environment.CopyDesktopPath(shortcut))); more.Items.Add(Item("Open containing folder", () => environment.ShowFiles(Path.GetDirectoryName(shortcut.Target))));
-            more.Items.Add(Item("Properties…", () => environment.WindowsFileAction(shortcut.Target, "properties")));
-            menu.Items.Add(more);
-            if (shortcut.IsFolder) menu.Items.Add(Item("Pin folder to Places", () => environment.PinDesktopPlace(shortcut)));
-            menu.Items.Add(new MenuFlyoutSeparator()); menu.Items.Add(Item("Windows options…", () => environment.WindowsFileAction(shortcut.Target)));
+            menu.Items.Add(ShellMenu.Action("Open", () => environment.OpenDesktopItem(shortcut), "\uE8A5"));
+            return menu;
         }
+        var target = shortcut.Target;
+        var handlers = new Dictionary<FileContextCommand, Action>
+        {
+            [FileContextCommand.Open] = () => environment.OpenDesktopItem(shortcut),
+            [FileContextCommand.Rename] = () => environment.RenameDesktopItem(shortcut),
+            [FileContextCommand.CopyPath] = () => environment.CopyDesktopPath(shortcut),
+            [FileContextCommand.Properties] = () => environment.WindowsFileAction(target, "properties"),
+            [FileContextCommand.Reveal] = () => environment.ShowFiles(Path.GetDirectoryName(target)),
+            [FileContextCommand.WindowsOptions] = () => environment.WindowsFileAction(target)
+        };
+        if (!shortcut.IsFolder)
+            handlers[FileContextCommand.OpenWith] = () => environment.WindowsFileAction(target, "open-with");
+        if (shortcut.IsFolder)
+            handlers[FileContextCommand.PinFolder] = () => environment.PinDesktopPlace(shortcut);
+        TypedFileMenu.Build(menu, [new FileTypeMenuTarget(target, shortcut.IsFolder)], handlers);
         return menu;
     }
     internal MenuFlyout ClockMenu()
