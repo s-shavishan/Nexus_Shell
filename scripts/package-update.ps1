@@ -61,7 +61,7 @@ No SDK or separate runtime installation is needed.
 If runtime files are missing or different, use this release's full ZIP instead.
 Do not copy only the EXE or mix UI resource files from different builds.
 If desktop sign-in points to your old folder, select "Use this version at sign-in"
-in the new version's Nexus Controls → Startup & session page. Keep the old folder until this succeeds.
+in the new version's Nexus Controls > Startup & session page. Keep the old folder until this succeeds.
 '@ | Set-Content (Join-Path $stage 'UPDATE-README.txt') -Encoding UTF8
     New-Item (Split-Path ([IO.Path]::GetFullPath($OutputZip)) -Parent) -ItemType Directory -Force | Out-Null
     Compress-Archive -Path "$stage\*" -DestinationPath $OutputZip -Force
