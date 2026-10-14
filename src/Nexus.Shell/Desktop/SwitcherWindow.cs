@@ -398,20 +398,34 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
         {
             if (_applying || !entry.CanArrange || !NativeMethods.OwnsWindow(entry.Window)
                 || !args.GetCurrentPoint(Root).Properties.IsLeftButtonPressed) return;
-            // Capture the original placement just ONCE when pointer contact
-            // starts. Calling GetWindowPlacement + monitor projection on every
-            // mouse-move event caused avoidable input latency and frame jitter.
-            var source = DesktopWindowCatalog.CurrentBounds(entry, _monitors);
-            var target = _monitors.FirstOrDefault(m => m.Id == MonitorId)
-                ?? _monitors.FirstOrDefault(m => m.Id == entry.MonitorId);
-            if (source is null || target is null || !surface.CapturePointer(args.Pointer)) return;
-            var origin = _monitors.FirstOrDefault(m => m.Id == entry.MonitorId);
-            if (origin is null) { surface.ReleasePointerCaptures(); return; }
-            dragStartBounds = _staged.TryGetValue(entry.Key, out var staged)
-                ? staged.Bounds : WindowOverviewGeometry.ProjectBetween(source.Value, origin.Work, target.Work);
-            dragMonitor = target;
-            start = args.GetCurrentPoint(Root).Position;
-            candidate = null; dragging = false;
+            // Capture the original native placement once; ordinary windows
+            // do not need an executable path just to drag their HWND.
+            try
+            {
+                var source = DesktopWindowCatalog.CurrentBounds(entry, _monitors);
+                var origin = _monitors.FirstOrDefault(m => m.Id == entry.MonitorId);
+                var target = _monitors.FirstOrDefault(m => m.Id == MonitorId) ?? origin;
+                if (source is null || target is null || origin is null)
+                {
+                    _message.Text = "Cannot read this window's geometry. Try another resizable window or Refresh.";
+                    return;
+                }
+                if (!surface.CapturePointer(args.Pointer))
+                {
+                    _message.Text = "Pointer capture was denied. Try the drag again.";
+                    return;
+                }
+                dragStartBounds = _staged.TryGetValue(entry.Key, out var staged)
+                    ? staged.Bounds : WindowOverviewGeometry.ProjectBetween(source.Value, origin.Work, target.Work);
+                dragMonitor = target;
+                start = args.GetCurrentPoint(Root).Position;
+                candidate = null; dragging = false;
+            }
+            catch (Exception error)
+            {
+                _message.Text = "Could not begin window drag: " + error.Message;
+                surface.ReleasePointerCaptures();
+            }
         }), true);
         surface.AddHandler(UIElement.PointerMovedEvent, new PointerEventHandler((_, args) =>
         {
