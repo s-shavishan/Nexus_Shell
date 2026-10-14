@@ -53,8 +53,8 @@ internal sealed class DisplayModeCoordinator(Action<Exception>? report = null) :
                     _pending = pending;
                     try
                     {
-                        pending.Timer = new Timer(_ => Timeout(pending), null,
-                            TimeSpan.FromSeconds(TimeoutSeconds), Timeout.InfiniteTimeSpan);
+                        pending.Timer = new Timer(_ => OnTimeout(pending), null,
+                            TimeSpan.FromSeconds(TimeoutSeconds), System.Threading.Timeout.InfiniteTimeSpan);
                     }
                     catch
                     {
@@ -97,7 +97,7 @@ internal sealed class DisplayModeCoordinator(Action<Exception>? report = null) :
         }
     }
 
-    private void Timeout(Pending original)
+    private void OnTimeout(Pending original)
     {
         lock (_gate)
         {
@@ -120,7 +120,7 @@ internal sealed class DisplayModeCoordinator(Action<Exception>? report = null) :
             // Do not silently claim rollback when a driver rejects it or the
             // monitor disconnects. Preserve pending state and retry shortly.
             try { report?.Invoke(error); } catch { }
-            if (!_disposed) pending.Timer?.Change(TimeSpan.FromSeconds(3), Timeout.InfiniteTimeSpan);
+            if (!_disposed) pending.Timer?.Change(TimeSpan.FromSeconds(3), System.Threading.Timeout.InfiniteTimeSpan);
             return false;
         }
     }
