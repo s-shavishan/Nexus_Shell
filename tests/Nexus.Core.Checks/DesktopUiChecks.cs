@@ -10,6 +10,24 @@ internal static class DesktopUiChecks
         && inner.X >= outer.X && inner.Y >= outer.Y && inner.Right <= outer.Right && inner.Bottom <= outer.Bottom;
     internal static void Run()
     {
+        Check(FileTypeContextCatalog.Initialize() && FileTypeContextCatalog.Reload(),
+            "The shipped file context schema must parse before native UI builds.");
+        Check(FileTypeContextCatalog.Resolve(@"C:\Data\movie.MP4", false).Id == "video.general"
+            && FileTypeContextCatalog.Resolve(@"C:\Data\archive.TAR.GZ", false).Id == "archive.generic"
+            && FileTypeContextCatalog.Resolve(@"C:\Data\project.TS", false).Id == "code.source"
+            && FileTypeContextCatalog.Resolve(@"C:\Data\unknown.MDF", false).Id == "fallback.unknown"
+            && FileTypeContextCatalog.Resolve(@"C:\Data\images", true).Id == "folder",
+            "Profiles must be deterministic, case-insensitive and support longest compound extensions with safe fallback.");
+        var mixedFileContext = FileTypeContextCatalog.Plan([
+            new FileTypeMenuTarget(@"C:\Data\photo.png", false),
+            new FileTypeMenuTarget(@"C:\Data\project.cs", false)]);
+        Check(mixedFileContext.SelectionCount == 2 && mixedFileContext.Primary.Length == 0
+            && mixedFileContext.CommonActions.SequenceEqual(["open_with"]),
+            "Mixed selections retain only common type capabilities and never mass-run applications.");
+        Check(FileTypeContextCatalog.Plan([new(@"C:\Data\audio.mp3", false)]).Primary == "play"
+            && FileContextPolicy.For(@"C:\Data\setup.exe", false).OpenLabel == "Run application"
+            && FileContextPolicy.For(@"C:\Data\bundle.tar.gz", false).OpenLabel == "Open archive",
+            "Native context labels reflect their file-profile default.");
         var displayEpoch = Guid.NewGuid();
         SettingsRules.Validate(new SettingsRequest("Display", 17,
             new SettingsChange("display-preview", "DISPLAY1", "1280x720@60", Epoch: displayEpoch)), displayEpoch);
