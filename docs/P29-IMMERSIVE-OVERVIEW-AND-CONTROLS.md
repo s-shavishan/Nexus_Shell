@@ -165,3 +165,30 @@ Open concerns: dual-monitor positioning and hotplug, forced Core termination mid
   after a forced process termination or driver failure.
 
 The latest draft is still intentionally isolated from `main`.
+
+
+## P2.9 continuation — pointer-path and confirmation safety
+
+This branch remains a **draft**. None of these source changes was verified on a Windows build during this pass.
+
+### Fullscreen overview responsiveness
+
+- A native placement snapshot is now captured exactly once at **pointer-down**. The pointer-move callback reuses that immutable starting rectangle instead of calling `DesktopWindowCatalog.Capture` and reading Win32 placement on each mouse move. Native HWND/PID ownership remains checked before the initial capture and again at pointer release; a window that closed during dragging is not staged.
+- The synthesized click after a drag is suppressed for **only the dragged card**, not every card in the overview. A new portable `WindowOverviewInteractionPolicy` tests the expected per-card behavior.
+- If a user has staged window moves, clicking another preview or pressing Enter to switch cannot silently discard the arrangement. Nexus leaves the overview visible and requires an explicit **Done / Cancel** decision. The same policy is unit-tested with zero, one, and twelve staged windows.
+
+### Display-mode persistence
+
+- Before persisting a mode with **Keep**, Core re-enumerates the selected adapter's current mode and confirms that its resolution and reported refresh rate still equal the previewed choice. If hotplug, external Windows settings, RDP mode switching or a driver reset changed the mode, Nexus refuses to persist the stale choice, attempts to restore the previous mode, and reports whether restoration succeeded. Core's existing timeout and retry behavior remains in force.
+- Added portable Runtime checks to reject an empty requested mode, a changed resolution and a changed refresh rate. Driver rounding such as 59/60 Hz may conservatively reject Keep; that is preferable to persisting an unverified mode until native test evidence supports tolerance.
+
+### Required Windows acceptance additions
+
+1. Open fullscreen overview with at least 12 windows, drag the same card repeatedly, watch CPU/input responsiveness and confirm all movement is staged before Done.
+2. Drag a card and immediately click a different card: only the original card's synthetic click should be suppressed; with a staged layout pending the overlay must retain the user's arrangement.
+3. With an open staged arrangement, press Enter on search results. Verify it does not close/erase the layout without user confirmation. Test Escape/Cancel discard and Done commit independently.
+4. Close a target window during drag. It must not appear in the staged set or move another process that reuses the HWND.
+5. Change the display mode externally during an 18-second preview and attempt Keep. Core must refuse to persist the stale choice and provide truthful recovery status.
+6. Confirm compatibility with negative-origin monitors, mixed DPI and a Windows 10 virtual GPU that exposes only one display mode.
+
+**Source-level check:** 11/11 targeted cross-file assertions passed for the new overview state, pointer-capture placement path, Runtime confirmation checks, and unchanged file context-menu integration. These are not .NET compiler or native UI acceptance results.
