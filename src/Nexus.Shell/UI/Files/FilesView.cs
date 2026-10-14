@@ -10,6 +10,7 @@ using Nexus.Shell.Interop;
 using Nexus.Shell.Services;
 using Nexus.Runtime.Transfers;
 using Nexus.Shell.UI.Menus;
+using Nexus.Shell.UI;
 using Windows.System;
 
 namespace Nexus.Shell.UI.Files;
@@ -110,7 +111,8 @@ internal sealed class FilesView : Grid
         { string path = drive.RootDirectory.FullName; places.Children.Add(PlaceButton(path, path)); }
         _placesCard.Child = new ScrollViewer { Content = places, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
         body.Children.Add(_placesCard);
-        _list.SelectionMode = request.Kind == FileSelectionKind.OpenFiles ? ListViewSelectionMode.Multiple : ListViewSelectionMode.Single;
+        _list.SelectionMode = request.Kind is FileSelectionKind.OpenFiles or FileSelectionKind.Browse
+            ? ListViewSelectionMode.Extended : ListViewSelectionMode.Single;
         _tiles.SelectionMode = _list.SelectionMode;
         _tiles.ItemsPanel = (ItemsPanelTemplate)XamlReader.Load("<ItemsPanelTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'><ItemsWrapGrid ItemWidth='116' ItemHeight='136' Orientation='Horizontal'/></ItemsPanelTemplate>");
         _tiles.ItemTemplate = (DataTemplate)XamlReader.Load("""
@@ -151,8 +153,18 @@ internal sealed class FilesView : Grid
             {
                 var renameKey = new KeyboardAccelerator { Key = VirtualKey.F2 }; renameKey.Invoked += async (_, e) => { e.Handled = true; try { await RenameAsync(); } catch (Exception error) { ShowError(error); } }; view.KeyboardAccelerators.Add(renameKey);
                 var undoKey = new KeyboardAccelerator { Key = VirtualKey.Z, Modifiers = VirtualKeyModifiers.Control }; undoKey.Invoked += async (_, e) => { e.Handled = true; try { await UndoAsync(); } catch (Exception error) { ShowError(error); } }; view.KeyboardAccelerators.Add(undoKey);
-                var context = ShellMenu.Create(); context.Opening += (_, _) => BuildContext(context, view.SelectedItem as FileEntry); view.ContextFlyout = context;
-                view.RightTapped += (_, args) => view.SelectedItem = ItemAt(view, args.OriginalSource);
+                var selectAll = new KeyboardAccelerator { Key = VirtualKey.A, Modifiers = VirtualKeyModifiers.Control };
+                selectAll.Invoked += (_, args) => { if (!_navigating && !_recycle) { view.SelectAll(); args.Handled = true; } };
+                view.KeyboardAccelerators.Add(selectAll);
+                var context = ShellMenu.Create();
+                context.Opening += (_, _) => BuildContext(context,
+                    view.SelectedItems.Count == 1 ? view.SelectedItem as FileEntry : null);
+                view.ContextFlyout = context;
+                view.RightTapped += (_, args) =>
+                {
+                    var clicked = ItemAt(view, args.OriginalSource);
+                    if (clicked is not null && !view.SelectedItems.Contains(clicked)) view.SelectedItem = clicked;
+                };
             }
         }
         var contents = new Grid { RowSpacing = 12 };
@@ -173,6 +185,15 @@ internal sealed class FilesView : Grid
         Grid.SetColumn(viewScroll, 1); contentHeader.Children.Add(viewScroll);
         contents.Children.Add(contentHeader);
         Grid.SetRow(_list, 1); Grid.SetRow(_tiles, 1); contents.Children.Add(_list); contents.Children.Add(_tiles);
+        if (request.Kind == FileSelectionKind.Browse)
+        {
+            var selectionLayer = new Canvas { IsHitTestVisible = false };
+            Grid.SetRow(selectionLayer, 1); contents.Children.Add(selectionLayer);
+            foreach (var view in new ListViewBase[] { _list, _tiles })
+                _ = new SelectionMarquee(view, view, selectionLayer,
+                    () => !_rendering && !_navigating && !_recycle && view.Visibility == Visibility.Visible,
+                    source => ItemAt(view, source!) is null);
+        }
         _contentsCard.Child = contents; Grid.SetColumn(_contentsCard, 1); body.Children.Add(_contentsCard);
         Grid.SetColumn(_loading, 1); body.Children.Add(_loading);
         var details = new StackPanel { Spacing = 14 };
@@ -423,6 +444,9 @@ internal sealed class FilesView : Grid
     internal void VerifyValidationContexts()
     {
         if (!_environment.Validation) throw new InvalidOperationException("Context-menu validation requires an isolated Files fixture.");
+        if (_list.SelectionMode != ListViewSelectionMode.Extended
+            || _tiles.SelectionMode != ListViewSelectionMode.Extended)
+            throw new InvalidOperationException("Files browse must enable native multiple selection in list and grid.");
         foreach (var (path, folder) in new[] { (@"C:\Example\Folder", true), (@"C:\Example\photo.png", false), (@"C:\Example\music.flac", false), (@"C:\Example\archive.zip", false), (@"C:\Example\setup.exe", false), (@"C:\Example\unknown.custom", false) })
         {
             var menu = ShellMenu.Create(); BuildContext(menu, new FileEntry(Path.GetFileName(path), path, folder, "Fixture"));
@@ -444,7 +468,14 @@ internal sealed class FilesView : Grid
             ResetPreview(); _fileTitle.Text = "Recycle Bin"; _fileKind.Text = "Deleted items";
             _fileLocation.Text = "Windows Recycle Bin"; _modified.Text = ""; _fileIcon.Source = NexusIcons.Source("Windows"); return;
         }
-        if (ActiveList.SelectedItem is FileEntry item)
+        if (ActiveList.SelectedItems.Count > 1)
+        {
+            ResetPreview(); _fileIcon.Source = NexusIcons.Source("Files");
+            _fileTitle.Text = ActiveList.SelectedItems.Count + " items selected";
+            _fileKind.Text = "Use Ctrl or Shift to change selection.";
+            _fileLocation.Text = _folder; _modified.Text = "";
+        }
+        else if (ActiveList.SelectedItem is FileEntry item)
         {
             _fileTitle.Text = item.Name;
             _fileKind.Text = item.IsFolder ? "Folder" : item.Detail;
@@ -467,7 +498,8 @@ internal sealed class FilesView : Grid
         _back.IsEnabled = ready && _history.CanGoBack; _forward.IsEnabled = ready && _history.CanGoForward;
         _list.IsEnabled = _tiles.IsEnabled = ready;
         _choose.IsEnabled = _newFolder.IsEnabled = ready && !_recycle && _folder.Length > 0;
-        _rename.IsEnabled = ready && !_recycle && ActiveList.SelectedItem is FileEntry;
+        _rename.IsEnabled = ready && !_recycle
+            && ActiveList.SelectedItems.Count == 1 && ActiveList.SelectedItem is FileEntry;
         _undo.IsEnabled = ready && _edits.CanUndo; _undo.Content = _edits.UndoLabel;
         _empty.IsEnabled = ready && _recycle && _binHasItems;
     }

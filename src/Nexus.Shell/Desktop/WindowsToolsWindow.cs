@@ -6,6 +6,8 @@ namespace Nexus.Shell.Desktop;
 
 internal sealed class WindowsToolsWindow : DesktopPanelWindow
 {
+    // A usable utility window must not auto-hide when it opens a Windows tool.
+    protected override bool DismissOnDeactivate => false;
     private readonly TextBox _search = new() { PlaceholderText = "Find a Windows tool…" };
     private readonly StackPanel _items = new() { Spacing = 10 };
     private readonly TextBlock _awakeStatus = new() { FontSize = 13, TextWrapping = TextWrapping.Wrap };

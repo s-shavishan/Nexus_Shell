@@ -179,7 +179,8 @@ internal static class NativeMethods
             if (title.Length == 0 || ShellLayerInterop.IsExplorerDesktopWindow(window)) return true;
             GetWindowThreadProcessId(window, out uint id);
             if (id == (uint)Environment.ProcessId || id > int.MaxValue) return true;
-            if (processes.TryGetName((int)id, out var processName))
+            if (processes.TryGetName((int)id, out var processName)
+                && !DockPinnedWindowPolicy.IsShellArtifact(title.ToString(), processName))
                 result.Add(new(window, title.ToString(), processName, (int)id));
             return true; // Overflow scrolls; never silently lose the 21st/81st app.
         }, IntPtr.Zero);

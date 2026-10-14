@@ -28,6 +28,7 @@ internal abstract class DesktopPanelWindow : Window
     private IntPtr _monitorSource;
     protected bool IsClosed { get; private set; }
     internal bool IsOpen { get; private set; }
+    protected virtual bool DismissOnDeactivate => true;
     internal string MaterialStatus => _material.Status;
     internal FrameworkElement ValidationRoot => Root;
     internal void PrepareValidation(IntPtr owner, int width, int height)
@@ -48,7 +49,11 @@ internal abstract class DesktopPanelWindow : Window
         ShellLayerInterop.ToolWindow(Handle); _chrome = new(Handle, closeRequested: Hide);
         _motion = new(animateBody ? Root : header, () => environment.Theme.Animations && !environment.Theme.HighContrast && environment.Session.State.SurfaceAnimations && !environment.Session.State.ReducedEffects);
         var escape = new KeyboardAccelerator { Key = VirtualKey.Escape }; escape.Invoked += (_, e) => { Hide(); e.Handled = true; }; Root.KeyboardAccelerators.Add(escape);
-        Activated += (_, args) => { if (args.WindowActivationState == WindowActivationState.Deactivated) Hide(); };
+        Activated += (_, args) =>
+        {
+            if (DismissOnDeactivate && IsOpen
+                && args.WindowActivationState == WindowActivationState.Deactivated) Hide();
+        };
         Closed += (_, _) => { IsClosed = true; IsOpen = false; OnHidden(); _chrome.Dispose(); _motion.Dispose(); OnClosed(); };
     }
     protected void ShowPanel(IntPtr monitorSource = default)

@@ -20,6 +20,7 @@ internal sealed class TaskbarWindow : Window, IDisposable
     private readonly UI.WindowMaterial _material = new();
     private readonly UI.WindowTransition _transition;
     private readonly DispatcherTimer _visibilityTimer = new() { Interval = TimeSpan.FromMilliseconds(80) };
+    private readonly DispatcherTimer _startupAreaCheck = new() { Interval = TimeSpan.FromMilliseconds(1400) };
     private readonly DockVisibility _visibility = new();
     private readonly ForegroundRepairCadence _foregroundRepairCadence = new();
     private readonly CoalescedUiDispatch _positionDispatch = new();
@@ -60,8 +61,25 @@ internal sealed class TaskbarWindow : Window, IDisposable
             RefreshVisibility(foreground);
         };
         _visibilityTimer.Start();
+        _startupAreaCheck.Tick += (_, _) =>
+        {
+            _startupAreaCheck.Stop();
+            if (_disposed || _registration is not ExclusiveTaskbarRegistration exclusive) return;
+            try
+            {
+                if (exclusive.ReconcileStartupWorkArea())
+                {
+                    // Even if the bar stayed at the same visual coordinates,
+                    // maximized windows and desktop insets must be recalculated.
+                    _lastPlacement = null;
+                    Position();
+                }
+            }
+            catch (Exception error) { Log.Write("Startup work-area verification failed", error); }
+        };
         Closed += (_, _) => { Dispose(); if (!environment.IsStopping) environment.Shutdown(); };
         Position();
+        if (environment.IsManagedDesktop) _startupAreaCheck.Start();
     }
     internal void Position()
     {
@@ -230,5 +248,5 @@ internal sealed class TaskbarWindow : Window, IDisposable
     private (bool Maximized, bool Fullscreen, bool Attached) _applicationState;
     private ShellRect? _applicationMonitor;
     internal void ApplyAppearance() { if (_disposed) return; View.ApplyAppearance(); _material.Apply(this, View.Frame, _environment, "Dock"); Position(); }
-    public void Dispose() { if (_disposed) return; _disposed = true; ++_hideGeneration; _hidePending = false; _visibilityTimer.Stop(); _transition.Dispose(); View.PreferredWidthChanged -= QueuePosition; _registration.Dispose(); _chrome.Dispose(); View.Release(); }
+    public void Dispose() { if (_disposed) return; _disposed = true; ++_hideGeneration; _hidePending = false; _startupAreaCheck.Stop(); _visibilityTimer.Stop(); _transition.Dispose(); View.PreferredWidthChanged -= QueuePosition; _registration.Dispose(); _chrome.Dispose(); View.Release(); }
 }

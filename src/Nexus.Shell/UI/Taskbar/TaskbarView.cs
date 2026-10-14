@@ -34,6 +34,7 @@ internal sealed class TaskbarView : Grid
     private readonly Dictionary<DockWindowIdentity, DockItem> _items = [];
     private readonly HashSet<MenuFlyout> _openContextMenus = [];
     private readonly Dictionary<Button, Image> _pinImages = [];
+    private readonly Dictionary<Button, (AppEntry App, Border Indicator)> _pinMarkers = [];
     private readonly DispatcherTimer _hoverTimer = new() { Interval = TimeSpan.FromMilliseconds(DockPreviewPolicy.HoverDelayMilliseconds) };
     private readonly EventHandler<object> _hoverTick;
     private DockItem? _hoverItem;
@@ -80,7 +81,9 @@ internal sealed class TaskbarView : Grid
     private readonly Border _separator;
     private double _reportedWidth;
     internal event Action? PreferredWidthChanged;
-    internal double PreferredWidthDip => (_environment.Session.State.FloatingTaskbar ? 212 : 344) + (_pins.Children.Count + _windows.Children.Count) * (_environment.Session.State.CompactDock ? 44 : 72);
+    internal double PreferredWidthDip => (_environment.Session.State.FloatingTaskbar ? 212 : 344)
+        + (_pins.Children.Count + _windows.Children.OfType<Button>().Count(button => button.Visibility == Visibility.Visible))
+        * (_environment.Session.State.CompactDock ? 44 : 72);
     internal Border Frame => _frame;
     // The real HWND uses WindowMaterial to control native acrylic, opaque
     // preparation and fallback. Its view must not repaint that same surface.
@@ -98,7 +101,7 @@ internal sealed class TaskbarView : Grid
         var middle = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 16, VerticalAlignment = VerticalAlignment.Center };
         _separator = new Border { Width = 1, Height = 34, VerticalAlignment = VerticalAlignment.Center };
         middle.Children.Add(_pins); middle.Children.Add(_separator); middle.Children.Add(_windows);
-        var scroll = new ScrollViewer { Content = middle, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
+        var scroll = new ScrollViewer { Content = middle, HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
             HorizontalScrollMode = ScrollMode.Enabled, VerticalScrollMode = ScrollMode.Disabled, VerticalAlignment = VerticalAlignment.Center };
         scroll.ViewChanged += (_, _) => _environment.HideDockPreview();
         _appsIsland.Child = scroll;
@@ -153,8 +156,13 @@ internal sealed class TaskbarView : Grid
         var icon = NexusIcons.Image(NexusIcons.ForApp(app), 46);
         _ = AppIconCache.ApplyAsync(icon, app);
         var host = new Grid(); host.Children.Add(icon);
+        var marker = new Border { Width = 18, Height = 3, CornerRadius = new CornerRadius(2),
+            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom,
+            Visibility = Visibility.Collapsed, IsHitTestVisible = false };
+        host.Children.Add(marker);
         var button = new Button { Content = host, Tag = host, Style = (Style)Application.Current.Resources["DockButton"], Width = 64, Height = 68 };
-        _pinImages.Add(button, icon); bool arrive = _baselineReconciled;
+        _pinImages.Add(button, icon); _pinMarkers.Add(button, (app, marker));
+        bool arrive = _baselineReconciled;
         void PlayArrival()
         {
             if (!arrive || _released || _dockMotion is null || !icon.IsLoaded) return;
@@ -177,8 +185,15 @@ internal sealed class TaskbarView : Grid
             arrive = false;
             _dockMotion?.Detach(icon);
         };
-        button.Click += (_, _) => { if (_environment.TryLaunch(app)) _dockMotion?.Play(icon, DockMotionCue.Launch); };
-        var menu = Menus.ShellMenu.Create(); var open = Menus.ShellMenu.Action("Open", () => { if (_environment.TryLaunch(app)) _dockMotion?.Play(icon, DockMotionCue.Launch); }, "\uE768"); menu.Items.Add(open);
+        void OpenPinned()
+        {
+            var running = FindPinnedWindow(app);
+            if (running is not null) _environment.ToggleDockWindow(running);
+            else if (_environment.TryLaunch(app)) _dockMotion?.Play(icon, DockMotionCue.Launch);
+        }
+        button.Click += (_, _) => OpenPinned();
+        var menu = Menus.ShellMenu.Create();
+        menu.Items.Add(Menus.ShellMenu.Action("Open or switch", OpenPinned, "\uE768"));
         var remove = new MenuFlyoutItem { Text = "Remove from dock" }; remove.Click += (_, _) =>
         { if (_released) return; _environment.Session.State.PinnedApps.RemoveAll(pin => string.Equals(pin.Target, app.Target, StringComparison.OrdinalIgnoreCase)); _environment.SaveState(); }; menu.Items.Add(remove);
         var position = Menus.ShellMenu.Group("Position");
@@ -243,7 +258,8 @@ internal sealed class TaskbarView : Grid
         if (pinsChanged)
         {
             foreach (var button in _pins.Children.OfType<Button>()) { if (button.ContextFlyout is MenuFlyout menu) { menu.Hide(); _openContextMenus.Remove(menu); } _motion?.DetachHover(button); if (_pinImages.TryGetValue(button, out var icon)) _dockMotion?.Detach(icon); }
-            _pinImages.Clear(); _pins.Children.Clear(); foreach (var pin in pins) _pins.Children.Add(PinButton(pin)); _shownPins = pins;
+            _pinImages.Clear(); _pinMarkers.Clear();
+            _pins.Children.Clear(); foreach (var pin in pins) _pins.Children.Add(PinButton(pin)); _shownPins = pins;
         }
         bool windowsChanged = _windowSet.Reconcile(windows, destroyedHandles);
         if (!DockVisualRecoveryPolicy.RequiresFullReconcile(
@@ -291,6 +307,42 @@ internal sealed class TaskbarView : Grid
         ApplyDensity(); RefreshClock(); _baselineReconciled = true;
         _refreshIncomplete = false;
     }
+    private RunningWindow? FindPinnedWindow(AppEntry pin)
+        => _windowSet.Windows.FirstOrDefault(window =>
+            DockPinnedWindowPolicy.Matches(pin.Target, pin.Name, window.Title, window.ProcessName));
+
+    private bool HasPinnedArtwork(RunningWindow window)
+        => _shownPins.Any(pin =>
+        {
+            // Only the representative window is integrated into the pin.
+            // Additional document/windows from the same process remain
+            // individually reachable as running entries.
+            var representative = FindPinnedWindow(pin);
+            return representative is not null
+                && DockWindowIdentity.Of(representative) == DockWindowIdentity.Of(window);
+        });
+
+    private void RefreshPinnedIndicators()
+    {
+        var foreground = NativeMethods.ForegroundTaskWindow();
+        foreach (var (button, marker) in _pinMarkers)
+        {
+            var running = FindPinnedWindow(marker.App);
+            bool active = running is not null;
+            var visibility = active ? Visibility.Visible : Visibility.Collapsed;
+            if (marker.Indicator.Visibility != visibility) marker.Indicator.Visibility = visibility;
+            if (active)
+            {
+                var brush = _environment.Theme.Brush(running!.Handle == foreground ? "NexusAccent" : "NexusMuted");
+                if (!ReferenceEquals(marker.Indicator.Background, brush)) marker.Indicator.Background = brush;
+            }
+            string tooltip = active ? "Switch to " + marker.App.Name : "Open " + marker.App.Name;
+            if (!Equals(ToolTipService.GetToolTip(button), tooltip)) ToolTipService.SetToolTip(button, tooltip);
+            if (Microsoft.UI.Xaml.Automation.AutomationProperties.GetName(button) != tooltip)
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, tooltip);
+        }
+    }
+
     private DockItem CreateWindowButton(RunningWindow window)
     {
         var item = new DockItem(window) { NewlyOpened = _baselineReconciled };
@@ -384,6 +436,7 @@ internal sealed class TaskbarView : Grid
         if (_released) return;
         var foreground = observedForeground ?? NativeMethods.ForegroundTaskWindow();
         foreach (var item in _items.Values) RefreshWindowState(item, foreground);
+        RefreshPinnedIndicators();
     }
 
     private void RefreshWindowState(DockItem item, IntPtr foreground)
@@ -496,7 +549,13 @@ internal sealed class TaskbarView : Grid
         }
         foreach (var icon in _pinImages.Values.Concat(_items.Values.Select(i => i.Icon)))
             Size(icon, compact ? 30 : 46, compact ? 30 : 46);
-        var separator = _windows.Children.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+        foreach (var item in _items.Values)
+        {
+            var state = HasPinnedArtwork(item.Window) ? Visibility.Collapsed : Visibility.Visible;
+            if (item.Button.Visibility != state) item.Button.Visibility = state;
+        }
+        var separator = _windows.Children.OfType<Button>().Any(button => button.Visibility == Visibility.Visible)
+            ? Visibility.Visible : Visibility.Collapsed;
         if (_separator.Visibility != separator) _separator.Visibility = separator;
         double width = PreferredWidthDip;
         if (_reportedWidth != width) { _reportedWidth = width; PreferredWidthChanged?.Invoke(); }
@@ -734,6 +793,10 @@ internal sealed class TaskbarView : Grid
     internal void VerifyVisualIslands()
     {
         ApplyVisualIslands();
+        if (_appsIsland.Child is not ScrollViewer overflow
+            || overflow.HorizontalScrollBarVisibility != ScrollBarVisibility.Hidden
+            || overflow.HorizontalScrollMode != ScrollMode.Enabled)
+            throw new InvalidOperationException("Dock overflow must stay scrollable without a visible scrollbar.");
         if (_galleryInvalid())
             throw new InvalidOperationException("The floating dock lost its three functional glass zones.");
         var originalFloating = _environment.Session.State.FloatingTaskbar;
@@ -785,6 +848,6 @@ internal sealed class TaskbarView : Grid
     {
         if (_released) return; _released = true; CancelPreviewRequest(); _hoverTimer.Tick -= _hoverTick;
         foreach (var menu in _openContextMenus.ToArray()) menu.Hide();
-        _openContextMenus.Clear(); _motion?.Dispose(); _dockMotion?.Dispose(); _pinImages.Clear(); _iconButtons.Clear(); _items.Clear();
+        _openContextMenus.Clear(); _motion?.Dispose(); _dockMotion?.Dispose(); _pinImages.Clear(); _pinMarkers.Clear(); _iconButtons.Clear(); _items.Clear();
     }
 }

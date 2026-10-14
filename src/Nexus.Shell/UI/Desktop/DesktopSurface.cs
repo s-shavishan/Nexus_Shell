@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Nexus.Shell.Desktop;
 using Nexus.Shell.Services;
+using Nexus.Shell.UI;
 using Windows.System;
 
 namespace Nexus.Shell.UI.Desktop;
@@ -16,6 +17,7 @@ internal sealed class DesktopSurface : Grid
     private readonly DesktopEnvironment _environment;
     private readonly Image _wallpaper = new() { Stretch = Stretch.UniformToFill, IsHitTestVisible = false };
     private readonly GridView _icons;
+    private readonly Canvas _selectionLayer = new() { IsHitTestVisible = false };
     private readonly StackPanel _widgetRail = new()
     {
         Width = 336, Spacing = 12,
@@ -66,7 +68,7 @@ internal sealed class DesktopSurface : Grid
         Children.Add(_wallpaper);
         BuildCalendar();
         BuildWidgetRail();
-        _icons = new GridView { Margin = new Thickness(20, 48, 20, 100), SelectionMode = ListViewSelectionMode.Single,
+        _icons = new GridView { Margin = new Thickness(20, 48, 20, 100), SelectionMode = ListViewSelectionMode.Extended,
             IsItemClickEnabled = false, Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
             HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Stretch };
         _icons.ItemsPanel = (ItemsPanelTemplate)XamlReader.Load("<ItemsPanelTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'><ItemsWrapGrid Orientation='Vertical' ItemWidth='108' ItemHeight='112'/></ItemsPanelTemplate>");
@@ -84,7 +86,7 @@ internal sealed class DesktopSurface : Grid
         _icons.SelectionChanged += (_, _) => { if (!_applyingIcons) _selectPath = null; };
         _icons.KeyDown += (_, args) =>
         {
-            if (_icons.SelectedItem is not DesktopShortcut item) return;
+            if (_icons.SelectedItems.Count != 1 || _icons.SelectedItem is not DesktopShortcut item) return;
             if (args.Key == VirtualKey.Enter) { environment.OpenDesktopItem(item); args.Handled = true; }
             else if (args.Key == VirtualKey.F2) { environment.RenameDesktopItem(item); args.Handled = true; }
         };
@@ -92,7 +94,7 @@ internal sealed class DesktopSurface : Grid
         {
             var item = ItemAt(args.OriginalSource);
             if (item is null) return;
-            _icons.SelectedItem = item;
+            if (!_icons.SelectedItems.Contains(item)) _icons.SelectedItem = item;
             environment.Menus.DesktopItemMenu(item).ShowAt(_icons, new FlyoutShowOptions { Position = args.GetPosition(_icons) }); args.Handled = true;
         };
         RightTapped += (_, args) =>
@@ -101,7 +103,14 @@ internal sealed class DesktopSurface : Grid
             _icons.SelectedItem = null;
             environment.Menus.DesktopMenu().ShowAt(this, new FlyoutShowOptions { Position = args.GetPosition(this) }); args.Handled = true;
         };
-        Children.Add(_icons); Children.Add(_widgetRail); Children.Add(_status);
+        Children.Add(_icons);
+        Children.Add(_selectionLayer);
+        // Start rubber-band selection only from empty desktop space. Buttons,
+        // widgets and individual app icons retain their own mouse interactions.
+        _ = new SelectionMarquee(this, _icons, _selectionLayer,
+            () => !_environment.IsStopping && _icons.Visibility == Visibility.Visible,
+            source => ItemAt(source!) is null && !IsWithin(source, _widgetRail) && !IsWithin(source, _status));
+        Children.Add(_widgetRail); Children.Add(_status);
         _clockTimer.Tick += (_, _) => RefreshClock();
         Loaded += (_, _) => { RefreshClock(); _clockTimer.Start(); };
         Unloaded += (_, _) => _clockTimer.Stop();
@@ -120,6 +129,8 @@ internal sealed class DesktopSurface : Grid
         Shortcut(this, VirtualKey.P, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, environment.ShowPlaces);
         Shortcut(this, VirtualKey.F, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, environment.ShowSearch);
         Shortcut(_icons, VirtualKey.Z, VirtualKeyModifiers.Control, environment.UndoDesktopEdit);
+        Shortcut(_icons, VirtualKey.A, VirtualKeyModifiers.Control, () => _icons.SelectAll());
+        Shortcut(_icons, VirtualKey.Escape, VirtualKeyModifiers.None, () => _icons.SelectedItems.Clear());
         ApplyAppearance();
         RefreshContent();
     }
@@ -215,6 +226,12 @@ internal sealed class DesktopSurface : Grid
         { if (element is GridViewItem container) return container.Content as DesktopShortcut; element = VisualTreeHelper.GetParent(element); }
         return null;
     }
+    private static bool IsWithin(object? source, DependencyObject ancestor)
+    {
+        for (var element = source as DependencyObject; element is not null; element = VisualTreeHelper.GetParent(element))
+            if (ReferenceEquals(element, ancestor)) return true;
+        return false;
+    }
     private void OpenDoubleTapped(object sender, DoubleTappedRoutedEventArgs args)
     { if (ItemAt(args.OriginalSource) is DesktopShortcut item) { _environment.OpenDesktopItem(item); args.Handled = true; } }
     internal void SetWorkArea(double bottomInset) => Padding = new Thickness(0, 0, 0, Math.Max(0, bottomInset));
@@ -231,13 +248,27 @@ internal sealed class DesktopSurface : Grid
         catch (Exception ex) { _environment.Report("Could not refresh desktop icons", ex); }
         finally { _refreshing = false; if (_refreshAgain && !_environment.IsStopping) { _refreshAgain = false; _ = RefreshAsync(); } }
     }
-    internal void SelectPath(string path) { _selectPath = path; ApplyIconPreferences(); _icons.Focus(FocusState.Programmatic); }
+    internal void SelectPath(string path)
+    {
+        _icons.SelectedItems.Clear();
+        _selectPath = path;
+        ApplyIconPreferences();
+        _icons.Focus(FocusState.Programmatic);
+    }
     internal void ApplyIconPreferences()
     {
-        string? selected = _selectPath ?? (_icons.SelectedItem as DesktopShortcut)?.Id;
+        var selected = _icons.SelectedItems.OfType<DesktopShortcut>()
+            .Select(item => item.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (_selectPath is not null) selected.Add(_selectPath);
         var items = DesktopCatalog.Sort(_allIcons, _environment.Session.State.DesktopIconOrder);
         _applyingIcons = true;
-        try { _icons.ItemsSource = items; _icons.SelectedItem = items.FirstOrDefault(i => string.Equals(i.Id, selected, StringComparison.OrdinalIgnoreCase)); if (_icons.SelectedItem is not null) _selectPath = null; }
+        try
+        {
+            _icons.ItemsSource = items;
+            foreach (var item in items.Where(item => selected.Contains(item.Id)))
+                _icons.SelectedItems.Add(item);
+            if (_icons.SelectedItems.Count > 0) _selectPath = null;
+        }
         finally { _applyingIcons = false; }
         RefreshContent();
     }
