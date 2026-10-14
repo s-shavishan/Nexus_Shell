@@ -500,9 +500,19 @@ internal sealed class FilesView : Grid
         {
             var menu = ShellMenu.Create(); BuildContext(menu, new FileEntry(Path.GetFileName(path), path, folder, "Fixture"));
             var policy = FileContextPolicy.For(path, folder);
-            if (menu.Items.Count > 9 || menu.Items.OfType<MenuFlyoutItem>().First().Text != policy.OpenLabel || menu.Items.OfType<MenuFlyoutItem>().Any(item => item.Text == "Open with…") != policy.OpenWith)
-                throw new InvalidOperationException("The production file context did not preserve compact type-specific actions.");
+            if (menu.Items.Count(x => x is not MenuFlyoutSeparator) > 7
+                || menu.Items.OfType<MenuFlyoutItem>().First().Text != policy.OpenLabel
+                || menu.Items.OfType<MenuFlyoutItem>().Any(item => item.Text == "Open with…") != policy.OpenWith)
+                throw new InvalidOperationException("The production file context lost its compact profile-aware actions.");
         }
+        var mixed = ShellMenu.Create();
+        BuildContext(mixed, null, [
+            new FileEntry("photo.png", @"C:\Example\photo.png", false, "Fixture"),
+            new FileEntry("script.cs", @"C:\Example\script.cs", false, "Fixture")]);
+        if (mixed.Items.Count(x => x is not MenuFlyoutSeparator) > 7
+            || mixed.Items.OfType<MenuFlyoutItem>().Any(i => i.Text is "Open" or "Run application" or "Edit")
+            || mixed.Items.OfType<MenuFlyoutItem>().First().Text != "Copy 2 items to…")
+            throw new InvalidOperationException("Mixed file selection must offer safe batch actions instead of single-file execution.");
     }
     private ContentDialog Dialog(string title, object content, string primary) => new() { XamlRoot = XamlRoot, RequestedTheme = RequestedTheme, Title = title, Content = content,
         PrimaryButtonText = primary, CloseButtonText = "Cancel", DefaultButton = ContentDialogButton.Close };
