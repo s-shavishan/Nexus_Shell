@@ -326,6 +326,17 @@
       "actions": [
         "open_with"
       ]
+    },
+    {
+      "id": "shortcuts.windows",
+      "label": "Windows shortcut",
+      "extensions": [
+        ".lnk",
+        ".url",
+        ".website"
+      ],
+      "primary": "open",
+      "actions": []
     }
   ],
   "fallback": {
