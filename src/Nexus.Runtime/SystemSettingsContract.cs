@@ -12,6 +12,12 @@ public sealed record NetworkState(LinkState[] Links, WifiAdapter[] Wifi, string 
 public sealed record BluetoothDeviceState(string Id, string Name, bool Connected, bool Paired);
 public sealed record BluetoothRadioState(string Id, string Name, bool Discoverable, BluetoothDeviceState[] Devices);
 public sealed record BluetoothState(BluetoothRadioState[] Radios, string Message);
+// Shared between Core and Shell; neither process references the other's
+// executable for native device probes.
+public static class BluetoothRadioProbePolicy
+{
+    public static bool NoRadioError(int code) => code is 0 or 2 or 55 or 259 or 433 or 1168;
+}
 public sealed record PowerPlan(string Id, string Name, bool Active);
 public sealed record PowerState(PowerPlan[] Plans, string Status, string Message);
 public sealed record DisplayModeOption(string Id, int Width, int Height, int RefreshHz);
