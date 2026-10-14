@@ -1,3 +1,5 @@
+using Nexus.Shell.Models;
+
 namespace Nexus.Shell.Services;
 
 // Only observed Window Manager helpers are excluded; ordinary windows must
@@ -7,6 +9,20 @@ public static class DockPinnedWindowPolicy
     public static bool IsShellArtifact(string? title, string? process)
         => string.Equals(process, "dwm", StringComparison.OrdinalIgnoreCase)
         && string.Equals(title?.Trim(), "DWM Notification Window", StringComparison.OrdinalIgnoreCase);
+
+    // The pin represents one app, but each additional document HWND must
+    // remain reachable from its context menu. Deduplicate by native identity
+    // and cap the flyout without making a broad process-name-only claim.
+    public static IReadOnlyList<RunningWindow> MatchingWindows(
+        string? target, string? name, IEnumerable<RunningWindow> candidates,
+        int maximum = 12)
+    {
+        if (maximum is < 1 or > 12) throw new ArgumentOutOfRangeException(nameof(maximum));
+        return candidates.Where(window => window.Handle != IntPtr.Zero && window.ProcessId > 0
+            && Matches(target, name, window.Title, window.ProcessName))
+            .DistinctBy(window => (window.Handle, window.ProcessId))
+            .Take(maximum).ToArray();
+    }
 
     public static bool Matches(string? target, string? name, string? title, string? process)
     {
