@@ -27,6 +27,14 @@ internal static class SettingsChecks
             var state = await service.ExecuteAsync(new(section), CancellationToken.None);
             Check(state.Section == section && state.Epoch == service.Epoch && state.Epoch != Guid.Empty, "The service must own the snapshot epoch.");
         }
+        Check(DisplayModePreviewPolicy.TimeoutSeconds == 18
+            && DisplayModePreviewPolicy.Remaining(new DateTimeOffset(2026, 10, 14, 12, 0, 18, TimeSpan.Zero),
+                new DateTimeOffset(2026, 10, 14, 12, 0, 0, TimeSpan.Zero)) == 18
+            && !DisplayModePreviewPolicy.Expired(new DateTimeOffset(2026, 10, 14, 12, 0, 18, TimeSpan.Zero),
+                new DateTimeOffset(2026, 10, 14, 12, 0, 17, TimeSpan.Zero))
+            && DisplayModePreviewPolicy.Expired(new DateTimeOffset(2026, 10, 14, 12, 0, 18, TimeSpan.Zero),
+                new DateTimeOffset(2026, 10, 14, 12, 0, 18, TimeSpan.Zero)),
+            "Display preview expiry must be deterministic and inclusive at the 18-second deadline.");
         int reads = backend.Calls;
         await Reject("settings-section", () => service.ExecuteAsync(new("Registry"), CancellationToken.None));
         await Reject("settings-window", () => service.ExecuteAsync(new("Sound", Window: -1), CancellationToken.None));
@@ -83,6 +91,14 @@ internal static class SettingsChecks
         var hardware = new SettingsSnapshot(service.Epoch, "Sound", Sound: new(true, "output", "Speakers", .75f, false, [new("session", "Player", .5f, true)], ""));
         var roundTrip = RuntimeProtocol.Payload<SettingsSnapshot>(RuntimeProtocol.Body(hardware));
         Check(roundTrip.Epoch == hardware.Epoch && roundTrip.Sound!.Sessions[0].Muted && roundTrip.Sound.Volume == .75f, "Hardware snapshots must survive the framed JSON contract.");
+        var displayResult = new SettingsSnapshot(service.Epoch, "Display",
+            Displays: [new DisplayState("Screen", 1920, 1080, 60, true, @"\\.\DISPLAY1",
+                [new DisplayModeOption("1920x1080@60", 1920, 1080, 60)])],
+            Preview: new DisplayModePreview(@"\\.\DISPLAY1", "1920x1080@60", 12));
+        var displayRoundTrip = RuntimeProtocol.Payload<SettingsSnapshot>(RuntimeProtocol.Body(displayResult));
+        Check(displayRoundTrip.Preview is { SecondsRemaining: 12 }
+            && displayRoundTrip.Displays?.Single().Modes?.Single().Id == "1920x1080@60",
+            "Mode preview, selected adapter and typed resolutions must survive the Core IPC JSON contract.");
         var preferences = new ShellState { QuietNotifications = true, CompactDock = true, NativeGlass = false };
         Check(preferences.Snapshot().QuietNotifications && JsonSerializer.Deserialize<ShellState>(JsonSerializer.Serialize(preferences))!.QuietNotifications, "Quiet Nexus alerts must survive snapshot and restart.");
         Check(!JsonSerializer.Deserialize<ShellState>("{}")!.QuietNotifications, "Older profiles must keep normal alerts enabled.");
