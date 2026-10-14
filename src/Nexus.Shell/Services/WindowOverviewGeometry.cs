@@ -7,6 +7,31 @@ public readonly record struct OverviewDrop(LayoutRect Bounds, string Zone);
 
 public static class WindowOverviewGeometry
 {
+    // Live HWND placement does not require the process's executable path.
+    // Project a rectangle between monitor work areas, including negative
+    // virtual-screen origins, without making a persistent saved layout.
+    public static LayoutRect ProjectBetween(LayoutRect bounds, LayoutRect source, LayoutRect destination)
+    {
+        if (bounds.Width < 1 || bounds.Height < 1 || source.Width < 1 || source.Height < 1
+            || destination.Width < 1 || destination.Height < 1)
+            throw new ArgumentException("A window and two usable monitor work areas are required.");
+        double left = Math.Clamp((bounds.X - (double)source.X) / source.Width, 0, 1);
+        double top = Math.Clamp((bounds.Y - (double)source.Y) / source.Height, 0, 1);
+        double widthFraction = Math.Clamp(bounds.Width / (double)source.Width, .05, 1);
+        double heightFraction = Math.Clamp(bounds.Height / (double)source.Height, .05, 1);
+        int width = Math.Clamp((int)Math.Round(widthFraction * destination.Width),
+            Math.Min(160, destination.Width), destination.Width);
+        int height = Math.Clamp((int)Math.Round(heightFraction * destination.Height),
+            Math.Min(120, destination.Height), destination.Height);
+        long maxX = (long)destination.X + destination.Width - width;
+        long maxY = (long)destination.Y + destination.Height - height;
+        int x = (int)Math.Clamp(destination.X + (long)Math.Round(left * destination.Width),
+            destination.X, maxX);
+        int y = (int)Math.Clamp(destination.Y + (long)Math.Round(top * destination.Height),
+            destination.Y, maxY);
+        return new(x, y, width, height);
+    }
+
     public static OverviewDrop Drag(LayoutRect work, LayoutRect original,
         double dx, double dy, int cursorX, int cursorY, double dpi)
     {
