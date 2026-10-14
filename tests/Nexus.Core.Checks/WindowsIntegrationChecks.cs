@@ -74,12 +74,25 @@ internal static class WindowsIntegrationChecks
         foreach (var tool in WindowsToolCatalog.All)
         {
             Check(DesktopSearchCatalog.Find(tool.Name).Any(command => command.Id == "system:" + tool.Id), "Every Windows tool must be reachable through Spotlight.");
-            if (tool.Kind == WindowsToolKind.SystemExecutable)
-                Check(tool.Target.EndsWith(".exe", StringComparison.Ordinal) && tool.Target.All(c => char.IsAsciiLetterOrDigit(c) || c == '.'),
-                    "Native tools must use bare allowlisted filenames, without paths or arguments.");
+            if (tool.Kind is WindowsToolKind.SystemExecutable or WindowsToolKind.ControlPanelApplet)
+                Check(WindowsToolCatalog.SafeNativeTarget(tool),
+                    "Native tools must use allowlisted System32 executables or an explicitly approved Control Panel applet, without paths or arguments.");
             if (tool.Kind == WindowsToolKind.Settings)
                 Check(tool.Target.StartsWith("ms-settings:", StringComparison.Ordinal), "Settings tools must use the Windows settings protocol.");
         }
+        var adapters = WindowsToolCatalog.Find("network-adapters");
+        Check(adapters is { Kind: WindowsToolKind.ControlPanelApplet, Target: "ncpa.cpl" }
+            && WindowsToolCatalog.SafeNativeTarget(adapters),
+            "Windows Network adapters must resolve to the approved System32 Control Panel applet.");
+        Check(!WindowsToolCatalog.SafeNativeTarget(new("injected-cpl", "Injected", "", "", "",
+                WindowsToolKind.ControlPanelApplet, "evil.cpl"))
+            && !WindowsToolCatalog.SafeNativeTarget(new("network-adapters", "Injected", "", "", "",
+                WindowsToolKind.ControlPanelApplet, @"..\\ncpa.cpl"))
+            && !WindowsToolCatalog.SafeNativeTarget(new("injected-exe", "Injected", "", "", "",
+                WindowsToolKind.SystemExecutable, @"C:\\Windows\\System32\\cmd.exe"))
+            && !WindowsToolCatalog.SafeNativeTarget(new("injected-arg", "Injected", "", "", "",
+                WindowsToolKind.SystemExecutable, "Taskmgr.exe /k")),
+            "Native tool validation must reject arbitrary applets, paths and injected command-line arguments.");
         if (OperatingSystem.IsWindows())
         {
             // Read-only native coverage; CI never changes a layout or power policy.
