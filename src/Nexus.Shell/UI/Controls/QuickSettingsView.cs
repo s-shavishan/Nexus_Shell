@@ -61,60 +61,42 @@ internal sealed class QuickSettingsView : Grid, IDisposable
         _subtitle = Label("Everything you need, close at hand.", 12, true);
         heading.Children.Add(_heading); heading.Children.Add(_subtitle); header.Children.Add(heading);
         var dismiss = ShellControls.IconButton("\uE8BB", "Close Control Center", close); Grid.SetColumn(dismiss, 1); header.Children.Add(dismiss); Children.Add(header);
-        // Four prominent modules echo the approved glass Control Center.
-        // Less frequently used Power/Desktop remain in a compact second tier,
-        // preserving the original backed-by-Core commands and keyboard focus.
+        // Dense, consistent navigation: three columns, two rows and no
+        // oversized empty second tier. Only backed-by-Core control categories.
         var nav = _nav;
-        nav.RowSpacing = 12;
-        nav.RowDefinitions.Add(new() { Height = GridLength.Auto });
-        nav.RowDefinitions.Add(new() { Height = GridLength.Auto });
-        var primary = new Grid { ColumnSpacing = 10, RowSpacing = 10 };
-        var secondary = new Grid { ColumnSpacing = 10 };
-        for (int i = 0; i < 2; i++)
-        {
-            primary.ColumnDefinitions.Add(new());
-            primary.RowDefinitions.Add(new() { Height = GridLength.Auto });
-            secondary.ColumnDefinitions.Add(new());
-        }
-        var sections = new[] { ("Sound", "\uE767"), ("Network", "\uE701"), ("Bluetooth", "\uE702"), ("Display", "\uE7F4"), ("Power", "\uE7E8"), ("Desktop", "\uE8FC") };
+        nav.ColumnSpacing = 8; nav.RowSpacing = 8;
+        for (int i = 0; i < 3; i++) nav.ColumnDefinitions.Add(new());
+        for (int i = 0; i < 2; i++) nav.RowDefinitions.Add(new() { Height = GridLength.Auto });
+        var sections = new[] { ("Sound", "\uE767"), ("Network", "\uE701"),
+            ("Display", "\uE7F4"), ("Bluetooth", "\uE702"),
+            ("Power", "\uE7E8"), ("Desktop", "\uE8FC") };
         for (int i = 0; i < sections.Length; i++)
         {
             var (name, glyph) = sections[i];
-            bool prominent = ControlCenterTilePolicy.IsPrimary(name);
-            var content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = prominent ? 12 : 9, VerticalAlignment = VerticalAlignment.Center };
-            var badge = ShellControls.Badge(glyph, environment.Theme, prominent ? 36 : 28);
+            var content = new StackPanel
+            {
+                Orientation = Orientation.Horizontal, Spacing = 7,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            var badge = ShellControls.Badge(glyph, environment.Theme, 27);
             _badges.Add(badge); content.Children.Add(badge);
-            var label = Label(name, prominent ? 13 : 12);
-            label.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
+            var label = Label(name, 12); label.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
             label.VerticalAlignment = VerticalAlignment.Center; content.Children.Add(label);
             var button = ActionButton(name, () => Navigate(name));
-            button.Content = content;
-            button.MinHeight = ControlCenterTilePolicy.Height(name);
+            button.Content = content; button.MinHeight = 46;
+            button.Padding = new Thickness(8, 5, 8, 5);
             button.HorizontalAlignment = HorizontalAlignment.Stretch;
             button.HorizontalContentAlignment = HorizontalAlignment.Left;
-            button.Padding = prominent ? new Thickness(12, 9, 12, 9) : new Thickness(10, 7, 10, 7);
-            button.CornerRadius = new CornerRadius(ControlCenterTilePolicy.Radius(name));
+            button.CornerRadius = new CornerRadius(13);
             button.BorderThickness = new Thickness(1);
             _tabs[name] = button;
-            if (prominent)
-            {
-                Grid.SetRow(button, i / 2);
-                Grid.SetColumn(button, i % 2);
-                primary.Children.Add(button);
-            }
-            else
-            {
-                Grid.SetColumn(button, i - 4);
-                secondary.Children.Add(button);
-            }
+            Grid.SetColumn(button, i % 3); Grid.SetRow(button, i / 3);
+            nav.Children.Add(button);
         }
-        nav.Children.Add(primary);
-        Grid.SetRow(secondary, 1);
-        nav.Children.Add(secondary);
         Grid.SetRow(nav, 1); Children.Add(nav);
         var scroll = new ScrollViewer { Content = _body, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
         Grid.SetRow(scroll, 2); Children.Add(scroll);
-        var footer = new StackPanel { Spacing = 8 }; footer.Children.Add(_error); footer.Children.Add(_progress); _status = Label("", 11, true); AutomationProperties.SetLiveSetting(_status, AutomationLiveSetting.Polite); footer.Children.Add(_status);
+        var footer = new StackPanel { Spacing = 6 }; footer.Children.Add(_error); footer.Children.Add(_progress); _status = Label("", 11, true); AutomationProperties.SetLiveSetting(_status, AutomationLiveSetting.Polite); footer.Children.Add(_status);
         _expand = ActionButton("All controls", environment.Expand); _expand.Visibility = Visibility.Collapsed; footer.Children.Add(_expand);
         var tools = new Grid { ColumnSpacing = 6 }; tools.ColumnDefinitions.Add(new()); tools.ColumnDefinitions.Add(new() { Width = GridLength.Auto }); tools.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
         tools.Children.Add(ActionButton("More options…", Advanced));
@@ -143,9 +125,9 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     }
     private StackPanel Card(string title, string? detail = null)
     {
-        var body = new StackPanel { Spacing = 13 }; var heading = Label(title, 15); heading.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold; body.Children.Add(heading);
+        var body = new StackPanel { Spacing = 8 }; var heading = Label(title, 14); heading.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold; body.Children.Add(heading);
         if (!string.IsNullOrWhiteSpace(detail)) body.Children.Add(Label(detail, 12, true));
-        var card = new Border { Child = body, Padding = new Thickness(17), CornerRadius = new CornerRadius(_environment.Theme.HighContrast ? 0 : MidnightGlassMetrics.CardRadius), BorderThickness = new Thickness(1),
+        var card = new Border { Child = body, Padding = new Thickness(12, 11, 12, 11), CornerRadius = new CornerRadius(_environment.Theme.HighContrast ? 0 : MidnightGlassMetrics.CardRadius), BorderThickness = new Thickness(1),
             Background = _environment.Theme.Material("Card", _environment.State.NativeGlass), BorderBrush = _environment.Theme.Edge };
         _cards.Add(card); _body.Children.Add(card); return body;
     }
@@ -181,8 +163,19 @@ internal sealed class QuickSettingsView : Grid, IDisposable
         if (_tabs.TryGetValue("Bluetooth", out var bluetooth))
             bluetooth.Visibility = BluetoothRadioAvailability.ShowControls(BluetoothRadioAvailability.Detect())
                 ? Visibility.Visible : Visibility.Collapsed;
+        ReflowNavigation();
         _expand.Visibility = compact ? Visibility.Visible : Visibility.Collapsed;
         Navigate(section ?? _section);
+    }
+    private void ReflowNavigation()
+    {
+        int offset = 0;
+        foreach (string section in new[] { "Sound", "Network", "Display", "Bluetooth", "Power", "Desktop" })
+        {
+            if (!_tabs.TryGetValue(section, out var tab) || tab.Visibility == Visibility.Collapsed) continue;
+            Grid.SetRow(tab, offset / 3); Grid.SetColumn(tab, offset % 3);
+            offset++;
+        }
     }
     private void Navigate(string section)
     {
@@ -325,9 +318,12 @@ internal sealed class QuickSettingsView : Grid, IDisposable
                 };
                 card.Children.Add(control);
             }
-            var options = Card("Display controls",
-                "Configure resolution, scaling, projection and night light in Windows.");
-            options.Children.Add(DeviceButton("Open display settings", Advanced));
+            var options = Card("Display tools", "Native Windows controls for resolution, projection and night light.");
+            var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+            actions.Children.Add(DeviceButton("Settings", Advanced));
+            actions.Children.Add(DeviceButton("Project…", () => _environment.OpenWindowsTool("project-display")));
+            options.Children.Add(actions);
+            options.Children.Add(DeviceButton("Night light…", () => _environment.OpenWindowsTool("night-light")));
         }
         _syncing = true;
         try { if (brightness?.Available == true && _brightness is not null) { double value = Pending("brightness", brightness.DeviceId)?.Value ?? brightness.Percent; _brightness.Value = value; _brightnessLabel!.Text = brightness.Device + " · " + Math.Round(value) + "%"; } else if (_brightnessLabel is not null) _brightnessLabel.Text = brightness?.Message ?? "Brightness is unavailable."; }
@@ -338,7 +334,11 @@ internal sealed class QuickSettingsView : Grid, IDisposable
         foreach (var link in state.Links)
         {
             var card = Card(link.Name, link.Kind + " · " + link.State + (link.SpeedMbps > 0 ? $" · {link.SpeedMbps} Mbps" : ""));
-            var info = Label($"Address: {link.Address}\nGateway: {link.Gateway}\nDNS: {link.Dns}", 11, true); info.IsTextSelectionEnabled = true; card.Children.Add(info);
+            var info = Label($"Address: {link.Address}\nGateway: {link.Gateway}\nDNS: {link.Dns}", 11, true);
+            info.IsTextSelectionEnabled = true; info.Visibility = Visibility.Collapsed;
+            card.Children.Add(info);
+            card.Children.Add(ActionButton("Details", () => info.Visibility =
+                info.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible));
         }
         foreach (var adapter in state.Wifi)
         {
@@ -359,7 +359,11 @@ internal sealed class QuickSettingsView : Grid, IDisposable
                 }
             }
         }
-        if (state.Message.Length != 0) Card("Network support", state.Message);
+        if (state.Message.Length != 0 && (state.Wifi.Length > 0 || state.Links.Length == 0))
+            Card("Connection status", state.Message);
+        var tools = Card("Network tools");
+        tools.Children.Add(DeviceButton("Windows network settings", () => _environment.OpenWindowsTool("network-settings")));
+        tools.Children.Add(DeviceButton("Network adapters", () => _environment.OpenWindowsTool("network-adapters")));
     }
     private void JoinEditor(StackPanel card, string adapter, WifiNetwork network)
     {
@@ -382,8 +386,7 @@ internal sealed class QuickSettingsView : Grid, IDisposable
         if (_tabs.TryGetValue("Bluetooth", out var tile))
         {
             tile.Visibility = supported ? Visibility.Visible : Visibility.Collapsed;
-            if (_tabs.TryGetValue("Display", out var display))
-                Grid.SetColumn(display, supported ? 1 : 0);
+            ReflowNavigation();
         }
         _scan.Visibility = _section == "Bluetooth" && !supported
             ? Visibility.Collapsed : _scan.Visibility;
@@ -396,6 +399,11 @@ internal sealed class QuickSettingsView : Grid, IDisposable
         }
         if (state.Message.Length > 0)
             Card(supported ? "Bluetooth status" : "Bluetooth unavailable", state.Message);
+        if (supported)
+        {
+            var tools = Card("Bluetooth settings");
+            tools.Children.Add(DeviceButton("Devices and pairing…", () => _environment.OpenWindowsTool("bluetooth-settings")));
+        }
     }
     private void RenderPower(Nexus.Runtime.PowerState state)
     {
