@@ -77,3 +77,18 @@ The follow-up also now:
 - Adds portable policy tests for action labels, 18-window menu input, deduplication, 12-entry cap, process spoofing and invalid limits.
 
 **Remaining quality gate:** P3.0 is still source-only until branch AppVeyor, Windows 10 VirtualBox and Windows 11 interactive verification. In particular validate no hovering popup remains after moving between pins and running icons, and no preview is attempted for an invalid or closed HWND.
+
+
+## P3.0 continuation — functional, compact Network control panel
+
+The old Network page constructed one full card for every Windows network interface (including disconnected virtual adapters) and an unbounded vertical stack of Wi-Fi scan results. On systems with multiple virtual NICs, this made the active connection difficult to locate. The new source:
+
+- Sorts native adapters deterministically with **all connected interfaces first**; keeps those and up to two adapter rows visible. Remaining down/offline adapters are available through an explicit **Show other adapters** disclosure, not discarded.
+- Orders nearby Wi-Fi entries by connected state then signal strength; shows six first and provides **More networks** to disclose the remaining rows. Existing Windows-native Connect, Disconnect, WPA2 join, Forget with confirmation, radio toggle and scan requests remain wired to Core.
+- Offers single-row adapter tools for native Windows Network settings and the explicitly allowlisted Network Adapters applet. Address/gateway/DNS details and Copy IP remain available in each adapter card without consuming default vertical space.
+- Uses pure `NetworkPresentationPolicy` linked into `Nexus.Core.Checks`; tests active-first order, all connected interfaces staying visible under 8+ active adapters, connected-first Wi-Fi ordering, and six-row threshold.
+- Does not create a fake Wi-Fi implementation when no radio exists. The existing native WLAN unavailable message and wired adapter tools continue to work.
+
+**Windows acceptance**: Test Ethernet-only Windows 10 VM, real Wi-Fi with saved/unsaved WPA2 profiles, 10+ virtual/disabled NICs and 10+ nearby SSIDs. Open **More networks**; ensure a refresh doesn't corrupt the panel or submit a command unexpectedly. Verify failed native connection requests show errors, and password text clears after submission or cancel. Do not claim secure Wi-Fi pairing or hardware support without real tests.
+
+**Current test status**: source and portable policy checks added; complete .NET build / Windows UI acceptance for this revision is pending.
