@@ -182,7 +182,7 @@ public sealed partial class MainWindow
         var clock = Group("Clock"); clock.Children.Add(Toggle("24-hour time", "Use 24-hour time in the Nexus menu bar and dock.", () => _state.Clock24Hour, v => _state.Clock24Hour = v));
         clock.Children.Add(Toggle("Desktop date card", "Show the date card when focus desktop is off.", () => _state.ShowClockWidget, v => _state.ShowClockWidget = v)); PageContent.Children.Add(Card(clock, "clock"));
         var alerts = Group("Notifications"); alerts.Children.Add(Toggle("Quiet notifications", "Keep new alerts in the inbox without desktop banners.", () => _state.QuietNotifications, v => _state.QuietNotifications = v));
-        alerts.Children.Add(ActionButton("Open notification inbox", _environment.ShowNotifications)); PageContent.Children.Add(Card(alerts, "notifications"));
+        alerts.Children.Add(ActionButton("Open Nexus activity", _environment.ShowNotifications)); PageContent.Children.Add(Card(alerts, "notifications"));
     }
     private void BuildPrivacy()
     {

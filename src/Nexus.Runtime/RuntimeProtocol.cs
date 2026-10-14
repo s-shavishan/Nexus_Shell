@@ -16,10 +16,11 @@ public static class RuntimeOperations
     public const string PanelSync = "panel.sync", PanelPulse = "panel.pulse", PanelReady = "panel.ready", PanelHide = "panel.hide", PanelAction = "panel.action";
     public const string PanelWait = "panel.wait";
     public const string FileJobs = "jobs.list", SubmitFileJob = "jobs.submit", ControlFileJob = "jobs.control";
+    public const string WindowsFileAction = "windows.file", WindowsFileStatus = "windows.file.status";
     public static bool Allows(string role, string operation) => role switch
     {
-        "desktop" => operation is Health or Stop or ReadState or CommitState or OpenFiles or Settings or PanelSync or Search or FileJobs or SubmitFileJob or ControlFileJob,
-        "files" => operation is Work or Next or Ready or Complete or Pulse or OpenFiles or FileJobs or SubmitFileJob,
+        "desktop" => operation is Health or Stop or ReadState or CommitState or OpenFiles or Settings or PanelSync or Search or FileJobs or SubmitFileJob or ControlFileJob or WindowsFileAction or WindowsFileStatus,
+        "files" => operation is Work or Next or Ready or Complete or Pulse or OpenFiles or FileJobs or SubmitFileJob or WindowsFileAction or WindowsFileStatus,
         "controlcenter" => operation is PanelPulse or PanelWait or PanelReady or PanelHide or PanelAction or Settings,
         _ => false
     };
@@ -37,7 +38,7 @@ public sealed record FilesReady(Guid OperationId, long Window);
 public sealed record FilesCompletion(Guid OperationId, string[] Paths);
 public sealed record FilesResult(int ProcessId, long Window, string[] Paths);
 public sealed record AppearanceSettings(string Wallpaper, bool NativeGlass, bool ReducedEffects, bool Animations = true, string GlassStyle = Nexus.Shell.Services.GlassStyle.Default, string GlassQuality = Nexus.Shell.Services.GlassQuality.Default);
-public sealed record RuntimeHealth(int CoreProcessId, long Revision, int FilesProcesses, Guid IssueId, string Issue);
+public sealed record RuntimeHealth(int CoreProcessId, long Revision, int FilesProcesses, Guid IssueId, string Issue, int WindowsFileProcesses = 0);
 
 public sealed class RuntimeFailure(string code, string message) : Exception(message)
 { public string Code { get; } = code; }

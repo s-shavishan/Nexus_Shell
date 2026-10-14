@@ -674,12 +674,15 @@
    <Style TargetType="FlyoutPresenter">
     <Setter Property="Background" Value="{ThemeResource NexusPanel}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusBorder}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="18"/><Setter Property="Padding" Value="8"/>
    </Style>
-   <Style TargetType="MenuFlyoutPresenter">
-    <Setter Property="Background" Value="{ThemeResource NexusPanel}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusBorder}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="16"/><Setter Property="Padding" Value="6"/>
+   <Style x:Key="NexusContextPresenter" TargetType="MenuFlyoutPresenter">
+    <Setter Property="Background" Value="{ThemeResource NexusPanel}"/><Setter Property="BorderBrush" Value="{ThemeResource NexusBorder}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="12"/><Setter Property="Padding" Value="4"/><Setter Property="MinWidth" Value="208"/><Setter Property="MaxWidth" Value="360"/><Setter Property="MaxHeight" Value="520"/>
    </Style>
+   <Style TargetType="MenuFlyoutPresenter" BasedOn="{StaticResource NexusContextPresenter}"/>
    <Style TargetType="MenuFlyoutItem">
-    <Setter Property="FontSize" Value="13"/><Setter Property="MinHeight" Value="32"/><Setter Property="Padding" Value="12,6"/><Setter Property="CornerRadius" Value="7"/>
+    <Setter Property="FontSize" Value="12"/><Setter Property="MinHeight" Value="30"/><Setter Property="Padding" Value="10,5"/><Setter Property="CornerRadius" Value="6"/>
    </Style>
+   <Style TargetType="MenuFlyoutSubItem"><Setter Property="FontSize" Value="12"/><Setter Property="MinHeight" Value="30"/><Setter Property="Padding" Value="10,5"/><Setter Property="CornerRadius" Value="6"/></Style>
+   <Style TargetType="ToggleMenuFlyoutItem"><Setter Property="FontSize" Value="12"/><Setter Property="MinHeight" Value="30"/><Setter Property="Padding" Value="10,5"/><Setter Property="CornerRadius" Value="6"/></Style>
    <Style TargetType="ToggleSwitch"><Setter Property="Foreground" Value="{ThemeResource NexusText}"/><Setter Property="FontSize" Value="13"/></Style>
    <Style TargetType="Slider"><Setter Property="MinHeight" Value="32"/></Style>
    <Style TargetType="CheckBox"><Setter Property="Foreground" Value="{ThemeResource NexusText}"/><Setter Property="FontSize" Value="13"/><Setter Property="MinHeight" Value="32"/></Style>

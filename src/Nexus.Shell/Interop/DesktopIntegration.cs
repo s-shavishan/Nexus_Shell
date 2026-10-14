@@ -148,13 +148,18 @@ internal sealed class DesktopIntegration : IDisposable
         if (menu == IntPtr.Zero) return;
         try
         {
-            AppendMenu(menu, 0, new UIntPtr(1), "Open Nexus");
+            AppendMenu(menu, 0, new UIntPtr(1), "Nexus Controls");
             AppendMenu(menu, 0, new UIntPtr(2), "Launchpad");
+            AppendMenu(menu, 0, new UIntPtr(3), "Windows calendar");
+            AppendMenu(menu, 0, new UIntPtr(4), "Windows notifications");
+            AppendMenu(menu, 0x0800, UIntPtr.Zero, "");
+            AppendMenu(menu, 0, new UIntPtr(5), "About Nexus");
             if (!GetCursorPos(out var point)) return;
             SetForegroundWindow(_window);
             uint chosen = TrackPopupMenuEx(menu, 0x0100 | 0x0002, point.X, point.Y, _window, IntPtr.Zero);
             PostMessage(_window, 0, UIntPtr.Zero, IntPtr.Zero);
-            if (chosen is 1 or 2) _dispatch(chosen == 1 ? "show" : "start");
+            string? command = chosen switch { 1 => "show", 2 => "start", 3 => "windows-calendar", 4 => "windows-notifications", 5 => "about", _ => null };
+            if (command is not null) _dispatch(command);
         }
         finally { DestroyMenu(menu); }
     }

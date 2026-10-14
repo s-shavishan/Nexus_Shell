@@ -152,6 +152,13 @@ internal sealed class CoreProcessSession : IAsyncDisposable
         var client = await ClientAsync().ConfigureAwait(false);
         return await client.CallAsync<FileJobsSnapshot>(operation, payload, TimeSpan.FromSeconds(5), linked.Token).ConfigureAwait(false);
     }
+    internal async Task<WindowsFileActionStatus> WindowsFileAsync(string operation, object payload, CancellationToken cancellation)
+    {
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellation, _operations.Token);
+        var client = await ClientAsync().ConfigureAwait(false);
+        if (_process is { HasExited: false }) Interop.WindowsShellBridge.AllowForeground(_process.Id);
+        return await client.CallAsync<WindowsFileActionStatus>(operation, payload, TimeSpan.FromSeconds(5), linked.Token).ConfigureAwait(false);
+    }
     public async ValueTask DisposeAsync()
     {
         _disposed = true; _operations.Cancel();

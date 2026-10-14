@@ -9,6 +9,7 @@ using Nexus.Shell.Desktop;
 using Nexus.Shell.Interop;
 using Nexus.Shell.Services;
 using Nexus.Runtime.Transfers;
+using Nexus.Shell.UI.Menus;
 using Windows.System;
 
 namespace Nexus.Shell.UI.Files;
@@ -61,7 +62,7 @@ internal sealed class FilesView : Grid
     private readonly LatestWorkQueue _navigation = new(), _previews = new();
     internal FilesView(FilesEnvironment environment, FileSelectionRequest request, Action<IReadOnlyList<string>> complete)
     {
-        _environment = environment; _request = request; _complete = complete; Padding = new Thickness(18); RowSpacing = 14;
+        _environment = environment; _request = request; _complete = complete; Padding = new Thickness(18); RowSpacing = 14; IsHitTestVisible = !environment.Validation;
         _slowRead.Tick += (_, _) =>
         {
             _slowRead.Stop();
@@ -101,10 +102,11 @@ internal sealed class FilesView : Grid
             ("Documents", Environment.SpecialFolder.MyDocuments), ("Pictures", Environment.SpecialFolder.MyPictures), ("Music", Environment.SpecialFolder.MyMusic), ("Videos", Environment.SpecialFolder.MyVideos) })
         { string path = Environment.GetFolderPath(place.Item2); if (path.Length > 0) places.Children.Add(PlaceButton(place.Item1, path)); }
         string downloads = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-        if (Directory.Exists(downloads)) places.Children.Add(PlaceButton("Downloads", downloads));
+        if (environment.Validation || Directory.Exists(downloads)) places.Children.Add(PlaceButton("Downloads", downloads));
         if (request.Kind == FileSelectionKind.Browse) places.Children.Add(PlaceButton("Recycle Bin", "nexus:recycle"));
         places.Children.Add(new TextBlock { Text = "LOCATIONS", FontSize = 11, Foreground = environment.Theme.Brush("NexusMuted"), Margin = new Thickness(9, 15, 0, 6) });
-        foreach (var drive in DriveInfo.GetDrives().Take(26))
+        if (environment.Validation) places.Children.Add(PlaceButton("C:\\", "C:\\"));
+        else foreach (var drive in DriveInfo.GetDrives().Take(26))
         { string path = drive.RootDirectory.FullName; places.Children.Add(PlaceButton(path, path)); }
         _placesCard.Child = new ScrollViewer { Content = places, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
         body.Children.Add(_placesCard);
@@ -149,12 +151,7 @@ internal sealed class FilesView : Grid
             {
                 var renameKey = new KeyboardAccelerator { Key = VirtualKey.F2 }; renameKey.Invoked += async (_, e) => { e.Handled = true; try { await RenameAsync(); } catch (Exception error) { ShowError(error); } }; view.KeyboardAccelerators.Add(renameKey);
                 var undoKey = new KeyboardAccelerator { Key = VirtualKey.Z, Modifiers = VirtualKeyModifiers.Control }; undoKey.Invoked += async (_, e) => { e.Handled = true; try { await UndoAsync(); } catch (Exception error) { ShowError(error); } }; view.KeyboardAccelerators.Add(undoKey);
-                var context = new MenuFlyout(); var rename = new MenuFlyoutItem { Text = "Rename…" }; var undo = new MenuFlyoutItem { Text = "Undo file edit" };
-                rename.Click += async (_, _) => { try { await RenameAsync(); } catch (Exception error) { ShowError(error); } }; undo.Click += async (_, _) => { try { await UndoAsync(); } catch (Exception error) { ShowError(error); } }; context.Items.Add(rename); context.Items.Add(undo);
-                var copy = new MenuFlyoutItem { Text = "Copy to…" }; var move = new MenuFlyoutItem { Text = "Move to…" };
-                copy.Click += async (_, _) => await TransferAsync(FileJobKind.Copy); move.Click += async (_, _) => await TransferAsync(FileJobKind.Move); context.Items.Add(copy); context.Items.Add(move);
-                context.Opening += (_, _) => copy.IsEnabled = move.IsEnabled = !_dialog && !_navigating && !_recycle && ActiveList.SelectedItem is FileEntry;
-                context.Opening += (_, _) => { rename.IsEnabled = !_dialog && !_navigating && !_recycle && ActiveList.SelectedItem is FileEntry; undo.Text = _edits.UndoLabel; undo.IsEnabled = !_dialog && !_navigating && _edits.CanUndo; }; view.ContextFlyout = context;
+                var context = ShellMenu.Create(); context.Opening += (_, _) => BuildContext(context, view.SelectedItem as FileEntry); view.ContextFlyout = context;
                 view.RightTapped += (_, args) => view.SelectedItem = ItemAt(view, args.OriginalSource);
             }
         }
@@ -167,7 +164,7 @@ internal sealed class FilesView : Grid
         contentHeader.Children.Add(_folderHeading);
         var views = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
         _gridButton = Button("Grid", () => { _showGrid = true; Render(); return Task.CompletedTask; }); _listButton = Button("List", () => { _showGrid = false; Render(); return Task.CompletedTask; }); views.Children.Add(_gridButton); views.Children.Add(_listButton);
-        _rename = Button("Rename…", RenameAsync); _undo = Button("Undo edit", UndoAsync);
+        _rename = Button("Rename…", () => RenameAsync()); _undo = Button("Undo edit", UndoAsync);
         _rename.Visibility = _undo.Visibility = request.Kind == FileSelectionKind.Browse ? Visibility.Visible : Visibility.Collapsed;
         views.Children.Add(_rename); views.Children.Add(_undo);
         foreach (string sort in new[] { "Name", "Newest", "Size", "Kind" }) _sort.Items.Add(sort);
@@ -228,7 +225,7 @@ internal sealed class FilesView : Grid
     private Button Button(string title, Func<Task> action)
     {
         var button = new Button { Content = title, Style = (Style)Application.Current.Resources["QuietButton"], HorizontalAlignment = HorizontalAlignment.Stretch };
-        button.Click += async (_, _) => { if (_dialog || _closed) return; button.IsEnabled = false; try { await action(); } catch (Exception ex) { ShowError(ex); } finally { if (!_closed) { button.IsEnabled = true; UpdateActions(); } } }; return button;
+        button.Click += async (_, _) => { if (_dialog || _closed || _environment.Validation) return; button.IsEnabled = false; try { await action(); } catch (Exception ex) { ShowError(ex); } finally { if (!_closed) { button.IsEnabled = true; UpdateActions(); } } }; return button;
     }
     private Button PlaceButton(string title, string path)
     {
@@ -240,7 +237,7 @@ internal sealed class FilesView : Grid
     }
     internal async Task NavigateAsync(string path, int historyMove = 0)
     {
-        if (_closed || _dialog || (historyMove != 0 && _navigating)) return;
+        if (_closed || _dialog || _environment.Validation || (historyMove != 0 && _navigating)) return;
         int version = ++_navigationVersion; _navigating = true;
         ResetPreview(); UpdateActions(); _status.Text = "Opening folder…"; _loading.IsActive = true;
         _slowRead.Stop(); _slowRead.Start();
@@ -346,9 +343,10 @@ internal sealed class FilesView : Grid
         finally { _dialog = false; if (!_closed) UpdateActions(); }
         await NavigateAsync(_folder);
     }
-    private async Task RenameAsync()
+    private async Task RenameAsync(FileEntry? target = null)
     {
-        if (_closed || _dialog || _navigating || _recycle || _request.Kind != FileSelectionKind.Browse || ActiveList.SelectedItem is not FileEntry item) return;
+        var item = target ?? ActiveList.SelectedItem as FileEntry;
+        if (_closed || _dialog || _navigating || _recycle || _request.Kind != FileSelectionKind.Browse || item is null) return;
         _dialog = true; UpdateActions(); string? destination = null;
         try
         {
@@ -379,14 +377,59 @@ internal sealed class FilesView : Grid
         await NavigateAsync("nexus:recycle");
     }
     internal void ShowMessage(string message) { if (!_closed) _status.Text = message; }
-    private async Task TransferAsync(FileJobKind kind)
+    private async Task TransferAsync(FileJobKind kind, FileEntry? target = null)
     {
-        if (_closed || _dialog || _navigating || _recycle || ActiveList.SelectedItem is not FileEntry item) return;
+        var item = target ?? ActiveList.SelectedItem as FileEntry;
+        if (_closed || _dialog || _navigating || _recycle || item is null) return;
         _dialog = true;
         try { await _environment.QueueTransferAsync([item.Path], kind); }
         catch (OperationCanceledException) when (_closed) { }
         catch (Exception error) { if (!_closed) ShowError(error); }
         finally { _dialog = false; UpdateActions(); }
+    }
+    private void BuildContext(MenuFlyout menu, FileEntry? target)
+    {
+        menu.Items.Clear();
+        if (_closed || _navigating || _dialog || _recycle) { menu.Items.Add(new MenuFlyoutItem { Text = "File actions unavailable", IsEnabled = false }); return; }
+        if (target is null)
+        {
+            menu.Items.Add(ShellMenu.Action("New folder…", () => RunContextAsync(NewFolderAsync), "\uE8F4", enabled: _folder.Length > 0));
+            menu.Items.Add(ShellMenu.Action("Refresh", () => RunContextAsync(() => NavigateAsync(_folder)), "\uE72C", "F5"));
+            var view = ShellMenu.Group("View", "\uE8A9"); view.Items.Add(ShellMenu.Toggle("List", !_showGrid, () => { _showGrid = false; Render(); })); view.Items.Add(ShellMenu.Toggle("Grid", _showGrid, () => { _showGrid = true; Render(); })); menu.Items.Add(view);
+            if (_request.Kind == FileSelectionKind.Browse) menu.Items.Add(ShellMenu.Action("Open folder in Windows Explorer", () => _environment.OpenTarget(_folder), "\uED25"));
+            return;
+        }
+        // A context invocation keeps its original target even if selection or
+        // a folder refresh changes before the user chooses an action.
+        var policy = FileContextPolicy.For(target.Path, target.IsFolder);
+        menu.Items.Add(ShellMenu.Action(policy.OpenLabel, () => RunContextAsync(() => OpenAsync(target)), policy.Icon));
+        if (policy.OpenWith) menu.Items.Add(ShellMenu.Action("Open with…", () => RunContextAsync(() => _environment.WindowsFileAsync(target.Path, "open-with")), "\uE8A5"));
+        menu.Items.Add(new MenuFlyoutSeparator());
+        var transfer = ShellMenu.Group("Transfer", "\uE8B7"); transfer.Items.Add(ShellMenu.Action("Copy to…", () => RunContextAsync(() => TransferAsync(FileJobKind.Copy, target)), "\uE8C8")); transfer.Items.Add(ShellMenu.Action("Move to…", () => RunContextAsync(() => TransferAsync(FileJobKind.Move, target)), "\uE8DE")); menu.Items.Add(transfer);
+        menu.Items.Add(ShellMenu.Action("Rename…", () => RunContextAsync(() => RenameAsync(target)), "\uE8AC", "F2"));
+        var more = ShellMenu.Group("More", "\uE712");
+        more.Items.Add(ShellMenu.Action("Copy path", () =>
+        {
+            var data = new Windows.ApplicationModel.DataTransfer.DataPackage(); data.SetText(target.Path);
+            try { Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(data); _status.Text = "Path copied."; } catch (Exception error) { ShowError(error); }
+        }, "\uE8C8"));
+        more.Items.Add(ShellMenu.Action("Show in Windows Explorer", () => RunContextAsync(() => _environment.WindowsFileAsync(target.Path, "reveal")), "\uED25"));
+        more.Items.Add(ShellMenu.Action("Properties…", () => RunContextAsync(() => _environment.WindowsFileAsync(target.Path, "properties")), "\uE946"));
+        if (_edits.CanUndo) more.Items.Add(ShellMenu.Action(_edits.UndoLabel, () => RunContextAsync(UndoAsync), "\uE7A7", "Ctrl+Z")); menu.Items.Add(more);
+        menu.Items.Add(new MenuFlyoutSeparator()); menu.Items.Add(ShellMenu.Action("Windows options…", () => RunContextAsync(() => _environment.WindowsFileAsync(target.Path, "menu")), "\uE713"));
+    }
+    private async void RunContextAsync(Func<Task> action)
+    { try { if (!_closed && !_environment.Validation) await action(); } catch (OperationCanceledException) when (_closed) { } catch (Exception error) { if (!_closed) ShowError(error); } }
+    internal void VerifyValidationContexts()
+    {
+        if (!_environment.Validation) throw new InvalidOperationException("Context-menu validation requires an isolated Files fixture.");
+        foreach (var (path, folder) in new[] { (@"C:\Example\Folder", true), (@"C:\Example\photo.png", false), (@"C:\Example\music.flac", false), (@"C:\Example\archive.zip", false), (@"C:\Example\setup.exe", false), (@"C:\Example\unknown.custom", false) })
+        {
+            var menu = ShellMenu.Create(); BuildContext(menu, new FileEntry(Path.GetFileName(path), path, folder, "Fixture"));
+            var policy = FileContextPolicy.For(path, folder);
+            if (menu.Items.Count > 9 || menu.Items.OfType<MenuFlyoutItem>().First().Text != policy.OpenLabel || menu.Items.OfType<MenuFlyoutItem>().Any(item => item.Text == "Open with…") != policy.OpenWith)
+                throw new InvalidOperationException("The production file context did not preserve compact type-specific actions.");
+        }
     }
     private ContentDialog Dialog(string title, object content, string primary) => new() { XamlRoot = XamlRoot, RequestedTheme = RequestedTheme, Title = title, Content = content,
         PrimaryButtonText = primary, CloseButtonText = "Cancel", DefaultButton = ContentDialogButton.Close };

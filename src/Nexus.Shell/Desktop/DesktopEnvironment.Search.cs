@@ -45,7 +45,12 @@ internal sealed partial class DesktopEnvironment
             case "bluetooth": ShowControlCenter("Bluetooth"); break;
             case "power": ShowControlCenter("Power"); break;
             case "appearance": ShowControls("Personalize"); break;
-            case "notifications": ShowNotifications(); break;
+            case "notifications": OpenWindowsSurface(WindowsShellSurface.Notifications); break;
+            case "calendar": OpenWindowsSurface(WindowsShellSurface.Calendar); break;
+            case "about": ShowAbout(); break;
+            case "activity": ShowNotifications(); break;
+            case "windows-clipboard": OpenWindowsSurface(WindowsShellSurface.Clipboard); break;
+            case "task-view": OpenWindowsSurface(WindowsShellSurface.TaskView); break;
             case "clipboard": ShowClipboardShelf(); break;
             case "status": ShowSessionStatus(); break;
             case "guide": ShowDesktopGuide(); break;

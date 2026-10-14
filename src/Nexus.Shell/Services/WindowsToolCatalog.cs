@@ -20,6 +20,8 @@ public static class WindowsToolCatalog
         new("storage", "Storage settings", "Review drive space and storage options", "Windows settings", "disk cleanup space", WindowsToolKind.Settings, "ms-settings:storagesense"),
         new("default-apps", "Default apps", "Choose apps for links and file types", "Windows settings", "browser associations", WindowsToolKind.Settings, "ms-settings:defaultapps"),
         new("language", "Language & keyboard", "Manage Windows languages and input methods", "Windows settings", "typing sinhala tamil english layout", WindowsToolKind.Settings, "ms-settings:regionlanguage"),
+        new("date-time", "Date & time", "Windows clock, time zone and synchronization", "Windows settings", "calendar clock timezone daylight", WindowsToolKind.Settings, "ms-settings:dateandtime"),
+        new("notifications", "Notification settings", "Windows app notifications and alerts", "Windows settings", "action center do not disturb focus", WindowsToolKind.Settings, "ms-settings:notifications"),
         new("accessibility", "Accessibility", "Windows vision, hearing and interaction options", "Windows settings", "ease access contrast magnifier narrator", WindowsToolKind.Settings, "ms-settings:easeofaccess"),
         new("windows-update", "Windows Update", "Review Windows updates", "Windows settings", "security patches upgrade", WindowsToolKind.Settings, "ms-settings:windowsupdate"),
         new("resource-monitor", "Resource Monitor", "Inspect CPU, disk, network and memory activity", "System tools", "performance processes", WindowsToolKind.SystemExecutable, "resmon.exe"),

@@ -1,7 +1,7 @@
 using Nexus.Runtime.Transfers;
 namespace Nexus.Runtime;
 
-public sealed class CoreRouter(CoreStateRepository state, FilesCoordinator files, SystemSettingsCoordinator? settings = null, ControlCenterCoordinator? panels = null, SearchCoordinator? search = null, FileJobCoordinator? jobs = null)
+public sealed class CoreRouter(CoreStateRepository state, FilesCoordinator files, SystemSettingsCoordinator? settings = null, ControlCenterCoordinator? panels = null, SearchCoordinator? search = null, FileJobCoordinator? jobs = null, WindowsFileActionCoordinator? windowsFiles = null)
 {
     private int _stop;
     public bool StopRequested => Volatile.Read(ref _stop) != 0;
@@ -13,7 +13,16 @@ public sealed class CoreRouter(CoreStateRepository state, FilesCoordinator files
         {
             case RuntimeOperations.Health:
                 var health = files.Health();
-                return RuntimeProtocol.Success(request.Id, new RuntimeHealth(Environment.ProcessId, state.Revision, health.Count, health.IssueId, health.Issue));
+                var shell = windowsFiles?.Health() ?? (Count: 0, IssueId: Guid.Empty, Issue: "");
+                bool shellIssue = shell.IssueId != Guid.Empty;
+                Guid issueId = health.IssueId; string issue = health.Issue;
+                if (shellIssue)
+                {
+                    byte[] mixed = shell.IssueId.ToByteArray(), other = health.IssueId.ToByteArray();
+                    for (int i = 0; i < mixed.Length; i++) mixed[i] ^= other[i]; issueId = new Guid(mixed);
+                    issue = (issue.Length > 0 ? issue + "\n" : "") + shell.Issue;
+                }
+                return RuntimeProtocol.Success(request.Id, new RuntimeHealth(Environment.ProcessId, state.Revision, health.Count, issueId, issue, shell.Count));
             case RuntimeOperations.Stop:
                 Interlocked.Exchange(ref _stop, 1); return RuntimeProtocol.Success(request.Id, new { Stopping = true });
             case RuntimeOperations.ReadState: return RuntimeProtocol.Success(request.Id, state.Read());
@@ -28,6 +37,8 @@ public sealed class CoreRouter(CoreStateRepository state, FilesCoordinator files
                     throw new RuntimeFailure("file-picker", "Files can open only a destination-folder picker for transfers.");
                 return RuntimeProtocol.Success(request.Id, await files.OpenAsync(request.Id, RuntimeProtocol.Payload<FilesLaunch>(request.Payload), cancellation).ConfigureAwait(false));
             case RuntimeOperations.FileJobs: return RuntimeProtocol.Success(request.Id, JobService().Snapshot());
+            case RuntimeOperations.WindowsFileAction: return RuntimeProtocol.Success(request.Id, WindowsFileService().Submit(RuntimeProtocol.Payload<WindowsFileAction>(request.Payload), request.ProcessId));
+            case RuntimeOperations.WindowsFileStatus: return RuntimeProtocol.Success(request.Id, WindowsFileService().Status(RuntimeProtocol.Payload<WindowsFileStatusRequest>(request.Payload).Id, request.ProcessId));
             case RuntimeOperations.SubmitFileJob: return RuntimeProtocol.Success(request.Id, JobService().Submit(RuntimeProtocol.Payload<FileJobSubmit>(request.Payload)));
             case RuntimeOperations.ControlFileJob: return RuntimeProtocol.Success(request.Id, JobService().Control(RuntimeProtocol.Payload<FileJobControl>(request.Payload)));
             case RuntimeOperations.Settings:
@@ -59,5 +70,6 @@ public sealed class CoreRouter(CoreStateRepository state, FilesCoordinator files
     }
     private ControlCenterCoordinator PanelService() => panels ?? throw new RuntimeFailure("panel-unavailable", "This Core has no panel supervisor. Keep the complete build together.");
     private FileJobCoordinator JobService() => jobs ?? throw new RuntimeFailure("file-jobs", "This Core has no File Jobs service. Keep the complete build together.");
+    private WindowsFileActionCoordinator WindowsFileService() => windowsFiles ?? throw new RuntimeFailure("windows-file", "This Core has no Windows file-action service. Keep the complete build together.");
 }
 public sealed record FilesNext(FilesCommand? Command);

@@ -107,7 +107,14 @@ internal sealed class TaskbarView : Grid
         _overview = IconButton("Windows", "Switch windows", environment.ShowWindowOverview, true); status.Children.Add(_overview);
         var clock = new StackPanel { Spacing = 2 }; clock.Children.Add(_time); clock.Children.Add(_date);
         _clockButton = new Button { Content = clock, Style = (Style)Application.Current.Resources["QuietButton"], Padding = new Thickness(10, 5, 10, 5), CornerRadius = new CornerRadius(12) };
-        _clockButton.Click += (_, _) => environment.ShowNotifications(); ToolTipService.SetToolTip(_clockButton, "Date and notifications"); status.Children.Add(_clockButton);
+        _clockButton.Click += (_, _) => environment.OpenWindowsSurface(WindowsShellSurface.Calendar); ToolTipService.SetToolTip(_clockButton, "Windows date and time"); status.Children.Add(_clockButton);
+        var clockMenu = environment.Menus.ClockMenu(); _clockButton.ContextFlyout = clockMenu;
+        var dockMenu = environment.Menus.DockMenu(); _frame.ContextFlyout = dockMenu;
+        foreach (var context in new[] { clockMenu, dockMenu })
+        {
+            context.Opened += (_, _) => { _environment.HideDockPreview(); _openContextMenus.Add(context); _environment.Taskbar.RefreshVisibility(); };
+            context.Closed += (_, _) => { _openContextMenus.Remove(context); if (!_released) _environment.Taskbar.RefreshVisibility(); };
+        }
         _desktopButton = new Button { Width = 24, Height = 40, Content = new FontIcon { FontFamily = new FontFamily("Segoe MDL2 Assets"), Glyph = "\uE740", FontSize = 13 }, Style = (Style)Application.Current.Resources["QuietButton"], Padding = new Thickness(0) };
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_desktopButton, "Show Nexus desktop"); ToolTipService.SetToolTip(_desktopButton, "Show Nexus desktop");
         _desktopButton.Click += (_, _) => environment.ShowDesktop(); status.Children.Add(_desktopButton);
@@ -171,11 +178,13 @@ internal sealed class TaskbarView : Grid
             _dockMotion?.Detach(icon);
         };
         button.Click += (_, _) => { if (_environment.TryLaunch(app)) _dockMotion?.Play(icon, DockMotionCue.Launch); };
-        var menu = new MenuFlyout(); var open = new MenuFlyoutItem { Text = "Open " + app.Name }; open.Click += (_, _) => { if (_environment.TryLaunch(app)) _dockMotion?.Play(icon, DockMotionCue.Launch); }; menu.Items.Add(open);
+        var menu = Menus.ShellMenu.Create(); var open = Menus.ShellMenu.Action("Open", () => { if (_environment.TryLaunch(app)) _dockMotion?.Play(icon, DockMotionCue.Launch); }, "\uE768"); menu.Items.Add(open);
         var remove = new MenuFlyoutItem { Text = "Remove from dock" }; remove.Click += (_, _) =>
         { if (_released) return; _environment.Session.State.PinnedApps.RemoveAll(pin => string.Equals(pin.Target, app.Target, StringComparison.OrdinalIgnoreCase)); _environment.SaveState(); }; menu.Items.Add(remove);
-        foreach (var (label, direction) in new[] { ("Move pin left", -1), ("Move pin right", 1) })
-        { var move = new MenuFlyoutItem { Text = label }; move.Click += (_, _) => { if (!_released && DesktopOrganization.MovePin(_environment.Session.State.PinnedApps, app.Target, direction)) _environment.SaveState(); }; menu.Items.Add(move); }
+        var position = Menus.ShellMenu.Group("Position");
+        foreach (var (label, direction) in new[] { ("Move left", -1), ("Move right", 1) })
+        { position.Items.Add(Menus.ShellMenu.Action(label, () => { if (!_released && DesktopOrganization.MovePin(_environment.Session.State.PinnedApps, app.Target, direction)) _environment.SaveState(); })); } menu.Items.Add(position);
+        if (Path.IsPathFullyQualified(app.Target)) menu.Items.Add(Menus.ShellMenu.Action("Windows file options…", () => _environment.WindowsFileAction(app.Target), "\uE713"));
         menu.Opened += (_, _) => { _environment.HideDockPreview(); _openContextMenus.Add(menu); _environment.Taskbar.RefreshVisibility(); };
         menu.Closed += (_, _) => { _openContextMenus.Remove(menu); if (!_released) _environment.Taskbar.RefreshVisibility(); }; button.ContextFlyout = menu;
         ToolTipService.SetToolTip(button, "Open " + app.Name); Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, "Open " + app.Name);
@@ -291,29 +300,30 @@ internal sealed class TaskbarView : Grid
         face.Children.Add(item.Indicator);
         item.Button = new Button { Content = face, Tag = iconHost, Width = 64, Height = 68, Style = (Style)Application.Current.Resources["DockButton"] };
         item.Button.Click += (_, _) => _environment.ToggleDockWindow(item.Window);
-        var menu = new MenuFlyout();
-        var restore = new MenuFlyoutItem { Text = "Restore / switch to window" };
-        restore.Click += (_, _) => _environment.RestoreDockWindow(item.Window);
+        var menu = Menus.ShellMenu.Create(); RunningWindow target = item.Window;
+        var restore = new MenuFlyoutItem { Text = "Activate", Icon = new FontIcon { Glyph = "\uE8A7" } };
+        restore.Click += (_, _) => _environment.RestoreDockWindow(target);
         var minimize = new MenuFlyoutItem { Text = "Minimize window" };
-        minimize.Click += (_, _) => _environment.MinimizeDockWindow(item.Window);
+        minimize.Click += (_, _) => _environment.MinimizeDockWindow(target);
         var maximize = new MenuFlyoutItem { Text = "Maximize window" };
-        maximize.Click += (_, _) => { _environment.HideDockPreview(); _environment.MaximizeDockWindow(item.Window); };
+        maximize.Click += (_, _) => { _environment.HideDockPreview(); _environment.MaximizeDockWindow(target); };
         var preview = new MenuFlyoutItem { Text = "Window preview" };
         preview.Click += (_, _) =>
         {
             // Let the context menu close before activating the preview.
-            item.Button.DispatcherQueue.TryEnqueue(() => { if (!_released && TryGetAnchor(item.Button, out var anchor)) _environment.ShowDockPreview(item.Window, anchor, true); });
+            var selected = target; item.Button.DispatcherQueue.TryEnqueue(() => { if (!_released && TryGetAnchor(item.Button, out var anchor)) _environment.ShowDockPreview(selected, anchor, true); });
         };
         var close = new MenuFlyoutItem { Text = "Close window" };
-        close.Click += (_, _) => { _environment.HideDockPreview(); _environment.CloseDockWindow(item.Window); };
-        menu.Items.Add(restore); menu.Items.Add(minimize); menu.Items.Add(maximize); menu.Items.Add(preview); menu.Items.Add(new MenuFlyoutSeparator()); menu.Items.Add(close);
+        close.Click += (_, _) => { _environment.HideDockPreview(); _environment.CloseDockWindow(target); };
+        var arrange = Menus.ShellMenu.Group("Arrange", "\uE9A6"); foreach (string placement in WindowPlacementPlan.Choices) arrange.Items.Add(Menus.ShellMenu.Action(placement, () => _environment.PlaceWindow(target, placement)));
+        menu.Items.Add(restore); menu.Items.Add(minimize); menu.Items.Add(maximize); menu.Items.Add(arrange); menu.Items.Add(preview); menu.Items.Add(new MenuFlyoutSeparator()); menu.Items.Add(close);
         menu.Opened += (_, _) =>
         {
             _environment.HideDockPreview(); _openContextMenus.Add(menu);
-            bool valid = NativeMethods.OwnsWindow(item.Window);
+            target = item.Window; bool valid = NativeMethods.OwnsWindow(target); arrange.IsEnabled = valid;
             restore.IsEnabled = maximize.IsEnabled = close.IsEnabled = valid; preview.IsEnabled = valid && _environment.Session.State.DockPreviews;
-            minimize.IsEnabled = valid && NativeMethods.Visible(item.Window.Handle) && !NativeMethods.IsMinimized(item.Window.Handle);
-            maximize.Text = valid && NativeMethods.IsZoomed(item.Window.Handle) ? "Restore window size" : "Maximize window";
+            minimize.IsEnabled = valid && NativeMethods.Visible(target.Handle) && !NativeMethods.IsMinimized(target.Handle);
+            maximize.Text = valid && NativeMethods.IsZoomed(target.Handle) ? "Restore window size" : "Maximize window";
             _environment.Taskbar.RefreshVisibility();
         };
         menu.Closed += (_, _) => { _openContextMenus.Remove(menu); _environment.Taskbar.RefreshVisibility(); };

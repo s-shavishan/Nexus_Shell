@@ -13,6 +13,7 @@ GlassAttachmentGateChecks.Run();
 GlassUiDispatchChecks.Run();
 GlassStateDispatchChecks.Run();
 WindowsIntegrationChecks.Run();
+ShellIntegrationChecks.Run();
 NexusControlsChecks.Run();
 
 static void Check(bool condition, string message)

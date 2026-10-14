@@ -8,48 +8,40 @@ namespace Nexus.Shell.UI.Menus;
 internal sealed class DesktopMenus(DesktopEnvironment environment)
 {
     private static MenuFlyoutItem Item(string name, Action action)
-    { var item = new MenuFlyoutItem { Text = name }; item.Click += (_, _) => action(); return item; }
+        => ShellMenu.Action(name, action);
     internal MenuFlyout DesktopMenu()
     {
-        var menu = new MenuFlyout();
-        menu.Items.Add(Item("Refresh", environment.RefreshDesktop));
-        menu.Items.Add(Item("New folder…", environment.CreateDesktopFolder));
-        var undo = Item(environment.DesktopUndoLabel, environment.UndoDesktopEdit); undo.IsEnabled = environment.CanUndoDesktopEdit; menu.Items.Add(undo);
-        var sort = new MenuFlyoutSubItem { Text = "Sort desktop icons" };
-        foreach (string order in new[] { "Name", "Kind", "Newest" }) { var choice = new ToggleMenuFlyoutItem { Text = order, IsChecked = environment.Session.State.DesktopIconOrder == order }; choice.Click += (_, _) => environment.SetDesktopOrder(order); sort.Items.Add(choice); } menu.Items.Add(sort);
-        var icons = new ToggleMenuFlyoutItem { Text = "Show desktop icons", IsChecked = environment.Session.State.ShowDesktopIcons }; icons.Click += (_, _) => environment.ToggleDesktopIcons(); menu.Items.Add(icons);
-        menu.Items.Add(Item("Nexus Controls…", () => environment.ShowControls()));
-        menu.Items.Add(Item("File jobs", () => environment.ShowUtility("File jobs")));
-        menu.Items.Add(Item("Control Center", environment.ShowQuickSettings));
-        menu.Items.Add(Item("Windows tools", environment.ShowWindowsTools));
-        menu.Items.Add(Item("Launchpad", () => environment.ShowMenu()));
-        menu.Items.Add(Item("Notifications", environment.ShowNotifications));
-        menu.Items.Add(Item("Nexus Search", environment.ShowSearch));
-        menu.Items.Add(Item("Clipboard shelf", environment.ShowClipboardShelf));
-        menu.Items.Add(Item("Places", environment.ShowPlaces));
-        menu.Items.Add(Item("Desktop shortcuts", environment.ShowDesktopGuide));
-        menu.Items.Add(Item("Window board", environment.ShowWindowOverview));
+        var menu = ShellMenu.Create();
+        menu.Items.Add(ShellMenu.Action("New folder…", environment.CreateDesktopFolder, "\uE8F4"));
+        var view = ShellMenu.Group("View", "\uE8A9");
+        view.Items.Add(ShellMenu.Toggle("Show desktop icons", environment.Session.State.ShowDesktopIcons, environment.ToggleDesktopIcons));
+        var sort = ShellMenu.Group("Sort by");
+        foreach (string order in new[] { "Name", "Kind", "Newest" }) sort.Items.Add(ShellMenu.Toggle(order, environment.Session.State.DesktopIconOrder == order, () => environment.SetDesktopOrder(order)));
+        view.Items.Add(sort); menu.Items.Add(view);
+        menu.Items.Add(ShellMenu.Action("Refresh", environment.RefreshDesktop, "\uE72C", "F5"));
+        if (environment.CanUndoDesktopEdit) menu.Items.Add(ShellMenu.Action(environment.DesktopUndoLabel, environment.UndoDesktopEdit, "\uE7A7", "Ctrl+Z"));
         menu.Items.Add(new MenuFlyoutSeparator());
-        menu.Items.Add(Item("Open desktop folder", () => environment.OpenTarget(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory))));
-        menu.Items.Add(Item("Personalize", () => environment.ShowControls("Personalize")));
+        menu.Items.Add(ShellMenu.Action("Open desktop folder", () => environment.ShowFiles(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory)), "\uED25"));
+        var tools = ShellMenu.Group("Tools", "\uE713");
+        tools.Items.Add(Item("Search…", environment.ShowSearch)); tools.Items.Add(Item("File jobs…", () => environment.ShowUtility("File jobs")));
+        tools.Items.Add(Item("Places…", environment.ShowPlaces)); tools.Items.Add(Item("Windows tools…", environment.ShowWindowsTools)); tools.Items.Add(Item("Clipboard shelf…", environment.ShowClipboardShelf));
+        menu.Items.Add(tools);
+        menu.Items.Add(ShellMenu.Action("Personalize…", () => environment.ShowControls("personalize"), "\uE790"));
         return menu;
     }
     internal MenuFlyout NexusMenu()
     {
-        var menu = new MenuFlyout(); menu.Items.Add(Item("About this session", () => environment.ShowControls("core")));
-        menu.Items.Add(Item("Nexus Controls…", () => environment.OpenTarget("nexus:controls")));
-        menu.Items.Add(Item("File jobs…", () => environment.ShowUtility("File jobs")));
-        menu.Items.Add(Item("Session status…", environment.ShowSessionStatus));
-        menu.Items.Add(Item("Windows tools & keep awake…", environment.ShowWindowsTools));
-        menu.Items.Add(Item("Search…", environment.ShowSearch));
-        menu.Items.Add(Item("Desktop shortcuts…", environment.ShowDesktopGuide));
-        menu.Items.Add(Item("Launchpad…", () => environment.ShowMenu())); menu.Items.Add(new MenuFlyoutSeparator());
-        menu.Items.Add(Item("Refresh desktop", environment.RefreshDesktop)); menu.Items.Add(Item("Lock screen", environment.LockScreen));
-        menu.Items.Add(new MenuFlyoutSeparator()); menu.Items.Add(Item(environment.IsManagedDesktop ? "Return to Windows…" : "Exit Nexus", environment.RequestExit)); return menu;
+        var menu = ShellMenu.Create(); menu.Items.Add(ShellMenu.Action("About Nexus…", environment.ShowAbout, "\uE946"));
+        menu.Items.Add(ShellMenu.Action("Nexus Controls…", () => environment.ShowControls(), "\uE713"));
+        menu.Items.Add(new MenuFlyoutSeparator());
+        var tools = ShellMenu.Group("Tools", "\uE8A5"); tools.Items.Add(Item("File jobs…", () => environment.ShowUtility("File jobs"))); tools.Items.Add(Item("Windows tools & keep awake…", environment.ShowWindowsTools)); tools.Items.Add(Item("Session status…", environment.ShowSessionStatus)); tools.Items.Add(Item("Desktop shortcuts…", environment.ShowDesktopGuide)); menu.Items.Add(tools);
+        menu.Items.Add(ShellMenu.Action("Launchpad…", () => environment.ShowMenu(), "\uE80A")); menu.Items.Add(ShellMenu.Action("Search…", environment.ShowSearch, "\uE721"));
+        menu.Items.Add(new MenuFlyoutSeparator()); menu.Items.Add(ShellMenu.Action("Lock screen", environment.LockScreen, "\uE72E"));
+        var session = ShellMenu.Group("Session"); session.Items.Add(Item(environment.IsManagedDesktop ? "Return to Windows…" : "Exit Nexus", environment.RequestExit)); session.Items.Add(Item("Startup & recovery…", () => environment.ShowControls("startup"))); menu.Items.Add(session); return menu;
     }
     internal MenuFlyout FileMenu()
     {
-        var menu = new MenuFlyout(); menu.Items.Add(Item("New note", () => environment.ShowUtility("Notes")));
+        var menu = ShellMenu.Create(); menu.Items.Add(Item("New note", () => environment.ShowUtility("Notes")));
         menu.Items.Add(Item("Places & favorite folders…", environment.ShowPlaces));
         menu.Items.Add(Item("Search files…", environment.ShowSearch));
         menu.Items.Add(Item("Open files…", () => environment.ShowFiles())); menu.Items.Add(Item("Downloads", () => environment.ShowFiles(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"))));
@@ -57,21 +49,21 @@ internal sealed class DesktopMenus(DesktopEnvironment environment)
     }
     internal MenuFlyout ViewMenu()
     {
-        var menu = new MenuFlyout(); menu.Items.Add(Item("Launchpad", () => environment.ShowMenu())); menu.Items.Add(Item("Control Center", environment.ShowQuickSettings)); menu.Items.Add(Item("Notifications", environment.ShowNotifications));
-        menu.Items.Add(Item("Clipboard shelf", environment.ShowClipboardShelf)); menu.Items.Add(Item("Session status", environment.ShowSessionStatus));
-        menu.Items.Add(Item("Places", environment.ShowPlaces)); menu.Items.Add(Item("Desktop shortcuts", environment.ShowDesktopGuide));
-        menu.Items.Add(Item("Windows tools", environment.ShowWindowsTools));
-        menu.Items.Add(Item("Desktop appearance…", () => environment.ShowControls("Personalize"))); menu.Items.Add(Item("Focus desktop", () => { environment.Session.State.FocusMode = !environment.Session.State.FocusMode; environment.SaveState(); })); return menu;
+        var menu = ShellMenu.Create(); menu.Items.Add(Item("Launchpad", () => environment.ShowMenu())); menu.Items.Add(Item("Control Center", environment.ShowQuickSettings));
+        menu.Items.Add(Item("Windows notifications", () => environment.OpenWindowsSurface(WindowsShellSurface.Notifications)));
+        menu.Items.Add(Item("Windows clipboard history", () => environment.OpenWindowsSurface(WindowsShellSurface.Clipboard)));
+        var tools = ShellMenu.Group("Nexus tools"); tools.Items.Add(Item("Nexus activity", environment.ShowNotifications)); tools.Items.Add(Item("Clipboard shelf", environment.ShowClipboardShelf)); tools.Items.Add(Item("Session status", environment.ShowSessionStatus)); tools.Items.Add(Item("Places", environment.ShowPlaces)); menu.Items.Add(tools);
+        menu.Items.Add(new MenuFlyoutSeparator()); menu.Items.Add(Item("Desktop appearance…", () => environment.ShowControls("Personalize"))); var focus = ShellMenu.Toggle("Focus desktop", environment.Session.State.FocusMode, () => { environment.Session.State.FocusMode = !environment.Session.State.FocusMode; environment.SaveState(); }); menu.Items.Add(focus); menu.Opening += (_, _) => focus.IsChecked = environment.Session.State.FocusMode; return menu;
     }
     internal MenuFlyout WindowMenu()
     {
-        var menu = new MenuFlyout(); menu.Items.Add(Item("Window board & layouts", environment.ShowWindowOverview)); menu.Items.Add(Item("Show desktop", environment.ShowDesktop));
+        var menu = ShellMenu.Create(); menu.Items.Add(Item("Windows Task View", () => environment.OpenWindowsSurface(WindowsShellSurface.TaskView))); menu.Items.Add(Item("Window board & layouts", environment.ShowWindowOverview)); menu.Items.Add(Item("Show desktop", environment.ShowDesktop));
         menu.Items.Add(Item("Repair maximized window layout", environment.RepairDesktopLayout));
         menu.Items.Add(Item("Nexus Controls", () => environment.ShowControls())); return menu;
     }
     internal MenuFlyout InputLanguageMenu()
     {
-        var menu = new MenuFlyout();
+        var menu = ShellMenu.Create();
         menu.Opening += (_, _) =>
         {
             menu.Items.Clear();
@@ -100,7 +92,7 @@ internal sealed class DesktopMenus(DesktopEnvironment environment)
     }
     internal MenuFlyout ActiveWindowMenu()
     {
-        var menu = new MenuFlyout();
+        var menu = ShellMenu.Create();
         menu.Opening += (_, _) =>
         {
             menu.Items.Clear();
@@ -109,7 +101,7 @@ internal sealed class DesktopMenus(DesktopEnvironment environment)
                 menu.Items.Add(Item("Minimize", () => environment.MinimizeDockWindow(window)));
                 menu.Items.Add(Item(environment.ActiveWindowMaximized ? "Restore size" : "Maximize", () => environment.MaximizeDockWindow(window)));
                 menu.Items.Add(new MenuFlyoutSeparator());
-                foreach (string placement in WindowPlacementPlan.Choices) menu.Items.Add(Item(placement, () => environment.PlaceWindow(window, placement)));
+                var arrange = ShellMenu.Group("Arrange", "\uE9A6"); foreach (string placement in WindowPlacementPlan.Choices) arrange.Items.Add(Item(placement, () => environment.PlaceWindow(window, placement))); menu.Items.Add(arrange);
                 var undo = Item("Undo window placement", environment.UndoWindowPlacement); undo.IsEnabled = environment.CanUndoWindowPlacement; menu.Items.Add(undo);
                 menu.Items.Add(Item("Show in window overview", environment.ShowWindowOverview));
                 menu.Items.Add(new MenuFlyoutSeparator()); menu.Items.Add(Item("Close window", () => environment.CloseDockWindow(window)));
@@ -124,14 +116,53 @@ internal sealed class DesktopMenus(DesktopEnvironment environment)
     }
     internal MenuFlyout DesktopItemMenu(DesktopShortcut shortcut)
     {
-        var menu = new MenuFlyout(); menu.Items.Add(Item("Open", () => environment.OpenDesktopItem(shortcut)));
+        var capabilities = FileContextPolicy.For(shortcut.Target, shortcut.IsFolder);
+        var menu = ShellMenu.Create(); menu.Items.Add(ShellMenu.Action(shortcut.IsFileSystem ? capabilities.OpenLabel : "Open", () => environment.OpenDesktopItem(shortcut), capabilities.Icon));
         if (shortcut.IsFileSystem)
         {
-            menu.Items.Add(Item("Rename…", () => environment.RenameDesktopItem(shortcut)));
-            menu.Items.Add(Item("Copy path", () => environment.CopyDesktopPath(shortcut)));
-            menu.Items.Add(Item("Open containing folder", () => environment.ShowFiles(Path.GetDirectoryName(shortcut.Target))));
+            if (capabilities.OpenWith) menu.Items.Add(Item("Open with…", () => environment.WindowsFileAction(shortcut.Target, "open-with")));
+            menu.Items.Add(ShellMenu.Action("Rename…", () => environment.RenameDesktopItem(shortcut), "\uE8AC", "F2"));
+            var more = ShellMenu.Group("More", "\uE712");
+            more.Items.Add(Item("Copy path", () => environment.CopyDesktopPath(shortcut))); more.Items.Add(Item("Open containing folder", () => environment.ShowFiles(Path.GetDirectoryName(shortcut.Target))));
+            more.Items.Add(Item("Properties…", () => environment.WindowsFileAction(shortcut.Target, "properties")));
+            menu.Items.Add(more);
             if (shortcut.IsFolder) menu.Items.Add(Item("Pin folder to Places", () => environment.PinDesktopPlace(shortcut)));
+            menu.Items.Add(new MenuFlyoutSeparator()); menu.Items.Add(Item("Windows options…", () => environment.WindowsFileAction(shortcut.Target)));
         }
         return menu;
+    }
+    internal MenuFlyout ClockMenu()
+    {
+        var menu = ShellMenu.Create(); var calendar = environment.WindowsRoute(WindowsShellSurface.Calendar);
+        menu.Items.Add(ShellMenu.Action("Open Windows calendar", () => environment.OpenWindowsSurface(WindowsShellSurface.Calendar), "\uE787", calendar.Shortcut));
+        menu.Items.Add(Item("Date & time settings…", () => environment.RunWindowsTool("date-time")));
+        var clock = ShellMenu.Toggle("24-hour time", environment.Session.State.Clock24Hour, () => { environment.Session.State.Clock24Hour = !environment.Session.State.Clock24Hour; environment.SaveState(); }); menu.Items.Add(clock); menu.Opening += (_, _) => clock.IsChecked = environment.Session.State.Clock24Hour; return menu;
+    }
+    internal MenuFlyout NotificationsMenu()
+    {
+        var menu = ShellMenu.Create(); var route = environment.WindowsRoute(WindowsShellSurface.Notifications);
+        menu.Items.Add(ShellMenu.Action(route.Name, () => environment.OpenWindowsSurface(WindowsShellSurface.Notifications), "\uE7E7", route.Shortcut));
+        menu.Items.Add(Item("Windows notification settings…", () => environment.RunWindowsTool("notifications")));
+        menu.Items.Add(new MenuFlyoutSeparator()); menu.Items.Add(Item("Nexus activity…", environment.ShowNotifications)); return menu;
+    }
+    internal MenuFlyout MenuBarMenu()
+    {
+        var menu = ShellMenu.Create(); menu.Items.Add(Item("Nexus Controls…", () => environment.ShowControls())); menu.Items.Add(Item("Windows calendar", () => environment.OpenWindowsSurface(WindowsShellSurface.Calendar))); menu.Items.Add(Item("Windows notifications", () => environment.OpenWindowsSurface(WindowsShellSurface.Notifications)));
+        menu.Items.Add(Item("Windows tools…", environment.ShowWindowsTools)); menu.Items.Add(Item("About Nexus…", environment.ShowAbout)); return menu;
+    }
+    internal MenuFlyout DockMenu()
+    {
+        var menu = ShellMenu.Create(); var compact = ShellMenu.Toggle("Compact icons", environment.Session.State.CompactDock, () => { environment.Session.State.CompactDock = !environment.Session.State.CompactDock; environment.SaveState(); });
+        var previews = ShellMenu.Toggle("Hover previews", environment.Session.State.DockPreviews, () => { environment.Session.State.DockPreviews = !environment.Session.State.DockPreviews; environment.SaveState(); });
+        menu.Items.Add(compact); menu.Items.Add(previews); menu.Items.Add(new MenuFlyoutSeparator());
+        menu.Items.Add(Item("Windows Task View", () => environment.OpenWindowsSurface(WindowsShellSurface.TaskView))); menu.Items.Add(Item("Window board & layouts", environment.ShowWindowOverview)); menu.Items.Add(Item("Dock preferences…", () => environment.ShowControls("desktop", "dock")));
+        menu.Opening += (_, _) => { compact.IsChecked = environment.Session.State.CompactDock; previews.IsChecked = environment.Session.State.DockPreviews; }; return menu;
+    }
+    internal MenuFlyout SystemControlMenu(string section)
+    {
+        var menu = ShellMenu.Create(); menu.Items.Add(Item("Nexus " + section.ToLowerInvariant() + " controls", () => environment.ShowControlCenter(section)));
+        menu.Items.Add(Item("Windows quick settings", () => environment.OpenWindowsSurface(WindowsShellSurface.QuickSettings)));
+        var uri = section switch { "Sound" => "ms-settings:sound", "Network" => "ms-settings:network-status", "Bluetooth" => "ms-settings:bluetooth", "Display" => "ms-settings:display", _ => "ms-settings:" };
+        menu.Items.Add(Item("Advanced Windows settings…", async () => { try { await AppCatalog.OpenSettingsAsync(uri); } catch (Exception error) { environment.Report("Windows settings could not open", error); } })); return menu;
     }
 }

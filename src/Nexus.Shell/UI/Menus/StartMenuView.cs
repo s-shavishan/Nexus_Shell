@@ -128,7 +128,7 @@ internal sealed class StartMenuView : Grid, IDisposable
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_collections, "App collection");
         var create = new Button { Content = "+ Collection" }; create.Flyout = CollectionEditor(false); tools.Children.Add(create);
         _renameCollection.Flyout = CollectionEditor(true); tools.Children.Add(_renameCollection);
-        var removeFlyout = new MenuFlyout(); var removeGroup = new MenuFlyoutItem { Text = "Remove collection · apps stay installed" };
+        var removeFlyout = ShellMenu.Create(); var removeGroup = new MenuFlyoutItem { Text = "Remove collection" };
         removeGroup.Click += (_, _) => Organize(() => { string id = CurrentCollectionId; environment.Session.State.AppCollections.RemoveAll(g => g.Id == id); _category = "All"; }); removeFlyout.Items.Add(removeGroup); _deleteCollection.Flyout = removeFlyout; tools.Children.Add(_deleteCollection);
         _order.Items.Add("A–Z"); _order.Items.Add("Catalog order"); _order.SelectedIndex = environment.Session.State.LaunchpadOrder == "Catalog" ? 1 : 0;
         _order.SelectionChanged += (_, _) => { if (!_organizing) Organize(() => environment.Session.State.LaunchpadOrder = _order.SelectedIndex == 1 ? "Catalog" : "Name"); }; tools.Children.Add(_order);
@@ -167,20 +167,26 @@ internal sealed class StartMenuView : Grid, IDisposable
             """);
         _apps.ItemClick += (_, e) => Open(((LaunchpadTile)e.ClickedItem).App);
         _apps.KeyDown += (_, e) => { if (e.Key == VirtualKey.Enter && _apps.SelectedItem is LaunchpadTile tile) { Open(tile.App); e.Handled = true; } };
-        var context = new MenuFlyout(); _apps.ContextFlyout = context;
+        var context = ShellMenu.Create(); _apps.ContextFlyout = context;
         context.Opening += (_, _) =>
         {
             context.Items.Clear(); if (_apps.SelectedItem is not LaunchpadTile tile) return;
             var app = tile.App; var state = environment.Session.State;
-            void Action(string text, Action action) { var item = new MenuFlyoutItem { Text = text }; item.Click += (_, _) => Organize(action); context.Items.Add(item); }
+            void Action(string text, Action action) => context.Items.Add(ShellMenu.Action(text, () => Organize(action)));
+            context.Items.Add(ShellMenu.Action("Open", () => Open(app), "\uE768"));
             Action(LaunchpadCatalog.IsPinned(state.PinnedApps, app) ? "Remove from dock" : "Pin to dock", () => LaunchpadCatalog.TogglePin(state.PinnedApps, app));
-            if (LaunchpadCatalog.IsPinned(state.PinnedApps, app)) { Action("Move dock pin left", () => DesktopOrganization.MovePin(state.PinnedApps, app.Target, -1)); Action("Move dock pin right", () => DesktopOrganization.MovePin(state.PinnedApps, app.Target, 1)); }
-            var groups = new MenuFlyoutSubItem { Text = "Collections", IsEnabled = state.AppCollections.Count > 0 };
+            if (LaunchpadCatalog.IsPinned(state.PinnedApps, app))
+            { var dock = ShellMenu.Group("Dock position"); dock.Items.Add(ShellMenu.Action("Move left", () => Organize(() => DesktopOrganization.MovePin(state.PinnedApps, app.Target, -1)))); dock.Items.Add(ShellMenu.Action("Move right", () => Organize(() => DesktopOrganization.MovePin(state.PinnedApps, app.Target, 1)))); context.Items.Add(dock); }
+            var groups = ShellMenu.Group("Collections"); groups.IsEnabled = state.AppCollections.Count > 0;
             foreach (var group in state.AppCollections)
             { var member = new ToggleMenuFlyoutItem { Text = group.Name, IsChecked = group.Targets.Contains(app.Target, StringComparer.OrdinalIgnoreCase) }; member.Click += (_, _) => Organize(() => DesktopOrganization.ToggleMember(state, group.Id, app.Target)); groups.Items.Add(member); }
             context.Items.Add(groups); context.Items.Add(new MenuFlyoutSeparator());
             bool hidden = state.HiddenAppTargets.Contains(app.Target, StringComparer.OrdinalIgnoreCase);
             Action(hidden ? "Show in Launchpad" : "Hide from Launchpad", () => DesktopOrganization.SetHidden(state, app.Target, !hidden));
+            if (Path.IsPathFullyQualified(app.Target))
+            {
+                var windows = ShellMenu.Group("Windows", "\uE713"); windows.Items.Add(ShellMenu.Action("Properties…", () => environment.WindowsFileAction(app.Target, "properties"))); windows.Items.Add(ShellMenu.Action("File options…", () => environment.WindowsFileAction(app.Target))); context.Items.Add(windows);
+            }
         };
         _apps.RightTapped += (_, args) => { DependencyObject? node = args.OriginalSource as DependencyObject; while (node is not null && node is not GridViewItem && !ReferenceEquals(node, _apps)) node = VisualTreeHelper.GetParent(node); _apps.SelectedItem = node is GridViewItem item ? item.Content : null; };
         var gallery = new Grid();

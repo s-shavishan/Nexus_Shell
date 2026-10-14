@@ -17,7 +17,7 @@ internal sealed class NotificationWindow : Window
     private readonly AppWindow _window;
     private readonly Border _frame;
     private readonly StackPanel _items = new() { Spacing = 12 };
-    private readonly TextBlock _title = new() { Text = "Notifications", FontSize = 22, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
+    private readonly TextBlock _title = new() { Text = "Nexus activity", FontSize = 22, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
     private readonly TextBlock _subtitle = new() { Text = "Nexus alert history", FontSize = 12 };
     private readonly WindowChrome _chrome;
     private readonly WindowMaterial _material = new();

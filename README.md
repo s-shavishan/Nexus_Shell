@@ -2,6 +2,16 @@
 
 Nexus is a native C# / WinUI desktop environment on Windows. This release adds an integrated Search panel backed by Everything's local index, plus desktop controls and open-window results. Launchpad remains the app launcher.
 
+## Windows shell and compact menus (pending Windows validation)
+
+- Compact desktop, app, Files, dock and menu-bar context menus with grouped actions, file-type-aware commands and checked preferences.
+- A real **About Nexus** window with version/system information, project links and copyable diagnostics.
+- Clock/date buttons open Windows calendar; the bell opens Windows notifications. Windows 11 uses its combined panel; Windows 10 uses separate date/time and Action Center routes. Native clipboard history and Task View are also connected.
+- Explorer stays running. Managed startup starts it if absent and hides its taskbar through the existing recoverable surface lease.
+- Windows **Open with**, properties and registered shell options run in separate supervised helper processes with startup admission deadlines, bounded concurrency and no automatic command replay.
+
+Nexus service alerts remain under **Nexus activity**. See [shell behavior, limits and Windows acceptance](docs/P211-WINDOWS-SHELL-MENUS.md).
+
 ## Nexus File Jobs (pending Windows validation)
 
 Nexus Workspaces is removed. Its profile model, resume state, launch planner and workspace commands are retired. **File Jobs** replaces that direction with a practical copy/move queue owned by Nexus Core.

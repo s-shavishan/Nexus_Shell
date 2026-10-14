@@ -33,7 +33,7 @@ internal sealed partial class DesktopEnvironment
     private void ClipboardFeedChanged()
     {
         if (IsStopping) return;
-        if (ClipboardSuspended) { _clipboardShelf?.Hide(); _switcher?.Hide(); _sessionStatus?.Hide(); _search?.Hide(); _places?.Hide(); _desktopGuide?.Hide(); }
+        if (ClipboardSuspended) { _clipboardShelf?.Hide(); _switcher?.Hide(); _sessionStatus?.Hide(); _search?.Hide(); _places?.Hide(); _desktopGuide?.Hide(); _about?.Hide(); }
         ClipboardChanged?.Invoke();
     }
     private void RefreshClipboardPreference()
@@ -78,7 +78,7 @@ internal sealed partial class DesktopEnvironment
     internal IReadOnlyList<DesktopStatusRow> DesktopServiceStatus()
     {
         string core = _lastCoreHealth is { } health
-            ? "Process " + health.CoreProcessId + " · observed " + Math.Max(0, (int)(DateTimeOffset.Now - _coreHealthAt).TotalSeconds) + "s ago · settings revision " + health.Revision + " · " + health.FilesProcesses + " file workers"
+            ? "Process " + health.CoreProcessId + " · observed " + Math.Max(0, (int)(DateTimeOffset.Now - _coreHealthAt).TotalSeconds) + "s ago · settings revision " + health.Revision + " · " + health.FilesProcesses + " file workers · " + health.WindowsFileProcesses + " Windows file handlers"
             : "Waiting for the first Core health reply.";
         if (_coreFailureReported) core = "Core is reconnecting. Current edits remain in the desktop; automatic recovery has a restart budget.";
         string panel = _lastPanelHealth is { } status ? status.Paused ? "Automatic recovery is paused after repeated stops. It retries within its one-minute budget."
@@ -90,6 +90,7 @@ internal sealed partial class DesktopEnvironment
         return [new("Desktop session", Mode + " · active for " + Math.Max(0, (int)(DateTimeOffset.Now - _sessionStarted).TotalMinutes) + " minutes · " + _windows.Count + " app windows"),
             new("Nexus Core", core), new("Control Center", panel), new("Search", SearchServiceStatus), new("Settings persistence", save),
             new("Windows integration", WindowsIntegrationStatus),
+            new("Windows shell", WindowsShellStatus),
             new("Desktop folder updates", _desktopMonitor is null ? "Starting folder observation. F5 always refreshes manually." : _desktopMonitor.HadError ? "Some folder notifications were unavailable. F5 refreshes manually; Check services retries observation." : "Watching " + _desktopMonitor.FolderCount + " desktop folders with coalesced updates."),
             new("Clipboard capture", ClipboardStatus + " · " + Clipboard.Items.Count + " retained text entries"),
             new("Windows foundation", "Windows owns sign-in, app processes, graphics, drivers and system services. Nexus supervises its own desktop services.")];

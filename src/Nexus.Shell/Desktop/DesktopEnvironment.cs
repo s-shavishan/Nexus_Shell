@@ -22,7 +22,7 @@ internal sealed partial class DesktopEnvironment
     internal TaskbarWindow Taskbar { get; private set; } = null!;
     internal bool IsStopping { get; private set; }
     internal bool ControlsOpen => _controlsWindow is not null;
-    internal bool DockInteraction => _menu?.IsOpen == true || _controlVisible || _notifications?.IsOpen == true || _switcher?.IsOpen == true || _clipboardShelf?.IsOpen == true || _sessionStatus?.IsOpen == true || _windowsTools?.IsOpen == true || _search?.IsOpen == true || _places?.IsOpen == true || _desktopGuide?.IsOpen == true || _dockPreview?.IsOpen == true || _sessionDialog;
+    internal bool DockInteraction => _menu?.IsOpen == true || _controlVisible || _notifications?.IsOpen == true || _switcher?.IsOpen == true || _clipboardShelf?.IsOpen == true || _sessionStatus?.IsOpen == true || _windowsTools?.IsOpen == true || _search?.IsOpen == true || _places?.IsOpen == true || _desktopGuide?.IsOpen == true || _about?.IsOpen == true || _dockPreview?.IsOpen == true || _sessionDialog;
     internal DesktopSessionMode Mode { get; }
     internal bool IsManagedDesktop => Mode != DesktopSessionMode.Preview;
     internal event Action? Stopped;
@@ -115,7 +115,10 @@ internal sealed partial class DesktopEnvironment
                 if (command == "exit") RequestExit(); else if (command == "search") ShowSearch();
                 else if (command == "start") ShowMenu();
                 else if (command == "start-unavailable") Report("Windows-key routing is unavailable in this context. Use Launchpad in the Nexus dock.");
-                else if (command == "show") ShowDesktop();
+                else if (command == "show") ShowControls();
+                else if (command == "about") ShowAbout();
+                else if (command == "windows-calendar") OpenWindowsSurface(WindowsShellSurface.Calendar);
+                else if (command == "windows-notifications") OpenWindowsSurface(WindowsShellSurface.Notifications);
                 else if (command == "tray-lost") Report("The Windows notification icon is unavailable. The Nexus taskbar is still running.");
             }), QueueSystemChange);
             StartFeatureServices(); StartDesktopFileMonitor(); RefreshIntegration(); Desktop.ShowSurface(); Taskbar.ShowBar();
@@ -176,7 +179,7 @@ internal sealed partial class DesktopEnvironment
         Taskbar?.ApplyAppearance(); _menu?.ApplyAppearance(this);
         foreach (var utility in _utilities.Values) utility.ApplyAppearance();
         _switcher?.ApplyAppearance();
-        _clipboardShelf?.ApplyAppearance(); _sessionStatus?.ApplyAppearance(); _windowsTools?.ApplyAppearance(); _search?.ApplyAppearance(); _places?.ApplyAppearance(); _desktopGuide?.ApplyAppearance();
+        _clipboardShelf?.ApplyAppearance(); _sessionStatus?.ApplyAppearance(); _windowsTools?.ApplyAppearance(); _search?.ApplyAppearance(); _places?.ApplyAppearance(); _desktopGuide?.ApplyAppearance(); _about?.ApplyAppearance();
         _controlsWindow?.RefreshSharedAppearance();
         _notifications?.ApplyAppearance(); _topBar?.ApplyAppearance();
     }
@@ -435,13 +438,13 @@ internal sealed partial class DesktopEnvironment
         HideDockPreview();
         HideControlCenter();
         _notifications?.Hide();
-        _switcher?.Hide(); _clipboardShelf?.Hide(); _sessionStatus?.Hide(); _windowsTools?.Hide(); _search?.Hide(); _places?.Hide(); _desktopGuide?.Hide();
+        _switcher?.Hide(); _clipboardShelf?.Hide(); _sessionStatus?.Hide(); _windowsTools?.Hide(); _search?.Hide(); _places?.Hide(); _desktopGuide?.Hide(); _about?.Hide();
         try { _menu ??= new(this); if (_menu.IsOpen && !search) _menu.HideMenu(); else _menu.ShowMenu(this, Taskbar.BarBounds, search); }
         catch (Exception ex) { Report("Could not open Start", ex); }
     }
     internal void ShowQuickSettings()
     {
-        if (IsStopping) return; HideDockPreview(); _menu?.HideMenu(); _notifications?.Hide(); _switcher?.Hide(); _clipboardShelf?.Hide(); _sessionStatus?.Hide(); _windowsTools?.Hide(); _search?.Hide(); _places?.Hide(); _desktopGuide?.Hide();
+        if (IsStopping) return; HideDockPreview(); _menu?.HideMenu(); _notifications?.Hide(); _switcher?.Hide(); _clipboardShelf?.Hide(); _sessionStatus?.Hide(); _windowsTools?.Hide(); _search?.Hide(); _places?.Hide(); _desktopGuide?.Hide(); _about?.Hide();
         if (_controlVisible && !_controlCompact) HideControlCenter(); else ShowControlCenter(_controlSection);
     }
     internal void ShowQuickControl(string section, Nexus.Runtime.PanelAnchor? anchor = null)
@@ -451,7 +454,7 @@ internal sealed partial class DesktopEnvironment
     }
     internal void ShowControlCenter(string section, bool compact = false, Nexus.Runtime.PanelAnchor? anchor = null)
     {
-        if (IsStopping) return; HideDockPreview(); _menu?.HideMenu(); _notifications?.Hide(); _switcher?.Hide(); _clipboardShelf?.Hide(); _sessionStatus?.Hide(); _windowsTools?.Hide(); _search?.Hide(); _places?.Hide(); _desktopGuide?.Hide();
+        if (IsStopping) return; HideDockPreview(); _menu?.HideMenu(); _notifications?.Hide(); _switcher?.Hide(); _clipboardShelf?.Hide(); _sessionStatus?.Hide(); _windowsTools?.Hide(); _search?.Hide(); _places?.Hide(); _desktopGuide?.Hide(); _about?.Hide();
         _controlVisible = true; _controlCompact = compact; _controlAnchor = compact ? anchor : null; _controlSection = ControlCenterPreferences.Sections.Contains(section) ? section : "Sound"; ++_controlSequence;
         _ = SyncControlCenterAsync();
     }
@@ -461,7 +464,7 @@ internal sealed partial class DesktopEnvironment
     internal void PositionDesktopPanels()
     {
         _topBar?.Position(); PositionQuickSettings(); if (_notifications?.IsOpen == true) _notifications.Position();
-        _switcher?.Reposition(); _clipboardShelf?.Reposition(); _sessionStatus?.Reposition(); _windowsTools?.Reposition(); _search?.Reposition(); _places?.Reposition(); _desktopGuide?.Reposition();
+        _switcher?.Reposition(); _clipboardShelf?.Reposition(); _sessionStatus?.Reposition(); _windowsTools?.Reposition(); _search?.Reposition(); _places?.Reposition(); _desktopGuide?.Reposition(); _about?.Reposition();
     }
     internal void SetDesktopFullscreen(bool fullscreen) => _topBar?.SetFullscreen(fullscreen);
     internal void SetMenuBarAttached(bool attached) { if (!DockInteraction) _topBar?.SetAttached(attached); }
@@ -473,7 +476,7 @@ internal sealed partial class DesktopEnvironment
         catch (Exception error) { Report("Could not open notifications", error); }
     }
     internal void NotificationClosed(NotificationWindow window) { if (ReferenceEquals(_notifications, window)) _notifications = null; }
-    internal void HideMenu() { HideDockPreview(); _menu?.HideMenu(); HideControlCenter(); _notifications?.Hide(); _switcher?.Hide(); _clipboardShelf?.Hide(); _sessionStatus?.Hide(); _windowsTools?.Hide(); _search?.Hide(); _places?.Hide(); _desktopGuide?.Hide(); }
+    internal void HideMenu() { HideDockPreview(); _menu?.HideMenu(); HideControlCenter(); _notifications?.Hide(); _switcher?.Hide(); _clipboardShelf?.Hide(); _sessionStatus?.Hide(); _windowsTools?.Hide(); _search?.Hide(); _places?.Hide(); _desktopGuide?.Hide(); _about?.Hide(); }
     internal void MenuClosed(MenuWindow window) { if (ReferenceEquals(_menu, window)) _menu = null; }
     internal Task<List<AppEntry>> GetCatalogAsync(bool refresh = false)
     {
@@ -654,6 +657,7 @@ internal sealed partial class DesktopEnvironment
         Cleanup(() => _search?.Close()); _search = null;
         Cleanup(() => _places?.Close()); _places = null;
         Cleanup(() => _desktopGuide?.Close()); _desktopGuide = null;
+        Cleanup(() => _about?.Close()); _about = null;
         Cleanup(() => _desktopFilesTimer.Stop()); Cleanup(() => _desktopMonitor?.Dispose()); _desktopMonitor = null;
         Cleanup(() => _clipboardFeed?.Dispose()); _clipboardFeed = null; Clipboard.Clear();
         Cleanup(() => _windowEvents?.Dispose()); _windowEvents = null;

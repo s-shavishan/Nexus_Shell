@@ -19,6 +19,7 @@ required = [
     "Services/AudioController.cs", "Services/PcMetrics.cs", "Services/WindowLayouts.cs",
     "MainWindow.Controls.cs", "Services/NexusControlsCatalog.cs", "Assets/Icons/Controls.svg",
     "UI/Controls/FileJobsView.cs", "Assets/Icons/Jobs.svg",
+    "UI/Menus/ShellMenu.cs", "Desktop/AboutNexusWindow.cs", "Desktop/DesktopEnvironment.Shell.cs", "Services/WindowsShellPolicy.cs", "Services/FileContextPolicy.cs", "Interop/WindowsShellBridge.cs",
     "App.xaml", "App.xaml.cs", "MainWindow.xaml", "MainWindow.xaml.cs", "Services/ExploreWorkspace.cs", "UI/SavedKindConverter.cs", "UI/NexusIcons.cs", "Services/NavigationTrail.cs", "Services/ShellExperience.cs", "Services/AuraPalette.cs", "Interop/DesktopIntegration.cs",
     "Services/FocusSession.cs", "Services/CommandSearch.cs", "Services/WorkspaceState.cs",
     "Nexus.Shell.csproj", "app.manifest", "Assets/Nexus.ico",
@@ -360,6 +361,16 @@ assert "FileJobsAsync" in jobs_view and "File.Copy(" not in jobs_view and "File.
 assert "FileJobCoordinator" in (root / "src/Nexus.Core/Program.cs").read_text() and "WindowsTransferSource.Open" in (root / "src/Nexus.Core/Program.cs").read_text()
 assert "file-jobs-construction-and-layout" in (project / "UI/UiResourceProbe.cs").read_text() and "VerifyValidationLayout" in jobs_view
 print("Workspace retirement, Core-owned File Jobs and isolated native UI probe wiring OK")
+for relative in ["src/Nexus.Runtime/WindowsFileActions.cs", "src/Nexus.Core/Windows/WindowsFileWorker.cs", "tests/Nexus.Core.Checks/ShellIntegrationChecks.cs", "tests/Nexus.Runtime.Checks/WindowsFileActionChecks.cs"]:
+    assert (root / relative).is_file(), f"Missing shell integration component: {relative}"
+menus = (project / "UI/Menus/DesktopMenus.cs").read_text()
+assert '"About Nexus…", environment.ShowAbout' in menus and '"About this session"' not in menus
+assert "WindowsShellSurface.Calendar" in (project / "UI/Desktop/MenuBarView.cs").read_text() and "WindowsShellSurface.Calendar" in (project / "UI/Taskbar/TaskbarView.cs").read_text()
+assert "IContextMenu3" in (root / "src/Nexus.Core/Windows/WindowsFileWorker.cs").read_text()
+assert "WindowsFileActionCoordinator" in (root / "src/Nexus.Core/Program.cs").read_text()
+assert "compact-context-menu-construction" in (project / "UI/UiResourceProbe.cs").read_text() and "VerifyValidationContexts" in (project / "UI/Files/FilesView.cs").read_text()
+assert "WindowsDesktopSurfaces.EnsureExplorer()" in (root / "src/Nexus.DesktopHost/Program.cs").read_text()
+print("Compact context system, dedicated About, native Windows routes, Explorer retention and isolated shell handlers OK")
 runtime_version = ET.parse(root / "src/Nexus.Runtime/Nexus.Runtime.csproj").findtext("PropertyGroup/Version")
 for packages in json.loads((project / "packages.lock.json").read_text())["dependencies"].values():
     for package, entry in packages.items():
