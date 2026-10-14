@@ -105,7 +105,7 @@ internal sealed class DockPreviewWindow : Window
         if (_header.Children.Count > 1) _header.Children.RemoveAt(1);
         string icon = IconFor(window);
         _iconKey = icon;
-        _header.Children.Add(NexusIcons.Image(icon, 28)); _fallback.Children.Clear(); _fallback.Children.Add(NexusIcons.Image(icon, 48));
+        _header.Children.Add(NexusIcons.Image(icon, 28)); BuildFallback(icon, window.Title);
         _bounds = DesktopLayout.PreviewBounds(ShellLayerInterop.Monitor(_environment.Taskbar.Handle).Monitor.Bounds,
             _environment.Taskbar.BarBounds, anchor, ShellLayerInterop.Scale(_environment.Taskbar.Handle));
         _native.MoveAndResize(new RectInt32(_bounds.X, _bounds.Y, _bounds.Width, _bounds.Height));
@@ -226,10 +226,48 @@ internal sealed class DockPreviewWindow : Window
             _iconKey = icon;
             if (_header.Children.Count > 1) _header.Children.RemoveAt(1);
             _header.Children.Add(NexusIcons.Image(icon, 28));
-            _fallback.Children.Clear();
-            _fallback.Children.Add(NexusIcons.Image(icon, 48));
+            BuildFallback(icon, current.Title);
         }
+        BuildFallback(icon, current.Title);
         RefreshState();
+    }
+    private void BuildFallback(string icon, string title)
+    {
+        _fallback.Children.Clear();
+        var content = new StackPanel
+        {
+            Spacing = 10,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(15)
+        };
+        content.Children.Add(NexusIcons.Image(icon, 50));
+        content.Children.Add(new TextBlock
+        {
+            Text = title,
+            FontSize = 13,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            MaxWidth = 260,
+            MaxLines = 2,
+            TextWrapping = TextWrapping.Wrap,
+            TextAlignment = TextAlignment.Center,
+            Foreground = _environment.Theme.Brush("NexusText")
+        });
+        content.Children.Add(new TextBlock
+        {
+            Text = "Window preview · click to restore",
+            FontSize = 11,
+            TextAlignment = TextAlignment.Center,
+            Foreground = _environment.Theme.Brush("NexusMuted")
+        });
+        _fallback.Children.Add(new Border
+        {
+            Child = content,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
+            Background = _environment.Theme.Surface("Hero"),
+            CornerRadius = new CornerRadius(_environment.Theme.HighContrast ? 0 : 13)
+        });
     }
     private void ReleaseThumbnail()
     { _thumbnail?.Dispose(); _thumbnail = null; _fallback.Visibility = Visibility.Visible; }
@@ -243,7 +281,7 @@ internal sealed class DockPreviewWindow : Window
         var theme = _environment.Theme; _root.RequestedTheme = theme.ElementTheme;
         _frame.Background = theme.Surface("Panel"); _frame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 18);
         _frame.BorderBrush = theme.Brush("NexusBorder"); _frame.BorderThickness = new Thickness(theme.HighContrast ? 1 : 0);
-        _viewport.Background = theme.Brush("NexusInput"); _title.Foreground = theme.Brush("NexusText"); _detail.Foreground = _status.Foreground = theme.Brush("NexusMuted");
+        _viewport.Background = theme.Surface("Sidebar"); _title.Foreground = theme.Brush("NexusText"); _detail.Foreground = _status.Foreground = theme.Brush("NexusMuted");
         foreach (var button in new[] { _restore, _minimize, _maximize, _close }) { button.Background = theme.Brush("NexusCard"); button.Foreground = theme.Brush("NexusText"); }
         _chrome.SetCorners(theme.HighContrast, 18);
         _motion?.SetEnabled(theme.Animations && !theme.HighContrast && _environment.Session.State.SurfaceAnimations && !_environment.Session.State.ReducedEffects);
