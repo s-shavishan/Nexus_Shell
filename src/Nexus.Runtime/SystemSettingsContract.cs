@@ -24,6 +24,13 @@ public sealed record DisplayModeOption(string Id, int Width, int Height, int Ref
 public sealed record DisplayState(string Name, int Width, int Height, int RefreshHz, bool Primary,
     string DeviceId = "", DisplayModeOption[]? Modes = null);
 public sealed record DisplayModePreview(string DeviceId, string ModeId, int SecondsRemaining);
+public static class DisplayModePreviewPolicy
+{
+    public const int TimeoutSeconds = 18;
+    public static int Remaining(DateTimeOffset expiry, DateTimeOffset now)
+        => Math.Max(0, (int)Math.Ceiling((expiry - now).TotalSeconds));
+    public static bool Expired(DateTimeOffset expiry, DateTimeOffset now) => now >= expiry;
+}
 public sealed record SettingsChange(string Kind, string DeviceId = "", string ItemId = "", double? Value = null, bool? Enabled = null, Guid Epoch = default, string Secret = "")
 { public override string ToString() => "SettingsChange { Kind = " + Kind + ", Epoch = " + Epoch + ", connection details redacted }"; }
 public sealed record SettingsRequest(string Section, long Window = 0, SettingsChange? Change = null, bool Scan = false);
