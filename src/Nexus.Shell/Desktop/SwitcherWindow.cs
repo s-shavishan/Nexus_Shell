@@ -227,8 +227,9 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
         AutomationProperties.SetName(switchButton, "Switch to or drag " + entry.Window.Title);
         switchButton.Click += (_, _) =>
         {
-            if (_suppressCardClickKey == entry.Key
-                && System.Environment.TickCount64 < _suppressCardClickUntil) return;
+            if (WindowOverviewInteractionPolicy.SuppressClick(
+                _suppressCardClickKey, entry.Key, _suppressCardClickUntil,
+                System.Environment.TickCount64)) return;
             Commit(entry.Window);
         };
         content.Children.Add(switchButton);
@@ -476,7 +477,7 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
     private void ReleasePreviews() { foreach (var preview in _previews) preview.Thumbnail?.Dispose(); _previews.Clear(); }
     private void Commit(RunningWindow window)
     {
-        if (_staged.Count > 0)
+        if (!WindowOverviewInteractionPolicy.CanSwitch(_staged.Count))
         {
             // Switching to a window must not silently throw away a layout the
             // user carefully staged. Keep the overlay open for an explicit
