@@ -445,6 +445,15 @@ internal sealed class FilesView : Grid
                 menu.Items.Add(ShellMenu.Action("Open folder in Windows Explorer", () => _environment.OpenTarget(_folder), "\uED25"));
             return;
         }
+        if (targets.Length > 100)
+        {
+            menu.Items.Add(new MenuFlyoutItem
+            {
+                Text = "Select up to 100 items for batch actions",
+                IsEnabled = false
+            });
+            return;
+        }
         // Capture the original targets. A later refresh or selection change
         // cannot retarget a queued Core transfer or native Windows command.
         var selected = targets.ToArray();
