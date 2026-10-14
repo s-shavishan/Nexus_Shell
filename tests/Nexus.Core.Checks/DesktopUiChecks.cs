@@ -9,6 +9,10 @@ internal static class DesktopUiChecks
         && inner.X >= outer.X && inner.Y >= outer.Y && inner.Right <= outer.Right && inner.Bottom <= outer.Bottom;
     internal static void Run()
     {
+        Check(new[] { 0, 2, 55, 259, 433, 1168 }.All(BluetoothRadioAvailability.NoRadioError)
+            && !BluetoothRadioAvailability.NoRadioError(5)
+            && !BluetoothRadioAvailability.NoRadioError(31),
+            "No-radio Win32 errors must hide Bluetooth but real access/driver failures must remain visible.");
         Check(!BluetoothRadioAvailability.ShowControls(false)
             && BluetoothRadioAvailability.ShowControls(true)
             && BluetoothRadioAvailability.ShowControls(null),
