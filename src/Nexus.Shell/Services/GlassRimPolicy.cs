@@ -7,6 +7,6 @@ internal readonly record struct GlassRimAppearance(bool Visible, double Opacity)
     internal static GlassRimAppearance For(string? effectiveQuality, bool highContrast, bool simple)
     {
         bool visible = !highContrast && !simple && (effectiveQuality is "Ultra" or "Balanced");
-        return new(visible, effectiveQuality == "Ultra" ? .85 : .65);
+        return new(visible, effectiveQuality == "Ultra" ? .48 : .30);
     }
 }
