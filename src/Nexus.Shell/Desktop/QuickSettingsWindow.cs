@@ -33,9 +33,11 @@ internal sealed class QuickSettingsWindow : Window
         _window = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(_handle));
         _window.Title = "Nexus Control Center"; WindowSwitcherPolicy.Request(() => _window.IsShownInSwitchers = false, error => Log.Write("Switcher API unavailable; using native tool-window styling", error));
         if (_window.Presenter is OverlappedPresenter presenter)
-        { presenter.SetBorderAndTitleBar(false, false); presenter.IsResizable = presenter.IsMinimizable = presenter.IsMaximizable = false; }
+        { presenter.SetBorderAndTitleBar(false, false);
+          presenter.IsResizable = true; presenter.IsMinimizable = presenter.IsMaximizable = false; }
         ShellLayerInterop.ToolWindow(_handle);
-        _chrome = new(_handle, closeRequested: environment.Hide);
+        _chrome = new(_handle, resizable: true, resizeAllowed: () => !_compact,
+            minimumWidth: 390, minimumHeight: 330, closeRequested: environment.Hide);
         _motion = new(_frame, () => environment.Theme.Animations && !environment.Theme.HighContrast && environment.State.SurfaceAnimations && !environment.State.ReducedEffects);
         Activated += (_, args) => { if (IsOpen && args.WindowActivationState == WindowActivationState.Deactivated) environment.Hide(); };
         Closed += (_, _) => { _closed = true; IsOpen = false; _motion.Dispose(); _chrome.Dispose(); _view.Dispose(); environment.Stop(); };
@@ -43,7 +45,9 @@ internal sealed class QuickSettingsWindow : Window
     }
     internal void Show(string? section = null, bool compact = false)
     {
-        if (_closed) return; _compact = compact; ApplyAppearance(); Position();
+        if (_closed) return; _compact = compact;
+        if (_window.Presenter is OverlappedPresenter presenter) presenter.IsResizable = !compact;
+        ApplyAppearance(); Position();
         bool wasOpen = IsOpen; _frame.IsHitTestVisible = true; IsOpen = true; _view.Open(section, compact); Activate(); if (!wasOpen) _motion.Open();
     }
     internal void Position()
