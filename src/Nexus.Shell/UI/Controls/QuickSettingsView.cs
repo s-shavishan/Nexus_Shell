@@ -319,7 +319,27 @@ internal sealed class QuickSettingsView : Grid, IDisposable
                 };
                 card.Children.Add(control);
             }
-            var options = Card("Display tools", "Native Windows controls for resolution, projection and night light.");
+            if ((state.Displays?.Length ?? 0) > 1)
+            {
+                var projection = Card("Projection mode", "Apply a Windows multi-monitor layout directly.");
+                var modes = new Grid { ColumnSpacing = 6, RowSpacing = 6 };
+                modes.ColumnDefinitions.Add(new()); modes.ColumnDefinitions.Add(new());
+                modes.RowDefinitions.Add(new() { Height = GridLength.Auto });
+                modes.RowDefinitions.Add(new() { Height = GridLength.Auto });
+                string[] captions = ["PC screen", "Duplicate", "Extend", "Second screen"];
+                string[] targets = ["Internal", "Duplicate", "Extend", "External"];
+                for (int i = 0; i < captions.Length; i++)
+                {
+                    int index = i;
+                    var action = DeviceButton(captions[i], () => _environment.SetProjection(targets[index]));
+                    Grid.SetColumn(action, i % 2); Grid.SetRow(action, i / 2); modes.Children.Add(action);
+                }
+                projection.Children.Add(modes);
+            }
+            var options = Card("Display tools",
+                (state.Displays?.Length ?? 0) <= 1
+                    ? "One display is detected. Multi-monitor modes are hidden. Hardware brightness appears only when supported."
+                    : "Advanced Windows controls for scaling, refresh rate and night light.");
             var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
             actions.Children.Add(DeviceButton("Settings", Advanced));
             actions.Children.Add(DeviceButton("Project…", () => _environment.OpenWindowsTool("project-display")));
