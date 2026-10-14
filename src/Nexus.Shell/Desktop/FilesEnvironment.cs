@@ -1,8 +1,10 @@
 using Microsoft.UI.Xaml;
 using Nexus.Runtime;
+using Nexus.Runtime.Transfers;
 using Nexus.Shell.Models;
 using Nexus.Shell.Services;
 using Nexus.Shell.UI;
+using Nexus.Shell.Interop;
 using System.Diagnostics;
 
 namespace Nexus.Shell.Desktop;
@@ -22,7 +24,11 @@ internal sealed class FilesEnvironment
     private FilesWindow? _window;
     private FilesWork? _work;
     private bool _stopping, _pulsing;
+    internal bool Validation { get; }
     private int _failures;
+    private FilesEnvironment()
+    { Validation = true; _stopping = true; _core = null!; _client = null!; Theme.Apply("Midnight"); }
+    internal static FilesEnvironment ForValidation() => new();
     internal FilesEnvironment(string[] args)
     {
         if (args.Length != 7 || args[0] != "--files-worker" || args[1] != "--core-pipe" || args[3] != "--core-pid"
@@ -123,7 +129,40 @@ internal sealed class FilesEnvironment
     }
     internal void OpenTarget(string path)
     {
+        if (_stopping) return;
         try { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); }
         catch (Exception ex) { Log.Write("Files could not open the selected item", ex); _window?.View.ShowMessage("Could not open this item: " + ex.Message); }
+    }
+    internal async Task QueueTransferAsync(string[] sources, FileJobKind kind)
+    {
+        var destination = await _client.CallAsync<FilesResult>(RuntimeOperations.OpenFiles, new FilesLaunch(new(FileSelectionKind.Folder, kind == FileJobKind.Copy ? "Copy selection to…" : "Move selection to…")), null, _cancel.Token);
+        if (_stopping || destination.Paths.Length == 0) return;
+        var snapshot = await _client.CallAsync<FileJobsSnapshot>(RuntimeOperations.FileJobs, new { }, TimeSpan.FromSeconds(5), _cancel.Token);
+        var spec = FileJobRules.Validate(new(Guid.NewGuid(), kind, sources, destination.Paths[0]));
+        try
+        {
+            await _client.CallAsync<FileJobsSnapshot>(RuntimeOperations.SubmitFileJob, new FileJobSubmit(snapshot.Epoch, spec), TimeSpan.FromSeconds(5), _cancel.Token);
+            if (!_stopping) _window?.View.ShowMessage("Transfer accepted by Core. Open Nexus menu → File jobs for progress and cancellation.");
+        }
+        catch (Exception error) when (error is IOException or TimeoutException)
+        {
+            // Submission is not retried with a new ID after a lost reply.
+            if (!_stopping) _window?.View.ShowMessage("Transfer acknowledgement was lost. Review File Jobs before queuing it again.");
+        }
+    }
+    internal async Task WindowsFileAsync(string path, string kind)
+    {
+        if (_stopping || _window is null) return;
+        var (x, y) = WindowsShellBridge.Cursor(); var request = new WindowsFileAction(Guid.NewGuid(), kind, path, _window.Handle.ToInt64(), x, y);
+        WindowsShellBridge.AllowForeground(_core.Id);
+        var status = await _client.CallAsync<WindowsFileActionStatus>(RuntimeOperations.WindowsFileAction, request, TimeSpan.FromSeconds(5), _cancel.Token);
+        WindowsShellBridge.AllowForeground(status.ProcessId);
+        for (int i = 0; i < 8 && !_stopping; i++)
+        {
+            await Task.Delay(250, _cancel.Token);
+            status = await _client.CallAsync<WindowsFileActionStatus>(RuntimeOperations.WindowsFileStatus, new WindowsFileStatusRequest(request.Id), TimeSpan.FromSeconds(5), _cancel.Token);
+            if (status.State == "Failed") throw new InvalidOperationException(status.Detail);
+            if (status.State == "Finished") break;
+        }
     }
 }

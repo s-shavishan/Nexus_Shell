@@ -58,7 +58,11 @@ internal static class LaunchpadCacheChecks
         Check(cache.Update(state.PinnedApps, apps), "A new installed-app snapshot must update the catalog.");
         var catalog = cache.Catalog; var all = cache.Filter(state, "All", "");
         Check(all.SequenceEqual(DesktopOrganization.Apps(LaunchpadCatalog.Build([builtin], [], apps), state, "All", "")), "Caching changed catalog filtering or the 600-item bound.");
-        Check(all.Count == 600 && LaunchpadCatalog.Page(all, 0).Count == 24, "Retained data must preserve the bounded catalog and realized page.");
+        Check(all.Count == 600 && LaunchpadCatalog.Page(all, 0).Count == LaunchpadCatalog.PageSize, "Retained data must preserve the bounded catalog and realized page.");
+        Check(LaunchpadCatalog.PageSize == 18 && LaunchpadCatalog.Page(all, 1).Count == 18
+            && !LaunchpadCatalog.Page(all, 0).Intersect(LaunchpadCatalog.Page(all, 1)).Any()
+            && LaunchpadCatalog.Page(all, 33).Count == 6,
+            "Three-row pagination must retain unique apps and the final partial page.");
         for (int i = 0; i < 500; i++)
         {
             Check(!cache.Update(state.PinnedApps, apps) && ReferenceEquals(catalog, cache.Catalog), "An unchanged catalog was rebuilt.");

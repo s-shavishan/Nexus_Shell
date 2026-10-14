@@ -27,7 +27,7 @@ public sealed class StateStore
                 string json = ReadBounded(FilePath);
                 var state = ReadState(json);
                 using var document = JsonDocument.Parse(json);
-                foreach (var migration in new[] { ("Profiles", "0.5.0"), ("ExploreSpaces", "0.8.0"), ("Tasks", "0.4.0") })
+                foreach (var migration in new[] { ("ExploreSpaces", "0.8.0"), ("Tasks", "0.4.0") })
                 {
                     if (document.RootElement.TryGetProperty(migration.Item1, out _)) continue;
                     string backup = Path.Combine(_directoryPath, "settings.before-" + migration.Item2 + ".json");
@@ -52,7 +52,7 @@ public sealed class StateStore
             return recovered;
         }
         catch (Exception ex) { Log.Write("No readable settings recovery copy", ex); }
-        RecoveryMessage = "Nexus could not restore your settings. It opened a fresh workspace; any unreadable copy is kept in the data folder.";
+        RecoveryMessage = "Nexus could not restore your settings. It loaded default settings; any unreadable copy is kept in the data folder.";
         return NormalizeState(new());
     }
 
@@ -67,7 +67,7 @@ public sealed class StateStore
     {
         using var document = JsonDocument.Parse(json);
         if (document.RootElement.ValueKind != JsonValueKind.Object)
-            throw new InvalidDataException("Settings must contain a workspace object.");
+            throw new InvalidDataException("Settings must contain a JSON object.");
         return JsonSerializer.Deserialize<ShellState>(json, _json) ?? throw new InvalidDataException("Settings are empty.");
     }
     public static ShellState NormalizeState(ShellState state)
@@ -91,7 +91,6 @@ public sealed class StateStore
             state.FocusCompleted = Math.Clamp(state.FocusCompleted, 0, 1000);
             WorkspaceState.Normalize(state);
             ExploreWorkspace.Normalize(state);
-            DesktopWorkspace.Normalize(state);
             ShellExperience.Normalize(state);
             state.UsageSeconds = (state.UsageSeconds ?? []).Where(a => !string.IsNullOrWhiteSpace(a.Key) && a.Key.Length <= 260 &&
                     double.IsFinite(a.Value) && a.Value >= 0 && a.Value <= 1_000_000_000)

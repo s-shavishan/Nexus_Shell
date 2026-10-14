@@ -10,9 +10,6 @@ public sealed record TaskEntry(string Id, string Title, bool Completed = false);
 public sealed record RecentCommand(string Kind, string Target);
 public sealed record CommandEntry(string Title, string Subtitle, string Glyph, string Kind, string Target);
 
-public sealed record WorkspaceProfile(string Id, string Name, string Description, string Page, string Glyph,
-    List<AppEntry> Apps, List<string> SavedItemIds);
-public sealed record WorkspaceLaunchItem(string Title, string Target, string Kind);
 public sealed record SavedWindowPosition(string ProcessPath, string Title, string MonitorId,
     double Left, double Top, double Width, double Height, bool Maximized);
 public sealed record SavedWindowLayout(string Id, string Name, List<SavedWindowPosition> Windows);
@@ -62,10 +59,6 @@ public sealed class ShellState
     public List<RecentCommand> RecentCommands { get; set; } = [];
     public bool DesktopLayout { get; set; } = true;
     public bool KeepAvailable { get; set; }
-    public bool ResumeWorkspace { get; set; } = true;
-    public string LastPage { get; set; } = "Home";
-    public string ActiveProfileId { get; set; } = "personal";
-    public List<WorkspaceProfile> Profiles { get; set; } = [];
     public string QuickNote { get; set; } = "";
     public int FocusMinutes { get; set; } = 25;
     public string FocusDay { get; set; } = "";
@@ -98,8 +91,6 @@ public sealed class ShellState
         AppCollections = AppCollections.Select(group => group with { Targets = [.. group.Targets] }).ToList(),
         HiddenAppTargets = [.. HiddenAppTargets], LaunchpadOrder = LaunchpadOrder, Places = [.. Places],
         ShowDesktopIcons = ShowDesktopIcons, DesktopIconOrder = DesktopIconOrder,
-        ResumeWorkspace = ResumeWorkspace, LastPage = LastPage, ActiveProfileId = ActiveProfileId,
-        Profiles = Profiles.Select(p => p with { Apps = [.. p.Apps], SavedItemIds = [.. p.SavedItemIds] }).ToList(),
         Wallpaper = Wallpaper, QuickNote = QuickNote, FocusMinutes = FocusMinutes,
         FocusDay = FocusDay, FocusCompleted = FocusCompleted, SavedItems = [.. SavedItems],
         FocusRemainingSeconds = FocusRemainingSeconds, FocusTaskId = FocusTaskId, Tasks = [.. Tasks],

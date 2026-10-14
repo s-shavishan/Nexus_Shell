@@ -12,10 +12,12 @@ public static class AppCatalog
     {
         var apps = new List<AppEntry>
         {
+            new("controls", "Nexus Controls", "nexus:controls", "\uE713", "System"),
+            new("jobs", "File jobs", "nexus:jobs", "\uE8B7", "Utility"),
             new("files", "Files", "nexus:files", "\uE8B7", "System"),
             new("browser", "Browser", "https://www.google.com", "\uE774", "Browser"),
             new("terminal", "Terminal", Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "cmd.exe"), "\uE756", "Development"),
-            new("settings", "Settings", "ms-settings:", "\uE713", "System"),
+            new("settings", "Windows Settings", "ms-settings:", "\uE713", "System"),
             new("calculator", "Calculator", "nexus:calculator", "\uE8EF", "Utility"),
             new("notes", "Notes", "nexus:notes", "\uE70B", "Utility")
         };

@@ -70,8 +70,6 @@ internal static class ExploreChecks
         check(System.Text.Encoding.UTF8.GetByteCount(largeNotesArchive) < ExploreWorkspace.ImportByteLimit &&
             ExploreWorkspace.ReadImport(largeNotesArchive).Items.Count == WorkspaceState.MaximumItems,
             "A full board of maximum-length Unicode notes must fit its own export/import limit.");
-        var profile = new WorkspaceProfile("p", "Study", "", "Explore", "x", [], [note.Id]);
-        check(DesktopWorkspace.Plan(profile, restored.SavedItems).Length == 0, "Workspace launch plans must never treat a local note as an executable target.");
         var repaired = new ShellState { ExploreSpaces = [new("odd", "Custom", "", "unknown")], ActiveExploreSpaceId = "missing",
             ExploreSelectedItemId = "missing", SavedItems = [new("safe", "Link", "https://example.com", "Link", SpaceId: "missing")] };
         ExploreWorkspace.Normalize(repaired);

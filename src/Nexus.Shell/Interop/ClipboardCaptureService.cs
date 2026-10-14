@@ -17,6 +17,7 @@ internal sealed class ClipboardCaptureService : IDisposable
     private int _writing;
     private uint _baseline;
     internal event Action? Changed;
+    internal event Action<bool>? SessionAvailabilityChanged;
     internal string Status { get; private set; } = "Off · nothing is retained.";
     internal bool Suspended => _locked || _disconnected;
     internal bool Available => _hooked && _sessionEvents;
@@ -62,6 +63,7 @@ internal sealed class ClipboardCaptureService : IDisposable
                     if (_listening) Status = Suspended ? "Paused while this session is locked or disconnected." : "On · new copied text stays in this session.";
                     Changed?.Invoke();
                 }
+                if (action is 1 or 2 or 3 or 4 or 5 or 6 or 7 or 8) SessionAvailabilityChanged?.Invoke(Suspended);
             }
         }
         catch { Status = "Clipboard notifications paused. Turn the shelf off and on to retry."; Changed?.Invoke(); }
@@ -153,7 +155,7 @@ internal sealed class ClipboardCaptureService : IDisposable
     }
     public void Dispose()
     {
-        if (_disposed) return; SetEnabled(false); _disposed = true; _gate.Invalidate(); _history.Clear(); Changed = null;
+        if (_disposed) return; SetEnabled(false); _disposed = true; _gate.Invalidate(); _history.Clear(); Changed = null; SessionAvailabilityChanged = null;
         if (_sessionEvents) WTSUnRegisterSessionNotification(_window);
         if (_hooked) ShellLayerInterop.RemoveWindowSubclass(_window, _callback, new UIntPtr(SubclassId));
     }

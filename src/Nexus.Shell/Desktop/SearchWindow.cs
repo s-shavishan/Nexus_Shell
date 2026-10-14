@@ -21,21 +21,45 @@ internal sealed class SearchWindow : DesktopPanelWindow
     private readonly TextBlock _engine = new() { FontSize = 11, TextTrimming = TextTrimming.CharacterEllipsis };
     private readonly TextBlock _hint = new() { Text = "↑ ↓ select   ·   Enter open   ·   Ctrl+Enter open folder   ·   Ctrl+Shift+C copy path", FontSize = 11, TextWrapping = TextWrapping.Wrap };
     private readonly ProgressBar _progress = new() { IsIndeterminate = false, Height = 2, Visibility = Visibility.Collapsed };
-    private readonly Border _listFrame = new() { CornerRadius = new CornerRadius(14), BorderThickness = new Thickness(1), Padding = new Thickness(5) };
-    private readonly Border _launchFrame = new() { BorderThickness = new Thickness(1), Padding = new Thickness(8, 10, 8, 10) };
+    private readonly Border _listFrame = new() { CornerRadius = new CornerRadius(19), BorderThickness = new Thickness(1), Padding = new Thickness(8) };
+    private readonly Border _launchFrame = new() { CornerRadius = new CornerRadius(20), BorderThickness = new Thickness(1), Padding = new Thickness(13, 12, 13, 12) };
+    private readonly Border _queryFrame = new() { CornerRadius = new CornerRadius(20), BorderThickness = new Thickness(1), Padding = new Thickness(9, 5, 12, 5) };
+    private readonly Border _searchGlyphWell = new() { Width = 43, Height = 43, CornerRadius = new CornerRadius(14), VerticalAlignment = VerticalAlignment.Center };
+    private readonly Border _keyHint = new() { Padding = new Thickness(9, 5, 9, 5), CornerRadius = new CornerRadius(8), VerticalAlignment = VerticalAlignment.Center };
+    private readonly TextBlock _resultCount = new() { FontSize = 11, VerticalAlignment = VerticalAlignment.Center };
+    private readonly List<Border> _quickArtWells = [];
+    private readonly List<Button> _quickButtons = [];
     private readonly Button _open, _folder, _copy, _previous, _next;
     private readonly LatestWorkQueue _work = new();
     private readonly DispatcherTimer _debounce = new() { Interval = TimeSpan.FromMilliseconds(140) };
     private readonly List<Row> _rows = [];
+    private readonly List<UIElement> _expandedChrome = [];
+    private bool _expanded;
     private int _generation, _offset;
     private SearchReply? _reply;
     private bool _initializing = true, _validation;
     internal SearchWindow(DesktopEnvironment environment) : this(environment, new Grid { RowSpacing = 12 }) { }
-    private SearchWindow(DesktopEnvironment environment, Grid body) : base(environment, "Search", body, 790, 700, center: true, animateBody: false)
+    private SearchWindow(DesktopEnvironment environment, Grid body) : base(environment, "Search", body, 760, 630, center: true, animateBody: false)
     {
         foreach (bool flexible in new[] { false, false, false, false, true, false, false, false })
             body.RowDefinitions.Add(new() { Height = flexible ? new GridLength(1, GridUnitType.Star) : GridLength.Auto });
-        body.Children.Add(_query);
+        // Spotlight's input is one prominent, rounded glass search surface.
+        // The existing TextBox remains the sole keyboard/text source.
+        var searchRow = new Grid { ColumnSpacing = 10 };
+        searchRow.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
+        searchRow.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) });
+        searchRow.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
+        _searchGlyphWell.Child = ShellControls.Icon("\uE721", 21);
+        searchRow.Children.Add(_searchGlyphWell);
+        _query.BorderThickness = new Thickness(0);
+        _query.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        _query.VerticalAlignment = VerticalAlignment.Center;
+        Grid.SetColumn(_query, 1); searchRow.Children.Add(_query);
+        _keyHint.Child = new TextBlock { Text = "CTRL  K", FontSize = 10, VerticalAlignment = VerticalAlignment.Center };
+        Grid.SetColumn(_keyHint, 2); searchRow.Children.Add(_keyHint);
+        _queryFrame.Child = searchRow; body.Children.Add(_queryFrame);
+        _query.GotFocus += (_, _) => _queryFrame.BorderBrush = Environment.Theme.Brush("NexusAccent");
+        _query.LostFocus += (_, _) => _queryFrame.BorderBrush = Environment.Theme.Edge;
 
         // The reference's immediately accessible application strip belongs
         // inside Spotlight, not in the search-results virtualized list.
@@ -48,40 +72,55 @@ internal sealed class SearchWindow : DesktopPanelWindow
         };
         void QuickApp(string name, string icon, Action open)
         {
-            var image = NexusIcons.Image(icon, 34);
+            var artwork = new Border
+            {
+                Width = 54, Height = 54, CornerRadius = new CornerRadius(17),
+                BorderThickness = new Thickness(1),
+                Child = NexusIcons.Image(icon, 37),
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
             var label = new TextBlock
             {
-                Text = name, FontSize = 12,
-                TextAlignment = TextAlignment.Center,
+                Text = name, FontSize = 12, TextAlignment = TextAlignment.Center,
                 TextTrimming = TextTrimming.CharacterEllipsis
             };
-            var contents = new StackPanel { Spacing = 7, HorizontalAlignment = HorizontalAlignment.Center };
-            contents.Children.Add(image); contents.Children.Add(label);
+            var contents = new StackPanel { Spacing = 8, HorizontalAlignment = HorizontalAlignment.Center };
+            contents.Children.Add(artwork); contents.Children.Add(label);
             var button = new Button
             {
-                Content = contents, Width = 104, Height = 90,
-                CornerRadius = new CornerRadius(14),
+                Content = contents, Width = 106, Height = 102,
+                CornerRadius = new CornerRadius(17), Padding = new Thickness(4, 7, 4, 7),
                 Style = (Style)Application.Current.Resources["QuietButton"],
                 HorizontalContentAlignment = HorizontalAlignment.Center
             };
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, "Open " + name);
             ToolTipService.SetToolTip(button, "Open " + name);
             button.Click += (_, _) => { Hide(); open(); };
+            _quickButtons.Add(button);
+            _quickArtWells.Add(artwork);
             quickApps.Children.Add(button);
         }
         QuickApp("Launchpad", "Launchpad", () => Environment.ShowMenu());
         QuickApp("Files", "Files", () => Environment.ShowFiles());
-        QuickApp("Explore", "Explore", () => Environment.ShowSections("Explore"));
-        QuickApp("Notes", "Note", () => Environment.ShowSections("Study"));
+        QuickApp("Controls", "Controls", () => Environment.ShowControls());
+        QuickApp("Notes", "Note", () => Environment.OpenTarget("nexus:notes"));
         QuickApp("Settings", "Settings", () => Environment.ShowQuickSettings());
         QuickApp("Windows", "Windows", () => Environment.ShowWindowOverview());
-        _launchFrame.Child = new ScrollViewer
+        var launchContent = new StackPanel { Spacing = 8 };
+        launchContent.Children.Add(new TextBlock
+        {
+            Text = "QUICK ACCESS", FontSize = 11,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            Foreground = Environment.Theme.Brush("NexusMuted")
+        });
+        launchContent.Children.Add(new ScrollViewer
         {
             Content = quickApps,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
             VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
             VerticalScrollMode = ScrollMode.Disabled
-        };
+        });
+        _launchFrame.Child = launchContent;
         Grid.SetRow(_launchFrame, 1);
         body.Children.Add(_launchFrame);
         var filters = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
@@ -93,7 +132,23 @@ internal sealed class SearchWindow : DesktopPanelWindow
         var setup = ActionButton("Engine setup", () => { }); setup.Flyout = Setup(); filters.Children.Add(setup);
         var filterScroll = new ScrollViewer { Content = filters, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled }; Grid.SetRow(filterScroll, 2); body.Children.Add(filterScroll);
         Grid.SetRow(_progress, 3); body.Children.Add(_progress);
-        _listFrame.Child = _results; Grid.SetRow(_listFrame, 4); body.Children.Add(_listFrame);
+        var resultsPane = new Grid { RowSpacing = 6 };
+        resultsPane.RowDefinitions.Add(new() { Height = GridLength.Auto });
+        resultsPane.RowDefinitions.Add(new() { Height = new GridLength(1, GridUnitType.Star) });
+        var resultHeader = new Grid { Padding = new Thickness(12, 7, 12, 4) };
+        resultHeader.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) });
+        resultHeader.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
+        resultHeader.Children.Add(new TextBlock
+        {
+            Text = "SEARCH RESULTS", FontSize = 11,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            Foreground = Environment.Theme.Brush("NexusMuted")
+        });
+        Grid.SetColumn(_resultCount, 1); resultHeader.Children.Add(_resultCount);
+        resultsPane.Children.Add(resultHeader);
+        Grid.SetRow(_results, 1); resultsPane.Children.Add(_results);
+        _listFrame.Child = resultsPane;
+        Grid.SetRow(_listFrame, 4); body.Children.Add(_listFrame);
         Grid.SetRow(_status, 5); body.Children.Add(_status);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
         _open = ActionButton("Open", OpenSelected); _folder = ActionButton("Open folder", RevealSelected); _copy = ActionButton("Copy path", () => _ = CopySelectedAsync());
@@ -101,6 +156,14 @@ internal sealed class SearchWindow : DesktopPanelWindow
         foreach (var button in new[] { _open, _folder, _copy, _previous, _next }) actions.Children.Add(button);
         var actionScroll = new ScrollViewer { Content = actions, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled }; Grid.SetRow(actionScroll, 6); body.Children.Add(actionScroll);
         var footer = new StackPanel { Spacing = 5 }; footer.Children.Add(_hint); footer.Children.Add(_engine); Grid.SetRow(footer, 7); body.Children.Add(footer);
+        // This is a launcher until there is a query. Keep the result controls
+        // alive but out of measure/arrange so no native search dialog appears.
+        _expandedChrome.Add(filterScroll);
+        _expandedChrome.Add(_listFrame);
+        _expandedChrome.Add(_status);
+        _expandedChrome.Add(actionScroll);
+        _expandedChrome.Add(footer);
+        foreach (var element in _expandedChrome) element.Visibility = Visibility.Collapsed;
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_query, "Search names and desktop controls");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_category, "Result category");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_scope, "File search scope");
@@ -108,13 +171,14 @@ internal sealed class SearchWindow : DesktopPanelWindow
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetLiveSetting(_status, Microsoft.UI.Xaml.Automation.Peers.AutomationLiveSetting.Polite);
         _query.TextChanged += (_, _) =>
         {
-            // Empty Spotlight shows the familiar quick-launch strip. As soon
-            // as the user types, release that space to searchable results
-            // rather than forcing an extra scroll on smaller monitors.
-            var visibility = string.IsNullOrWhiteSpace(_query.Text)
-                ? Visibility.Visible : Visibility.Collapsed;
-            if (_launchFrame.Visibility != visibility) _launchFrame.Visibility = visibility;
-            Schedule();
+            SetExpanded(!string.IsNullOrWhiteSpace(_query.Text));
+            if (_expanded) Schedule();
+            else
+            {
+                // Prevent a pending indexed search from repainting the hidden
+                // results after the panel has returned to launcher mode.
+                ++_generation; _debounce.Stop(); _work.Cancel(); SetBusy(false);
+            }
         };
         _category.SelectionChanged += (_, _) => Schedule();
         _scope.SelectionChanged += (_, _) => Schedule();
@@ -135,6 +199,19 @@ internal sealed class SearchWindow : DesktopPanelWindow
         _debounce.Tick += (_, _) => { _debounce.Stop(); _ = SearchAsync(); };
         _initializing = false; ApplyAppearance(); RefreshActions();
     }
+    private void SetExpanded(bool expanded)
+    {
+        if (_expanded == expanded) return;
+        _expanded = expanded;
+        _launchFrame.Visibility = expanded ? Visibility.Collapsed : Visibility.Visible;
+        foreach (var child in _expandedChrome)
+            child.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
+        if (IsOpen) Reposition();
+    }
+
+    protected override ShellRect ResolveBounds(ShellRect work, ShellRect monitor, double scale)
+        => DesktopLayout.SpotlightPanelBounds(work, scale, _expanded);
+
     private void Shortcut(VirtualKey key, VirtualKeyModifiers modifiers, Action action)
     { var shortcut = new KeyboardAccelerator { Key = key, Modifiers = modifiers }; shortcut.Invoked += (_, args) => { action(); args.Handled = true; }; Root.KeyboardAccelerators.Add(shortcut); }
     private Flyout Setup()
@@ -212,16 +289,43 @@ internal sealed class SearchWindow : DesktopPanelWindow
         var theme = Environment.Theme;
         foreach (var row in _rows)
         {
-            var face = new Grid { ColumnSpacing = 12 }; face.ColumnDefinitions.Add(new() { Width = new GridLength(32) }); face.ColumnDefinitions.Add(new());
-            face.Children.Add(NexusIcons.Image(row.Icon, 28)); var labels = new StackPanel { Spacing = 3 };
+            var face = new Grid { ColumnSpacing = 13 };
+            face.ColumnDefinitions.Add(new() { Width = new GridLength(44) });
+            face.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) });
+            face.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
+            var artwork = new Border
+            {
+                Child = NexusIcons.Image(row.Icon, 29),
+                Width = 42, Height = 42, CornerRadius = new CornerRadius(13),
+                Background = theme.Surface(row.File is not null ? "Sidebar" : "Hero"),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            face.Children.Add(artwork);
+            var labels = new StackPanel { Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
             labels.Children.Add(new TextBlock { Text = row.Name, FontSize = 14, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Foreground = theme.Brush("NexusText"), TextTrimming = TextTrimming.CharacterEllipsis });
             labels.Children.Add(new TextBlock { Text = row.Detail, FontSize = 11, Foreground = theme.Brush("NexusMuted"), TextTrimming = TextTrimming.CharacterEllipsis });
             Grid.SetColumn(labels, 1); face.Children.Add(labels);
-            var item = new ListViewItem { Content = face, Tag = row, Padding = new Thickness(10, 9, 10, 9), HorizontalContentAlignment = HorizontalAlignment.Stretch };
+            var kind = new Border
+            {
+                Padding = new Thickness(10, 5, 10, 5), CornerRadius = new CornerRadius(9),
+                Background = theme.Brush("NexusSelection"), VerticalAlignment = VerticalAlignment.Center,
+                Child = new TextBlock
+                {
+                    Text = row.File is not null ? "FILE" : row.Window is not null ? "WINDOW" : "ACTION",
+                    FontSize = 10, Foreground = theme.Brush("NexusMuted")
+                }
+            };
+            Grid.SetColumn(kind, 2); face.Children.Add(kind);
+            var item = new ListViewItem
+            {
+                Content = face, Tag = row, Padding = new Thickness(11, 10, 11, 10),
+                HorizontalContentAlignment = HorizontalAlignment.Stretch
+            };
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(item, row.Name + ", " + row.Detail); ToolTipService.SetToolTip(item, row.Detail); _results.Items.Add(item);
             if (row == selected) _results.SelectedItem = item;
         }
         if (_results.SelectedIndex < 0 && _results.Items.Count > 0) _results.SelectedIndex = 0;
+        _resultCount.Text = _rows.Count == 1 ? "1 result" : _rows.Count + " results";
         RefreshActions();
     }
     private void RefreshActions()
@@ -256,7 +360,7 @@ internal sealed class SearchWindow : DesktopPanelWindow
     }
     internal void Show() => ShowPanel();
     protected override void OnShown()
-    { _query.Focus(FocusState.Programmatic); if (!_validation) Schedule(immediate: true); }
+    { _query.Focus(FocusState.Programmatic); if (!_validation && _expanded) Schedule(immediate: true); }
     protected override void OnHidden()
     {
         ++_generation; _debounce.Stop(); _work.Cancel(); SetBusy(false);
@@ -270,17 +374,49 @@ internal sealed class SearchWindow : DesktopPanelWindow
         _rows.Add(new("Sound controls", "Desktop · Volume and audio devices", "Settings", Command: "sound"));
         _status.Text = "Files 1–1 of 1"; _engine.Text = "Everything · Windows profile · names only"; Render();
     }
+    internal void VerifySpotlightComposition()
+    {
+        // Native WinUI preflight: the search box, real quick-launch actions
+        // and result list must belong to the intended glass surfaces.
+        if (_queryFrame.Child is not Grid queryRow
+            || !queryRow.Children.Contains(_query)
+            || _launchFrame.Child is not StackPanel launch
+            || launch.Children.Count != 2
+            || _quickArtWells.Count != 6 || _quickButtons.Count != 6
+            || _listFrame.Child is not Grid resultStage
+            || !resultStage.Children.Contains(_results))
+            throw new InvalidOperationException("Spotlight lost its functional glass composition.");
+        var paints = _quickArtWells.Select(well => well.Background).ToArray();
+        for (int i = 0; i < 30; i++) ApplyAppearance();
+        if (!paints.SequenceEqual(_quickArtWells.Select(well => well.Background)))
+            throw new InvalidOperationException("Steady-state Spotlight repainted quick-launch art.");
+    }
+
     internal override void ApplyAppearance()
     {
         base.ApplyAppearance(); var theme = Environment.Theme;
-        _query.Foreground = _results.Foreground = theme.Brush("NexusText"); _status.Foreground = _engine.Foreground = _hint.Foreground = theme.Brush("NexusMuted");
-        _query.Background = _listFrame.Background = theme.Material("Card", Environment.Session.State.NativeGlass);
-        _launchFrame.Background = MidnightGlassMetrics.ReferenceEnabled(theme.Palette, theme.HighContrast)
-            ? theme.Surface("Dock") : theme.Material("Card", Environment.Session.State.NativeGlass);
-        _query.BorderBrush = _listFrame.BorderBrush = _launchFrame.BorderBrush = theme.Edge;
-        _query.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : MidnightGlassMetrics.ControlRadius);
-        _launchFrame.CornerRadius = _listFrame.CornerRadius =
-            new CornerRadius(theme.HighContrast ? 0 : MidnightGlassMetrics.CardRadius);
+        _query.Foreground = _results.Foreground = theme.Brush("NexusText");
+        _status.Foreground = _engine.Foreground = _hint.Foreground = _resultCount.Foreground = theme.Brush("NexusMuted");
+        var material = theme.Material("Card", Environment.Session.State.NativeGlass);
+        bool midnight = MidnightGlassMetrics.ReferenceEnabled(theme.Palette, theme.HighContrast);
+        _queryFrame.Background = midnight ? theme.Surface("Hero") : theme.Material("Input", Environment.Session.State.NativeGlass);
+        _queryFrame.BorderBrush = _query.FocusState == FocusState.Unfocused ? theme.Edge : theme.Brush("NexusAccent");
+        _queryFrame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 20);
+        _searchGlyphWell.Background = theme.Brush("NexusSelection");
+        _keyHint.Background = theme.Brush("NexusSidebar");
+        _launchFrame.Background = midnight ? theme.Surface("Dock") : material;
+        _listFrame.Background = midnight ? theme.Surface("Sidebar") : material;
+        _listFrame.BorderBrush = _launchFrame.BorderBrush = theme.Edge;
+        _launchFrame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 20);
+        _listFrame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 19);
+        for (int i = 0; i < _quickArtWells.Count; i++)
+        {
+            var well = _quickArtWells[i];
+            var background = midnight ? theme.Surface(i % 3 == 0 ? "Hero" : i % 3 == 1 ? "Sidebar" : "Dock") : material;
+            if (!ReferenceEquals(well.Background, background)) well.Background = background;
+            if (!ReferenceEquals(well.BorderBrush, theme.Edge)) well.BorderBrush = theme.Edge;
+            well.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 17);
+        }
         if (_rows.Count > 0) Render();
     }
 }

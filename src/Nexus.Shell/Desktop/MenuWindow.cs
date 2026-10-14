@@ -22,7 +22,7 @@ internal sealed class MenuWindow : Window
     private bool _closed;
     internal MenuWindow(DesktopEnvironment environment)
     {
-        _view = new(environment); _frame = new Border { Child = _view, CornerRadius = new CornerRadius(16), BorderThickness = new Thickness(1) }; Content = _frame;
+        _view = new(environment); _frame = new Border { Child = _view, CornerRadius = new CornerRadius(MidnightGlassMetrics.FrameRadius), BorderThickness = new Thickness(1) }; Content = _frame;
         _handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
         NativeWindow = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(_handle));
         NativeWindow.Title = "Nexus Launchpad"; WindowSwitcherPolicy.Request(() => NativeWindow.IsShownInSwitchers = false, error => Log.Write("Switcher API unavailable; using native tool-window styling", error));
@@ -50,7 +50,7 @@ internal sealed class MenuWindow : Window
     internal void ApplyAppearance(DesktopEnvironment environment)
     {
         _frame.RequestedTheme = environment.Theme.ElementTheme; _material.Apply(this, _frame, environment); _frame.BorderBrush = environment.Theme.Edge;
-        _frame.BorderThickness = new Thickness(1); _frame.CornerRadius = new CornerRadius(environment.Theme.HighContrast ? 0 : 22);
-        _chrome.SetCorners(environment.Theme.HighContrast, 22); _motion.Refresh(); _view.ApplyAppearance();
+        _frame.BorderThickness = new Thickness(1); _frame.CornerRadius = new CornerRadius(environment.Theme.HighContrast ? 0 : MidnightGlassMetrics.FrameRadius);
+        _chrome.SetCorners(environment.Theme.HighContrast, MidnightGlassMetrics.FrameRadius); _motion.Refresh(); _view.ApplyAppearance();
     }
 }

@@ -75,12 +75,9 @@ public sealed partial class MainWindow
                 PrimaryButtonText = enable ? "Enable desktop startup" : "Disable startup", CloseButtonText = "Cancel", DefaultButton = ContentDialogButton.Close };
             PolishDialog(dialog);
             if (await dialog.ShowAsync() != ContentDialogResult.Primary || !_ready) return;
-            StartupRegistration.SetDesktopEnabled(enable); RefreshStartupRepair();
-            _syncingPersonalization = true;
-            try { StartupSwitch.IsOn = StartupRegistration.IsEnabled(); }
-            finally { _syncingPersonalization = false; }
+            StartupRegistration.SetDesktopEnabled(enable);
             ShowStatus(enable ? "Nexus desktop will start after Windows signs you in." : "Nexus automatic startup is disabled.");
-            Navigate("Personalize", false);
+            BuildPage();
         }
         finally { _dialogOpen = false; }
     }
@@ -128,9 +125,9 @@ public sealed partial class MainWindow
             PolishDialog(dialog);
             if (await dialog.ShowAsync() != ContentDialogResult.Primary || !_ready) return;
             if (await ApplyDesktopPolicyAsync(true) is not true) { ShowStatus("The Windows permission request was cancelled. Desktop policy was not changed by the helper."); return; }
-            RefreshStartupRepair();
+
             ShowStatus("Nexus is selected for your next sign-in. Save your work, then sign out when you’re ready.");
-            Navigate("Personalize", false);
+            BuildPage();
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException)
         {
@@ -150,9 +147,9 @@ public sealed partial class MainWindow
             PolishDialog(dialog);
             if (await dialog.ShowAsync() != ContentDialogResult.Primary || !_ready) return;
             bool? restored = await ApplyDesktopPolicyAsync(false);
-            RefreshStartupRepair();
+
             ShowStatus(restored switch { true => "Your previous desktop sign-in setting is restored.", false => "No saved Nexus desktop setup was found. No sign-in setting changed.", null => "The Windows permission request was cancelled. The saved recovery record is retained." });
-            Navigate("Personalize", false);
+            BuildPage();
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException)
         {

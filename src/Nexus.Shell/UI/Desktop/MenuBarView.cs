@@ -11,8 +11,9 @@ internal sealed class MenuBarView : Grid, IDisposable
 {
     private readonly DesktopEnvironment _environment;
     private readonly TextBlock _clock = new() { FontSize = 12.5, VerticalAlignment = VerticalAlignment.Center };
-    private readonly TextBlock _badge = new() { FontSize = 10, VerticalAlignment = VerticalAlignment.Center };
     private readonly Button _notification;
+    private readonly TextBlock _inputLabel = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+    private readonly Button _inputLanguage, _awake;
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(15) };
     private readonly Grid _controls = new() { Width = 17, Height = 17 };
     private readonly List<Button> _buttons = [];
@@ -48,7 +49,7 @@ internal sealed class MenuBarView : Grid, IDisposable
         Button Icon(string glyph, string name, Action action)
         { var button = Basic(new FontIcon { Glyph = glyph, FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14 }, name); button.Width = 31; button.Click += (_, _) => action(); right.Children.Add(button); return button; }
         Button QuickControl(string glyph, string section)
-        { Button? button = null; button = Icon(glyph, section + " controls", () => environment.ShowQuickControl(section, environment.MenuControlAnchor(button!))); return button; }
+        { Button? button = null; button = Icon(glyph, section + " controls", () => environment.ShowQuickControl(section, environment.MenuControlAnchor(button!))); button.ContextFlyout = environment.Menus.SystemControlMenu(section); return button; }
         QuickControl("\uE701", "Network"); QuickControl("\uE767", "Sound");
         Icon("\uE721", "Nexus Search · Ctrl+Alt+Space", environment.ShowSearch);
         var bluetooth = QuickControl("\uE702", "Bluetooth"); var display = QuickControl("\uE7F4", "Display");
@@ -56,11 +57,14 @@ internal sealed class MenuBarView : Grid, IDisposable
         for (int i = 0; i < 2; i++)
         { controls.Children.Add(new Border { Height = 2, Background = new SolidColorBrush(Microsoft.UI.Colors.White), VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, i * 8 + 4, 0, 0), CornerRadius = new CornerRadius(1) }); controls.Children.Add(new Ellipse { Width = 5, Height = 5, Fill = new SolidColorBrush(Microsoft.UI.Colors.White), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(i == 0 ? 3 : 10, i * 8 + 2.5, 0, 0) }); }
         var control = Basic(controls, "Control Center"); control.Width = 32; control.Click += (_, _) => environment.ShowQuickSettings(); right.Children.Add(control);
-        var bell = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 3 }; bell.Children.Add(new FontIcon { Glyph = "\uE7E7", FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14 }); bell.Children.Add(_badge);
-        _notification = Basic(bell, "Nexus notifications"); _notification.Click += (_, _) => environment.ShowNotifications(); right.Children.Add(_notification);
-        var date = Basic(_clock, "Date and notifications"); date.Click += (_, _) => environment.ShowNotifications(); right.Children.Add(date);
+        _inputLanguage = Basic(_inputLabel, "Input language"); _inputLanguage.Flyout = environment.Menus.InputLanguageMenu(); right.Children.Add(_inputLanguage);
+        _awake = Basic(new FontIcon { Glyph = "\uE708", FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14 }, "Keep awake");
+        _awake.Width = 31; _awake.Click += (_, _) => environment.ShowWindowsTools(); right.Children.Add(_awake);
+        _notification = Basic(new FontIcon { Glyph = "\uE7E7", FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14 }, "Windows notifications"); _notification.ContextFlyout = environment.Menus.NotificationsMenu(); _notification.Click += (_, _) => environment.OpenWindowsSurface(WindowsShellSurface.Notifications); right.Children.Add(_notification);
+        var date = Basic(_clock, "Windows date and time"); date.ContextFlyout = environment.Menus.ClockMenu(); date.Click += (_, _) => environment.OpenWindowsSurface(WindowsShellSurface.Calendar); right.Children.Add(date);
+        ContextFlyout = environment.Menus.MenuBarMenu();
         Grid.SetColumn(right, 1); Children.Add(right);
-        environment.Notifications.Changed += QueueRefresh; environment.ActiveWindowChanged += QueueRefresh; _timer.Tick += (_, _) => Refresh(); _timer.Start(); ApplyAppearance();
+        environment.ActiveWindowChanged += QueueRefresh; environment.SystemStatusChanged += QueueRefresh; _timer.Tick += (_, _) => Refresh(); _timer.Start(); ApplyAppearance();
         SizeChanged += (_, _) =>
         {
             int shown = ActualWidth < 480 ? 1 : ActualWidth < 950 ? 2 : int.MaxValue;
@@ -112,10 +116,19 @@ internal sealed class MenuBarView : Grid, IDisposable
         string glyph = _environment.ActiveWindowMaximized ? "\uE923" : "\uE922";
         if (icon.Glyph != glyph) icon.Glyph = glyph;
         SetText(_clock, (clockOverride ?? DateTime.Now).ToString(DesktopPresentation.ClockFormat(ActualWidth < 650, _environment.Session.State.Clock24Hour)));
-        int unread = _environment.Notifications.Unread;
-        SetText(_badge, unread > 0 ? (unread > 9 ? "9+" : unread.ToString()) : "");
-        SetVisible(_badge, unread > 0);
-        SetName(_notification, unread + " unread Nexus notifications");
+        SetName(_notification, _environment.WindowsRoute(WindowsShellSurface.Notifications).Name);
+        SetVisible(_inputLanguage, ActualWidth >= 750);
+        try
+        {
+            var input = _environment.CurrentInputLanguage(); SetText(_inputLabel, input.Code);
+            SetName(_inputLanguage, "Input language · " + input.Name);
+            if (!Equals(ToolTipService.GetToolTip(_inputLanguage), input.Name)) ToolTipService.SetToolTip(_inputLanguage, input.Name);
+        }
+        catch { SetText(_inputLabel, "—"); }
+        SetVisible(_awake, _environment.KeepAwake.Active && ActualWidth >= 650);
+        string awake = _environment.KeepAwake.Status;
+        SetName(_awake, awake);
+        if (!Equals(ToolTipService.GetToolTip(_awake), awake)) ToolTipService.SetToolTip(_awake, awake);
     }
     internal void ApplyAppearance()
     {
@@ -130,8 +143,7 @@ internal sealed class MenuBarView : Grid, IDisposable
         foreach (var dot in _controls.Children.OfType<Ellipse>())
             if (!ReferenceEquals(dot.Fill, foreground)) dot.Fill = foreground;
         if (!ReferenceEquals(_clock.Foreground, foreground)) _clock.Foreground = foreground;
-        var accent = theme.Brush("NexusAccent");
-        if (!ReferenceEquals(_badge.Foreground, accent)) _badge.Foreground = accent;
+        if (!ReferenceEquals(_inputLabel.Foreground, foreground)) _inputLabel.Foreground = foreground;
         Refresh();
     }
     internal void VerifyRetainedRefresh()
@@ -153,5 +165,5 @@ internal sealed class MenuBarView : Grid, IDisposable
             Refresh(); // Restore the live clock after the fixed-time fixture.
         }
     }
-    public void Dispose() { if (_disposed) return; _disposed = true; _timer.Stop(); _environment.Notifications.Changed -= QueueRefresh; _environment.ActiveWindowChanged -= QueueRefresh; }
+    public void Dispose() { if (_disposed) return; _disposed = true; _timer.Stop(); _environment.ActiveWindowChanged -= QueueRefresh; _environment.SystemStatusChanged -= QueueRefresh; }
 }

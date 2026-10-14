@@ -139,10 +139,11 @@ internal static class Program
             if (!first) return 0;
             if (sessionOnly) WaitForPreview(args);
             if (WindowsDesktopSurfaces.NexusExists)
-            { MessageBox(IntPtr.Zero, "Nexus is already open. Use Sections → Personalize → Use Nexus for this session, or exit the preview before launching Nexus desktop.", "Nexus desktop", 0x40); return 0; }
+            { MessageBox(IntPtr.Zero, "Nexus is already open. Use Nexus Controls → Startup & session → Use Nexus for this session, or exit the preview before launching Nexus desktop.", "Nexus desktop", 0x40); return 0; }
             // Recover an interrupted old session before replacing its saved state.
             if (SessionRecord.Read(SessionId) is not null && RestoreWindows(false, null, null, false) != 0)
                 throw new InvalidOperationException("The previous desktop session still needs recovery.");
+            WindowsDesktopSurfaces.EnsureExplorer();
             original = Monitor();
             var snapshot = new DesktopSessionSnapshot(1, SessionId, Environment.ProcessPath!, Rectangle(original.Value.Monitor), Rectangle(original.Value.Work), [], WindowsMinimizedMetrics.Read());
             SessionRecord.Save(snapshot);

@@ -20,7 +20,7 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     private readonly StackPanel _body = new() { Spacing = 14 };
     private readonly TextBlock _status;
     private readonly InfoBar _error = new() { IsClosable = true, Severity = InfoBarSeverity.Error, Title = "Control Center needs attention" };
-    private readonly Grid _nav = new() { ColumnSpacing = 8, RowSpacing = 8 };
+    private readonly Grid _nav = new() { ColumnSpacing = 10, RowSpacing = 10 };
     private readonly TextBlock _heading, _subtitle;
     private readonly Button _expand;
     private readonly ProgressBar _progress = new() { IsIndeterminate = false, Height = 2, Opacity = 0 };
@@ -61,17 +61,56 @@ internal sealed class QuickSettingsView : Grid, IDisposable
         _subtitle = Label("Everything you need, close at hand.", 12, true);
         heading.Children.Add(_heading); heading.Children.Add(_subtitle); header.Children.Add(heading);
         var dismiss = ShellControls.IconButton("\uE8BB", "Close Control Center", close); Grid.SetColumn(dismiss, 1); header.Children.Add(dismiss); Children.Add(header);
+        // Four prominent modules echo the approved glass Control Center.
+        // Less frequently used Power/Desktop remain in a compact second tier,
+        // preserving the original backed-by-Core commands and keyboard focus.
         var nav = _nav;
-        for (int i = 0; i < 3; i++) nav.ColumnDefinitions.Add(new()); for (int i = 0; i < 2; i++) nav.RowDefinitions.Add(new());
+        nav.RowSpacing = 12;
+        nav.RowDefinitions.Add(new() { Height = GridLength.Auto });
+        nav.RowDefinitions.Add(new() { Height = GridLength.Auto });
+        var primary = new Grid { ColumnSpacing = 10, RowSpacing = 10 };
+        var secondary = new Grid { ColumnSpacing = 10 };
+        for (int i = 0; i < 2; i++)
+        {
+            primary.ColumnDefinitions.Add(new());
+            primary.RowDefinitions.Add(new() { Height = GridLength.Auto });
+            secondary.ColumnDefinitions.Add(new());
+        }
         var sections = new[] { ("Sound", "\uE767"), ("Network", "\uE701"), ("Bluetooth", "\uE702"), ("Display", "\uE7F4"), ("Power", "\uE7E8"), ("Desktop", "\uE8FC") };
         for (int i = 0; i < sections.Length; i++)
         {
-            var (name, glyph) = sections[i]; var content = new StackPanel { Spacing = 8, HorizontalAlignment = HorizontalAlignment.Center };
-            var badge = ShellControls.Badge(glyph, environment.Theme, 34); _badges.Add(badge); content.Children.Add(badge); var label = Label(name, 12); label.HorizontalAlignment = HorizontalAlignment.Center; content.Children.Add(label);
-            var button = ActionButton(name, () => Navigate(name)); button.Content = content; button.HorizontalAlignment = HorizontalAlignment.Stretch;
-            button.HorizontalContentAlignment = HorizontalAlignment.Center; button.Padding = new Thickness(8, 12, 8, 12); button.CornerRadius = new CornerRadius(MidnightGlassMetrics.CardRadius); button.BorderThickness = new Thickness(1);
-            _tabs[name] = button; Grid.SetRow(button, i / 3); Grid.SetColumn(button, i % 3); nav.Children.Add(button);
+            var (name, glyph) = sections[i];
+            bool prominent = ControlCenterTilePolicy.IsPrimary(name);
+            var content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = prominent ? 12 : 9, VerticalAlignment = VerticalAlignment.Center };
+            var badge = ShellControls.Badge(glyph, environment.Theme, prominent ? 36 : 28);
+            _badges.Add(badge); content.Children.Add(badge);
+            var label = Label(name, prominent ? 13 : 12);
+            label.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
+            label.VerticalAlignment = VerticalAlignment.Center; content.Children.Add(label);
+            var button = ActionButton(name, () => Navigate(name));
+            button.Content = content;
+            button.MinHeight = ControlCenterTilePolicy.Height(name);
+            button.HorizontalAlignment = HorizontalAlignment.Stretch;
+            button.HorizontalContentAlignment = HorizontalAlignment.Left;
+            button.Padding = prominent ? new Thickness(12, 9, 12, 9) : new Thickness(10, 7, 10, 7);
+            button.CornerRadius = new CornerRadius(ControlCenterTilePolicy.Radius(name));
+            button.BorderThickness = new Thickness(1);
+            _tabs[name] = button;
+            if (prominent)
+            {
+                Grid.SetRow(button, i / 2);
+                Grid.SetColumn(button, i % 2);
+                primary.Children.Add(button);
+            }
+            else
+            {
+                Grid.SetColumn(button, i - 4);
+                secondary.Children.Add(button);
+            }
         }
+        nav.Children.Add(primary);
+        Grid.SetRow(secondary, 1);
+        nav.Children.Add(secondary);
         Grid.SetRow(nav, 1); Children.Add(nav);
         var scroll = new ScrollViewer { Content = _body, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
         Grid.SetRow(scroll, 2); Children.Add(scroll);
@@ -121,7 +160,7 @@ internal sealed class QuickSettingsView : Grid, IDisposable
         foreach (var (label, muted) in _labels) label.Foreground = _environment.Theme.Brush(muted ? "NexusMuted" : "NexusText");
         foreach (var badge in _badges) { badge.Background = _environment.Theme.Brush("NexusSelection"); badge.CornerRadius = new CornerRadius(_environment.Theme.HighContrast ? 0 : 9); if (badge.Child is FontIcon icon) icon.Foreground = _environment.Theme.Brush("NexusAccent"); }
         foreach (var card in _cards) { card.Background = _environment.Theme.Material("Card", _environment.State.NativeGlass); card.BorderBrush = _environment.Theme.Edge; card.CornerRadius = new CornerRadius(_environment.Theme.HighContrast ? 0 : MidnightGlassMetrics.CardRadius); }
-        foreach (var (section, tab) in _tabs) { tab.Background = section == _section ? _environment.Theme.Brush("NexusSelection") : _environment.Theme.Material("Card", _environment.State.NativeGlass); tab.BorderBrush = section == _section ? _environment.Theme.Brush("NexusAccent") : _environment.Theme.Edge; tab.CornerRadius = new CornerRadius(_environment.Theme.HighContrast ? 0 : MidnightGlassMetrics.CardRadius); }
+        foreach (var (section, tab) in _tabs) { tab.Background = section == _section ? _environment.Theme.Brush("NexusSelection") : _environment.Theme.Material("Card", _environment.State.NativeGlass); tab.BorderBrush = section == _section ? _environment.Theme.Brush("NexusAccent") : _environment.Theme.Edge; tab.CornerRadius = new CornerRadius(_environment.Theme.HighContrast ? 0 : ControlCenterTilePolicy.Radius(section)); }
         RefreshPreferences();
         RefreshGlassStatus();
     }
@@ -397,7 +436,7 @@ internal sealed class QuickSettingsView : Grid, IDisposable
         var signIn = Card("Desktop at sign-in", _environment.IsManagedDesktop
             ? "Nexus is managing this desktop session. Sign-in replacement and startup alongside Windows are separate choices."
             : "This is a preview alongside Windows. Use session mode to give the standalone Windows key to Nexus Launchpad.");
-        signIn.Children.Add(ActionButton("Review startup and sign-in setup…", () => _environment.ShowSections("Personalize")));
+        signIn.Children.Add(ActionButton("Review startup and sign-in setup…", () => _environment.ShowControls("startup")));
         ApplyAppearance();
     }
     private void Advanced() => _environment.Advanced(_section);

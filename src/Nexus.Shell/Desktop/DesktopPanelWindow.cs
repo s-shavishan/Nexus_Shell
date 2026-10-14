@@ -63,15 +63,18 @@ internal abstract class DesktopPanelWindow : Window
     private void Position(IntPtr source)
     {
         if (source == IntPtr.Zero) source = Environment.Desktop.Handle;
-        var monitor = ShellLayerInterop.Monitor(source); double scale = ShellLayerInterop.Scale(source); ShellRect bounds;
-        if (_center)
-        {
-            bounds = DesktopLayout.CenteredPanelBounds(monitor.Work.Bounds, scale, _width, _height);
-        }
-        else bounds = DesktopLayout.PanelBounds(monitor.Monitor.Bounds, scale, _width, _height);
+        var monitor = ShellLayerInterop.Monitor(source); double scale = ShellLayerInterop.Scale(source);
+        ShellRect bounds = ResolveBounds(monitor.Work.Bounds, monitor.Monitor.Bounds, scale);
         Native.MoveAndResize(new RectInt32(bounds.X, bounds.Y, bounds.Width, bounds.Height));
         ShellLayerInterop.SetWindowPos(Handle, ShellLayerInterop.Topmost, 0, 0, 0, 0, 0x0013);
     }
+    // Keep ordinary panels' native placement intact. Specialized floating
+    // surfaces may choose a compact/expanded position without manipulating
+    // Win32 HWND geometry from every input event.
+    protected virtual ShellRect ResolveBounds(ShellRect work, ShellRect monitor, double scale)
+        => _center ? DesktopLayout.CenteredPanelBounds(work, scale, _width, _height)
+                   : DesktopLayout.PanelBounds(monitor, scale, _width, _height);
+
     internal virtual void ApplyAppearance()
     {
         var theme = Environment.Theme; Root.RequestedTheme = theme.ElementTheme;

@@ -19,7 +19,6 @@
     <Compile Include="../Nexus.Shell/Services/AuraPalette.cs" Link="State/AuraPalette.cs" />
     <Compile Include="../Nexus.Shell/Services/WorkspaceState.cs" Link="State/WorkspaceState.cs" />
     <Compile Include="../Nexus.Shell/Services/ExploreWorkspace.cs" Link="State/ExploreWorkspace.cs" />
-    <Compile Include="../Nexus.Shell/Services/DesktopWorkspace.cs" Link="State/DesktopWorkspace.cs" />
     <Compile Include="../Nexus.Shell/Services/ShellExperience.cs" Link="State/ShellExperience.cs" />
     <Compile Include="../Nexus.Shell/Services/CommandSearch.cs" Link="State/CommandSearch.cs" />
     <Compile Include="../Nexus.Shell/Services/Log.cs" Link="State/Log.cs" />

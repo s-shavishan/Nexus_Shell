@@ -26,7 +26,7 @@ internal sealed class UtilityWindow : Window
     private readonly WindowMaterial _material = new();
     private readonly WindowTransition _transition;
     private readonly Action _apply;
-    internal UtilityWindow(DesktopEnvironment environment, string title, FrameworkElement view, int width, int height, Action apply, Action release)
+    internal UtilityWindow(DesktopEnvironment environment, string title, FrameworkElement view, int width, int height, Action apply, Action release, Action<bool>? active = null)
     {
         _environment = environment; UtilityTitle = title; View = view; _apply = apply;
         var grid = new Grid(); grid.RowDefinitions.Add(new() { Height = new GridLength(44) }); grid.RowDefinitions.Add(new() { Height = new GridLength(1, GridUnitType.Star) });
@@ -52,6 +52,7 @@ internal sealed class UtilityWindow : Window
         int w = Math.Min(work.Width, (int)(width * scale)), h = Math.Min(work.Height, (int)(height * scale));
         NativeWindow.MoveAndResize(new RectInt32(work.X + (work.Width - w) / 2, work.Y + (work.Height - h) / 2, w, h));
         Closed += (_, _) => { release(); _caption.Dispose(); _transition.Dispose(); _motion.Dispose(); _chrome.Dispose(); };
+        Activated += (_, args) => active?.Invoke(args.WindowActivationState != WindowActivationState.Deactivated);
         ApplyAppearance(); Activate(); _motion.Open();
     }
     internal void Restore() { _transition.Restore(); NativeWindow.Show(); NativeMethods.Activate(Handle); _environment.UpdateTaskbar(); }

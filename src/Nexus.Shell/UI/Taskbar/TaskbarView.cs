@@ -15,9 +15,17 @@ internal sealed class TaskbarView : Grid
     private readonly DesktopEnvironment _environment;
     private readonly Border _frame = new();
     private readonly SolidColorBrush _transparent = new(Microsoft.UI.Colors.Transparent);
-    private readonly Grid _body = new() { ColumnSpacing = 12, Padding = new Thickness(16, 8, 16, 8) };
-    private readonly StackPanel _pins = new() { Orientation = Orientation.Horizontal, Spacing = 4 };
-    private readonly StackPanel _windows = new() { Orientation = Orientation.Horizontal, Spacing = 4 };
+    private readonly Grid _body = new() { ColumnSpacing = 14, Padding = new Thickness(18, 10, 18, 10) };
+    // Each inset island is *inside* the window-owned material surface. Never
+    // repaint Frame here: native acrylic and its opaque fallback remain owned
+    // exclusively by TaskbarWindow / WindowMaterial.
+    private readonly Border _launchIsland = new() { CornerRadius = new CornerRadius(17), BorderThickness = new Thickness(0), VerticalAlignment = VerticalAlignment.Center };
+    private readonly Border _appsIsland = new() { CornerRadius = new CornerRadius(19), BorderThickness = new Thickness(0), VerticalAlignment = VerticalAlignment.Center };
+    private readonly Border _utilityIsland = new() { CornerRadius = new CornerRadius(17), BorderThickness = new Thickness(0), VerticalAlignment = VerticalAlignment.Center };
+    private readonly Border _topGlint = new() { Height = 1, Opacity = .55, IsHitTestVisible = false, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(8, 0, 8, 0) };
+    private bool _islandsEmphasized;
+    private readonly StackPanel _pins = new() { Orientation = Orientation.Horizontal, Spacing = 7 };
+    private readonly StackPanel _windows = new() { Orientation = Orientation.Horizontal, Spacing = 7 };
     private readonly TextBlock _time = new() { FontSize = 12, TextAlignment = TextAlignment.Right };
     private readonly TextBlock _date = new() { FontSize = 10, TextAlignment = TextAlignment.Right };
     private readonly List<Button> _iconButtons = [];
@@ -72,7 +80,7 @@ internal sealed class TaskbarView : Grid
     private readonly Border _separator;
     private double _reportedWidth;
     internal event Action? PreferredWidthChanged;
-    internal double PreferredWidthDip => (_environment.Session.State.FloatingTaskbar ? 186 : 322) + (_pins.Children.Count + _windows.Children.Count) * (_environment.Session.State.CompactDock ? 44 : 56);
+    internal double PreferredWidthDip => (_environment.Session.State.FloatingTaskbar ? 212 : 344) + (_pins.Children.Count + _windows.Children.Count) * (_environment.Session.State.CompactDock ? 44 : 72);
     internal Border Frame => _frame;
     // The real HWND uses WindowMaterial to control native acrylic, opaque
     // preparation and fallback. Its view must not repaint that same surface.
@@ -85,23 +93,34 @@ internal sealed class TaskbarView : Grid
         _body.ColumnDefinitions.Add(new() { Width = GridLength.Auto }); _body.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) }); _body.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
         var start = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
         _start = IconButton("Launchpad", "Launchpad", () => environment.ShowMenu(), true); start.Children.Add(_start);
-        _body.Children.Add(start);
-        var middle = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 14, VerticalAlignment = VerticalAlignment.Center };
-        _separator = new Border { Width = 1, Height = 28, VerticalAlignment = VerticalAlignment.Center };
+        _launchIsland.Child = start;
+        _body.Children.Add(_launchIsland);
+        var middle = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 16, VerticalAlignment = VerticalAlignment.Center };
+        _separator = new Border { Width = 1, Height = 34, VerticalAlignment = VerticalAlignment.Center };
         middle.Children.Add(_pins); middle.Children.Add(_separator); middle.Children.Add(_windows);
         var scroll = new ScrollViewer { Content = middle, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
             HorizontalScrollMode = ScrollMode.Enabled, VerticalScrollMode = ScrollMode.Disabled, VerticalAlignment = VerticalAlignment.Center };
         scroll.ViewChanged += (_, _) => _environment.HideDockPreview();
-        Grid.SetColumn(scroll, 1); _body.Children.Add(scroll);
+        _appsIsland.Child = scroll;
+        Grid.SetColumn(_appsIsland, 1); _body.Children.Add(_appsIsland);
         var status = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
         _overview = IconButton("Windows", "Switch windows", environment.ShowWindowOverview, true); status.Children.Add(_overview);
         var clock = new StackPanel { Spacing = 2 }; clock.Children.Add(_time); clock.Children.Add(_date);
         _clockButton = new Button { Content = clock, Style = (Style)Application.Current.Resources["QuietButton"], Padding = new Thickness(10, 5, 10, 5), CornerRadius = new CornerRadius(12) };
-        _clockButton.Click += (_, _) => environment.ShowNotifications(); ToolTipService.SetToolTip(_clockButton, "Date and notifications"); status.Children.Add(_clockButton);
+        _clockButton.Click += (_, _) => environment.OpenWindowsSurface(WindowsShellSurface.Calendar); ToolTipService.SetToolTip(_clockButton, "Windows date and time"); status.Children.Add(_clockButton);
+        var clockMenu = environment.Menus.ClockMenu(); _clockButton.ContextFlyout = clockMenu;
+        var dockMenu = environment.Menus.DockMenu(); _frame.ContextFlyout = dockMenu;
+        foreach (var context in new[] { clockMenu, dockMenu })
+        {
+            context.Opened += (_, _) => { _environment.HideDockPreview(); _openContextMenus.Add(context); _environment.Taskbar.RefreshVisibility(); };
+            context.Closed += (_, _) => { _openContextMenus.Remove(context); if (!_released) _environment.Taskbar.RefreshVisibility(); };
+        }
         _desktopButton = new Button { Width = 24, Height = 40, Content = new FontIcon { FontFamily = new FontFamily("Segoe MDL2 Assets"), Glyph = "\uE740", FontSize = 13 }, Style = (Style)Application.Current.Resources["QuietButton"], Padding = new Thickness(0) };
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_desktopButton, "Show Nexus desktop"); ToolTipService.SetToolTip(_desktopButton, "Show Nexus desktop");
         _desktopButton.Click += (_, _) => environment.ShowDesktop(); status.Children.Add(_desktopButton);
-        Grid.SetColumn(status, 2); _body.Children.Add(status);
+        _utilityIsland.Child = status;
+        Grid.SetColumn(_utilityIsland, 2); _body.Children.Add(_utilityIsland);
+        Grid.SetColumnSpan(_topGlint, 3); _body.Children.Add(_topGlint);
         _hoverTick = (_, _) =>
         {
             _hoverTimer.Stop(); var item = _hoverItem; _hoverItem = null;
@@ -123,18 +142,18 @@ internal sealed class TaskbarView : Grid
     }
     private Button IconButton(string icon, string title, Action action, bool retain = false)
     {
-        UIElement face = NexusIcons.Image(icon, 36);
-        var button = new Button { Content = face, Style = (Style)Application.Current.Resources["DockButton"], Width = 52, Height = 56 };
+        UIElement face = NexusIcons.Image(icon, 46);
+        var button = new Button { Content = face, Style = (Style)Application.Current.Resources["DockButton"], Width = 64, Height = 68 };
         button.Loaded += (_, _) => _motion?.AttachHover(button);
         button.Click += (_, _) => action(); ToolTipService.SetToolTip(button, title); Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, title);
         if (retain) _iconButtons.Add(button); _motion?.AttachHover(button); return button;
     }
     private Button PinButton(AppEntry app)
     {
-        var icon = NexusIcons.Image(NexusIcons.ForApp(app), 32);
+        var icon = NexusIcons.Image(NexusIcons.ForApp(app), 46);
         _ = AppIconCache.ApplyAsync(icon, app);
         var host = new Grid(); host.Children.Add(icon);
-        var button = new Button { Content = host, Tag = host, Style = (Style)Application.Current.Resources["DockButton"], Width = 52, Height = 56 };
+        var button = new Button { Content = host, Tag = host, Style = (Style)Application.Current.Resources["DockButton"], Width = 64, Height = 68 };
         _pinImages.Add(button, icon); bool arrive = _baselineReconciled;
         void PlayArrival()
         {
@@ -159,11 +178,13 @@ internal sealed class TaskbarView : Grid
             _dockMotion?.Detach(icon);
         };
         button.Click += (_, _) => { if (_environment.TryLaunch(app)) _dockMotion?.Play(icon, DockMotionCue.Launch); };
-        var menu = new MenuFlyout(); var open = new MenuFlyoutItem { Text = "Open " + app.Name }; open.Click += (_, _) => { if (_environment.TryLaunch(app)) _dockMotion?.Play(icon, DockMotionCue.Launch); }; menu.Items.Add(open);
+        var menu = Menus.ShellMenu.Create(); var open = Menus.ShellMenu.Action("Open", () => { if (_environment.TryLaunch(app)) _dockMotion?.Play(icon, DockMotionCue.Launch); }, "\uE768"); menu.Items.Add(open);
         var remove = new MenuFlyoutItem { Text = "Remove from dock" }; remove.Click += (_, _) =>
         { if (_released) return; _environment.Session.State.PinnedApps.RemoveAll(pin => string.Equals(pin.Target, app.Target, StringComparison.OrdinalIgnoreCase)); _environment.SaveState(); }; menu.Items.Add(remove);
-        foreach (var (label, direction) in new[] { ("Move pin left", -1), ("Move pin right", 1) })
-        { var move = new MenuFlyoutItem { Text = label }; move.Click += (_, _) => { if (!_released && DesktopOrganization.MovePin(_environment.Session.State.PinnedApps, app.Target, direction)) _environment.SaveState(); }; menu.Items.Add(move); }
+        var position = Menus.ShellMenu.Group("Position");
+        foreach (var (label, direction) in new[] { ("Move left", -1), ("Move right", 1) })
+        { position.Items.Add(Menus.ShellMenu.Action(label, () => { if (!_released && DesktopOrganization.MovePin(_environment.Session.State.PinnedApps, app.Target, direction)) _environment.SaveState(); })); } menu.Items.Add(position);
+        if (Path.IsPathFullyQualified(app.Target)) menu.Items.Add(Menus.ShellMenu.Action("Windows file options…", () => _environment.WindowsFileAction(app.Target), "\uE713"));
         menu.Opened += (_, _) => { _environment.HideDockPreview(); _openContextMenus.Add(menu); _environment.Taskbar.RefreshVisibility(); };
         menu.Closed += (_, _) => { _openContextMenus.Remove(menu); if (!_released) _environment.Taskbar.RefreshVisibility(); }; button.ContextFlyout = menu;
         ToolTipService.SetToolTip(button, "Open " + app.Name); Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, "Open " + app.Name);
@@ -273,35 +294,36 @@ internal sealed class TaskbarView : Grid
     private DockItem CreateWindowButton(RunningWindow window)
     {
         var item = new DockItem(window) { NewlyOpened = _baselineReconciled };
-        string icon = window.ProcessId == Environment.ProcessId ? window.Title switch { "Sections" => "Apps", "Notes" => "Note", "Calculator" => "Calculator", _ => "Files" } : NexusIcons.ForProcess(window.ProcessName);
-        var face = new Grid(); var iconHost = new Grid(); item.Icon = NexusIcons.Image(icon, 32); iconHost.Children.Add(item.Icon); face.Children.Add(iconHost);
+        string icon = window.ProcessId == Environment.ProcessId ? window.Title switch { "File jobs" => "Jobs", "Nexus Controls" => "Controls", "Notes" => "Note", "Calculator" => "Calculator", _ => "Files" } : NexusIcons.ForProcess(window.ProcessName);
+        var face = new Grid(); var iconHost = new Grid(); item.Icon = NexusIcons.Image(icon, 46); iconHost.Children.Add(item.Icon); face.Children.Add(iconHost);
         item.Indicator = new Border { Width = 22, Height = 3, CornerRadius = new CornerRadius(2), VerticalAlignment = VerticalAlignment.Bottom, HorizontalAlignment = HorizontalAlignment.Center };
         face.Children.Add(item.Indicator);
-        item.Button = new Button { Content = face, Tag = iconHost, Width = 52, Height = 56, Style = (Style)Application.Current.Resources["DockButton"] };
+        item.Button = new Button { Content = face, Tag = iconHost, Width = 64, Height = 68, Style = (Style)Application.Current.Resources["DockButton"] };
         item.Button.Click += (_, _) => _environment.ToggleDockWindow(item.Window);
-        var menu = new MenuFlyout();
-        var restore = new MenuFlyoutItem { Text = "Restore / switch to window" };
-        restore.Click += (_, _) => _environment.RestoreDockWindow(item.Window);
+        var menu = Menus.ShellMenu.Create(); RunningWindow target = item.Window;
+        var restore = new MenuFlyoutItem { Text = "Activate", Icon = new FontIcon { Glyph = "\uE8A7" } };
+        restore.Click += (_, _) => _environment.RestoreDockWindow(target);
         var minimize = new MenuFlyoutItem { Text = "Minimize window" };
-        minimize.Click += (_, _) => _environment.MinimizeDockWindow(item.Window);
+        minimize.Click += (_, _) => _environment.MinimizeDockWindow(target);
         var maximize = new MenuFlyoutItem { Text = "Maximize window" };
-        maximize.Click += (_, _) => { _environment.HideDockPreview(); _environment.MaximizeDockWindow(item.Window); };
+        maximize.Click += (_, _) => { _environment.HideDockPreview(); _environment.MaximizeDockWindow(target); };
         var preview = new MenuFlyoutItem { Text = "Window preview" };
         preview.Click += (_, _) =>
         {
             // Let the context menu close before activating the preview.
-            item.Button.DispatcherQueue.TryEnqueue(() => { if (!_released && TryGetAnchor(item.Button, out var anchor)) _environment.ShowDockPreview(item.Window, anchor, true); });
+            var selected = target; item.Button.DispatcherQueue.TryEnqueue(() => { if (!_released && TryGetAnchor(item.Button, out var anchor)) _environment.ShowDockPreview(selected, anchor, true); });
         };
         var close = new MenuFlyoutItem { Text = "Close window" };
-        close.Click += (_, _) => { _environment.HideDockPreview(); _environment.CloseDockWindow(item.Window); };
-        menu.Items.Add(restore); menu.Items.Add(minimize); menu.Items.Add(maximize); menu.Items.Add(preview); menu.Items.Add(new MenuFlyoutSeparator()); menu.Items.Add(close);
+        close.Click += (_, _) => { _environment.HideDockPreview(); _environment.CloseDockWindow(target); };
+        var arrange = Menus.ShellMenu.Group("Arrange", "\uE9A6"); foreach (string placement in WindowPlacementPlan.Choices) arrange.Items.Add(Menus.ShellMenu.Action(placement, () => _environment.PlaceWindow(target, placement)));
+        menu.Items.Add(restore); menu.Items.Add(minimize); menu.Items.Add(maximize); menu.Items.Add(arrange); menu.Items.Add(preview); menu.Items.Add(new MenuFlyoutSeparator()); menu.Items.Add(close);
         menu.Opened += (_, _) =>
         {
             _environment.HideDockPreview(); _openContextMenus.Add(menu);
-            bool valid = NativeMethods.OwnsWindow(item.Window);
+            target = item.Window; bool valid = NativeMethods.OwnsWindow(target); arrange.IsEnabled = valid;
             restore.IsEnabled = maximize.IsEnabled = close.IsEnabled = valid; preview.IsEnabled = valid && _environment.Session.State.DockPreviews;
-            minimize.IsEnabled = valid && NativeMethods.Visible(item.Window.Handle) && !NativeMethods.IsMinimized(item.Window.Handle);
-            maximize.Text = valid && NativeMethods.IsZoomed(item.Window.Handle) ? "Restore window size" : "Maximize window";
+            minimize.IsEnabled = valid && NativeMethods.Visible(target.Handle) && !NativeMethods.IsMinimized(target.Handle);
+            maximize.Text = valid && NativeMethods.IsZoomed(target.Handle) ? "Restore window size" : "Maximize window";
             _environment.Taskbar.RefreshVisibility();
         };
         menu.Closed += (_, _) => { _openContextMenus.Remove(menu); _environment.Taskbar.RefreshVisibility(); };
@@ -470,10 +492,10 @@ internal sealed class TaskbarView : Grid
         {
             Size(button, compact ? MidnightGlassMetrics.DockCompactButtonWidth : MidnightGlassMetrics.DockButtonWidth,
                 compact ? MidnightGlassMetrics.DockCompactButtonHeight : MidnightGlassMetrics.DockButtonHeight);
-            if (button.Content is Image icon) Size(icon, compact ? 30 : 36, compact ? 30 : 36);
+            if (button.Content is Image icon) Size(icon, compact ? 30 : 46, compact ? 30 : 46);
         }
         foreach (var icon in _pinImages.Values.Concat(_items.Values.Select(i => i.Icon)))
-            Size(icon, compact ? 30 : 40, compact ? 30 : 40);
+            Size(icon, compact ? 30 : 46, compact ? 30 : 46);
         var separator = _windows.Children.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
         if (_separator.Visibility != separator) _separator.Visibility = separator;
         double width = PreferredWidthDip;
@@ -547,7 +569,7 @@ internal sealed class TaskbarView : Grid
         try
         {
             _environment.Session.State.CompactDock = false; Refresh([]);
-            if (button.Width != 52 || button.Height != 56 || icon.Width != 36 || icon.Height != 36)
+            if (button.Width != 64 || button.Height != 68 || icon.Width != 46 || icon.Height != 46)
                 throw new InvalidOperationException("The normal dock did not apply its production icon geometry.");
             _environment.Session.State.CompactDock = true; Refresh([]);
             if (button.Width != 40 || button.Height != 44 || icon.Width != 30 || icon.Height != 30 || !ReferenceEquals(button, _iconButtons[0]))
@@ -559,7 +581,7 @@ internal sealed class TaskbarView : Grid
                 for (int i = 0; i < 20; i++) Refresh([]);
                 if (writes != 0) throw new InvalidOperationException("Unchanged dock snapshots rewrote icon sizing.");
                 _environment.Session.State.CompactDock = false; Refresh([]);
-                if (button.Width != 52 || button.Height != 56 || icon.Width != 36 || icon.Height != 36)
+                if (button.Width != 64 || button.Height != 68 || icon.Width != 46 || icon.Height != 46)
                     throw new InvalidOperationException("The dock did not restore normal geometry after compact mode.");
             }
             finally { button.UnregisterPropertyChangedCallback(WidthProperty, token); }
@@ -634,6 +656,10 @@ internal sealed class TaskbarView : Grid
         SetVisible(_clockButton, widthDip >= 480 && !_environment.Session.State.FloatingTaskbar);
         SetVisible(_desktopButton, widthDip >= 600);
         SetVisible(_date, widthDip >= 620);
+        // Avoid a blank decorative plate when all utility controls are hidden
+        // by narrow desktop widths. The running-app zone remains scrollable.
+        SetVisible(_utilityIsland, _overview.Visibility == Visibility.Visible
+            || _clockButton.Visibility == Visibility.Visible || _desktopButton.Visibility == Visibility.Visible);
     }
     internal void RefreshClock()
     {
@@ -658,6 +684,7 @@ internal sealed class TaskbarView : Grid
         ApplyFrameCorners();
         if (!MaterialOwnedByWindow) GlassPaintRetention.Edge(_frame, theme.Edge);
         if (!_frame.BorderThickness.Equals(new Thickness(1))) _frame.BorderThickness = new Thickness(1);
+        ApplyVisualIslands();
         var border = theme.Brush("NexusBorder"); var text = theme.Brush("NexusText"); var muted = theme.Brush("NexusMuted");
         if (!ReferenceEquals(_separator.Background, border)) _separator.Background = border;
         if (!ReferenceEquals(_time.Foreground, text)) _time.Foreground = text;
@@ -673,6 +700,87 @@ internal sealed class TaskbarView : Grid
         RefreshWindowStates();
         ApplyDensity(); RefreshClock();
     }
+    private void ApplyVisualIslands()
+    {
+        var theme = _environment.Theme;
+        bool emphasize = MidnightGlassMetrics.ReferenceEnabled(theme.Palette, theme.HighContrast)
+            && _environment.Session.State.FloatingTaskbar
+            && !theme.Simple;
+        // All materials are cached in ShellTheme. Applying the same look
+        // never restarts an animation, re-enumerates HWNDs or edits Frame.
+        var edge = emphasize ? theme.Edge : _transparent;
+        PaintIsland(_launchIsland, emphasize ? theme.Surface("Hero") : _transparent, edge, emphasize, 17);
+        PaintIsland(_appsIsland, emphasize ? theme.Surface("Sidebar") : _transparent, edge, emphasize, 19);
+        PaintIsland(_utilityIsland, emphasize ? theme.Surface("Sidebar") : _transparent, edge, emphasize, 17);
+        var glintVisibility = emphasize ? Visibility.Visible : Visibility.Collapsed;
+        if (_topGlint.Visibility != glintVisibility) _topGlint.Visibility = glintVisibility;
+        if (emphasize && !ReferenceEquals(_topGlint.Background, edge))
+            _topGlint.Background = edge;
+        _islandsEmphasized = emphasize;
+    }
+
+    private static void PaintIsland(Border island, Brush background, Brush edge, bool emphasized, double radius)
+    {
+        if (!ReferenceEquals(island.Background, background)) island.Background = background;
+        if (!ReferenceEquals(island.BorderBrush, edge)) island.BorderBrush = edge;
+        var thickness = new Thickness(emphasized ? 1 : 0);
+        if (!island.BorderThickness.Equals(thickness)) island.BorderThickness = thickness;
+        var corners = new CornerRadius(radius);
+        if (!island.CornerRadius.Equals(corners)) island.CornerRadius = corners;
+    }
+
+    // This runs in the real native UI preflight against production WinUI
+    // elements, checking hierarchy, stable paints and accessibility fallback.
+    internal void VerifyVisualIslands()
+    {
+        ApplyVisualIslands();
+        if (_galleryInvalid())
+            throw new InvalidOperationException("The floating dock lost its three functional glass zones.");
+        var originalFloating = _environment.Session.State.FloatingTaskbar;
+        try
+        {
+            _environment.Session.State.FloatingTaskbar = true;
+            ApplyVisualIslands();
+            bool expected = MidnightGlassMetrics.ReferenceEnabled(
+                _environment.Theme.Palette, _environment.Theme.HighContrast)
+                && !_environment.Theme.Simple;
+            if (_islandsEmphasized != expected
+                || _topGlint.Visibility != (expected ? Visibility.Visible : Visibility.Collapsed))
+                throw new InvalidOperationException("Floating Midnight materials did not honor accessibility mode.");
+            var launcher = _launchIsland.Background;
+            var apps = _appsIsland.Background;
+            var utility = _utilityIsland.Background;
+            var edge = _appsIsland.BorderBrush;
+            for (int n = 0; n < 100; n++) ApplyVisualIslands();
+            if (!ReferenceEquals(launcher, _launchIsland.Background)
+                || !ReferenceEquals(apps, _appsIsland.Background)
+                || !ReferenceEquals(utility, _utilityIsland.Background)
+                || !ReferenceEquals(edge, _appsIsland.BorderBrush))
+                throw new InvalidOperationException("Stable dock composition recreated inset material paints.");
+            _environment.Session.State.FloatingTaskbar = false;
+            ApplyVisualIslands();
+            if (_islandsEmphasized || _topGlint.Visibility != Visibility.Collapsed
+                || _launchIsland.BorderThickness.Left != 0)
+                throw new InvalidOperationException("Attached dock retained floating-only visual decoration.");
+        }
+        finally
+        {
+            _environment.Session.State.FloatingTaskbar = originalFloating;
+            ApplyVisualIslands();
+        }
+    }
+
+    private bool _galleryInvalid()
+        => _body.Children.Count != 4
+            || !ReferenceEquals(_body.Children[0], _launchIsland)
+            || !ReferenceEquals(_body.Children[1], _appsIsland)
+            || !ReferenceEquals(_body.Children[2], _utilityIsland)
+            || _launchIsland.Child is not StackPanel launcher
+            || launcher.Children.Count != 1 || !ReferenceEquals(launcher.Children[0], _start)
+            || _appsIsland.Child is not ScrollViewer
+            || _utilityIsland.Child is not StackPanel
+            || _topGlint.IsHitTestVisible || _topGlint.Height != 1;
+
     internal void Release()
     {
         if (_released) return; _released = true; CancelPreviewRequest(); _hoverTimer.Tick -= _hoverTick;

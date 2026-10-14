@@ -15,11 +15,14 @@ internal sealed class DesktopIntegration : IDisposable
     private readonly IntPtr _window;
     private readonly SubclassProc _callback;
     private readonly Action<string> _dispatch;
+    private readonly Action<Services.WindowsDesktopChange>? _systemChanged;
     private readonly uint _taskbarCreated;
     private IntPtr _icon;
+    private IntPtr _powerNotifications;
     private bool _hooked, _disposed, _trayRequested;
     private const int SearchHotkey = 0x4E53;
     internal bool SearchHotkeyAvailable { get; private set; }
+    internal bool SleepNotificationsAvailable => _powerNotifications != IntPtr.Zero;
     internal static int NotificationDataSize => Marshal.SizeOf<NotifyData>();
     internal static int NotificationIconOffset => (int)Marshal.OffsetOf<NotifyData>(nameof(NotifyData.Icon));
     internal bool TrayAvailable { get; private set; }
@@ -53,6 +56,8 @@ internal sealed class DesktopIntegration : IDisposable
     private static extern bool RegisterHotKey(IntPtr window, int id, uint modifiers, uint key);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool UnregisterHotKey(IntPtr window, int id);
+    [DllImport("user32.dll", SetLastError = true)] private static extern IntPtr RegisterSuspendResumeNotification(IntPtr recipient, uint flags);
+    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool UnregisterSuspendResumeNotification(IntPtr registration);
     [StructLayout(LayoutKind.Sequential)] private struct Point { public int X, Y; }
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct NotifyData
@@ -71,12 +76,17 @@ internal sealed class DesktopIntegration : IDisposable
         public IntPtr BalloonIcon;
     }
 
-    internal DesktopIntegration(IntPtr window, Action<string> dispatch)
+    internal DesktopIntegration(IntPtr window, Action<string> dispatch, Action<Services.WindowsDesktopChange>? systemChanged = null)
     {
-        _window = window; _dispatch = dispatch; _callback = HandleMessage;
+        _window = window; _dispatch = dispatch; _systemChanged = systemChanged; _callback = HandleMessage;
         _taskbarCreated = RegisterWindowMessage("TaskbarCreated");
         _hooked = SetWindowSubclass(window, _callback, new UIntPtr(SubclassId), UIntPtr.Zero);
         if (!_hooked) throw new Win32Exception("Nexus could not attach its desktop controls.");
+        if (systemChanged is not null)
+        {
+            _powerNotifications = RegisterSuspendResumeNotification(window, 0); // DEVICE_NOTIFY_WINDOW_HANDLE
+            if (_powerNotifications == IntPtr.Zero) Services.Log.Write("Sleep notification registration unavailable; standard desktop broadcasts remain active.");
+        }
         SearchHotkeyAvailable = RegisterHotKey(window, SearchHotkey, 0x4003, 0x20); // no repeat, Ctrl+Alt+Space
         if (!SearchHotkeyAvailable) Services.Log.Write("Nexus Search shortcut is in use; menu-bar and desktop search remain available.");
     }
@@ -105,6 +115,8 @@ internal sealed class DesktopIntegration : IDisposable
         {
             if (!_disposed)
             {
+                var change = Services.WindowsDesktopEvents.Classify(message, wParam.ToUInt64());
+                if (change != Services.WindowsDesktopChange.None) _systemChanged?.Invoke(change);
                 if (message == 0x0312 && wParam.ToUInt64() == SearchHotkey) { _dispatch("search"); return IntPtr.Zero; }
                 if (message == SummonMessage) { _dispatch("show"); return IntPtr.Zero; }
                 if (message == LaunchpadMessage) { _dispatch("start"); return IntPtr.Zero; }
@@ -125,7 +137,10 @@ internal sealed class DesktopIntegration : IDisposable
             }
         }
         catch (Exception ex) { Services.Log.Write("Desktop control message failed", ex); }
-        return DefSubclassProc(window, message, wParam, lParam);
+        var result = DefSubclassProc(window, message, wParam, lParam);
+        return !_disposed && _systemChanged is not null && message == 0x0218
+            && Services.WindowsDesktopEvents.Classify(message, wParam.ToUInt64()) != Services.WindowsDesktopChange.None
+            ? new IntPtr(1) : result;
     }
     private void ShowTrayMenu()
     {
@@ -133,13 +148,18 @@ internal sealed class DesktopIntegration : IDisposable
         if (menu == IntPtr.Zero) return;
         try
         {
-            AppendMenu(menu, 0, new UIntPtr(1), "Open Nexus");
+            AppendMenu(menu, 0, new UIntPtr(1), "Nexus Controls");
             AppendMenu(menu, 0, new UIntPtr(2), "Launchpad");
+            AppendMenu(menu, 0, new UIntPtr(3), "Windows calendar");
+            AppendMenu(menu, 0, new UIntPtr(4), "Windows notifications");
+            AppendMenu(menu, 0x0800, UIntPtr.Zero, "");
+            AppendMenu(menu, 0, new UIntPtr(5), "About Nexus");
             if (!GetCursorPos(out var point)) return;
             SetForegroundWindow(_window);
             uint chosen = TrackPopupMenuEx(menu, 0x0100 | 0x0002, point.X, point.Y, _window, IntPtr.Zero);
             PostMessage(_window, 0, UIntPtr.Zero, IntPtr.Zero);
-            if (chosen is 1 or 2) _dispatch(chosen == 1 ? "show" : "start");
+            string? command = chosen switch { 1 => "show", 2 => "start", 3 => "windows-calendar", 4 => "windows-notifications", 5 => "about", _ => null };
+            if (command is not null) _dispatch(command);
         }
         finally { DestroyMenu(menu); }
     }
@@ -147,6 +167,7 @@ internal sealed class DesktopIntegration : IDisposable
     {
         if (_disposed) return;
         SetResident(false); _disposed = true;
+        if (_powerNotifications != IntPtr.Zero) { UnregisterSuspendResumeNotification(_powerNotifications); _powerNotifications = IntPtr.Zero; }
         if (SearchHotkeyAvailable) { UnregisterHotKey(_window, SearchHotkey); SearchHotkeyAvailable = false; }
         if (_hooked) { RemoveWindowSubclass(_window, _callback, new UIntPtr(SubclassId)); _hooked = false; }
         if (_icon != IntPtr.Zero) { DestroyIcon(_icon); _icon = IntPtr.Zero; }

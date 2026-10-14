@@ -11,8 +11,8 @@ internal static class MidnightGlassMetrics
     internal const double ControlRadius = 12;
     internal const double SearchRadius = 22;
     internal const double ContentPadding = 20;
-    internal const double DockButtonWidth = 52;
-    internal const double DockButtonHeight = 56;
+    internal const double DockButtonWidth = 64;
+    internal const double DockButtonHeight = 68;
     internal const double DockCompactButtonWidth = 40;
     internal const double DockCompactButtonHeight = 44;
 

@@ -16,8 +16,11 @@ required = [
     "Desktop/DesktopEnvironment.cs", "Desktop/DesktopWindow.cs", "Desktop/TaskbarWindow.cs", "Desktop/MenuWindow.cs",
     "UI/Desktop/DesktopSurface.cs", "UI/Taskbar/TaskbarView.cs", "UI/Menus/DesktopMenus.cs", "UI/Menus/StartMenuView.cs", "UI/ShellTheme.cs",
     "Services/ShellSession.cs", "Services/DesktopLayout.cs", "Services/DesktopCatalog.cs", "Interop/ShellLayerInterop.cs", "Interop/TaskbarRegistration.cs",
-    "MainWindow.Polish.cs", "MainWindow.PcControls.cs", "Services/AudioController.cs", "Services/PcMetrics.cs", "Services/WindowLayouts.cs",
-    "App.xaml", "App.xaml.cs", "MainWindow.xaml", "MainWindow.xaml.cs", "MainWindow.Workspaces.cs", "MainWindow.Orbit.cs", "MainWindow.Desktop.cs", "MainWindow.Appearance.cs", "MainWindow.Experience.cs", "MainWindow.Explore.cs", "MainWindow.Overview.cs", "Services/ExploreWorkspace.cs", "UI/SavedKindConverter.cs", "UI/NexusIcons.cs", "Services/NavigationTrail.cs", "Services/ShellExperience.cs", "Services/AuraPalette.cs", "Services/DesktopWorkspace.cs", "Interop/DesktopIntegration.cs",
+    "Services/AudioController.cs", "Services/PcMetrics.cs", "Services/WindowLayouts.cs",
+    "MainWindow.Controls.cs", "Services/NexusControlsCatalog.cs", "Assets/Icons/Controls.svg",
+    "UI/Controls/FileJobsView.cs", "Assets/Icons/Jobs.svg",
+    "UI/Menus/ShellMenu.cs", "Desktop/AboutNexusWindow.cs", "Desktop/DesktopEnvironment.Shell.cs", "Services/WindowsShellPolicy.cs", "Services/FileContextPolicy.cs", "Interop/WindowsShellBridge.cs",
+    "App.xaml", "App.xaml.cs", "MainWindow.xaml", "MainWindow.xaml.cs", "Services/ExploreWorkspace.cs", "UI/SavedKindConverter.cs", "UI/NexusIcons.cs", "Services/NavigationTrail.cs", "Services/ShellExperience.cs", "Services/AuraPalette.cs", "Interop/DesktopIntegration.cs",
     "Services/FocusSession.cs", "Services/CommandSearch.cs", "Services/WorkspaceState.cs",
     "Nexus.Shell.csproj", "app.manifest", "Assets/Nexus.ico",
     "Interop/NativeMethods.cs", "Models/ShellState.cs", "Services/AppCatalog.cs",
@@ -171,19 +174,22 @@ main_dictionary = application.find(pns + "Application.Resources/" + pns + "Resou
 fallback_keys = {node.attrib[xns + "Key"] for node in main_dictionary if xns + "Key" in node.attrib}
 assert used_theme_keys <= fallback_keys, f"Missing fallback resources: {used_theme_keys - fallback_keys}"
 
-# Guard the library's finite viewport; an outer ScrollViewer/StackPanel would
-# reintroduce full realization of all discovered application tiles.
+# Controls has bounded, static settings pages inside a finite viewport. The
+# removed Sections app/catalog grids must not remain as a second settings UI.
 parents = {child: parent for parent in window.iter() for child in parent}
-for grid_name in ["AppsGrid", "WindowsGrid", "ExploreGrid"]:
-    grid = next(node for node in window.iter() if node.attrib.get(xns + "Name") == grid_name)
-    ancestor = parents[grid]
-    while ancestor is not window:
-        assert ancestor.tag.rsplit("}", 1)[-1] not in {"ScrollViewer", "StackPanel"}, f"Unbounded {grid_name} viewport"
-        ancestor = parents[ancestor]
-page_host = next(node for node in window.iter() if node.attrib.get(xns + "Name") == "PageHost")
-overview = next(node for node in window.iter() if node.attrib.get(xns + "Name") == "WindowOverviewView")
-assert parents[overview] is page_host, "Window overview must be inside the page host"
-assert "AppsGrid.ItemsSource =" in code and "grid.Items.Add(AppButton" not in code
+assert not {"AppsGrid", "WindowsGrid", "ExploreGrid", "NavStudy", "NavExplore"} & set(names), "Retired Sections content remains"
+for name in ["Navigation", "CompactNavigation", "SettingsSearch", "PageScroll", "PageContent", "ControlsDragArea"]:
+    assert name in names, f"Controls navigation/content is missing: {name}"
+search = next(node for node in window.iter() if node.attrib.get(xns + "Name") == "SettingsSearch")
+assert search.attrib.get("MaxLength") == "160", "Controls search input must be bounded"
+scroll = next(node for node in window.iter() if node.attrib.get(xns + "Name") == "PageScroll")
+ancestor = parents[scroll]
+while ancestor is not window:
+    assert ancestor.tag.rsplit("}", 1)[-1] not in {"ScrollViewer", "StackPanel"}, "Unbounded Controls viewport"
+    ancestor = parents[ancestor]
+assert 'NativeWindowTitle = "Nexus Controls"' in code and "NexusControlsCatalog.Find" in code
+assert '"nexus:controls"' in (project / "Services/DesktopCatalog.cs").read_text()
+assert 'new MainWindow(environment, validation: true)' in (project / "UI/UiResourceProbe.cs").read_text(), "Controls needs a native construction probe"
 motion = (project / "UI/MotionController.cs").read_text(encoding="utf-8")
 assert "IterationBehavior.Forever" not in motion and "CompositionTarget.Rendering" not in motion
 for relative in ["UI/Taskbar/DockMotionController.cs", "Desktop/DockPreviewWindow.cs"]:
@@ -246,23 +252,24 @@ for mood in ["Solstice", "Ember", "Opal", "Lagoon", "Graphite", "Pearl"]:
 desktop = (project / "UI/Desktop/DesktopSurface.cs").read_text()
 assert "BitmapImage" in desktop and "Shapes.Path" not in desktop, "Desktop ribbons must use the cached asset"
 print("Cached wallpaper assets and publish wiring OK")
-# Desktop composition must not regress into the Sections XAML root.
+# Desktop composition must remain independent of Nexus Controls.
 assert not (project / "MainWindow.Canvas.cs").exists(), "Obsolete packed desktop partial remains"
-assert not {"MenuBar", "DockBorder", "DesktopCanvas", "DesktopClockCard", "DesktopWorkspaceCard", "WallpaperAccents"} & set(names), "Desktop UI must not be embedded in Sections"
+assert not {"MenuBar", "DockBorder", "DesktopCanvas", "DesktopClockCard", "DesktopWorkspaceCard", "WallpaperAccents"} & set(names), "Desktop UI must not be embedded in Controls"
 startup = (project / "App.xaml.cs").read_text()
-assert "new MainWindow(" not in startup and "DesktopEnvironment" in startup, "Startup must create the environment without Sections"
+assert "new MainWindow(" not in startup and "DesktopEnvironment" in startup, "Startup must create the environment without Controls"
 for layer in ["DesktopWindow", "TaskbarWindow", "MenuWindow", "QuickSettingsWindow", "MenuBarWindow", "NotificationWindow"]:
     body = (project / "Desktop" / (layer + ".cs")).read_text()
     assert re.search(r"class\s+" + layer + r"\s*:\s*Window", body), f"{layer} must own a native Window"
 closed = code[code.index("private void Window_Closed("):]
-assert "SaveFinal(" not in closed and "DetachSnapshot(" in closed, "Closing Sections must not finalize the desktop session"
+assert "SaveFinal(" not in closed and "Shutdown(" not in closed and "_timer.Stop()" in closed, "Closing Controls must release local work without finalizing the desktop session"
+assert "AttachSnapshot(" not in code, "Controls must edit shared state without replacing another window snapshot provider"
 build_files = [appveyor_file, root / "scripts/package.ps1", root / "scripts/build.ps1"]
 if workflow is not None:
     build_files.append(workflow_file)
 for file in build_files:
     body = file.read_text()
     assert "Nexus-Shell-" + ET.parse(project / "Nexus.Shell.csproj").findtext("PropertyGroup/Version") in body and "Nexus-Shell-1.1.0" not in body and "Nexus-Shell-1.0.0" not in body, f"Stale artifact name: {file}"
-print("Independent desktop ownership, Sections lifetime and CI versions OK")
+print("Independent desktop ownership, Controls lifetime and CI versions OK")
 # Desktop replacement cannot silently instantiate Explorer or common picker UI.
 environment = (project / "Desktop/DesktopEnvironment.cs").read_text()
 assert "ExplorerDesktopPresent()" in environment and "DesktopSessionMode.DesktopShell" in environment
@@ -343,6 +350,27 @@ for relative in ["scripts/package-update.ps1", "scripts/apply-update.ps1"]:
     body = (root / relative).read_text()
     assert "Nexus.Core.*" in body and "Nexus.Runtime.*" in body, f"Core/protocol must be app-owned update files: {relative}"
 print("Isolated Files ownership, shared runtime projects, Core publish and update ownership OK")
+for relative in ["src/Nexus.Runtime/Transfers/FileJobContract.cs", "src/Nexus.Runtime/Transfers/FileJobCoordinator.cs", "src/Nexus.Runtime/Transfers/FileTransferEngine.cs", "src/Nexus.Runtime/Transfers/FileJobsJournal.cs", "src/Nexus.Core/Transfers/WindowsTransferSource.cs", "tests/Nexus.Runtime.Checks/FileJobsChecks.cs"]:
+    assert (root / relative).is_file(), f"Missing File Jobs component: {relative}"
+for relative in ["Services/DesktopWorkspace.cs", "MainWindow.Workspaces.cs"]:
+    assert not (project / relative).exists(), f"Retired workspace source remains: {relative}"
+state_model = (project / "Models/ShellState.cs").read_text()
+assert not re.search(r"\b(?:WorkspaceProfile|WorkspaceLaunchItem|ActiveProfileId|ResumeWorkspace|LastPage|Profiles)\b", state_model), "Retired workspace state remains active"
+jobs_view = (project / "UI/Controls/FileJobsView.cs").read_text()
+assert "FileJobsAsync" in jobs_view and "File.Copy(" not in jobs_view and "File.Delete(" not in jobs_view, "Transfers belong to Core, not the UI"
+assert "FileJobCoordinator" in (root / "src/Nexus.Core/Program.cs").read_text() and "WindowsTransferSource.Open" in (root / "src/Nexus.Core/Program.cs").read_text()
+assert "file-jobs-construction-and-layout" in (project / "UI/UiResourceProbe.cs").read_text() and "VerifyValidationLayout" in jobs_view
+print("Workspace retirement, Core-owned File Jobs and isolated native UI probe wiring OK")
+for relative in ["src/Nexus.Runtime/WindowsFileActions.cs", "src/Nexus.Core/Windows/WindowsFileWorker.cs", "tests/Nexus.Core.Checks/ShellIntegrationChecks.cs", "tests/Nexus.Runtime.Checks/WindowsFileActionChecks.cs"]:
+    assert (root / relative).is_file(), f"Missing shell integration component: {relative}"
+menus = (project / "UI/Menus/DesktopMenus.cs").read_text()
+assert '"About Nexus…", environment.ShowAbout' in menus and '"About this session"' not in menus
+assert "WindowsShellSurface.Calendar" in (project / "UI/Desktop/MenuBarView.cs").read_text() and "WindowsShellSurface.Calendar" in (project / "UI/Taskbar/TaskbarView.cs").read_text()
+assert "IContextMenu3" in (root / "src/Nexus.Core/Windows/WindowsFileWorker.cs").read_text()
+assert "WindowsFileActionCoordinator" in (root / "src/Nexus.Core/Program.cs").read_text()
+assert "compact-context-menu-construction" in (project / "UI/UiResourceProbe.cs").read_text() and "VerifyValidationContexts" in (project / "UI/Files/FilesView.cs").read_text()
+assert "WindowsDesktopSurfaces.EnsureExplorer()" in (root / "src/Nexus.DesktopHost/Program.cs").read_text()
+print("Compact context system, dedicated About, native Windows routes, Explorer retention and isolated shell handlers OK")
 runtime_version = ET.parse(root / "src/Nexus.Runtime/Nexus.Runtime.csproj").findtext("PropertyGroup/Version")
 for packages in json.loads((project / "packages.lock.json").read_text())["dependencies"].values():
     for package, entry in packages.items():
@@ -371,7 +399,9 @@ assert '"--control-center-worker"' in (project / "App.xaml.cs").read_text() and 
 assert '"controlcenter"' in panel and "CoreProcessSession" not in panel and "CommitState" not in panel and "StateStore(" not in panel
 assert "ControlCenterPreferences.Set" in (project / "Desktop/DesktopEnvironment.ControlCenter.cs").read_text()
 assert "_retiring" in coordinator and "RuntimeRestartBudget" in coordinator and "ExpireActions" in coordinator
-assert "MenuBarLayout.Attached" in (project / "Desktop/TaskbarWindow.cs").read_text() and "MenuBarLayout.ClientBounds" in (project / "Interop/WindowChrome.cs").read_text()
+assert "DockForegroundGeometryPolicy.Classify" in (project / "Desktop/TaskbarWindow.cs").read_text()
+assert "MenuBarLayout.Attached" in (project / "Services/DockForegroundGeometryPolicy.cs").read_text()
+assert "MenuBarLayout.ClientBounds" in (project / "Interop/WindowChrome.cs").read_text()
 assert "NotificationHistory = [.. NotificationHistory]" in (project / "Models/ShellState.cs").read_text()
 print("Supervised Control Center, preference ownership, attached-bar framing and durable alert history wiring OK")
 if options.syntax:

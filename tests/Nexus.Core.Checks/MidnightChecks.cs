@@ -28,6 +28,24 @@ internal static class MidnightChecks
                 && AuraColor.Parse(glass.Fallback).A == 255,
                 "Reference glass must have finite translucent parameters and a fully opaque safety fallback.");
         }
+        // The desktop's new widget rail must remain accessible at the
+        // screenshot work area without intruding on small screens or Focus.
+        var roomy = DesktopWidgetLayoutPolicy.Resolve(1649, 928, true, false);
+        check(roomy.ShowToday && roomy.ShowActions && roomy.AtTop,
+            "The reference-size desktop should expose the Today and Quick Access glass cards.");
+        foreach (var size in new[] { (800d, 600d), (1119d, 739d), (400d, 480d) })
+        {
+            var compact = DesktopWidgetLayoutPolicy.Resolve(size.Item1, size.Item2, true, false);
+            check(compact.ShowToday && !compact.ShowActions && !compact.AtTop,
+                "Compact desktops must show only the existing calendar without additional action clutter.");
+        }
+        foreach (var (width, height) in new[] { (399d, 480d), (1649d, 479d), (double.NaN, 900d) })
+            check(!DesktopWidgetLayoutPolicy.Resolve(width, height, true, false).ShowToday,
+                "Tiny or invalid work areas must not produce an off-screen floating widget.");
+        check(!DesktopWidgetLayoutPolicy.Resolve(1649, 928, false, false).ShowToday
+            && !DesktopWidgetLayoutPolicy.Resolve(1649, 928, true, true).ShowActions
+            && !DesktopWidgetLayoutPolicy.Resolve(1649, 928, true, true).ShowToday,
+            "Widget settings and Focus Mode must remain authoritative.");
         var calculator = new CalculatorEngine();
         void Keys(params string[] keys) { foreach (string key in keys) calculator.Input(key); }
         Keys("0", ".", "1", "+", "0", ".", "2", "="); check(calculator.Display == "0.3", "Decimal sums must not expose binary floating point error.");
@@ -60,6 +78,68 @@ internal static class MidnightChecks
         check(history.BackTarget == "first" && history.Current == "second", "Checking a back target must not move history before folder I/O succeeds.");
         history.Back(); history.Visit("third"); check(!history.CanGoForward, "New folder navigation must truncate forward history.");
 
+        check(MidnightGlassMetrics.DockButtonWidth == 64
+            && MidnightGlassMetrics.DockButtonHeight == 68
+            && DesktopLayout.TaskbarHeight(false) >= MidnightGlassMetrics.DockButtonHeight + 20
+            && DesktopLayout.TaskbarHeight(true) == 56,
+            "Floating dock must reserve room for the real icon size and preserve compact mode.");
+        // Screenshot-driven Files pane sizing: preserve the primary file list
+        // under tight widths and do not add a noninteractive inspector to dialogs.
+        foreach (double width in new[] { 320d, 590d, 859d, 860d, 940d, 1180d, double.NaN })
+        {
+            var browse = FilesPaneLayoutPolicy.Resolve(width, browse: true);
+            bool expectedInspector = double.IsFinite(width) && width >= 860;
+            double expectedWidth = expectedInspector ? width >= 1170 ? 256 : 228 : 0;
+            check(browse.SidebarWidth is >= 136 and <= 206
+                && browse.InspectorVisible == expectedInspector
+                && browse.InspectorWidth == expectedWidth,
+                "Responsive Files panes must preserve their width hierarchy and hide narrow inspectors.");
+            var picker = FilesPaneLayoutPolicy.Resolve(width, browse: false);
+            check(!picker.InspectorVisible && picker.InspectorWidth == 0,
+                "File selection dialogs must not allocate content width to an inspector.");
+        }
+        check(LaunchpadCatalog.PageSize == 18 && 6 * 3 == LaunchpadCatalog.PageSize,
+            "Launchpad must show three complete six-column rows at reference size.");
+        check(LaunchpadArtworkPolicy.UsesNexusArtwork("sections")
+            && !LaunchpadArtworkPolicy.UsesNexusArtwork("discovered-app"),
+            "Only Nexus-owned builtins should keep fixed vector app artwork.");
+        check(LaunchpadArtworkPolicy.Monogram("Administrative Tools") == "AT"
+            && LaunchpadArtworkPolicy.Monogram("Event Viewer") == "EV"
+            && LaunchpadArtworkPolicy.Monogram("Everything") == "EV"
+            && LaunchpadArtworkPolicy.Monogram("7-Zip") == "7Z"
+            && LaunchpadArtworkPolicy.Monogram("") == "APP",
+            "Discovered apps need distinct, stable monograms instead of repeated placeholders.");
+        check(LaunchpadArtworkPolicy.BackgroundForContrast("Everything", true) == "00000000"
+            && LaunchpadArtworkPolicy.BackgroundForContrast("Everything", false) == LaunchpadArtworkPolicy.Background("Everything"),
+            "Switching High Contrast must clear generated artwork without reloading native icons.");
+        check(ControlCenterTilePolicy.IsPrimary("Network") && ControlCenterTilePolicy.IsPrimary("Display")
+            && !ControlCenterTilePolicy.IsPrimary("Power") && !ControlCenterTilePolicy.IsPrimary("Desktop")
+            && ControlCenterTilePolicy.Height("Network") > ControlCenterTilePolicy.Height("Power")
+            && ControlCenterTilePolicy.Radius("Network") > ControlCenterTilePolicy.Radius("Desktop"),
+            "Control Center primary modules must remain visibly distinct from secondary actions.");
+        check(LaunchpadArtworkPolicy.Background("Event Viewer") == LaunchpadArtworkPolicy.Background("Event Viewer")
+            && LaunchpadArtworkPolicy.Background("Event Viewer").Length == 8,
+            "Fallback application tile color must be stable and fully opaque.");
+        // The launcher must fit the same real, negatively offset monitors as
+        // the expanded search without ever stealing focus or going off screen.
+        foreach (var monitor in new[] { new ShellRect(0, 0, 1649, 928), new ShellRect(-2560, -140, 2560, 1440), new ShellRect(100, 200, 640, 480) })
+        foreach (var scale in new[] { 1d, 1.5, 2d, double.NaN })
+        {
+            var compact = DesktopLayout.SpotlightPanelBounds(monitor, scale, false);
+            // The layout helper normalizes NaN and other bad DPI scales.
+            // Test the actual bounded result, not raw unnormalized inputs.
+            check(compact.Height >= Math.Min(312, Math.Max(1, monitor.Height - 48)),
+                "Compact Spotlight must allocate space for its shortcut gallery when monitor height permits.");
+            var expanded = DesktopLayout.SpotlightPanelBounds(monitor, scale, true);
+            check(compact.Width > 0 && compact.Height > 0
+                && compact.X >= monitor.X && compact.Y >= monitor.Y
+                && compact.Right <= monitor.Right && compact.Bottom <= monitor.Bottom,
+                "Compact Spotlight must fit available desktop space.");
+            check(expanded.Width == compact.Width && expanded.Height >= compact.Height
+                && expanded.X >= monitor.X && expanded.Y >= monitor.Y
+                && expanded.Right <= monitor.Right && expanded.Bottom <= monitor.Bottom,
+                "Expanded search must keep the Spotlight width, stay on screen and grow only vertically.");
+        }
         var visibility = new DockVisibility();
         check(!visibility.Update(true, false, true, true, true, 1) && !visibility.Update(false, false, true, true, true, 2), "Fullscreen must take precedence over stale preview and context-menu interaction holds in both dock modes.");
         foreach (var monitor in new[] { new ShellRect(0, 0, 1920, 1080), new ShellRect(-2560, -140, 2560, 1440), new ShellRect(100, 200, 640, 480) })

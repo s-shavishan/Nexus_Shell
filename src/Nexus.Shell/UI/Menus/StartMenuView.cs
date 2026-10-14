@@ -11,12 +11,35 @@ using System.ComponentModel;
 
 namespace Nexus.Shell.UI.Menus;
 
-internal sealed class LaunchpadTile(AppEntry app) : INotifyPropertyChanged
+internal sealed class LaunchpadTile(AppEntry app, bool highContrast) : INotifyPropertyChanged
 {
     internal AppEntry App => app;
     public string Name => app.Name;
-    private ImageSource _icon = NexusIcons.Source(NexusIcons.ForApp(app));
-    public ImageSource Icon { get => _icon; set { if (ReferenceEquals(_icon, value)) return; _icon = value; PropertyChanged?.Invoke(this, new(nameof(Icon))); } }
+    private ImageSource? _icon = LaunchpadArtworkPolicy.UsesNexusArtwork(app.Id)
+        ? NexusIcons.Source(NexusIcons.ForApp(app)) : null;
+    private Visibility _placeholder = LaunchpadArtworkPolicy.UsesNexusArtwork(app.Id)
+        ? Visibility.Collapsed : Visibility.Visible;
+    public string Monogram => LaunchpadArtworkPolicy.Monogram(app.Name);
+    public SolidColorBrush TileBrush { get; } =
+        new(ShellTheme.Color(LaunchpadArtworkPolicy.BackgroundForContrast(app.Name, highContrast)));
+    internal void UpdateContrast(bool highContrast)
+    {
+        var color = ShellTheme.Color(LaunchpadArtworkPolicy.BackgroundForContrast(app.Name, highContrast));
+        if (TileBrush.Color != color) TileBrush.Color = color;
+    }
+    public Visibility PlaceholderVisibility { get => _placeholder; private set
+        { if (_placeholder == value) return; _placeholder = value; PropertyChanged?.Invoke(this, new(nameof(PlaceholderVisibility))); } }
+    public ImageSource? Icon
+    {
+        get => _icon;
+        set
+        {
+            if (ReferenceEquals(_icon, value)) return;
+            _icon = value;
+            PlaceholderVisibility = value is null ? Visibility.Visible : Visibility.Collapsed;
+            PropertyChanged?.Invoke(this, new(nameof(Icon)));
+        }
+    }
     public event PropertyChangedEventHandler? PropertyChanged;
 }
 
@@ -27,11 +50,15 @@ internal sealed class StartMenuView : Grid, IDisposable
     private readonly DesktopEnvironment _environment;
     private readonly TextBox _search = new() { PlaceholderText = "Find an app", FontSize = 15, CornerRadius = new CornerRadius(12), Padding = new Thickness(14, 10, 14, 10) };
     private readonly GridView _apps = new() { IsItemClickEnabled = true, SelectionMode = ListViewSelectionMode.Single, HorizontalAlignment = HorizontalAlignment.Stretch };
-    private readonly TextBlock _title = new() { Text = "Launchpad", FontSize = 27, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
-    private readonly TextBlock _subtitle = new() { Text = "Your apps, ready when you are.", FontSize = 12, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis };
+    private readonly TextBlock _title = new() { Text = "Launchpad", FontSize = 32, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
+    private readonly TextBlock _subtitle = new() { Text = "Everything on your desktop, beautifully organized.", FontSize = 12, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis };
     private readonly StackPanel _dots = new() { Orientation = Orientation.Horizontal, Spacing = 5, VerticalAlignment = VerticalAlignment.Center };
     private readonly Border _empty = new() { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-    private readonly Border _searchFrame = new() { CornerRadius = new CornerRadius(13), BorderThickness = new Thickness(1) };
+    private readonly Border _searchFrame = new() { CornerRadius = new CornerRadius(18), BorderThickness = new Thickness(1) };
+    private readonly Button _organizeButton = new() { Content = "Organize  ▾" };
+    private readonly Border _organizeFrame = new() { Padding = new Thickness(10), CornerRadius = new CornerRadius(14), BorderThickness = new Thickness(1), Visibility = Visibility.Collapsed };
+    private readonly Border _galleryFrame = new() { CornerRadius = new CornerRadius(22), BorderThickness = new Thickness(1), Padding = new Thickness(7) };
+    private bool _organizerOpen;
     private readonly FontIcon _searchIcon = ShellControls.Icon("\uE721", 18);
     private readonly TextBlock _hint = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
     private readonly Button _previous = new() { Content = "‹", Width = 38 }, _next = new() { Content = "›", Width = 38 };
@@ -54,7 +81,7 @@ internal sealed class StartMenuView : Grid, IDisposable
     internal StartMenuView(DesktopEnvironment environment)
     {
         _environment = environment; _catalog = new(Builtins());
-        Padding = new Thickness(26); RowSpacing = 16;
+        Padding = new Thickness(24, 22, 24, 20); RowSpacing = 14;
         SizeChanged += (_, _) => _subtitle.MaxWidth = Math.Max(140, ActualWidth - 176);
         KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden;
         foreach (var height in new[] { GridLength.Auto, GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto }) RowDefinitions.Add(new() { Height = height });
@@ -78,53 +105,98 @@ internal sealed class StartMenuView : Grid, IDisposable
             button.Click += (_, _) => { _category = category; _page = 0; RefreshCollections(); Render(); }; _categories.Add(category, button); tabs.Children.Add(button);
         }
         var organization = new StackPanel { Spacing = 9 };
-        organization.Children.Add(new ScrollViewer { Content = tabs, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled });
+        var topBar = new Grid { ColumnSpacing = 10 };
+        topBar.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) });
+        topBar.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
+        topBar.Children.Add(new ScrollViewer { Content = tabs, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled });
+        _organizeButton.Style = (Style)Application.Current.Resources["QuietButton"];
+        _organizeButton.Padding = new Thickness(13, 7, 13, 7);
+        _organizeButton.CornerRadius = new CornerRadius(12);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_organizeButton, "Show Launchpad organization options");
+        _organizeButton.Click += (_, _) =>
+        {
+            _organizerOpen = !_organizerOpen;
+            _organizeFrame.Visibility = _organizerOpen ? Visibility.Visible : Visibility.Collapsed;
+            _organizeButton.Content = _organizerOpen ? "Done  ▴" : "Organize  ▾";
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_organizeButton,
+                _organizerOpen ? "Hide Launchpad organization options" : "Show Launchpad organization options");
+        };
+        Grid.SetColumn(_organizeButton, 1); topBar.Children.Add(_organizeButton);
+        organization.Children.Add(topBar);
         var tools = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
         tools.Children.Add(_collections); _collections.SelectionChanged += (_, _) => { if (_organizing || _collections.SelectedItem is not CollectionChoice choice) return; _category = choice.Id.Length == 0 ? "All" : "collection:" + choice.Id; _page = 0; RefreshCollections(); Render(); };
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_collections, "App collection");
         var create = new Button { Content = "+ Collection" }; create.Flyout = CollectionEditor(false); tools.Children.Add(create);
         _renameCollection.Flyout = CollectionEditor(true); tools.Children.Add(_renameCollection);
-        var removeFlyout = new MenuFlyout(); var removeGroup = new MenuFlyoutItem { Text = "Remove collection · apps stay installed" };
+        var removeFlyout = ShellMenu.Create(); var removeGroup = new MenuFlyoutItem { Text = "Remove collection" };
         removeGroup.Click += (_, _) => Organize(() => { string id = CurrentCollectionId; environment.Session.State.AppCollections.RemoveAll(g => g.Id == id); _category = "All"; }); removeFlyout.Items.Add(removeGroup); _deleteCollection.Flyout = removeFlyout; tools.Children.Add(_deleteCollection);
         _order.Items.Add("A–Z"); _order.Items.Add("Catalog order"); _order.SelectedIndex = environment.Session.State.LaunchpadOrder == "Catalog" ? 1 : 0;
         _order.SelectionChanged += (_, _) => { if (!_organizing) Organize(() => environment.Session.State.LaunchpadOrder = _order.SelectedIndex == 1 ? "Catalog" : "Name"); }; tools.Children.Add(_order);
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_order, "Launchpad app order");
         _restoreHidden.Click += (_, _) => Organize(() => environment.Session.State.HiddenAppTargets.Clear()); tools.Children.Add(_restoreHidden);
-        organization.Children.Add(new ScrollViewer { Content = tools, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled });
+        _organizeFrame.Child = new ScrollViewer
+        {
+            Content = tools, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Disabled
+        };
+        organization.Children.Add(_organizeFrame);
         Grid.SetRow(organization, 2); Children.Add(organization); RefreshCollections();
         _apps.ItemsPanel = (ItemsPanelTemplate)XamlReader.Load("""
-            <ItemsPanelTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"><ItemsWrapGrid Orientation="Horizontal" ItemWidth="110" ItemHeight="116" /></ItemsPanelTemplate>
+            <ItemsPanelTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"><ItemsWrapGrid Orientation="Horizontal" ItemWidth="110" ItemHeight="137" /></ItemsPanelTemplate>
             """);
         _apps.ItemTemplate = (DataTemplate)XamlReader.Load("""
             <DataTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
-              <StackPanel Spacing="11" Padding="4,10" HorizontalAlignment="Stretch" AutomationProperties.Name="{Binding Name}">
-                <Image Source="{Binding Icon}" Width="60" Height="60" />
-                <TextBlock Text="{Binding Name}" FontSize="12" TextAlignment="Center" TextTrimming="CharacterEllipsis" TextWrapping="Wrap" MaxLines="2" />
+              <StackPanel Spacing="10" Padding="5,9" HorizontalAlignment="Center" AutomationProperties.Name="{Binding Name}">
+                <Border Width="88" Height="88" CornerRadius="24"
+                        BorderBrush="{ThemeResource NexusBorder}" BorderThickness="1"
+                        Background="{ThemeResource NexusSidebar}">
+                  <Grid Width="76" Height="76">
+                    <Border Width="72" Height="72" CornerRadius="19" Background="{Binding TileBrush}"
+                            Visibility="{Binding PlaceholderVisibility}" HorizontalAlignment="Center">
+                      <TextBlock Text="{Binding Monogram}" FontSize="24" FontWeight="SemiBold"
+                                 Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <Image Source="{Binding Icon}" Width="72" Height="72" Stretch="Uniform"/>
+                  </Grid>
+                </Border>
+                <TextBlock Width="100" Text="{Binding Name}" FontSize="12" TextAlignment="Center"
+                           TextTrimming="CharacterEllipsis" TextWrapping="Wrap" MaxLines="2"/>
               </StackPanel>
             </DataTemplate>
             """);
         _apps.ItemClick += (_, e) => Open(((LaunchpadTile)e.ClickedItem).App);
         _apps.KeyDown += (_, e) => { if (e.Key == VirtualKey.Enter && _apps.SelectedItem is LaunchpadTile tile) { Open(tile.App); e.Handled = true; } };
-        var context = new MenuFlyout(); _apps.ContextFlyout = context;
+        var context = ShellMenu.Create(); _apps.ContextFlyout = context;
         context.Opening += (_, _) =>
         {
             context.Items.Clear(); if (_apps.SelectedItem is not LaunchpadTile tile) return;
             var app = tile.App; var state = environment.Session.State;
-            void Action(string text, Action action) { var item = new MenuFlyoutItem { Text = text }; item.Click += (_, _) => Organize(action); context.Items.Add(item); }
+            void Action(string text, Action action) => context.Items.Add(ShellMenu.Action(text, () => Organize(action)));
+            context.Items.Add(ShellMenu.Action("Open", () => Open(app), "\uE768"));
             Action(LaunchpadCatalog.IsPinned(state.PinnedApps, app) ? "Remove from dock" : "Pin to dock", () => LaunchpadCatalog.TogglePin(state.PinnedApps, app));
-            if (LaunchpadCatalog.IsPinned(state.PinnedApps, app)) { Action("Move dock pin left", () => DesktopOrganization.MovePin(state.PinnedApps, app.Target, -1)); Action("Move dock pin right", () => DesktopOrganization.MovePin(state.PinnedApps, app.Target, 1)); }
-            var groups = new MenuFlyoutSubItem { Text = "Collections", IsEnabled = state.AppCollections.Count > 0 };
+            if (LaunchpadCatalog.IsPinned(state.PinnedApps, app))
+            { var dock = ShellMenu.Group("Dock position"); dock.Items.Add(ShellMenu.Action("Move left", () => Organize(() => DesktopOrganization.MovePin(state.PinnedApps, app.Target, -1)))); dock.Items.Add(ShellMenu.Action("Move right", () => Organize(() => DesktopOrganization.MovePin(state.PinnedApps, app.Target, 1)))); context.Items.Add(dock); }
+            var groups = ShellMenu.Group("Collections"); groups.IsEnabled = state.AppCollections.Count > 0;
             foreach (var group in state.AppCollections)
             { var member = new ToggleMenuFlyoutItem { Text = group.Name, IsChecked = group.Targets.Contains(app.Target, StringComparer.OrdinalIgnoreCase) }; member.Click += (_, _) => Organize(() => DesktopOrganization.ToggleMember(state, group.Id, app.Target)); groups.Items.Add(member); }
             context.Items.Add(groups); context.Items.Add(new MenuFlyoutSeparator());
             bool hidden = state.HiddenAppTargets.Contains(app.Target, StringComparer.OrdinalIgnoreCase);
             Action(hidden ? "Show in Launchpad" : "Hide from Launchpad", () => DesktopOrganization.SetHidden(state, app.Target, !hidden));
+            if (Path.IsPathFullyQualified(app.Target))
+            {
+                var windows = ShellMenu.Group("Windows", "\uE713"); windows.Items.Add(ShellMenu.Action("Properties…", () => environment.WindowsFileAction(app.Target, "properties"))); windows.Items.Add(ShellMenu.Action("File options…", () => environment.WindowsFileAction(app.Target))); context.Items.Add(windows);
+            }
         };
         _apps.RightTapped += (_, args) => { DependencyObject? node = args.OriginalSource as DependencyObject; while (node is not null && node is not GridViewItem && !ReferenceEquals(node, _apps)) node = VisualTreeHelper.GetParent(node); _apps.SelectedItem = node is GridViewItem item ? item.Content : null; };
-        Grid.SetRow(_apps, 3); Children.Add(_apps);
+        var gallery = new Grid();
+        gallery.Children.Add(_apps);
+        _galleryFrame.Child = gallery;
+        Grid.SetRow(_galleryFrame, 3);
+        Children.Add(_galleryFrame);
         var empty = new StackPanel { Spacing = 14, HorizontalAlignment = HorizontalAlignment.Center }; var emptyIcon = ShellControls.Icon("\uE721", 32); emptyIcon.Foreground = environment.Theme.Brush("NexusMuted"); empty.Children.Add(emptyIcon);
         empty.Children.Add(new TextBlock { Text = "Nothing here yet", FontSize = 18, Foreground = environment.Theme.Brush("NexusText"), TextAlignment = TextAlignment.Center });
-        empty.Children.Add(new TextBlock { Text = "Try another category or search.\nRight-click apps to add them to a collection.\nHidden apps can be restored from the Hidden tab.", FontSize = 12, Foreground = environment.Theme.Brush("NexusMuted"), TextAlignment = TextAlignment.Center }); _empty.Child = empty; Grid.SetRow(_empty, 3); Children.Add(_empty);
+        empty.Children.Add(new TextBlock { Text = "Try another category or search.\nRight-click apps to add them to a collection.\nHidden apps can be restored from the Hidden tab.", FontSize = 12, Foreground = environment.Theme.Brush("NexusMuted"), TextAlignment = TextAlignment.Center }); _empty.Child = empty; gallery.Children.Add(_empty);
         var footer = new Grid(); footer.ColumnDefinitions.Add(new()); footer.ColumnDefinitions.Add(new() { Width = GridLength.Auto }); footer.Children.Add(_hint);
         var pages = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 9 }; pages.Children.Add(_previous); pages.Children.Add(_dots); pages.Children.Add(_next); Grid.SetColumn(pages, 1); footer.Children.Add(pages); Grid.SetRow(footer, 4); Children.Add(footer);
         _previous.Style = _next.Style = (Style)Application.Current.Resources["QuietButton"]; _previous.Padding = _next.Padding = new Thickness(0); _previous.Height = _next.Height = 32;
@@ -137,7 +209,7 @@ internal sealed class StartMenuView : Grid, IDisposable
         ApplyAppearance();
         environment.Session.Changed += _catalog.Invalidate;
     }
-    private IEnumerable<AppEntry> Builtins() => [new("sections", "Sections", "nexus:sections", "\uE80F", "System"), new("files", "Files", "nexus:files", "\uE8B7", "System"), new("settings", "Settings", "ms-settings:", "\uE713", "System"), new("notes", "Notes", "nexus:notes", "\uE70B", "Utility"), new("calculator", "Calculator", "nexus:calculator", "\uE8EF", "Utility")];
+    private IEnumerable<AppEntry> Builtins() => [new("jobs", "File jobs", "nexus:jobs", "\uE8B7", "Utility"), new("controls", "Nexus Controls", "nexus:controls", "\uE713", "System"), new("files", "Files", "nexus:files", "\uE8B7", "System"), new("settings", "Windows Settings", "ms-settings:", "\uE713", "System"), new("notes", "Notes", "nexus:notes", "\uE70B", "Utility"), new("calculator", "Calculator", "nexus:calculator", "\uE8EF", "Utility")];
     private string CurrentCollectionId => _category.StartsWith("collection:", StringComparison.Ordinal) ? _category[11..] : "";
     private void Organize(Action action)
     {
@@ -178,7 +250,10 @@ internal sealed class StartMenuView : Grid, IDisposable
     internal Task OpenAsync(bool search)
     {
         ++_epoch; _open = true; _title.Text = "Launchpad";
-        _category = "All"; _page = 0; _search.Text = ""; _filterTimer.Stop(); RefreshCollections();
+        _category = "All"; _page = 0; _search.Text = ""; _filterTimer.Stop();
+        _organizerOpen = false; _organizeFrame.Visibility = Visibility.Collapsed;
+        _organizeButton.Content = "Organize  ▾";
+        RefreshCollections();
         _catalog.Update(_environment.Session.State.PinnedApps); Render();
         return RefreshCatalogAsync();
     }
@@ -235,7 +310,7 @@ internal sealed class StartMenuView : Grid, IDisposable
         var shown = LaunchpadCatalog.Page(_filtered, _page);
         if (!_shown.SequenceEqual(shown))
         {
-            _shown = shown.ToArray(); var tiles = shown.Select(app => new LaunchpadTile(app)).ToArray(); _apps.ItemsSource = tiles;
+            _shown = shown.ToArray(); var tiles = shown.Select(app => new LaunchpadTile(app, _environment.Theme.HighContrast)).ToArray(); _apps.ItemsSource = tiles;
             _ = RefreshIconsAsync(tiles, ++_renderVersion);
         }
         _previous.IsEnabled = _page > 0; _next.IsEnabled = _page + 1 < pages;
@@ -260,10 +335,34 @@ internal sealed class StartMenuView : Grid, IDisposable
     internal void ApplyAppearance()
     {
         var theme = _environment.Theme; RequestedTheme = theme.ElementTheme;
+        // Reuse realized tiles and loaded Windows thumbnails on theme changes.
+        // Update just the mutable brush; no catalog scan or item rebuild.
+        if (_apps.ItemsSource is IEnumerable<LaunchpadTile> realized)
+            foreach (var tile in realized) tile.UpdateContrast(theme.HighContrast);
         _title.Foreground = _apps.Foreground = _search.Foreground = theme.Brush("NexusText"); _hint.Foreground = _subtitle.Foreground = _searchIcon.Foreground = theme.Brush("NexusMuted");
-        _searchFrame.Background = theme.Material("Input", _environment.Session.State.NativeGlass); _searchFrame.BorderBrush = _search.FocusState == FocusState.Unfocused ? theme.Edge : theme.Brush("NexusAccent"); _searchFrame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 13);
+        _searchFrame.Background = theme.Material("Input", _environment.Session.State.NativeGlass);
+        _searchFrame.BorderBrush = _search.FocusState == FocusState.Unfocused ? theme.Edge : theme.Brush("NexusAccent");
+        _searchFrame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 18);
+        _galleryFrame.Background = MidnightGlassMetrics.ReferenceEnabled(theme.Palette, theme.HighContrast)
+            ? theme.Surface("Dock") : theme.Material("Card", _environment.Session.State.NativeGlass);
+        _galleryFrame.BorderBrush = theme.Edge;
+        _galleryFrame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 22);
+        _organizeFrame.Background = theme.Material("Card", _environment.Session.State.NativeGlass);
+        _organizeFrame.BorderBrush = theme.Edge;
+        _organizeFrame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 14);
+        _organizeButton.Background = theme.Brush("NexusSidebar");
+        _organizeButton.Foreground = theme.Brush("NexusText");
         foreach (var (category, button) in _categories) { button.Background = category == _category ? theme.Brush("NexusSelection") : theme.Material("Card", _environment.Session.State.NativeGlass); button.Foreground = theme.Brush("NexusText"); button.BorderBrush = theme.Edge; button.BorderThickness = new Thickness(1); button.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 10); }
         if (_empty.Child is StackPanel empty) { foreach (var label in empty.Children.OfType<TextBlock>()) label.Foreground = theme.Brush(label.FontSize > 15 ? "NexusText" : "NexusMuted"); foreach (var icon in empty.Children.OfType<FontIcon>()) icon.Foreground = theme.Brush("NexusMuted"); }
     }
+    internal void VerifyGalleryComposition()
+    {
+        if (_galleryFrame.Child is not Grid stage
+            || !stage.Children.Contains(_apps)
+            || !stage.Children.Contains(_empty)
+            || _organizerOpen || _organizeFrame.Visibility != Visibility.Collapsed)
+            throw new InvalidOperationException("Launchpad glass gallery or its default organization hierarchy is invalid.");
+    }
+
     public void Dispose() { if (_disposed) return; _environment.Session.Changed -= _catalog.Invalidate; Hide(); _disposed = true; ++_renderVersion; _filterTimer.Stop(); }
 }

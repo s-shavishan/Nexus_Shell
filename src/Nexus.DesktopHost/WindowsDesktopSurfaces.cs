@@ -90,6 +90,14 @@ internal sealed class WindowsDesktopSurfaces : IWindowsDesktopSurfaces, IDisposa
         if (errors.Count > 0) throw new AggregateException("Some Windows desktop surfaces could not be shown.", errors);
     }
     internal static bool DesktopExists => GetShellWindow() != IntPtr.Zero;
+    // A Winlogon shell replacement can start without Explorer. Keep Windows
+    // shell services available; never terminate Explorer to hide its taskbar.
+    internal static void EnsureExplorer()
+    {
+        if (DesktopExists) return;
+        using var process = Process.Start(new ProcessStartInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe")) { UseShellExecute = true });
+        if (process is null) throw new InvalidOperationException("The Windows shell could not be started.");
+    }
     internal static bool NexusExists => FindWindow(null, "White Dreams Nexus Desktop") != IntPtr.Zero;
     public void Dispose() { foreach (var process in _explorers.Values) process.Dispose(); _explorers.Clear(); }
 }

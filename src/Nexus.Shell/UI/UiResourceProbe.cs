@@ -3,9 +3,12 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Markup;
 using Nexus.Shell.Desktop;
+using Nexus.Shell.Interop;
 using Nexus.Shell.Models;
 using Nexus.Shell.Services;
 using Nexus.Shell.UI.Desktop;
+using Nexus.Shell.UI.Controls;
+using Nexus.Shell.UI.Files;
 using Nexus.Shell.UI.Menus;
 using Nexus.Shell.UI.Taskbar;
 
@@ -27,6 +30,11 @@ internal static class UiResourceProbe
         StartMenuView? launchpad = null;
         TaskbarView? dock = null;
         NotificationWindow? notifications = null;
+        MainWindow? controls = null;
+        Window? jobsWindow = null;
+        FileJobsView? jobsView = null;
+        FilesView? filesView = null;
+        Window? filesWindow = null;
         var panels = new List<DesktopPanelWindow>();
         int parsed = 0;
         var checks = new List<string>();
@@ -73,17 +81,31 @@ internal static class UiResourceProbe
             frame.UpdateLayout();
             if (launchpad.ActualWidth <= 0 || menu.ActualHeight <= 0) throw new InvalidOperationException("The production surfaces did not lay out.");
             checks.Add("Production menu bar and populated Launchpad layout");
+            stage = "compact-context-menu-construction";
+            var desktopMenu = environment.Menus.DesktopMenu();
+            if (desktopMenu.Items.Count > 9 || !desktopMenu.Items.OfType<MenuFlyoutSubItem>().Any(item => item.Text == "Tools")) throw new InvalidOperationException("The desktop context expanded beyond its compact action budget.");
+            var nexusMenu = environment.Menus.NexusMenu();
+            if (nexusMenu.Items.OfType<MenuFlyoutItem>().First().Text != "About Nexus…") throw new InvalidOperationException("About Nexus must have its own menu action.");
+            foreach (var context in new[] { desktopMenu, nexusMenu, environment.Menus.MenuBarMenu(), environment.Menus.ClockMenu(), environment.Menus.NotificationsMenu(), environment.Menus.DockMenu(), environment.Menus.SystemControlMenu("Network") })
+            {
+                if (context.MenuFlyoutPresenterStyle is null) throw new InvalidOperationException("A production context menu lost the shared presenter style.");
+            }
+            checks.Add("Production desktop, Nexus, menu-bar, clock, notifications, dock and system-control context construction; compact desktop budget and dedicated About action, no commands executed");
             stage = "retained-menu-bar-refresh";
             menu.VerifyRetainedRefresh();
             checks.Add("100 unchanged menu bar refreshes retain native title and clock XAML properties");
             stage = "retained-launchpad-rendering";
             launchpad.VerifyRetainedRendering();
+            launchpad.VerifyGalleryComposition();
+            checks.Add("Launchpad glass gallery and default collapsed organization hierarchy are retained.");
             checks.Add("Twenty unchanged Launchpad renders retain item source and page-control identities");
             stage = "retained-dock-indicator-layout";
             dock.VerifyRetainedIndicatorLayout();
             checks.Add("100 unchanged dock indicator frames retain size/opacity, while real state changes repaint");
             stage = "retained-dock-appearance";
             dock.VerifyRetainedAppearance();
+            dock.VerifyVisualIslands();
+            checks.Add("Three functional Midnight dock islands retain their paint resources across 100 stable visual refreshes");
             checks.Add("100 native dock appearance refreshes preserve launcher and clock brushes");
             stage = "retained-dock-density";
             dock.VerifyRetainedDensity();
@@ -122,8 +144,10 @@ internal static class UiResourceProbe
             var clipboard = new ClipboardShelfWindow(environment); panels.Add(clipboard);
             panels.Add(new SessionStatusWindow(environment));
             var places = new PlacesWindow(environment); places.PopulateValidation(); panels.Add(places);
-            var search = new SearchWindow(environment); search.PopulateValidation(); panels.Add(search);
+            var search = new SearchWindow(environment); search.PopulateValidation(); search.VerifySpotlightComposition(); panels.Add(search);
             panels.Add(new DesktopGuideWindow(environment));
+            panels.Add(new WindowsToolsWindow(environment));
+            panels.Add(new AboutNexusWindow(environment));
             IntPtr owner = WinRT.Interop.WindowNative.GetWindowHandle(window);
             foreach (var panel in panels)
             {
@@ -135,7 +159,42 @@ internal static class UiResourceProbe
                 panel.Hide();
             }
             environment.Clipboard.Clear();
-            checks.Add("Production window board with cards, clipboard shelf, session status, Places, Search with file/command rows and desktop-shortcuts panels at two native window sizes");
+            checks.Add("Production window board, clipboard shelf, session status, Places, Search, desktop shortcuts and Windows tools panels at two native window sizes");
+            stage = "file-context-construction-and-layout";
+            filesView = new FilesView(FilesEnvironment.ForValidation(), new(FileSelectionKind.Browse, "Files fixture"), _ => { });
+            filesWindow = new Window { Content = filesView }; filesWindow.Activate();
+            var filesNative = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(Microsoft.UI.Win32Interop.GetWindowIdFromWindow(WinRT.Interop.WindowNative.GetWindowHandle(filesWindow)));
+            foreach (var size in new[] { (Width: 1040, Height: 740), (Width: 620, Height: 520) })
+            {
+                filesNative.Resize(new Windows.Graphics.SizeInt32((int)(size.Width * ShellLayerInterop.Scale(owner)), (int)(size.Height * ShellLayerInterop.Scale(owner)))); await Task.Delay(80); filesView.UpdateLayout(); filesView.VerifyValidationContexts();
+                if (filesView.ActualWidth <= 0 || filesView.ActualHeight <= 0) throw new InvalidOperationException("Files context fixture did not lay out.");
+            }
+            filesView.Release(); filesWindow.Close(); filesView = null; filesWindow = null;
+            checks.Add("Production Files layout and six folder/media/archive/application/document context types at two native sizes; isolated fixture without Core, scans, previews or shell commands");
+            stage = "notification-construction-and-layout";
+            controls = new MainWindow(environment, validation: true);
+            stage = "nexus-controls-construction-and-layout";
+            foreach (var page in NexusControlsCatalog.Pages)
+            foreach (var size in new[] { (Width: 1080, Height: 780), (Width: 620, Height: 520) })
+            {
+                controls.PrepareValidation(page.Id, size.Width, size.Height); await Task.Delay(80);
+                controls.ValidationRoot.UpdateLayout(); controls.VerifyValidationPage(page.Id);
+            }
+            controls.Close(); controls = null;
+            checks.Add("Nexus Controls: all six production pages, search destinations and compact navigation at two native sizes; no settings or policy actions executed");
+            stage = "file-jobs-construction-and-layout";
+            jobsView = new FileJobsView(environment, validation: true);
+            jobsWindow = new Window { Content = jobsView }; jobsWindow.Activate();
+            IntPtr jobsHandle = WinRT.Interop.WindowNative.GetWindowHandle(jobsWindow);
+            var jobsNative = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(Microsoft.UI.Win32Interop.GetWindowIdFromWindow(jobsHandle));
+            double jobsScale = ShellLayerInterop.Scale(jobsHandle);
+            foreach (var size in new[] { (Width: 970, Height: 740), (Width: 620, Height: 520) })
+            {
+                jobsNative.Resize(new Windows.Graphics.SizeInt32((int)(size.Width * jobsScale), (int)(size.Height * jobsScale)));
+                await Task.Delay(80); jobsView.UpdateLayout(); jobsView.VerifyValidationLayout(size.Width < 780);
+            }
+            jobsView.Release(); jobsWindow.Close(); jobsView = null; jobsWindow = null;
+            checks.Add("Production File Jobs form, queue progress and responsive columns at two native sizes; isolated fixture with polling, pickers and transfer actions disabled");
             stage = "notification-construction-and-layout";
             for (int i = 0; i < 25; i++) environment.Notifications.Publish("Construction sample " + i, "Temporary native UI fixture; no history is persisted.", i % 3 == 0 ? NoticeKind.Warning : NoticeKind.Information);
             notifications = new NotificationWindow(environment);
@@ -215,6 +274,11 @@ internal static class UiResourceProbe
         finally
         {
             _loaded = null; menu?.Dispose(); launchpad?.Dispose(); dock?.Release();
+            try { controls?.Close(); } catch (Exception error) { failures.Add("Controls cleanup: " + error.Message); }
+            jobsView?.Release();
+            filesView?.Release();
+            try { filesWindow?.Close(); } catch (Exception error) { failures.Add("Files context cleanup: " + error.Message); }
+            try { jobsWindow?.Close(); } catch (Exception error) { failures.Add("File Jobs cleanup: " + error.Message); }
             try { notifications?.Close(); } catch (Exception error) { failures.Add("Notification cleanup: " + error.Message); }
             foreach (var panel in panels) try { panel.Close(); } catch (Exception error) { failures.Add("Panel cleanup: " + error.Message); }
             try { window?.Close(); } catch (Exception error) { failures.Add("Window cleanup: " + error.Message); }

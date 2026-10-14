@@ -9,7 +9,7 @@ using Windows.Graphics;
 namespace Nexus.Shell.UI;
 
 // Passive native preflight: only this test-owned window changes size. Uses the
-// same chrome/transition binding as Files, utility windows and Sections.
+// same chrome/transition binding as Files, utility windows and Nexus Controls.
 internal static class NativeWindowMotionProbe
 {
     internal static async Task<string> RunAsync()

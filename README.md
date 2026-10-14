@@ -2,6 +2,48 @@
 
 Nexus is a native C# / WinUI desktop environment on Windows. This release adds an integrated Search panel backed by Everything's local index, plus desktop controls and open-window results. Launchpad remains the app launcher.
 
+## Windows shell and compact menus (pending Windows validation)
+
+- Compact desktop, app, Files, dock and menu-bar context menus with grouped actions, file-type-aware commands and checked preferences.
+- A real **About Nexus** window with version/system information, project links and copyable diagnostics.
+- Clock/date buttons open Windows calendar; the bell opens Windows notifications. Windows 11 uses its combined panel; Windows 10 uses separate date/time and Action Center routes. Native clipboard history and Task View are also connected.
+- Explorer stays running. Managed startup starts it if absent and hides its taskbar through the existing recoverable surface lease.
+- Windows **Open with**, properties and registered shell options run in separate supervised helper processes with startup admission deadlines, bounded concurrency and no automatic command replay.
+
+Nexus service alerts remain under **Nexus activity**. See [shell behavior, limits and Windows acceptance](docs/P211-WINDOWS-SHELL-MENUS.md).
+
+## Nexus File Jobs (pending Windows validation)
+
+Nexus Workspaces is removed. Its profile model, resume state, launch planner and workspace commands are retired. **File Jobs** replaces that direction with a practical copy/move queue owned by Nexus Core.
+
+- Add files or folders, choose a destination, and track bytes, committed files and skipped items.
+- Keep both names or skip collisions; existing destination items are never overwritten. Copied contents are verified with SHA-256 by default.
+- Pause the next job, cancel work, open its destination, or load finished/interrupted jobs into the form for review.
+- Open File Jobs from the Nexus menu, Launchpad, Spotlight or Controls. Nexus Files gains **Copy to…** and **Move to…** context actions.
+- Closing the utility window leaves accepted jobs running. Closing Nexus stops them; a restart marks unfinished jobs interrupted for manual review.
+
+Folder moves require the same drive; choose Copy across drives. Notes and independent saved content remain. See [behavior, recovery and Windows acceptance](docs/P210-FILE-JOBS.md).
+
+## Nexus Controls (pending Windows validation)
+
+**Sections is replaced by Nexus Controls**, available from its desktop shortcut, Launchpad, Spotlight and the Nexus menu. A new resizable window brings together Home, Core & recovery, Personalize, Desktop & dock, Privacy, and Startup & session.
+
+- Search settings inside Controls with **Ctrl+F**, or find individual settings through Spotlight.
+- Apply **Midnight Glass, Quiet desktop or Compact desktop** presets with an undo action; choose palettes, glass quality and motion individually.
+- Check/reconnect Nexus services, request a settings save, repair desktop layout and open local data/logs.
+- Manage dock behavior, desktop icons, time format, notifications, local history and clipboard capture. Review existing supervised startup, sign-in and Windows recovery choices in one place.
+
+Old Sections shortcuts migrate to Controls. Existing saved content remains in settings; notes stay available in Notes. The former Sections Explore/Study/workspace screens are retired. Native Windows/AppVeyor acceptance is still pending. See [Controls behavior, migration and validation](docs/P29-NEXUS-CONTROLS.md).
+
+## Windows integration pack (pending Windows validation)
+
+- **Nexus menu → Windows tools** brings 14 Windows utilities/settings pages into a searchable desktop panel. Spotlight also finds individual tools, including screen snipping, Task Manager, display projection, volume mixer, startup apps and storage settings.
+- **Keep awake** requests 15, 30, 60 or 120 minutes without changing your power plan, with an optional display-on request and a menu-bar indicator. It ends on lock, disconnect, sleep, expiry or Nexus shutdown.
+- **Input language** in the menu bar shows the observed app language and requests an installed layout for that app. Windows retains its own input switching and permission rules.
+- **Windows lifecycle recovery** responds to wake, display/device changes and clock/appearance notifications. Session status reports the integration; usage sampling pauses while asleep, locked or disconnected.
+
+The pack includes the pending P2.7 UI work. Portable checks pass; native Windows/AppVeyor and visual acceptance are still required. See [behavior, limits and Windows tests](docs/P28-WINDOWS-INTEGRATION.md).
+
 ## Changes in 3.6.0
 
 - Search files by category and scope in a glass desktop panel. Use My files by default or explicitly include indexed local drives; open results, open their folder in Nexus Files, or copy a path.
@@ -69,4 +111,4 @@ CI publishes `Nexus-Shell-3.6.0-win-x64.zip` and the smaller update ZIP. Keep th
 
 ## Next milestones
 
-The Control Center process is the first panel boundary. Launchpad/dock separation, dock per monitor, expanded file jobs/device controls, Windows app notifications and shell compatibility work remain in [the Session Core roadmap](docs/NEXT-DESKTOP-PACK.md), each with native acceptance gates. No new standalone app is added.
+The Control Center process is the first panel boundary. Launchpad/dock separation, dock per monitor, expanded file jobs/device controls, Windows app notifications and shell compatibility work remain in [the Session Core roadmap](docs/NEXT-DESKTOP-PACK.md), each with native acceptance gates. Nexus Controls is an independently closable window in the desktop process.
