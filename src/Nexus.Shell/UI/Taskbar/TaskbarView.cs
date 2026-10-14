@@ -205,15 +205,61 @@ internal sealed class TaskbarView : Grid
             else if (_environment.TryLaunch(app)) _dockMotion?.Play(icon, DockMotionCue.Launch);
         }
         button.Click += (_, _) => OpenPinned();
+        button.PointerEntered += (_, e) =>
+        {
+            if (e.Pointer.PointerDeviceType != Microsoft.UI.Input.PointerDeviceType.Mouse
+                || _released || !_environment.CanShowDockPreview || ContextMenuOpen
+                || FindPinnedWindow(app) is null) return;
+            _hoverTimer.Stop(); _hoverItem = null;
+            _hoverPin = (button, app); _hoverTimer.Start();
+        };
+        button.PointerExited += (_, _) =>
+        {
+            if (_hoverPin is { } pending && ReferenceEquals(pending.Button, button))
+                CancelPreviewRequest();
+        };
+        button.AddHandler(UIElement.PointerPressedEvent,
+            new PointerEventHandler((_, _) => _environment.HideDockPreview()), true);
+        button.KeyDown += (_, e) =>
+        {
+            if (e.Key != VirtualKey.Down || _released || !_environment.CanShowDockPreview) return;
+            var target = FindPinnedWindow(app);
+            if (target is null || !TryGetAnchor(button, out var anchor)) return;
+            CancelPreviewRequest();
+            _environment.ShowDockPreview(target, anchor, true); e.Handled = true;
+        };
         var menu = Menus.ShellMenu.Create();
         menu.Items.Add(Menus.ShellMenu.Action("Open or switch", OpenPinned, "\uE768"));
+        // Keep every real document reachable even though the dock merges
+        // only a representative running icon into its pinned artwork.
+        var openWindows = new MenuFlyoutSubItem { Text = "Open windows" };
+        menu.Items.Add(openWindows);
         var remove = new MenuFlyoutItem { Text = "Remove from dock" }; remove.Click += (_, _) =>
         { if (_released) return; _environment.Session.State.PinnedApps.RemoveAll(pin => string.Equals(pin.Target, app.Target, StringComparison.OrdinalIgnoreCase)); _environment.SaveState(); }; menu.Items.Add(remove);
         var position = Menus.ShellMenu.Group("Position");
         foreach (var (label, direction) in new[] { ("Move left", -1), ("Move right", 1) })
         { position.Items.Add(Menus.ShellMenu.Action(label, () => { if (!_released && DesktopOrganization.MovePin(_environment.Session.State.PinnedApps, app.Target, direction)) _environment.SaveState(); })); } menu.Items.Add(position);
         if (Path.IsPathFullyQualified(app.Target)) menu.Items.Add(Menus.ShellMenu.Action("Windows file options…", () => _environment.WindowsFileAction(app.Target), "\uE713"));
-        menu.Opened += (_, _) => { _environment.HideDockPreview(); _openContextMenus.Add(menu); _environment.Taskbar.RefreshVisibility(); };
+        menu.Opened += (_, _) =>
+        {
+            _environment.HideDockPreview(); _openContextMenus.Add(menu);
+            openWindows.Items.Clear();
+            string target = _shortcutTargets.TryGetValue(app.Target, out var resolved)
+                ? resolved : app.Target;
+            var matching = _windowSet.Windows.Where(w =>
+                DockPinnedWindowPolicy.Matches(target, app.Name, w.Title, w.ProcessName)
+                && NativeMethods.OwnsWindow(w)).Take(12).ToArray();
+            openWindows.Visibility = matching.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+            foreach (var window in matching)
+            {
+                var chosen = window;
+                string label = string.IsNullOrWhiteSpace(window.Title)
+                    ? window.ProcessName : window.Title;
+                openWindows.Items.Add(Menus.ShellMenu.Action(label,
+                    () => _environment.RestoreDockWindow(chosen), "\uE8A7"));
+            }
+            _environment.Taskbar.RefreshVisibility();
+        };
         menu.Closed += (_, _) => { _openContextMenus.Remove(menu); if (!_released) _environment.Taskbar.RefreshVisibility(); }; button.ContextFlyout = menu;
         ToolTipService.SetToolTip(button, "Open " + app.Name); Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, "Open " + app.Name);
         _motion?.AttachHover(button); return button;
