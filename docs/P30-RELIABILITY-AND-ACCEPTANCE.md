@@ -47,3 +47,19 @@ These source changes were checked by 10 targeted cross-file assertions. **Those 
 6. Retest fullscreen overview, native notification/calendar, Bluetooth absent/present, window resizing, contextual file menus, glass and first-login dock/work-area behavior on **main** before release acceptance.
 
 **Merge gate:** do not merge this draft unless a real AppVeyor Windows build passes and the user explicitly directs the merge. P2.9 remains the main test baseline until then.
+
+
+## P3.0 continuation — pinned app previews and multiple documents
+
+**Additional source implementation (not VM-certified):**
+
+- Confirmed a usability gap in P2.9: the dock hid the representative running-window icon once claimed by a pin, but hover previews were attached only to the visible running-window icon buttons. The pin had no equivalent hover or keyboard handler, so a successfully paired app lost easy preview access.
+- Pin icons now participate in the **existing** delayed dock preview pipeline. Hovering an active pin resolves its representative HWND at the time the timer fires, checks native process ownership, uses the same screen-pixel anchor and pointer corridor as an ordinary running icon, and opens the existing DWM preview/fallback. Down-arrow on a focused pin opens the same preview with keyboard focus.
+- To avoid lost secondary documents, the pin context menu now populates a live **Open windows** submenu for up to twelve owned, matching HWNDs. Entries activate a specific window; the representative remains merged into the pin while additional document windows retain separate dock buttons. The menu never launches an arbitrary process.
+- The bounded identity policy is portable and verified with explicit checks for duplicate (HWND, PID), other-process spoofing, caps, and invalid capacities.
+- Dock hover requests are cancelled when pins are rebuilt or the dock is disposed; retained WinUI hover state does not reference an unloaded pin.
+- No new DWM bitmap capture or polling is introduced, and the pinned hover uses the already implemented live DWM thumbnail with an accessibility/driver fallback.
+
+**Acceptance additions:** With pinned Firefox/Files/Calculator, hover a running pin and confirm the correct preview after a short delay; press Down on focused pin, then Escape to dismiss; check Alt+Tab/focus, minimized-window fallback, context-menu Open windows activation, 15+ windows, and remove/re-pin during pending hover. Repeat in Compact Dock, 125%/150% DPI and Windows 10/11. Live DWM previews can still be unavailable under VirtualBox—validate fallback instead of claiming hardware support.
+
+**CI status:** The existing main-branch build has not been independently verified green as of this edit. GitHub's status API reported a pending main build after an earlier error, and AppVeyor's console was not externally readable. Use GitHub's latest CI status and the first failing AppVeyor console line before calling P3.0 testable; this document does not claim compile success.
