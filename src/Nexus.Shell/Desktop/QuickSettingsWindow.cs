@@ -61,7 +61,7 @@ internal sealed class QuickSettingsWindow : Window
     {
         var theme = _environment.Theme;
         _frame.RequestedTheme = theme.ElementTheme; _material.Apply(this, _frame, theme, _environment.State); _frame.BorderBrush = theme.Edge;
-        _frame.BorderThickness = new Thickness(1); _frame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : MidnightGlassMetrics.FrameRadius);
+        _frame.BorderThickness = new Thickness(theme.HighContrast ? 1 : 0); _frame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : MidnightGlassMetrics.FrameRadius);
         _chrome.SetCorners(theme.HighContrast, MidnightGlassMetrics.FrameRadius); _motion.Refresh(); _view.ApplyAppearance();
     }
     internal void RefreshPreferences() => _view.RefreshPreferences();
