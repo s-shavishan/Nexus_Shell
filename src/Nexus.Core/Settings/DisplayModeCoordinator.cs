@@ -71,8 +71,10 @@ internal sealed class DisplayModeCoordinator(Action<Exception>? report = null) :
                         throw new InvalidOperationException("The display preview already expired. Refresh first.");
                     if (pending.Until <= DateTimeOffset.UtcNow)
                     {
-                        Restore(pending);
-                        throw new InvalidOperationException("The preview expired and the previous resolution was restored.");
+                        bool restored = Restore(pending);
+                        throw new InvalidOperationException(restored
+                            ? "The preview expired and the previous resolution was restored."
+                            : "The preview expired, but Windows could not restore the old resolution yet. Try Revert again.");
                     }
                     // Persist ONLY after explicit confirmation.
                     var selected = pending.Selected;
@@ -85,7 +87,8 @@ internal sealed class DisplayModeCoordinator(Action<Exception>? report = null) :
                 {
                     if (_pending is not { } pending || pending.Device != change.DeviceId)
                         throw new InvalidOperationException("There is no active preview to revert.");
-                    Restore(pending);
+                    if (!Restore(pending))
+                        throw new InvalidOperationException("Windows could not restore the old resolution. Revert is still available.");
                     break;
                 }
                 default:
@@ -103,12 +106,23 @@ internal sealed class DisplayModeCoordinator(Action<Exception>? report = null) :
         }
     }
 
-    private void Restore(Pending pending)
+    private bool Restore(Pending pending)
     {
-        _pending = null;
-        pending.Timer?.Dispose();
-        try { DisplaySettings.Apply(pending.Device, ref pending.Previous, persist: false); }
-        catch (Exception error) { report?.Invoke(error); }
+        try
+        {
+            DisplaySettings.Apply(pending.Device, ref pending.Previous, persist: false);
+            _pending = null;
+            pending.Timer?.Dispose();
+            return true;
+        }
+        catch (Exception error)
+        {
+            // Do not silently claim rollback when a driver rejects it or the
+            // monitor disconnects. Preserve pending state and retry shortly.
+            try { report?.Invoke(error); } catch { }
+            if (!_disposed) pending.Timer?.Change(TimeSpan.FromSeconds(3), Timeout.InfiniteTimeSpan);
+            return false;
+        }
     }
 
     public void Dispose()
@@ -116,7 +130,13 @@ internal sealed class DisplayModeCoordinator(Action<Exception>? report = null) :
         lock (_gate)
         {
             if (_disposed) return;
-            if (_pending is { } pending) Restore(pending);
+            if (_pending is { } pending)
+            {
+                // Dispose must not leave an orphan retry timer after Core exits.
+                for (int attempt = 0; attempt < 3 && ReferenceEquals(_pending, pending); attempt++)
+                    if (Restore(pending)) break;
+                pending.Timer?.Dispose();
+            }
             _disposed = true;
         }
     }
