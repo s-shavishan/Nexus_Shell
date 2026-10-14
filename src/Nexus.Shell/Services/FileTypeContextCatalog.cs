@@ -71,31 +71,7 @@ public static class FileTypeContextCatalog
             var document = JsonSerializer.Deserialize<CatalogDocument>(stream,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
                 ?? throw new InvalidDataException("The file context catalog is empty.");
-            if (document.Schema != "nexus.shell.filecontext/v1" || document.Profiles is null
-                || document.Profiles.Length is < 1 or > 64)
-                throw new InvalidDataException("Unrecognized file context schema or profile count.");
-            Validate(document.Fallback);
-            var extensions = new Dictionary<string, FileTypeMenuProfile>(StringComparer.OrdinalIgnoreCase);
-            var ids = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var profile in document.Profiles)
-            {
-                Validate(profile);
-                if (!ids.Add(profile.Id)) throw new InvalidDataException("Duplicate profile ID: " + profile.Id);
-                if (profile.Extensions is null || profile.Extensions.Length is < 1 or > 128)
-                    throw new InvalidDataException("Profile requires a bounded extension set: " + profile.Id);
-                foreach (string ext in profile.Extensions)
-                {
-                    if (string.IsNullOrWhiteSpace(ext) || ext.Length > 20 || !ext.StartsWith('.')
-                        || ext.Any(c => !char.IsAsciiLetterOrDigit(c) && c is not '.' and not '-' and not '_'))
-                        throw new InvalidDataException("Invalid extension entry in " + profile.Id);
-                    if (!extensions.TryAdd(ext, profile))
-                        throw new InvalidDataException("Ambiguous extension " + ext
-                            + ". Resolve conflicts in the catalog before reloading.");
-                }
-            }
-            if (document.Fallback.Id != "fallback.unknown" || extensions.Count > 1500)
-                throw new InvalidDataException("Missing default fallback or oversized catalog.");
-            Interlocked.Exchange(ref _snapshot, new CatalogSnapshot(extensions, document.Fallback));
+            Interlocked.Exchange(ref _snapshot, ValidateDocument(document));
             LastError = "";
             return true;
         }
@@ -104,6 +80,59 @@ public static class FileTypeContextCatalog
             LastError = error.Message; // Preserve last known-good snapshot.
             return false;
         }
+    }
+
+
+    // Pure preflight: invalid user-edited catalogs can be rejected and tested
+    // without replacing the live snapshot or installing an event watcher.
+    public static bool ValidateJson(string json, out string error)
+    {
+        try
+        {
+            if (System.Text.Encoding.UTF8.GetByteCount(json) is <= 0 or > 262144)
+                throw new InvalidDataException("File context catalog exceeds its size budget.");
+            var document = JsonSerializer.Deserialize<CatalogDocument>(json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+                ?? throw new InvalidDataException("The file context catalog is empty.");
+            _ = ValidateDocument(document);
+            error = "";
+            return true;
+        }
+        catch (Exception failure)
+        {
+            error = failure.Message;
+            return false;
+        }
+    }
+
+    private static CatalogSnapshot ValidateDocument(CatalogDocument document)
+    {
+        if (document.Schema != "nexus.shell.filecontext/v1" || document.Profiles is null
+            || document.Profiles.Length is < 1 or > 64)
+            throw new InvalidDataException("Unrecognized file context schema or profile count.");
+        Validate(document.Fallback);
+        var extensions = new Dictionary<string, FileTypeMenuProfile>(StringComparer.OrdinalIgnoreCase);
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var profile in document.Profiles)
+        {
+            Validate(profile);
+            if (!ids.Add(profile.Id)) throw new InvalidDataException("Duplicate profile ID: " + profile.Id);
+            if (profile.Extensions is null || profile.Extensions.Length is < 1 or > 128)
+                throw new InvalidDataException("Profile requires a bounded extension set: " + profile.Id);
+            foreach (string ext in profile.Extensions)
+            {
+                if (string.IsNullOrWhiteSpace(ext) || ext.Length > 20 || !ext.StartsWith('.')
+                    || ext.Any(c => !char.IsAsciiLetterOrDigit(c) && c is not '.' and not '-' and not '_'))
+                    throw new InvalidDataException("Invalid extension entry in " + profile.Id);
+                if (!extensions.TryAdd(ext, profile))
+                    throw new InvalidDataException("Ambiguous extension " + ext
+                        + ". Resolve conflicts in the catalog before reloading.");
+            }
+        }
+        if (document.Fallback.Id != "fallback.unknown" || extensions.Count > 1500)
+            throw new InvalidDataException("Missing default fallback or oversized catalog.");
+        return new CatalogSnapshot(extensions, document.Fallback);
+
     }
 
     private static void Validate(FileTypeMenuProfile? profile)
