@@ -31,7 +31,7 @@ internal static class DockChecks
         // A pinned built-in Files icon must claim its ONE representative HWND,
         // not create an additional running icon on every directory change.
         Check(DockPinnedWindowPolicy.Matches("nexus:files", "Files",
-                "Files · Nexus", "Nexus.Shell")
+                "My files · Nexus", "Nexus.Shell")
             && DockPinnedWindowPolicy.Matches("nexus:files", "Files",
                 "Documents · Nexus Files", "Nexus.Shell")
             && DockPinnedWindowPolicy.Matches("nexus:files", "Files",
