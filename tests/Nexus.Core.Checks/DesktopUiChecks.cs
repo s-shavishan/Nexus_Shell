@@ -10,6 +10,36 @@ internal static class DesktopUiChecks
         && inner.X >= outer.X && inner.Y >= outer.Y && inner.Right <= outer.Right && inner.Bottom <= outer.Bottom;
     internal static void Run()
     {
+        var mixedLinks = new[]
+        {
+            new LinkState("VPN", "Tunnel", "Down", "", "", "", 0),
+            new LinkState("Ethernet", "Ethernet", "Up", "192.168.1.5", "", "", 1000),
+            new LinkState("Wi-Fi", "Wireless80211", "Up", "192.168.1.8", "", "", 300),
+            new LinkState("Virtual adapter", "Virtual", "Down", "", "", "", 0)
+        };
+        var arrangedLinks = NetworkPresentationPolicy.OrderedLinks(mixedLinks);
+        Check(arrangedLinks.Count == 4 && arrangedLinks[0].Name == "Ethernet"
+            && arrangedLinks[1].Name == "Wi-Fi"
+            && NetworkPresentationPolicy.InitiallyVisibleLinks(arrangedLinks) == 2,
+            "The compact Network panel must show active adapters first and keep all remaining Windows adapters accessible.");
+        var activeLinks = Enumerable.Range(0, 6)
+            .Select(i => new LinkState("Active " + i, "Ethernet", "Up", "", "", "", 100))
+            .Concat(mixedLinks).ToArray();
+        var activeSorted = NetworkPresentationPolicy.OrderedLinks(activeLinks);
+        Check(NetworkPresentationPolicy.InitiallyVisibleLinks(activeSorted) == 8
+            && activeSorted.Take(8).All(NetworkPresentationPolicy.Connected)
+            && !NetworkPresentationPolicy.Connected(mixedLinks[0]),
+            "Network overflow cannot hide an active VPN, virtual interface or other connected adapter.");
+        var wifiRows = new[]
+        {
+            new WifiNetwork("Weak", "", 20, false, true),
+            new WifiNetwork("Live", "profile1", 10, true, true),
+            new WifiNetwork("Strong", "", 90, false, true)
+        };
+        var rankedWifi = NetworkPresentationPolicy.OrderedWifi(wifiRows);
+        Check(rankedWifi.Select(x => x.Name).SequenceEqual(["Live", "Strong", "Weak"])
+            && NetworkPresentationPolicy.InitialWifiRows == 6,
+            "Connected Wi-Fi must remain first while visible scan results are ordered by signal and collapsed after six.");
         Check(FileTypeContextCatalog.Initialize() && FileTypeContextCatalog.Reload(),
             "The shipped file context schema must parse before native UI builds.");
         string fileTypeJson = File.ReadAllText(Path.Combine(AppContext.BaseDirectory,
