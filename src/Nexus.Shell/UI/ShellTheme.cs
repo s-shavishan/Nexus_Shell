@@ -75,6 +75,21 @@ internal sealed class ShellTheme
         brush.GradientStops.Insert(1, new() { Color = Color(recipe.Start), Offset = .55 });
         return _surfaces[key] = brush;
     }
+    // A refined but strictly opaque material for systems whose DWM blur is
+    // unavailable (common in VMs). Never pretend this is a live blur; retain
+    // native solid contrast, a retained brush and High Contrast/reduced-effects.
+    public Brush FallbackMaterial(string role, bool requested)
+    {
+        if (!requested || HighContrast || Palette.Name != "Midnight" || RequestedQuality == "Solid")
+            return Material(role, false);
+        string key = "fallback:" + role;
+        if (_surfaces.TryGetValue(key, out var cached)) return cached;
+        string start = role == "Card" ? Palette.Card : role == "Dock" ? Palette.DockStart : Palette.Panel;
+        string end = role == "Card" ? Palette.HeroEnd : role == "Dock" ? Palette.DockEnd : Palette.WallpaperEnd;
+        var surface = Gradient("FF" + start[2..], "FF" + end[2..]);
+        surface.StartPoint = new(0, 0); surface.EndPoint = new(1, 1);
+        return _surfaces[key] = surface;
+    }
     public Brush Material(string role, bool glass)
     {
         if (HighContrast) return Brush(role == "Frame" ? "NexusPanel" : "NexusSidebar");
