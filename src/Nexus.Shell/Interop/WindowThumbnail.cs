@@ -25,6 +25,8 @@ internal sealed class WindowThumbnail : IDisposable
     [DllImport("dwmapi.dll")] private static extern int DwmIsCompositionEnabled([MarshalAs(UnmanagedType.Bool)] out bool enabled);
     private IntPtr _thumbnail;
     private ShellRect? _lastDestination;
+    private ShellRect? _lastViewport;
+    private long _lastGeometryQuery;
     private readonly RunningWindow _source;
     private bool _disposed;
     internal bool IsAttached => !_disposed && _thumbnail != IntPtr.Zero;
@@ -43,13 +45,23 @@ internal sealed class WindowThumbnail : IDisposable
     internal bool Update(ShellRect viewport)
     {
         if (!IsAttached || !NativeMethods.OwnsWindow(_source) || !NativeMethods.Visible(_source.Handle)
-            || NativeMethods.IsMinimized(_source.Handle) || NativeMethods.IsCloaked(_source.Handle)
-            || DwmQueryThumbnailSourceSize(_thumbnail, out var size) < 0) return false;
+            || NativeMethods.IsMinimized(_source.Handle) || NativeMethods.IsCloaked(_source.Handle))
+            return false;
+        long now = Environment.TickCount64;
+        if (DockPreviewPolicy.ReuseThumbnailGeometry(
+            viewport, _lastViewport, _lastDestination is not null, _lastGeometryQuery, now))
+            return true;
+        if (DwmQueryThumbnailSourceSize(_thumbnail, out var size) < 0) return false;
         var fit = DockPreviewPolicy.FitSource(viewport, size.Width, size.Height);
         if (fit.Width <= 0 || fit.Height <= 0) return false;
         // DWM retains an unchanged destination. Live layout notifications
         // should not call the native compositor repeatedly for the same rect.
-        if (_lastDestination == fit) return true;
+        if (_lastDestination == fit)
+        {
+            _lastViewport = viewport;
+            _lastGeometryQuery = now;
+            return true;
+        }
         var properties = new Properties
         {
             Flags = 1 | 4 | 8 | 16, // destination, opacity, visibility, source client area only
@@ -57,13 +69,19 @@ internal sealed class WindowThumbnail : IDisposable
             Opacity = 255, Visible = true, ClientOnly = false
         };
         bool updated = DwmUpdateThumbnailProperties(_thumbnail, ref properties) >= 0;
-        if (updated) _lastDestination = fit;
+        if (updated)
+        {
+            _lastDestination = fit;
+            _lastViewport = viewport;
+            _lastGeometryQuery = now;
+        }
         return updated;
     }
     public void Dispose()
     {
         if (_disposed) return; _disposed = true;
-        var thumbnail = _thumbnail; _thumbnail = IntPtr.Zero; _lastDestination = null;
+        var thumbnail = _thumbnail; _thumbnail = IntPtr.Zero;
+        _lastDestination = null; _lastViewport = null; _lastGeometryQuery = 0;
         if (thumbnail != IntPtr.Zero) _ = DwmUnregisterThumbnail(thumbnail);
     }
 }
