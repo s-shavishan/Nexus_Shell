@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Nexus.Runtime;
 
 namespace Nexus.Shell.Services;
 
@@ -61,6 +62,6 @@ internal static class BluetoothRadioAvailability
     // ERROR_FILE_NOT_FOUND is also returned when there is no classic radio
     // installed on Win10 VirtualBox. Treat only known enumeration absence as
     // proof; service/driver failures remain unknown and are not suppressed.
-    internal static bool NoRadioError(int code) => code is 0 or 2 or 55 or 259 or 433 or 1168;
+    internal static bool NoRadioError(int code) => BluetoothRadioProbePolicy.NoRadioError(code);
     internal static bool ShowControls(bool? available) => available != false;
 }
