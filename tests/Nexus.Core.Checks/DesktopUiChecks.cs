@@ -10,6 +10,13 @@ internal static class DesktopUiChecks
         && inner.X >= outer.X && inner.Y >= outer.Y && inner.Right <= outer.Right && inner.Bottom <= outer.Bottom;
     internal static void Run()
     {
+        Check(ControlCenterTilePolicy.RetainPanelAfterFailure("Network", true, true)
+            && ControlCenterTilePolicy.RetainPanelAfterFailure("Bluetooth", true, true)
+            && ControlCenterTilePolicy.RetainPanelAfterFailure("Power", true, true)
+            && ControlCenterTilePolicy.RetainPanelAfterFailure("Display", false, true)
+            && !ControlCenterTilePolicy.RetainPanelAfterFailure("Network", false, true)
+            && !ControlCenterTilePolicy.RetainPanelAfterFailure("Network", true, false),
+            "Failed device mutations retain usable controls without replay; failed first reads retain no stale panel.");
         var mixedLinks = new[]
         {
             new LinkState("VPN", "Tunnel", "Down", "", "", "", 0),
