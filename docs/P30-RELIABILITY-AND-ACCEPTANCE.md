@@ -92,3 +92,18 @@ The old Network page constructed one full card for every Windows network interfa
 **Windows acceptance**: Test Ethernet-only Windows 10 VM, real Wi-Fi with saved/unsaved WPA2 profiles, 10+ virtual/disabled NICs and 10+ nearby SSIDs. Open **More networks**; ensure a refresh doesn't corrupt the panel or submit a command unexpectedly. Verify failed native connection requests show errors, and password text clears after submission or cancel. Do not claim secure Wi-Fi pairing or hardware support without real tests.
 
 **Current test status**: source and portable policy checks added; complete .NET build / Windows UI acceptance for this revision is pending.
+
+
+## P3.0 continuation — retain device controls after failed mutations
+
+Previously any unsuccessful non-Display `QuickSettingsView.ExecuteAsync` request cleared `_state` and rebuilt an error-only page. That meant an invalid Wi-Fi password, transient WLAN API failure, denied Power plan switch or Bluetooth radio error removed all connection controls, forcing the user to navigate or refresh.
+
+- A new `ControlCenterTilePolicy.RetainPanelAfterFailure` holds on to the last known-good state **only for an actual mutation error** (Network, Bluetooth, Sound, Power) or for Display, where native Keep/Revert must survive a read error.
+- Existing controls remain visible beside a truthful device error and a manual Refresh action. No failed native command is automatically replayed, and the queued pending commands are cleared.
+- A failed **initial read** still shows the error-only placeholder; Nexus never fabricates device capability state from a missing snapshot.
+- Display preserves its prior independent auto-rollback and explicit Keep/Revert handling.
+- Portable Core regression tests cover normal mutation failure preservation, Display read failure, initial-read failure, and false preservation for non-Display reads.
+
+**Windows acceptance:** In a Windows 10 VM, attempt a deliberately invalid Wi-Fi connection, unavailable adapter action or denied Power change. Check that the error is visible, the device controls remain interactive, Refresh works, and there is no automatic retry storm. Confirm failed Display preview still keeps its Keep/Revert surface and automatic rollback timer independent from UI.
+
+**Source gate:** 18/18 targeted consistency assertions passed for native Wi-Fi actions, compact/network policies, error recovery policy, portable tests and preserved pinned hover. **This is not a .NET build**.
