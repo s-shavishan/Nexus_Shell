@@ -260,7 +260,8 @@ internal sealed class TaskbarView : Grid
             _environment.Taskbar.RefreshVisibility();
         };
         menu.Closed += (_, _) => { _openContextMenus.Remove(menu); if (!_released) _environment.Taskbar.RefreshVisibility(); }; button.ContextFlyout = menu;
-        ToolTipService.SetToolTip(button, "Open " + app.Name); Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, "Open " + app.Name);
+        ToolTipService.SetToolTip(button, _environment.Session.State.DockPreviews ? null : "Open " + app.Name);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, "Open " + app.Name);
         _motion?.AttachHover(button); return button;
     }
     // Explicit Launchpad rescan invalidates the shared icon cache. Recreate
@@ -427,18 +428,27 @@ internal sealed class TaskbarView : Grid
         foreach (var (button, marker) in _pinMarkers)
         {
             var running = FindPinnedWindow(marker.App);
-            bool active = running is not null;
-            var visibility = active ? Visibility.Visible : Visibility.Collapsed;
+            bool exists = running is not null && NativeMethods.OwnsWindow(running);
+            var visibility = exists ? Visibility.Visible : Visibility.Collapsed;
             if (marker.Indicator.Visibility != visibility) marker.Indicator.Visibility = visibility;
-            if (active)
+            bool foregroundApp = exists && running!.Handle == foreground;
+            bool minimized = exists && (NativeMethods.IsMinimized(running!.Handle)
+                || !NativeMethods.Visible(running.Handle));
+            if (exists)
             {
-                var brush = _environment.Theme.Brush(running!.Handle == foreground ? "NexusAccent" : "NexusMuted");
+                var brush = _environment.Theme.Brush(foregroundApp ? "NexusAccent" : "NexusMuted");
                 if (!ReferenceEquals(marker.Indicator.Background, brush)) marker.Indicator.Background = brush;
             }
-            string tooltip = active ? "Switch to " + marker.App.Name : "Open " + marker.App.Name;
-            if (!Equals(ToolTipService.GetToolTip(button), tooltip)) ToolTipService.SetToolTip(button, tooltip);
-            if (Microsoft.UI.Xaml.Automation.AutomationProperties.GetName(button) != tooltip)
-                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, tooltip);
+            string action = DockPinnedWindowPolicy.ActionLabel(
+                marker.App.Name, exists, foregroundApp, minimized);
+            // A standard WinUI tooltip otherwise overlaps the live DWM card
+            // and can make the pin seem unresponsive. Mirror running icons:
+            // accessible name always, tooltip only when previews are off.
+            object? tooltip = _environment.Session.State.DockPreviews ? null : action;
+            if (!Equals(ToolTipService.GetToolTip(button), tooltip))
+                ToolTipService.SetToolTip(button, tooltip);
+            if (Microsoft.UI.Xaml.Automation.AutomationProperties.GetName(button) != action)
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, action);
         }
     }
 
