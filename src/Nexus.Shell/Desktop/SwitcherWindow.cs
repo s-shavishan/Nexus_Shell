@@ -43,7 +43,7 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
     private IReadOnlyList<DesktopWindowEntry> _filtered = [];
     private IntPtr _current;
     private int _page, _columnCount = 3, _rowCount = 2, _previewQueued;
-    private bool _refreshing, _refreshAgain, _binding, _applying;
+    private bool _refreshing, _refreshAgain, _binding, _applying, _selectionInitialized;
     internal SwitcherWindow(DesktopEnvironment environment) : base(environment, "Window overview", new Grid(), 1060, 740, center: true, animateBody: false)
     {
         _body = (Grid)Root.Children[1]; _body.RowSpacing = 10;
@@ -94,7 +94,8 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
     private string MonitorId => (_monitor.SelectedItem as ComboBoxItem)?.Tag as string ?? "";
     internal void Show(IReadOnlyList<RunningWindow> windows, IntPtr current)
     {
-        _staged.Clear(); _current = current; _query.Text = "";
+        _staged.Clear(); _selected.Clear(); _selectionInitialized = false;
+        _current = current; _query.Text = "";
         ShowPanel(current); _query.Focus(FocusState.Programmatic); _ = RefreshAsync(windows);
     }
     internal override void ApplyAppearance()
@@ -131,6 +132,19 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
             string selected = MonitorId; _monitors = result.Monitors; _windows = result.Windows;
             if (unchanged) { UpdateActions(); return; }
             _selected.RemoveWhere(key => !_windows.Any(entry => entry.Key == key));
+            if (!_selectionInitialized)
+            {
+                _selectionInitialized = true;
+                // On first opening, show a usable selection instead of
+                // presenting three inert arrangement buttons. Never silently
+                // rearrange: the user must still explicitly stage and Apply.
+                var eligible = _windows.Where(entry => entry.CanArrange && !entry.Minimized).ToArray();
+                var first = eligible.FirstOrDefault(entry => entry.Window.Handle == _current)
+                    ?? eligible.FirstOrDefault();
+                if (first is not null) _selected.Add(first.Key);
+                var second = eligible.FirstOrDefault(entry => entry.Key != first?.Key);
+                if (second is not null) _selected.Add(second.Key);
+            }
             foreach (var key in _staged.Keys.Where(key => !_windows.Any(entry => entry.Key == key)).ToArray()) _staged.Remove(key);
             _binding = true; _monitor.Items.Clear(); _monitor.Items.Add(new ComboBoxItem { Content = "All displays", Tag = "" });
             foreach (var monitor in _monitors) _monitor.Items.Add(new ComboBoxItem { Content = monitor.Name, Tag = monitor.Id });
@@ -264,13 +278,17 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
         int count = _windows.Count(entry => _selected.Contains(entry.Key)); _grid.IsEnabled = _columns.IsEnabled = _stack.IsEnabled = !_applying && count is > 0 and <= 4;
         _move.IsEnabled = !_applying && count is > 0 and <= SavedWindowLayouts.MaximumWindows && MonitorId.Length > 0;
         _undo.IsEnabled = !_applying && (_staged.Count > 0 || _placement.CanUndo);
+        _undo.Content = _staged.Count > 0 ? "Discard staged changes" : "Undo last arrangement";
         _apply.IsEnabled = !_applying && _staged.Count > 0;
         _discard.IsEnabled = !_applying;
         _save.IsEnabled = !_applying && _windows.Any(entry => entry.CanArrange && entry.ProcessPath.Length > 0); _delete.IsEnabled = !_applying && SelectedLayout is not null;
         int matched = SelectedLayout is { } layout ? SavedWindowLayouts.Match(layout.Windows, _windows.Where(entry => entry.CanArrange).Select(entry => entry.Candidate).ToArray()).Count : 0;
         _restore.IsEnabled = !_applying && matched > 0; _restore.Content = matched > 0 ? "Restore " + matched : "Restore";
         _summary.Foreground = _message.Foreground = Environment.Theme.Brush("NexusMuted");
-        _summary.Text = _filtered.Count + " windows · " + _staged.Count + " staged · " + count + " selected · page " + (_page + 1) + " · drag a preview, then Apply";
+        _summary.Text = _filtered.Count + " windows · " + _staged.Count + " staged · "
+            + count + " selected · page " + (_page + 1)
+            + (count == 0 ? " · select window checkboxes to enable Grid/Columns/Stack"
+                : " · drag a preview or choose a layout, then Done");
     }
     private IReadOnlyList<DesktopWindowEntry> Selected() => _windows.Where(entry => _selected.Contains(entry.Key) && entry.CanArrange).ToArray();
     private void Arrange(string layout)
@@ -306,7 +324,14 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
     private void Undo()
     {
         if (_staged.Count > 0) { _staged.Clear(); Render(); _message.Text = "Unapplied changes discarded."; }
-        else { _message.Text = _placement.Undo() + " previous window positions requested."; UpdateActions(); Environment.UpdateTaskbar(); }
+        else
+        {
+            int restored = _placement.Undo();
+            _message.Text = restored > 0
+                ? restored + " previous window positions restored."
+                : "Undo could not restore any windows. They may have closed or changed.";
+            UpdateActions(); Environment.UpdateTaskbar();
+        }
     }
     private void Stage(IReadOnlyList<WindowMove> changes)
     {
