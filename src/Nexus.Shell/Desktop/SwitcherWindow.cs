@@ -16,7 +16,13 @@ namespace Nexus.Shell.Desktop;
 internal sealed class SwitcherWindow : DesktopPanelWindow
 {
     private sealed class Preview(DesktopWindowEntry entry, Border viewport, FrameworkElement fallback)
-    { internal readonly DesktopWindowEntry Entry = entry; internal readonly Border Viewport = viewport; internal readonly FrameworkElement Fallback = fallback; internal WindowThumbnail? Thumbnail; internal bool Attempted; }
+    {
+        internal readonly DesktopWindowEntry Entry = entry;
+        internal readonly Border Viewport = viewport;
+        internal readonly FrameworkElement Fallback = fallback;
+        internal readonly DockThumbnailRetry Retry = new();
+        internal WindowThumbnail? Thumbnail;
+    }
     private readonly Grid _body, _cards = new() { RowSpacing = 12, ColumnSpacing = 12 };
     private readonly TextBox _query = new() { PlaceholderText = "Find a window or app", MaxLength = 128 };
     private readonly ComboBox _monitor = new() { MinWidth = 150 };
@@ -35,6 +41,10 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
     protected override bool IsImmersive => true;
     protected override ShellRect ResolveBounds(ShellRect work, ShellRect monitor, double scale) => monitor;
     private readonly Flyout _saveFlyout = new();
+    // Only runs while Overview is visible. The root LayoutUpdated callback
+    // handles normal resize; this slow tick heals temporarily unavailable DWM.
+    private readonly DispatcherTimer _previewHealth = new() { Interval = TimeSpan.FromMilliseconds(700) };
+    private bool _saveFlyoutOpen;
     private readonly WindowLayouts _placement = new();
     private readonly HashSet<string> _selected = [];
     private readonly List<Preview> _previews = [];
@@ -63,8 +73,21 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
         Grid.SetColumn(_save, 1); layouts.Children.Add(_save); Grid.SetColumn(_restore, 2); layouts.Children.Add(_restore); Grid.SetColumn(_delete, 3); layouts.Children.Add(_delete); Grid.SetRow(layouts, 2); _body.Children.Add(layouts);
         var saveForm = new StackPanel { Spacing = 10, Width = 260 }; saveForm.Children.Add(new TextBlock { Text = "Save selected windows, or this view (up to 12).", TextWrapping = TextWrapping.Wrap });
         saveForm.Children.Add(_layoutName); saveForm.Children.Add(ActionButton("Save / replace by name", SaveLayout)); _saveFlyout.Content = saveForm;
-        _saveFlyout.Opening += (_, _) => { foreach (var preview in _previews) { preview.Thumbnail?.Dispose(); preview.Thumbnail = null; preview.Attempted = true; preview.Fallback.Visibility = Visibility.Visible; } };
-        _saveFlyout.Closed += (_, _) => { if (IsOpen) Render(); };
+        _saveFlyout.Opening += (_, _) =>
+        {
+            _saveFlyoutOpen = true;
+            foreach (var preview in _previews)
+            {
+                preview.Thumbnail?.Dispose(); preview.Thumbnail = null;
+                preview.Retry.Reset(); preview.Fallback.Visibility = Visibility.Visible;
+            }
+        };
+        _saveFlyout.Closed += (_, _) => { _saveFlyoutOpen = false; if (IsOpen) Render(); };
+        _previewHealth.Tick += (_, _) =>
+        {
+            if (!IsOpen || IsClosed) { _previewHealth.Stop(); return; }
+            QueuePreviews();
+        };
         Grid.SetRow(_cards, 3); _body.Children.Add(_cards);
         var footer = new Grid { ColumnSpacing = 10 };
         footer.ColumnDefinitions.Add(new());
@@ -96,7 +119,8 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
     {
         _staged.Clear(); _selected.Clear(); _selectionInitialized = false;
         _current = current; _query.Text = "";
-        ShowPanel(current); _query.Focus(FocusState.Programmatic); _ = RefreshAsync(windows);
+        ShowPanel(current); _previewHealth.Start();
+        _query.Focus(FocusState.Programmatic); _ = RefreshAsync(windows);
     }
     internal override void ApplyAppearance()
     {
@@ -515,22 +539,65 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
     }
     private void UpdatePreviews()
     {
-        if (!IsOpen || IsClosed || !Root.IsLoaded) return; double scale = ShellLayerInterop.Scale(Handle);
+        if (!IsOpen || IsClosed || !Root.IsLoaded || _saveFlyoutOpen) return;
+        double scale = ShellLayerInterop.Scale(Handle);
         foreach (var preview in _previews)
         {
             if (preview.Viewport.ActualWidth < 1 || preview.Viewport.ActualHeight < 1) continue;
             try
             {
-                if (!preview.Attempted) { preview.Attempted = true; if (!Environment.Theme.HighContrast && !Environment.Session.State.ReducedEffects) preview.Thumbnail = WindowThumbnail.TryCreate(Handle, preview.Entry.Window); }
-                var point = preview.Viewport.TransformToVisual(Frame).TransformPoint(new Windows.Foundation.Point(0, 0));
-                var rect = new ShellRect((int)Math.Round(point.X * scale), (int)Math.Round(point.Y * scale), (int)Math.Round(preview.Viewport.ActualWidth * scale), (int)Math.Round(preview.Viewport.ActualHeight * scale));
-                if (preview.Thumbnail is { } thumbnail && !thumbnail.Update(rect)) { thumbnail.Dispose(); preview.Thumbnail = null; }
-                preview.Fallback.Visibility = preview.Thumbnail is null ? Visibility.Visible : Visibility.Collapsed;
+                var window = preview.Entry.Window;
+                bool eligible = !Environment.Theme.HighContrast
+                    && !Environment.Session.State.ReducedEffects
+                    && NativeMethods.OwnsWindow(window)
+                    && NativeMethods.Visible(window.Handle)
+                    && !NativeMethods.IsMinimized(window.Handle)
+                    && !NativeMethods.IsCloaked(window.Handle);
+                if (!eligible)
+                {
+                    preview.Thumbnail?.Dispose(); preview.Thumbnail = null;
+                    preview.Retry.Reset(); preview.Fallback.Visibility = Visibility.Visible;
+                    continue;
+                }
+                // Registration is not drawable until DWM has a destination.
+                // On transient failures retry with bounded backoff, without
+                // creating a new relationship on every LayoutUpdated event.
+                long now = System.Environment.TickCount64;
+                if (preview.Thumbnail is null
+                    && preview.Retry.ShouldAttempt(true, false, now))
+                    preview.Thumbnail = WindowThumbnail.TryCreate(Handle, window);
+                if (preview.Thumbnail is { } thumbnail)
+                {
+                    var point = preview.Viewport.TransformToVisual(Frame).TransformPoint(new Windows.Foundation.Point(0, 0));
+                    var rect = new ShellRect((int)Math.Round(point.X * scale), (int)Math.Round(point.Y * scale),
+                        (int)Math.Round(preview.Viewport.ActualWidth * scale),
+                        (int)Math.Round(preview.Viewport.ActualHeight * scale));
+                    if (!thumbnail.Update(rect))
+                    {
+                        thumbnail.Dispose(); preview.Thumbnail = null;
+                    }
+                    else if (thumbnail.HasDestination) preview.Retry.Reset();
+                }
+                preview.Fallback.Visibility = DockPreviewPolicy.ShowFallback(
+                    preview.Thumbnail?.IsAttached == true, preview.Thumbnail?.HasDestination == true)
+                    ? Visibility.Visible : Visibility.Collapsed;
             }
-            catch { preview.Thumbnail?.Dispose(); preview.Thumbnail = null; preview.Fallback.Visibility = Visibility.Visible; }
+            catch (Exception error)
+            {
+                preview.Thumbnail?.Dispose(); preview.Thumbnail = null;
+                preview.Fallback.Visibility = Visibility.Visible;
+                Log.Write("Overview live window preview unavailable", error);
+            }
         }
     }
-    private void ReleasePreviews() { foreach (var preview in _previews) preview.Thumbnail?.Dispose(); _previews.Clear(); }
+    private void ReleasePreviews()
+    {
+        foreach (var preview in _previews)
+        {
+            preview.Thumbnail?.Dispose(); preview.Retry.Reset();
+        }
+        _previews.Clear();
+    }
     private void Commit(RunningWindow window)
     {
         if (!WindowOverviewInteractionPolicy.CanSwitch(_staged.Count))
@@ -545,6 +612,15 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
         Environment.RestoreDockWindow(window);
     }
     internal void CommitSelection() { if (!IsOpen) return; var entry = _filtered.FirstOrDefault(item => item.Window.Handle == _current) ?? _filtered.FirstOrDefault(); if (entry is not null) Commit(entry.Window); else Hide(); }
-    protected override void OnHidden() { _staged.Clear(); _dragCandidate = null; _saveFlyout.Hide(); ReleasePreviews(); }
-    protected override void OnClosed() => Environment.SwitcherClosed(this);
+    protected override void OnHidden()
+    {
+        _previewHealth.Stop();
+        _staged.Clear(); _dragCandidate = null;
+        _saveFlyout.Hide(); ReleasePreviews();
+    }
+    protected override void OnClosed()
+    {
+        _previewHealth.Stop();
+        Environment.SwitcherClosed(this);
+    }
 }
