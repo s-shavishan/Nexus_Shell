@@ -123,3 +123,19 @@ A native dock defect was found in `TaskbarView.QueueShortcutIdentity`: an instal
 **VM acceptance:** Pin a `.lnk` app (e.g. browser), launch it while Explorer/Start Menu shortcuts are still settling, verify no lasting duplicate icon, then retry after a transient shortcut lookup failure or Explorer restart. Remove/re-pin during an in-flight lookup, and verify a closed or removed pin never reappears. Repeat on Windows 10 and 11 and keep hover smooth under 130+ running windows.
 
 **Status:** Source change committed on draft PR #33; native compile/VM acceptance is not yet established for this follow-up.
+
+
+## P3.0 — DWM dock preview first-layout recovery
+
+**Root cause identified from production code**: `DockPreviewWindow.Show` can call `WindowThumbnail.TryCreate` immediately after `AppWindow.Show`, *before* WinUI measures the viewport. Previously `RefreshState` accepted non-null DWM registration as an active thumbnail, reset its retry state, and could leave an unconfigured thumbnail attached. With no new `SizeChanged` callback on subsequent openings at an unchanged card size, the user could observe a blank/incorrect preview even when `DwmRegisterThumbnail` succeeded.
+
+**Implementation**:
+- `WindowThumbnail.HasDestination` now reflects actual successful DWM destination-property configuration, rather than successful registration alone. It resets on Dispose.
+- `DockPreviewWindow.RefreshState` revisits attached-but-unconfigured thumbnails on existing pointer/health refresh ticks, using the same thumbnail instead of registering another one. Initial `Loaded` now re-enters the refresh path.
+- `DockPreviewPolicy.ShowFallback` keeps the accessible static card visible until the DWM relationship **and its destination** are ready. A registration with unknown viewport dimensions is not advertised as active.
+- If setting the native thumbnail rectangle fails, existing disposal and bounded retry behavior remains available; minimized, cloaked, high-contrast and reduced-effects cases still use the accessible fallback.
+- Portable DockChecks verify all four combinations of registration/destination readiness. Existing Windows-native `DesktopNativeChecks` now verify registered → configured → disposed states on owned test windows.
+
+**Acceptance on Windows 10 VM / Windows 11**: hover an ordinary running icon and a pinned running icon immediately after opening Nexus, before any manual resize. Open/close the preview 20 times without changing its size. Confirm DWM renders content where supported, otherwise retains an accessible static card; no invisible blank panel. With VirtualBox DWM restrictions, accept the fallback—not a fabricated screenshot. Repeat at 100%/150% DPI, while rapidly minimizing/restoring the target, and after Explorer restart.
+
+**Status**: committed to draft PR #33; actual WinUI interactive rendering remains a VM test, distinct from successful native DWM registration assertions. Merge requires a new green AppVeyor head and user approval.
