@@ -130,7 +130,7 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
             if (IsClosed || !IsOpen) return;
             bool unchanged = _monitors.SequenceEqual(result.Monitors) && _windows.SequenceEqual(result.Windows);
             string selected = MonitorId; _monitors = result.Monitors; _windows = result.Windows;
-            if (unchanged) { UpdateActions(); return; }
+            if (!WindowBoardPolicy.ShouldRenderSnapshot(unchanged, _selectionInitialized)) { UpdateActions(); return; }
             _selected.RemoveWhere(key => !_windows.Any(entry => entry.Key == key));
             if (!_selectionInitialized)
             {
