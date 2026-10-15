@@ -30,6 +30,9 @@ internal sealed class WindowThumbnail : IDisposable
     private readonly RunningWindow _source;
     private bool _disposed;
     internal bool IsAttached => !_disposed && _thumbnail != IntPtr.Zero;
+    // DwmRegisterThumbnail only establishes a relationship. DWM draws
+    // nothing until the first successful destination-property update.
+    internal bool HasDestination => IsAttached && _lastDestination is not null;
     private WindowThumbnail(IntPtr thumbnail, RunningWindow source) { _thumbnail = thumbnail; _source = source; }
     internal static bool CompositionAvailable() => OperatingSystem.IsWindows() && DwmIsCompositionEnabled(out bool enabled) >= 0 && enabled;
     internal static WindowThumbnail? TryCreate(IntPtr destination, RunningWindow source)
