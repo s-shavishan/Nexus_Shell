@@ -10,6 +10,11 @@ internal static class DesktopUiChecks
         && inner.X >= outer.X && inner.Y >= outer.Y && inner.Right <= outer.Right && inner.Bottom <= outer.Bottom;
     internal static void Run()
     {
+        Check(WindowBoardPolicy.ShouldRenderSnapshot(false, true)
+            && WindowBoardPolicy.ShouldRenderSnapshot(false, false)
+            && WindowBoardPolicy.ShouldRenderSnapshot(true, false)
+            && !WindowBoardPolicy.ShouldRenderSnapshot(true, true),
+            "Reopening Overview must reconstruct its initial selection even if the native window snapshot has not changed.");
         Check(ControlCenterTilePolicy.RetainPanelAfterFailure("Network", true, true)
             && ControlCenterTilePolicy.RetainPanelAfterFailure("Bluetooth", true, true)
             && ControlCenterTilePolicy.RetainPanelAfterFailure("Power", true, true)
