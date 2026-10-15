@@ -4,6 +4,10 @@ public readonly record struct WindowBoardPage(int Index, int Offset, int Count, 
 { public bool Previous => Index > 0; public bool Next => Index + 1 < Pages; }
 public static class WindowBoardPolicy
 {
+    // A fresh overview opening must rebuild cards/initial selection even if
+    // all native HWND snapshots are identical to the previous session.
+    public static bool ShouldRenderSnapshot(bool unchanged, bool selectionInitialized)
+        => !unchanged || !selectionInitialized;
     public static WindowBoardPage Page(int count, int index, double width, double height)
     {
         count = Math.Clamp(count, 0, 200);
