@@ -28,6 +28,7 @@
     <Compile Include="../../src/Nexus.Shell/Services/GlassRecipe.cs" Link="GlassRecipe.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/MidnightGlassMetrics.cs" Link="MidnightGlassMetrics.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DockPinnedWindowPolicy.cs" Link="DockPinnedWindowPolicy.cs" />
+    <Compile Include="../../src/Nexus.Shell/Services/DockShortcutRetryState.cs" Link="DockShortcutRetryState.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/DesktopWidgetLayoutPolicy.cs" Link="DesktopWidgetLayoutPolicy.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/SelectionMarqueeGeometry.cs" Link="SelectionMarqueeGeometry.cs" />
     <Compile Include="../../src/Nexus.Shell/Services/LaunchpadArtworkPolicy.cs" Link="LaunchpadArtworkPolicy.cs" />
