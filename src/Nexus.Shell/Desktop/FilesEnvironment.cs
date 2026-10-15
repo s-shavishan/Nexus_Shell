@@ -26,6 +26,8 @@ internal sealed class FilesEnvironment
     private bool _stopping, _pulsing;
     internal bool Validation { get; }
     private int _failures;
+    private readonly FilePasteSession _paste = new();
+    internal IntPtr WindowHandle => _window?.Handle ?? IntPtr.Zero;
     private FilesEnvironment()
     { Validation = true; _stopping = true; _core = null!; _client = null!; Theme.Apply("Midnight"); }
     internal static FilesEnvironment ForValidation() => new();
@@ -195,13 +197,47 @@ internal sealed class FilesEnvironment
         }
     }
     internal async Task WindowsFileAsync(string path, string kind)
+        => await WindowsFilesAsync([path], kind);
+    internal async Task PasteFilesAsync(FileClipboardContent clipboard, string destination)
     {
         if (_stopping || _window is null) return;
-        var (x, y) = WindowsShellBridge.Cursor(); var request = new WindowsFileAction(Guid.NewGuid(), kind, path, _window.Handle.ToInt64(), x, y);
+        var snapshot = await _client.CallAsync<FileJobsSnapshot>(RuntimeOperations.FileJobs, new { }, TimeSpan.FromSeconds(5), _cancel.Token);
+        var spec = _paste.Prepare(snapshot.Epoch, clipboard, destination);
+        try
+        {
+            try
+            {
+                snapshot = await _client.CallAsync<FileJobsSnapshot>(RuntimeOperations.SubmitFileJob,
+                    new FileJobSubmit(snapshot.Epoch, spec), TimeSpan.FromSeconds(5), _cancel.Token);
+            }
+            catch (Exception error) when (error is IOException or TimeoutException)
+            {
+                // Reconcile a lost reply by ID before reporting uncertainty.
+                var observed = await _client.CallAsync<FileJobsSnapshot>(RuntimeOperations.FileJobs, new { }, TimeSpan.FromSeconds(5), _cancel.Token);
+                if (observed.Epoch != snapshot.Epoch || !observed.Jobs.Any(job => job.Job.Id == spec.Id)) throw;
+            }
+            _paste.Accepted(spec.Id);
+            if (!_stopping)
+            {
+                if (clipboard.Kind == FileJobKind.Move) FileClipboardService.ClearCut(WindowHandle, clipboard.Sequence);
+                _window?.View.ShowMessage((clipboard.Kind == FileJobKind.Move ? "Move" : "Copy")
+                    + " accepted. Existing names are kept as separate copies. File Jobs has progress, pause and cancellation; refresh this folder when finished.");
+            }
+        }
+        catch (RuntimeFailure) { _paste.Rejected(spec.Id); throw; }
+        catch (Exception error) when (error is IOException or TimeoutException)
+        {
+            if (!_stopping) _window?.View.ShowMessage("Paste response was lost. Paste the same selection in this folder again to check the original job, or review File Jobs. The original job ID will be reused.");
+        }
+    }
+    internal async Task WindowsFilesAsync(string[] paths, string kind)
+    {
+        if (_stopping || _window is null || paths.Length == 0) return;
+        var (x, y) = WindowsShellBridge.Cursor(); var request = new WindowsFileAction(Guid.NewGuid(), kind, paths[0], _window.Handle.ToInt64(), x, y, AdditionalPaths: paths.Skip(1).ToArray());
         WindowsShellBridge.AllowForeground(_core.Id);
         var status = await _client.CallAsync<WindowsFileActionStatus>(RuntimeOperations.WindowsFileAction, request, TimeSpan.FromSeconds(5), _cancel.Token);
         WindowsShellBridge.AllowForeground(status.ProcessId);
-        for (int i = 0; i < 8 && !_stopping; i++)
+        for (int i = 0; (kind == "recycle" || i < 8) && !_stopping; i++)
         {
             await Task.Delay(250, _cancel.Token);
             status = await _client.CallAsync<WindowsFileActionStatus>(RuntimeOperations.WindowsFileStatus, new WindowsFileStatusRequest(request.Id), TimeSpan.FromSeconds(5), _cancel.Token);

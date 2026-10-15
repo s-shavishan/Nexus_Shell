@@ -31,6 +31,15 @@ Nexus Workspaces is removed. Its profile model, resume state, launch planner and
 
 Folder moves require the same drive; choose Copy across drives. Notes and independent saved content remain. See [behavior, recovery and Windows acceptance](docs/P210-FILE-JOBS.md).
 
+## Everyday file operations (pending Windows validation)
+
+- **Cut, Copy and Paste** files and folders between Nexus Files and Windows Explorer, using the Windows file clipboard. Toolbar buttons, folder/selection menus and **Ctrl+X/C/V** support up to 24 items.
+- Paste into the current folder through Core's File Jobs queue, with progress, pause, cancellation, default verification and keep-both collisions. A lost response keeps the original job ID; the same Cut cannot start a second move to another folder in that Core session.
+- **Move to Recycle Bin…** handles the selected files/folders through Windows, including its progress and cancellation dialogs. **Delete** opens confirmation; the Recycle Bin page opens Windows' **Restore** controls. Fixed local volumes are supported, with Windows warnings when an item cannot be recycled.
+- **Ctrl+Shift+N** creates a folder while the file list has focus. Text fields retain their normal editing shortcuts.
+
+See [file clipboard/recycle behavior and Windows acceptance](docs/P213-EVERYDAY-FILE-OPERATIONS.md).
+
 ## Nexus Controls (pending Windows validation)
 
 **Sections is replaced by Nexus Controls**, available from its desktop shortcut, Launchpad, Spotlight and the Nexus menu. A new resizable window brings together Home, Core & recovery, Personalize, Desktop & dock, Privacy, and Startup & session.

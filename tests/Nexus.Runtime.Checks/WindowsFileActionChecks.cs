@@ -34,6 +34,32 @@ internal static class WindowsFileActionChecks
         Check(RuntimeOperations.Allows("desktop", RuntimeOperations.WindowsFileAction) && RuntimeOperations.Allows("files", RuntimeOperations.WindowsFileStatus) && !RuntimeOperations.Allows("controlcenter", RuntimeOperations.WindowsFileAction), "Windows file actions must retain component permissions.");
         var layout = WindowsFileWorker.Layouts;
         Check(layout.Invoke == 56 && layout.OpenAs == 24 && layout.WindowClass == 80, "Native shell structs must match the complete x64 Windows ABI.");
+        var recycle = New("recycle") with { AdditionalPaths = [file + ".second"] };
+        var batchWorkers = new List<Worker>(); WindowsFileAction? batchRequest = null;
+        using var batches = new WindowsFileActionCoordinator((request, _) => { batchRequest = request; var worker = new Worker(300 + batchWorkers.Count); batchWorkers.Add(worker); return worker; });
+        batches.Submit(recycle, 44);
+        recycle.AdditionalPaths[0] = file + ".mutated";
+        Check(batchRequest!.AdditionalPaths!.Single() == file + ".second", "A recycle batch must detach its targets from the caller's mutable array.");
+        var retryRecycle = recycle with { AdditionalPaths = [file + ".second"] };
+        Check(batches.Submit(retryRecycle, 44).ProcessId == batchWorkers[0].Id && batchWorkers.Count == 1,
+            "A JSON-deserialized recycle retry must not repeat the native batch.");
+        Reject(() => batches.Submit(recycle, 44));
+        Reject(() => batches.Submit(retryRecycle, 55));
+        Reject(() => batches.Submit(retryRecycle with { Id = Guid.NewGuid() }, 44));
+        Reject(() => batches.Submit(New("recycle") with { Path = Path.GetDirectoryName(file)! }, 44));
+        Reject(() => WindowsFileActionCoordinator.Validate(New("menu") with { AdditionalPaths = [file + ".second"] }));
+        Reject(() => WindowsFileActionCoordinator.Validate(New("recycle") with { AdditionalPaths = [file] }));
+        Reject(() => WindowsFileActionCoordinator.Validate(New("recycle") with { Path = Path.GetPathRoot(file)! }));
+        Reject(() => WindowsFileActionCoordinator.Validate(New("recycle") with { Path = Path.GetDirectoryName(file)!, AdditionalPaths = [file] }));
+        Reject(() => WindowsFileActionCoordinator.Validate(New("recycle") with { AdditionalPaths = Enumerable.Range(0, 24).Select(i => file + i).ToArray() }));
+        Reject(() => WindowsFileActionCoordinator.Validate(New("recycle") with { AdditionalPaths = ["relative"] }));
+        Check(WindowsFileActionCoordinator.Validate(New("recycle") with { AdditionalPaths = Enumerable.Range(0, 23).Select(i => file + i).ToArray() }).AdditionalPaths!.Length == 23,
+            "A full 24-item recycle selection must remain supported.");
+        batchWorkers[0].HasExited = true; batchWorkers[0].ExitCode = 1; batches.Monitor();
+        Check(batches.Submit(retryRecycle, 44).State == "Failed" && batchWorkers.Count == 1,
+            "Cancelled or partially failed recycle actions must retain their receipt and never replay.");
+        batches.Submit(retryRecycle with { Id = Guid.NewGuid() }, 44);
+        Check(batchWorkers.Count == 2, "A later explicit recycle can be admitted after the prior helper exits.");
         Console.WriteLine($"PASS: {checks} Windows file-handler supervision checks; immutable target/owner, idempotency, concurrency, failures, no replay, scope, shutdown and x64 layouts. Native COM dialogs require Windows acceptance.");
     }
     private sealed class Worker(int id) : IWindowsFileProcess

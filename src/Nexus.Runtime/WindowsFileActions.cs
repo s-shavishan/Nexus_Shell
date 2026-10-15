@@ -2,7 +2,7 @@ using Nexus.Runtime.Transfers;
 
 namespace Nexus.Runtime;
 
-public sealed record WindowsFileAction(Guid Id, string Kind, string Path, long Owner, int X, int Y, int OwnerProcessId = 0);
+public sealed record WindowsFileAction(Guid Id, string Kind, string Path, long Owner, int X, int Y, int OwnerProcessId = 0, string[]? AdditionalPaths = null);
 public sealed record WindowsFileActionStatus(Guid Id, string State, string Detail, int ProcessId);
 public interface IWindowsFileProcess : IDisposable { int Id { get; } bool HasExited { get; } int ExitCode { get; } bool Ready { get; } void Admit(); void Stop(); }
 
@@ -21,10 +21,27 @@ public sealed class WindowsFileActionCoordinator(Func<WindowsFileAction, int, IW
     public (int Count, Guid IssueId, string Issue) Health() { lock (_gate) return (_workers.Count, IssueId, Issue); }
     public static WindowsFileAction Validate(WindowsFileAction request)
     {
-        if (request is null || request.Id == Guid.Empty || request.Kind is not ("menu" or "properties" or "open-with" or "reveal") || request.Owner == 0 || request.X is < -100000 or > 100000 || request.Y is < -100000 or > 100000)
+        if (request is null || request.Id == Guid.Empty || request.Kind is not ("menu" or "properties" or "open-with" or "reveal" or "recycle") || request.Owner == 0 || request.X is < -100000 or > 100000 || request.Y is < -100000 or > 100000)
             throw new RuntimeFailure("windows-file", "This Windows file action is invalid.");
-        return request with { Path = FileJobRules.PathName(request.Path) };
+        if ((request.AdditionalPaths?.Length ?? 0) > (request.Kind == "recycle" ? FileJobRules.MaximumSources - 1 : 0))
+            throw new RuntimeFailure("windows-file", "Recycle up to 24 items; other Windows file actions require one item.");
+        string path = FileJobRules.PathName(request.Path);
+        var additional = (request.AdditionalPaths ?? []).Select(FileJobRules.PathName).ToArray();
+        if (request.Kind == "recycle")
+        {
+            string[] paths = [path, .. additional];
+            if (paths.Distinct(FileJobRules.Paths).Count() != paths.Length
+                || paths.Any(item => FileJobRules.Paths.Equals(item, System.IO.Path.GetPathRoot(item))
+                    || paths.Any(other => !FileJobRules.Paths.Equals(item, other) && FileJobRules.Within(item, other))))
+                throw new RuntimeFailure("windows-file", "Select separate files or folders, without drive roots or a folder and its contents together.");
+        }
+        return request with { Path = path, AdditionalPaths = additional };
     }
+    private static bool Same(WindowsFileAction first, WindowsFileAction second)
+        => first with { AdditionalPaths = null } == second with { AdditionalPaths = null }
+            && (first.AdditionalPaths ?? []).SequenceEqual(second.AdditionalPaths ?? [], FileJobRules.Paths);
+    private static IEnumerable<string> Targets(WindowsFileAction request)
+        => new[] { request.Path }.Concat(request.AdditionalPaths ?? []);
     public WindowsFileActionStatus Submit(WindowsFileAction request, int caller)
     {
         request = Validate(request) with { OwnerProcessId = caller };
@@ -32,7 +49,11 @@ public sealed class WindowsFileActionCoordinator(Func<WindowsFileAction, int, IW
         {
             ObjectDisposedException.ThrowIf(_disposed, this); Monitor();
             if (_history.TryGetValue(request.Id, out var known))
-            { if (known.Request != request || known.Caller != caller) throw new RuntimeFailure("windows-file-id", "This identifier belongs to another Windows file action."); return known.Status; }
+            { if (!Same(known.Request, request) || known.Caller != caller) throw new RuntimeFailure("windows-file-id", "This identifier belongs to another Windows file action."); return known.Status; }
+            if (request.Kind == "recycle" && _workers.Keys.Select(id => _history[id].Request)
+                .Where(active => active.Kind == "recycle")
+                .Any(active => Targets(active).Any(first => Targets(request).Any(second => FileJobRules.Within(first, second) || FileJobRules.Within(second, first)))))
+                throw new RuntimeFailure("windows-file-busy", "Windows is already recycling an overlapping selection. Finish or cancel its dialog before trying again.");
             if (_workers.Count >= 3) throw new RuntimeFailure("windows-file-busy", "Three Windows file dialogs are already active. Close one before opening another.");
             if (_history.Count >= 4096) throw new RuntimeFailure("windows-file-budget", "This Core session has reached its Windows file-action limit. Restart Nexus after finishing current work.");
             var worker = start(request, caller);

@@ -3,6 +3,7 @@ using Nexus.Shell.Models;
 using Nexus.Shell.Services;
 using System.IO.Pipes;
 
+if (args.Contains("--file-clipboard-native-checks")) WindowsFileClipboardChecks.Run();
 await RuntimeChecks.RunAsync(args.Contains("--no-native-ipc"));
 
 internal static class RuntimeChecks
@@ -36,6 +37,7 @@ internal static class RuntimeChecks
         GlassQualityChecks.Run();
         await FileJobsChecks.RunAsync();
         await FileTransferFeatureChecks.RunAsync();
+        await FilePasteChecks.RunAsync();
         WindowsFileActionChecks.Run();
         await SearchChecks.RunAsync();
         await WindowsSearchChecks.RunAsync();

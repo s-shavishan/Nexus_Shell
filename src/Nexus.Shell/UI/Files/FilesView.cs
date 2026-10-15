@@ -29,6 +29,9 @@ internal sealed class FilesView : Grid
     private readonly NavigationTrail _history = new();
     private readonly FileMutationHistory _edits = new();
     private readonly Button _rename, _undo;
+    private readonly Button _copy, _cut, _paste, _recycleButton;
+    private readonly DispatcherTimer _clipboardWatch = new() { Interval = TimeSpan.FromSeconds(1) };
+    private uint _clipboardSequence;
     private readonly Button _back, _forward, _gridButton, _listButton;
     private readonly ComboBox _sort = new() { Width = 110, FontSize = 12 };
     private readonly Image _preview = new() { Height = 172, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Stretch };
@@ -157,6 +160,17 @@ internal sealed class FilesView : Grid
                 var selectAll = new KeyboardAccelerator { Key = VirtualKey.A, Modifiers = VirtualKeyModifiers.Control };
                 selectAll.Invoked += (_, args) => { if (!_navigating && !_recycle) { view.SelectAll(); args.Handled = true; } };
                 view.KeyboardAccelerators.Add(selectAll);
+                void FileShortcut(VirtualKey key, VirtualKeyModifiers modifiers, Func<Task> action)
+                {
+                    var accelerator = new KeyboardAccelerator { Key = key, Modifiers = modifiers };
+                    accelerator.Invoked += (_, args) => { args.Handled = true; RunContextAsync(action); };
+                    view.KeyboardAccelerators.Add(accelerator);
+                }
+                FileShortcut(VirtualKey.C, VirtualKeyModifiers.Control, () => CopySelectionAsync(FileJobKind.Copy));
+                FileShortcut(VirtualKey.X, VirtualKeyModifiers.Control, () => CopySelectionAsync(FileJobKind.Move));
+                FileShortcut(VirtualKey.V, VirtualKeyModifiers.Control, PasteAsync);
+                FileShortcut(VirtualKey.Delete, VirtualKeyModifiers.None, () => RecycleAsync());
+                FileShortcut(VirtualKey.N, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, NewFolderAsync);
                 var context = ShellMenu.Create();
                 context.Opening += (_, _) =>
                 {
@@ -190,6 +204,16 @@ internal sealed class FilesView : Grid
         _rename = Button("Rename…", () => RenameAsync()); _undo = Button("Undo edit", UndoAsync);
         _rename.Visibility = _undo.Visibility = request.Kind == FileSelectionKind.Browse ? Visibility.Visible : Visibility.Collapsed;
         views.Children.Add(_rename); views.Children.Add(_undo);
+        _copy = Button("Copy", () => CopySelectionAsync(FileJobKind.Copy));
+        _cut = Button("Cut", () => CopySelectionAsync(FileJobKind.Move));
+        _paste = Button("Paste", PasteAsync);
+        _recycleButton = Button("Recycle…", () => RecycleAsync());
+        foreach (var (button, shortcut) in new[] { (_copy, "Ctrl+C"), (_cut, "Ctrl+X"), (_paste, "Ctrl+V"), (_recycleButton, "Delete") })
+        {
+            button.Visibility = request.Kind == FileSelectionKind.Browse ? Visibility.Visible : Visibility.Collapsed;
+            ToolTipService.SetToolTip(button, button.Content + " · " + shortcut);
+            views.Children.Add(button);
+        }
         foreach (string sort in new[] { "Name", "Newest", "Size", "Kind" }) _sort.Items.Add(sort);
         _sort.SelectedIndex = 0; _sort.SelectionChanged += (_, _) => Render(); Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_sort, "Sort files"); views.Children.Add(_sort);
         var viewScroll = new ScrollViewer { Content = views, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled };
@@ -224,7 +248,8 @@ internal sealed class FilesView : Grid
         _inspectorCard.Visibility = request.Kind == FileSelectionKind.Browse ? Visibility.Visible : Visibility.Collapsed;
         if (request.Kind != FileSelectionKind.Browse) _inspectorColumn.Width = new GridLength(0);
         _bin.Children.Add(NexusIcons.Image("Windows", 64)); _bin.Children.Add(_binCount);
-        _bin.Children.Add(new TextBlock { Text = "Deleted items are kept by Windows. Nexus can empty the bin here.", TextWrapping = TextWrapping.Wrap, MaxWidth = 340 });
+        _bin.Children.Add(new TextBlock { Text = "Deleted items are kept by Windows. Open the Windows Recycle Bin to select items and restore them to their original locations.", TextWrapping = TextWrapping.Wrap, MaxWidth = 340 });
+        _bin.Children.Add(Button("Restore items in Windows…", () => { _environment.OpenTarget("shell:RecycleBinFolder"); return Task.CompletedTask; }));
         _empty = Button("Empty Recycle Bin…", EmptyBinAsync); _bin.Children.Add(_empty); _bin.Visibility = Visibility.Collapsed;
         Grid.SetColumn(_bin, 1); body.Children.Add(_bin); Grid.SetRow(body, 1); Children.Add(body);
         var footer = new Grid { ColumnSpacing = 10, RowSpacing = 8 };
@@ -246,6 +271,13 @@ internal sealed class FilesView : Grid
         Shortcut(VirtualKey.F, VirtualKeyModifiers.Control, () => _filter.Focus(FocusState.Programmatic));
         Shortcut(VirtualKey.F5, VirtualKeyModifiers.None, () => _ = NavigateAsync(_recycle ? "nexus:recycle" : _folder));
         SizeChanged += (_, _) => _filter.Width = ActualWidth < 700 ? 120 : 170;
+        _clipboardWatch.Tick += (_, _) =>
+        {
+            uint sequence = FileClipboardService.Sequence;
+            if (_clipboardSequence != sequence) { _clipboardSequence = sequence; UpdateActions(); }
+        };
+        Loaded += (_, _) => { if (!environment.Validation && request.Kind == FileSelectionKind.Browse && !_closed) { UpdateActions(); _clipboardWatch.Start(); } };
+        Unloaded += (_, _) => _clipboardWatch.Stop();
         ApplyAppearance(); UpdateActions();
     }
     private static FileEntry? ItemAt(ListViewBase view, object source)
@@ -409,6 +441,53 @@ internal sealed class FilesView : Grid
         await NavigateAsync("nexus:recycle");
     }
     internal void ShowMessage(string message) { if (!_closed) _status.Text = message; }
+    private bool CanMutate => !_closed && !_dialog && !_navigating && !_recycle
+        && _request.Kind == FileSelectionKind.Browse && _folder.Length > 0;
+    private FileEntry[] Selection() => ActiveList.SelectedItems.OfType<FileEntry>().ToArray();
+    private Task CopySelectionAsync(FileJobKind kind, IReadOnlyList<FileEntry>? targets = null)
+    {
+        if (!CanMutate) return Task.CompletedTask;
+        var selected = targets?.ToArray() ?? Selection();
+        if (selected.Length is < 1 or > FileJobRules.MaximumSources)
+            throw new InvalidOperationException("Select one to 24 items to copy or cut.");
+        FileClipboardService.Write(_environment.WindowHandle, selected.Select(item => item.Path).ToArray(), kind);
+        _status.Text = selected.Length + (kind == FileJobKind.Move
+            ? " items cut. Open a destination folder and Paste. Files stay here until the move runs."
+            : " items copied. Paste into Nexus Files or Windows Explorer.");
+        UpdateActions(); return Task.CompletedTask;
+    }
+    private async Task PasteAsync()
+    {
+        if (!CanMutate) return;
+        string destination = _folder;
+        var clipboard = FileClipboardService.Read(_environment.WindowHandle);
+        _dialog = true; UpdateActions();
+        try { await _environment.PasteFilesAsync(clipboard, destination); }
+        finally { _dialog = false; if (!_closed) UpdateActions(); }
+    }
+    private async Task RecycleAsync(IReadOnlyList<FileEntry>? targets = null)
+    {
+        if (!CanMutate) return;
+        var selected = targets?.ToArray() ?? Selection();
+        if (selected.Length is < 1 or > FileJobRules.MaximumSources)
+            throw new InvalidOperationException("Select one to 24 items to recycle.");
+        string folder = _folder;
+        string names = string.Join(Environment.NewLine, selected.Take(8).Select(item => item.Name));
+        if (selected.Length > 8) names += Environment.NewLine + "… and " + (selected.Length - 8) + " more items";
+        if (!await ConfirmAsync("Move " + selected.Length + " items to Recycle Bin?", names
+            + "\n\nRestore recycled items from the Windows Recycle Bin. Windows will warn if an item cannot be recycled; choose Cancel to keep it.", "Move to Recycle Bin") || _closed) return;
+        _dialog = true; UpdateActions(); _status.Text = "Windows is recycling the selected items…";
+        try
+        {
+            await _environment.WindowsFilesAsync(selected.Select(item => item.Path).ToArray(), "recycle");
+            if (!_closed) _status.Text = "Windows recycle action finished. Open Recycle Bin to restore deleted items.";
+        }
+        finally
+        {
+            _dialog = false;
+            if (!_closed) { string message = _status.Text; await NavigateAsync(folder); _status.Text = message; UpdateActions(); }
+        }
+    }
     private async Task TransferAsync(FileJobKind kind, FileEntry? target = null)
     {
         var item = target ?? ActiveList.SelectedItem as FileEntry;
@@ -442,6 +521,8 @@ internal sealed class FilesView : Grid
             : target is not null ? [target] : [];
         if (targets.Length == 0)
         {
+            menu.Items.Add(ShellMenu.Action("Paste", () => RunContextAsync(PasteAsync), "\uE77F", "Ctrl+V",
+                enabled: _request.Kind == FileSelectionKind.Browse && !_environment.Validation && FileClipboardService.HasFiles));
             menu.Items.Add(ShellMenu.Action("New folder…", () => RunContextAsync(NewFolderAsync), "\uE8F4", enabled: _folder.Length > 0));
             menu.Items.Add(ShellMenu.Action("Refresh", () => RunContextAsync(() => NavigateAsync(_folder)), "\uE72C", "F5"));
             var view = ShellMenu.Group("View", "\uE8A9");
@@ -481,6 +562,12 @@ internal sealed class FilesView : Grid
                 catch (Exception error) { ShowError(error); }
             }
         };
+        if (selected.Length <= FileJobRules.MaximumSources)
+        {
+            handlers[FileContextCommand.Copy] = () => RunContextAsync(() => CopySelectionAsync(FileJobKind.Copy, selected));
+            handlers[FileContextCommand.Cut] = () => RunContextAsync(() => CopySelectionAsync(FileJobKind.Move, selected));
+            handlers[FileContextCommand.Recycle] = () => RunContextAsync(() => RecycleAsync(selected));
+        }
         if (single is not null)
         {
             var captured = single;
@@ -529,6 +616,13 @@ internal sealed class FilesView : Grid
             || mixed.Items.OfType<MenuFlyoutItem>().Any(i => i.Text is "Open" or "Run application" or "Edit")
             || mixed.Items.OfType<MenuFlyoutItem>().First().Text != "Copy 2 items to…")
             throw new InvalidOperationException("Mixed file selection must offer safe batch actions instead of single-file execution.");
+        var organize = mixed.Items.OfType<MenuFlyoutSubItem>().Single(group => group.Text == "Organize");
+        foreach (string label in new[] { "Copy", "Cut", "Move to Recycle Bin…" })
+            if (!organize.Items.OfType<MenuFlyoutItem>().Any(item => item.Text == label))
+                throw new InvalidOperationException("The batch context lost a standard file action: " + label);
+        var canvas = ShellMenu.Create(); BuildContext(canvas, null);
+        if (!canvas.Items.OfType<MenuFlyoutItem>().Any(item => item.Text == "Paste"))
+            throw new InvalidOperationException("The folder context lost Paste.");
     }
     private ContentDialog Dialog(string title, object content, string primary) => new() { XamlRoot = XamlRoot, RequestedTheme = RequestedTheme, Title = title, Content = content,
         PrimaryButtonText = primary, CloseButtonText = "Cancel", DefaultButton = ContentDialogButton.Close };
@@ -577,6 +671,9 @@ internal sealed class FilesView : Grid
             && ActiveList.SelectedItems.Count == 1 && ActiveList.SelectedItem is FileEntry;
         _undo.IsEnabled = ready && _edits.CanUndo; _undo.Content = _edits.UndoLabel;
         _empty.IsEnabled = ready && _recycle && _binHasItems;
+        bool selection = CanMutate && ActiveList.SelectedItems.Count is >= 1 and <= FileJobRules.MaximumSources;
+        _copy.IsEnabled = _cut.IsEnabled = _recycleButton.IsEnabled = selection;
+        _paste.IsEnabled = CanMutate && !_environment.Validation && FileClipboardService.HasFiles;
     }
     private void ResetPreview()
     {
@@ -629,5 +726,5 @@ internal sealed class FilesView : Grid
         RefreshPlaces();
         foreach (var text in _bin.Children.OfType<TextBlock>()) text.Foreground = theme.Brush(text == _binCount ? "NexusText" : "NexusMuted");
     }
-    internal void Release() { _closed = true; _slowRead.Stop(); _navigationVersion++; _previewVersion++; _preview.Source = null; _navigation.Dispose(); _previews.Dispose(); _entries = []; }
+    internal void Release() { _closed = true; _slowRead.Stop(); _clipboardWatch.Stop(); _navigationVersion++; _previewVersion++; _preview.Source = null; _navigation.Dispose(); _previews.Dispose(); _entries = []; }
 }
