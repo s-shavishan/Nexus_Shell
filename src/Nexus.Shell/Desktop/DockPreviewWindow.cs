@@ -80,7 +80,7 @@ internal sealed class DockPreviewWindow : Window
             if (_closed) return;
             try { _motion ??= new(_root); foreach (var button in buttons) _motion.AttachHover(button); }
             catch (Exception ex) { Log.Write("Preview motion unavailable", ex); }
-            if (IsOpen) { UpdateThumbnail(); Enter(); if (_keyboardOpen) _restore.Focus(FocusState.Programmatic); }
+            if (IsOpen) { RefreshState(); Enter(); if (_keyboardOpen) _restore.Focus(FocusState.Programmatic); }
         };
         Activated += (_, e) => { if (_keyboardOpen && IsOpen && e.WindowActivationState == WindowActivationState.Deactivated) Hide(); };
         Closed += (_, _) =>
@@ -129,7 +129,10 @@ internal sealed class DockPreviewWindow : Window
             var rectangle = new ShellRect((int)Math.Round(point.X * scale), (int)Math.Round(point.Y * scale),
                 (int)Math.Round(_viewport.ActualWidth * scale), (int)Math.Round(_viewport.ActualHeight * scale));
             if (!_thumbnail.Update(rectangle)) ReleaseThumbnail();
-            _fallback.Visibility = _thumbnail is null ? Visibility.Visible : Visibility.Collapsed;
+            // Registration alone is not drawable. Keep accessible fallback
+            // until DWM acknowledges actual destination geometry.
+            _fallback.Visibility = _thumbnail?.HasDestination == true
+                ? Visibility.Collapsed : Visibility.Visible;
         }
         catch (Exception ex) { ReleaseThumbnail(); Log.Write("Window preview layout unavailable", ex); }
     }
@@ -167,7 +170,19 @@ internal sealed class DockPreviewWindow : Window
             _thumbnailRetry.Reset();
             return;
         }
-        if (!DockPreviewPolicy.ShouldAttachThumbnail(IsOpen, valid, minimized, cloaked, fast || contrast, _thumbnail is not null))
+        // Initial registration may precede WinUI's first Measure/Arrange.
+        // Keep trying to configure that SAME relationship during normal
+        // preview pointer ticks. Re-register only if the native update fails.
+        if (_thumbnail is not null)
+        {
+            if (!_thumbnail.HasDestination) UpdateThumbnail();
+            if (_thumbnail is not null)
+            {
+                if (_thumbnail.HasDestination) _thumbnailRetry.Reset();
+                return;
+            }
+        }
+        if (!DockPreviewPolicy.ShouldAttachThumbnail(IsOpen, valid, minimized, cloaked, fast || contrast, false))
         {
             _thumbnailRetry.Reset();
             return;
@@ -180,10 +195,14 @@ internal sealed class DockPreviewWindow : Window
             if (_thumbnail is not null)
             {
                 UpdateThumbnail();
-                if (_thumbnail is not null)
+                if (_thumbnail?.HasDestination == true)
                 {
                     _thumbnailRetry.Reset();
                     UiTrace.Surface("thumbnail-active", "DockPreview", _handle);
+                }
+                else if (_thumbnail is not null)
+                {
+                    UiTrace.Surface("thumbnail-await-layout", "DockPreview", _handle);
                 }
             }
             if (_thumbnail is null) UiTrace.Surface("thumbnail-unavailable", "DockPreview", _handle);
