@@ -37,6 +37,7 @@ internal sealed class TaskbarView : Grid
     private readonly Dictionary<Button, (AppEntry App, Border Indicator)> _pinMarkers = [];
     private readonly Dictionary<string, string> _shortcutTargets = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _pendingShortcuts = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, DockShortcutRetryState> _shortcutRetries = new(StringComparer.OrdinalIgnoreCase);
     private readonly DispatcherTimer _hoverTimer = new() { Interval = TimeSpan.FromMilliseconds(DockPreviewPolicy.HoverDelayMilliseconds) };
     private readonly EventHandler<object> _hoverTick;
     private DockItem? _hoverItem;
@@ -323,6 +324,9 @@ internal sealed class TaskbarView : Grid
         {
             // Old pinned buttons may still hold a delayed hover request.
             CancelPreviewRequest();
+            var pinnedTargets = pins.Select(pin => pin.Target).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (string old in _shortcutRetries.Keys.Where(key => !pinnedTargets.Contains(key)).ToArray())
+                _shortcutRetries.Remove(old);
             foreach (var button in _pins.Children.OfType<Button>()) { if (button.ContextFlyout is MenuFlyout menu) { menu.Hide(); _openContextMenus.Remove(menu); } _motion?.DetachHover(button); if (_pinImages.TryGetValue(button, out var icon)) _dockMotion?.Detach(icon); }
             _pinImages.Clear(); _pinMarkers.Clear();
             _pins.Children.Clear(); foreach (var pin in pins) _pins.Children.Add(PinButton(pin)); _shownPins = pins;
@@ -377,10 +381,12 @@ internal sealed class TaskbarView : Grid
     {
         if (!target.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase)
             || !Path.IsPathFullyQualified(target) || target.StartsWith(@"\\", StringComparison.Ordinal)
-            || _shortcutTargets.ContainsKey(target) || !_pendingShortcuts.Add(target)) return;
-        // IShellLink uses STA COM. Resolve only once per new pin, away from the
-        // dock's frame/foreground/scroll lanes; no blocking file or COM calls
-        // during a hover or native window event.
+            || _shortcutTargets.ContainsKey(target) || _pendingShortcuts.Contains(target)) return;
+        var retry = _shortcutRetries.TryGetValue(target, out var failure) ? failure : default;
+        if (!retry.CanAttempt(Environment.TickCount64) || !_pendingShortcuts.Add(target)) return;
+        // IShellLink uses STA COM. Only queue from UI; the actual file/COM
+        // read runs off-thread. Transient failures back off and can recover
+        // after Explorer/startup has settled; never spawn a thread per poll.
         var thread = new Thread(() =>
         {
             string resolved = "";
@@ -395,17 +401,30 @@ internal sealed class TaskbarView : Grid
             {
                 _pendingShortcuts.Remove(target);
                 if (_released) return;
+                if (!_shownPins.Any(pin => string.Equals(pin.Target, target, StringComparison.OrdinalIgnoreCase)))
+                { _shortcutRetries.Remove(target); return; }
+                if (resolved.Length == 0)
+                {
+                    // Do not cache an empty result forever. Retry on a later
+                    // dock heartbeat, respecting the bounded backoff policy.
+                    _shortcutRetries[target] = retry.Failed(Environment.TickCount64);
+                    return;
+                }
+                _shortcutRetries.Remove(target);
                 _shortcutTargets[target] = resolved;
-                // Window visibility is controlled by ApplyDensity, not the
-                // indicator refresh. Reconcile both after a shortcut resolves:
-                // otherwise a pinned app can still have a duplicate running
-                // button until a later native structural event.
+                // A recovered executable identity should immediately merge
+                // its existing running icon under its pinned artwork.
                 ApplyDensity();
                 RefreshWindowStates();
             });
         }) { IsBackground = true, Name = "Nexus dock shortcut identity" };
-        thread.SetApartmentState(ApartmentState.STA);
-        thread.Start();
+        try { thread.SetApartmentState(ApartmentState.STA); thread.Start(); }
+        catch (Exception error)
+        {
+            _pendingShortcuts.Remove(target);
+            _shortcutRetries[target] = retry.Failed(Environment.TickCount64);
+            Log.Write("Pinned shortcut resolver could not start", error);
+        }
     }
     private RunningWindow? FindPinnedWindow(AppEntry pin)
     {
@@ -555,6 +574,12 @@ internal sealed class TaskbarView : Grid
         var foreground = observedForeground ?? NativeMethods.ForegroundTaskWindow();
         foreach (var item in _items.Values) RefreshWindowState(item, foreground);
         RefreshPinnedIndicators(foreground);
+        // This is already the dock's retained heartbeat / reconciliation
+        // lane. Retry only unresolved pinned .lnk files after their backoff,
+        // with one in-flight STA worker per shortcut and no extra timer.
+        foreach (var pin in _shownPins)
+            if (pin.Target.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase))
+                QueueShortcutIdentity(pin.Target);
     }
 
     private void RefreshWindowState(DockItem item, IntPtr foreground)
@@ -973,5 +998,6 @@ internal sealed class TaskbarView : Grid
         if (_released) return; _released = true; CancelPreviewRequest(); _hoverTimer.Tick -= _hoverTick;
         foreach (var menu in _openContextMenus.ToArray()) menu.Hide();
         _openContextMenus.Clear(); _motion?.Dispose(); _dockMotion?.Dispose(); _pinImages.Clear(); _pinMarkers.Clear(); _iconButtons.Clear(); _items.Clear();
+        _shortcutRetries.Clear(); _shortcutTargets.Clear(); _pendingShortcuts.Clear();
     }
 }
