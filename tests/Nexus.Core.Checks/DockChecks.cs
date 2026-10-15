@@ -7,6 +7,29 @@ internal static class DockChecks
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
     internal static void Run()
     {
+        // A transient COM/ShellLink failure must not permanently detach a
+        // pinned app from its running HWND, but native scans cannot spin up
+        // an unbounded number of STA threads while Windows is recovering.
+        var retry = new DockShortcutRetryState();
+        Check(retry.CanAttempt(0), "A new pinned shortcut must resolve immediately.");
+        retry = retry.Failed(100);
+        Check(retry.Failures == 1 && !retry.CanAttempt(2099) && retry.CanAttempt(2100),
+            "First failed COM shortcut lookup waits two seconds before retry.");
+        retry = retry.Failed(2100);
+        Check(retry.Failures == 2 && !retry.CanAttempt(12099) && retry.CanAttempt(12100),
+            "Second failure backs off ten seconds without disabling a pin forever.");
+        retry = retry.Failed(12100);
+        Check(retry.Failures == 3 && !retry.CanAttempt(42099) && retry.CanAttempt(42100),
+            "A persistent failure must back off thirty seconds.");
+        retry = retry.Failed(42100);
+        Check(retry.Failures == 4 && !retry.CanAttempt(102099) && retry.CanAttempt(102100),
+            "Further failures must not flood the native shell with resolver threads.");
+        for (int i = 0; i < 100; i++) retry = retry.Failed(200000);
+        Check(retry.Failures == 6 && retry.NextAttemptTick == 320000 && retry.CanAttempt(320000),
+            "Persistent failures must use bounded two-minute retries and permit eventual recovery.");
+        retry = new DockShortcutRetryState().Failed(long.MaxValue - 500);
+        Check(retry.NextAttemptTick == long.MaxValue && !retry.CanAttempt(long.MaxValue - 1),
+            "A saturated monotonic tick must never wrap and start repeated retries.");
         var stableViewport = new ShellRect(-1400, 40, 350, 210);
         Check(DockPreviewPolicy.ReuseThumbnailGeometry(stableViewport, stableViewport, true, 1000, 1190)
             && !DockPreviewPolicy.ReuseThumbnailGeometry(stableViewport, stableViewport, true, 1000, 1300)
