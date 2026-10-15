@@ -131,8 +131,9 @@ internal sealed class DockPreviewWindow : Window
             if (!_thumbnail.Update(rectangle)) ReleaseThumbnail();
             // Registration alone is not drawable. Keep accessible fallback
             // until DWM acknowledges actual destination geometry.
-            _fallback.Visibility = _thumbnail?.HasDestination == true
-                ? Visibility.Collapsed : Visibility.Visible;
+            _fallback.Visibility = DockPreviewPolicy.ShowFallback(
+                _thumbnail?.IsAttached == true, _thumbnail?.HasDestination == true)
+                ? Visibility.Visible : Visibility.Collapsed;
         }
         catch (Exception ex) { ReleaseThumbnail(); Log.Write("Window preview layout unavailable", ex); }
     }
