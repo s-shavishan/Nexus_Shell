@@ -178,11 +178,13 @@ internal static class DesktopNativeChecks
             if (rejected is not null || WindowThumbnail.TryCreate(source.Handle, source) is not null)
                 throw new Exception("A thumbnail must reject a stale source and self-reference.");
             using var thumbnail = WindowThumbnail.TryCreate(destination, source);
-            if (thumbnail is null || !thumbnail.IsAttached || !thumbnail.Update(new(12, 36, 240, 140)))
-                throw new Exception("DWM must register and update a relationship between two own top-level test windows.");
+            if (thumbnail is null || !thumbnail.IsAttached || thumbnail.HasDestination)
+                throw new Exception("DWM registration alone must not be mistaken for a rendered thumbnail.");
+            if (!thumbnail.Update(new(12, 36, 240, 140)) || !thumbnail.HasDestination)
+                throw new Exception("DWM must configure a drawable destination between two own top-level test windows.");
             thumbnail.Dispose(); thumbnail.Dispose();
-            if (thumbnail.IsAttached || thumbnail.Update(new(12, 36, 240, 140)))
-                throw new Exception("Thumbnail release must be idempotent and prevent further native updates.");
+            if (thumbnail.IsAttached || thumbnail.HasDestination || thumbnail.Update(new(12, 36, 240, 140)))
+                throw new Exception("Thumbnail release must clear both registration and destination without further native updates.");
             Console.WriteLine("PASS: native DWM thumbnail registration, source sizing, update, rejection and disposal (own test windows only; rendered WinUI preview remains a manual check).");
         }
         finally { DestroyWindow(destination); }
