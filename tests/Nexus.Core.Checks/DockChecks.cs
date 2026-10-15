@@ -30,6 +30,19 @@ internal static class DockChecks
         retry = new DockShortcutRetryState().Failed(long.MaxValue - 500);
         Check(retry.NextAttemptTick == long.MaxValue && !retry.CanAttempt(long.MaxValue - 1),
             "A saturated monotonic tick must never wrap and start repeated retries.");
+        var thumbnailRetry = new DockThumbnailRetry();
+        Check(thumbnailRetry.ShouldAttempt(true, false, 1000)
+            && !thumbnailRetry.ShouldAttempt(true, false, 1100)
+            && thumbnailRetry.ShouldAttempt(true, false, 1250)
+            && !thumbnailRetry.ShouldAttempt(true, false, 1749)
+            && thumbnailRetry.ShouldAttempt(true, false, 1750),
+            "Overview and dock previews must use bounded retries after transient DWM registration failures.");
+        Check(!thumbnailRetry.ShouldAttempt(true, true, 1760)
+            && thumbnailRetry.ShouldAttempt(true, false, 1761),
+            "A successfully configured DWM thumbnail must reset the retry circuit.");
+        Check(!thumbnailRetry.ShouldAttempt(false, false, 1770)
+            && thumbnailRetry.ShouldAttempt(true, false, 1771),
+            "Minimized, cloaked and inaccessible windows must reset retry state without repeated native registration.");
         Check(DockPreviewPolicy.ShowFallback(false, false)
             && DockPreviewPolicy.ShowFallback(true, false)
             && DockPreviewPolicy.ShowFallback(false, true)
