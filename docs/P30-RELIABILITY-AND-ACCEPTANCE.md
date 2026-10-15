@@ -107,3 +107,19 @@ Previously any unsuccessful non-Display `QuickSettingsView.ExecuteAsync` request
 **Windows acceptance:** In a Windows 10 VM, attempt a deliberately invalid Wi-Fi connection, unavailable adapter action or denied Power change. Check that the error is visible, the device controls remain interactive, Refresh works, and there is no automatic retry storm. Confirm failed Display preview still keeps its Keep/Revert surface and automatic rollback timer independent from UI.
 
 **Source gate:** 18/18 targeted consistency assertions passed for native Wi-Fi actions, compact/network policies, error recovery policy, portable tests and preserved pinned hover. **This is not a .NET build**.
+
+
+## P3.0 — Self-healing pinned shortcut identity after Windows recovery
+
+A native dock defect was found in `TaskbarView.QueueShortcutIdentity`: an installed application's Start Menu `.lnk` was resolved on an STA thread **exactly once**. An empty result—whether from Explorer startup, a transient COM failure, an incomplete or temporarily unavailable shortcut—was cached for the rest of the Nexus session, so its running app could remain a duplicate unpinned icon until restart.
+
+- New `DockShortcutRetryState` is a portable, timer-free monotonic backoff policy: retry 2 seconds after the first failure, then 10, 30, 60 and 120 seconds (capped at two minutes). Persistently unavailable shortcuts are retried at a low frequency instead of causing a per-frame COM storm; tick overflow saturates safely.
+- Shortcut resolution stays on background STA threads. The existing `_pendingShortcuts` lockout ensures **one in-flight resolution per shortcut**, including simultaneous dock/foreground refreshes.
+- The existing retained dock refresh lane checks only unresolved pinned `.lnk` targets against the retry deadline. It never reads shortcut content or performs COM on the foreground/UI thread and introduces no new native event or polling timer.
+- Success stores a valid executable path, clears failure backoff, immediately reconciles pin artwork and active markers. Failure schedules another bounded attempt **without storing an empty identity**.
+- Removal of a pin prunes its retry record, and an async resolution completing after unpin does not recreate state or attach an unrelated app to that pin. Dock release clears all retry/pending/cached state.
+- Tests validate first-attempt admission, 2/10/30/60/120-second delays, a bounded failure counter, eventual retry, and no clock overflow. Tests do not simulate a live COM failure.
+
+**VM acceptance:** Pin a `.lnk` app (e.g. browser), launch it while Explorer/Start Menu shortcuts are still settling, verify no lasting duplicate icon, then retry after a transient shortcut lookup failure or Explorer restart. Remove/re-pin during an in-flight lookup, and verify a closed or removed pin never reappears. Repeat on Windows 10 and 11 and keep hover smooth under 130+ running windows.
+
+**Status:** Source change committed on draft PR #33; native compile/VM acceptance is not yet established for this follow-up.
