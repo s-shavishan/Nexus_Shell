@@ -35,9 +35,7 @@ internal sealed class TaskbarView : Grid
     private readonly HashSet<MenuFlyout> _openContextMenus = [];
     private readonly Dictionary<Button, Image> _pinImages = [];
     private readonly Dictionary<Button, (AppEntry App, Border Indicator)> _pinMarkers = [];
-    private readonly Dictionary<string, string> _shortcutTargets = new(StringComparer.OrdinalIgnoreCase);
-    private readonly HashSet<string> _pendingShortcuts = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, DockShortcutRetryState> _shortcutRetries = new(StringComparer.OrdinalIgnoreCase);
+    private readonly DockShortcutIdentityCache _shortcutIdentities = new();
     private readonly DispatcherTimer _hoverTimer = new() { Interval = TimeSpan.FromMilliseconds(DockPreviewPolicy.HoverDelayMilliseconds) };
     private readonly EventHandler<object> _hoverTick;
     private DockItem? _hoverItem;
@@ -246,7 +244,7 @@ internal sealed class TaskbarView : Grid
             // Populate before native flyout measure/placement to avoid a
             // late expanding submenu, scrollbar jumps and focus loss.
             openWindows.Items.Clear();
-            string target = _shortcutTargets.TryGetValue(app.Target, out var resolved)
+            string target = _shortcutIdentities.TryGetTarget(app.Target, out var resolved)
                 ? resolved : app.Target;
             var matching = DockPinnedWindowPolicy.MatchingWindows(
                 target, app.Name, _windowSet.Windows.Where(NativeMethods.OwnsWindow));
@@ -276,6 +274,9 @@ internal sealed class TaskbarView : Grid
     internal void RefreshPinnedAppIcons()
     {
         if (_released) return;
+        // A manual installed-app rescan must also reread changed .lnk targets.
+        // Running old requests keep their slots but cannot publish stale data.
+        _shortcutIdentities.Reconcile(_environment.Session.State.PinnedApps.Select(pin => pin.Target), invalidate: true);
         _shownPins = [];
         Refresh(_windowSet.Windows.ToArray());
     }
@@ -324,9 +325,7 @@ internal sealed class TaskbarView : Grid
         {
             // Old pinned buttons may still hold a delayed hover request.
             CancelPreviewRequest();
-            var pinnedTargets = pins.Select(pin => pin.Target).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            foreach (string old in _shortcutRetries.Keys.Where(key => !pinnedTargets.Contains(key)).ToArray())
-                _shortcutRetries.Remove(old);
+            _shortcutIdentities.Reconcile(pins.Select(pin => pin.Target));
             foreach (var button in _pins.Children.OfType<Button>()) { if (button.ContextFlyout is MenuFlyout menu) { menu.Hide(); _openContextMenus.Remove(menu); } _motion?.DetachHover(button); if (_pinImages.TryGetValue(button, out var icon)) _dockMotion?.Detach(icon); }
             _pinImages.Clear(); _pinMarkers.Clear();
             _pins.Children.Clear(); foreach (var pin in pins) _pins.Children.Add(PinButton(pin)); _shownPins = pins;
@@ -379,56 +378,52 @@ internal sealed class TaskbarView : Grid
     }
     private void QueueShortcutIdentity(string target)
     {
-        if (!target.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase)
-            || !Path.IsPathFullyQualified(target) || target.StartsWith(@"\\", StringComparison.Ordinal)
-            || _shortcutTargets.ContainsKey(target) || _pendingShortcuts.Contains(target)) return;
-        var retry = _shortcutRetries.TryGetValue(target, out var failure) ? failure : default;
-        if (!retry.CanAttempt(Environment.TickCount64) || !_pendingShortcuts.Add(target)) return;
+        if (_released || !target.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase)
+            || !Path.IsPathFullyQualified(target) || target.StartsWith(@"\\", StringComparison.Ordinal)) return;
+        var request = _shortcutIdentities.TryBegin(target, Environment.TickCount64);
+        if (request is null) return;
         // IShellLink uses STA COM. Only queue from UI; the actual file/COM
         // read runs off-thread. Transient failures back off and can recover
         // after Explorer/startup has settled; never spawn a thread per poll.
-        var thread = new Thread(() =>
+        try
         {
-            string resolved = "";
-            try
+            var thread = new Thread(() =>
             {
-                var link = ShortcutResolver.Read(target);
-                if (link.Target.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
-                    resolved = link.Target;
-            }
-            catch (Exception error) { Log.Write("Pinned shortcut identity unavailable: " + target, error); }
-            DispatcherQueue.TryEnqueue(() =>
-            {
-                _pendingShortcuts.Remove(target);
-                if (_released) return;
-                if (!_shownPins.Any(pin => string.Equals(pin.Target, target, StringComparison.OrdinalIgnoreCase)))
-                { _shortcutRetries.Remove(target); return; }
-                if (resolved.Length == 0)
+                string resolved = "";
+                try
                 {
-                    // Do not cache an empty result forever. Retry on a later
-                    // dock heartbeat, respecting the bounded backoff policy.
-                    _shortcutRetries[target] = retry.Failed(Environment.TickCount64);
-                    return;
+                    var link = ShortcutResolver.Read(target);
+                    if (link.Target.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                        resolved = link.Target;
                 }
-                _shortcutRetries.Remove(target);
-                _shortcutTargets[target] = resolved;
-                // A recovered executable identity should immediately merge
-                // its existing running icon under its pinned artwork.
-                ApplyDensity();
-                RefreshWindowStates();
-            });
-        }) { IsBackground = true, Name = "Nexus dock shortcut identity" };
-        try { thread.SetApartmentState(ApartmentState.STA); thread.Start(); }
+                catch (Exception error) { Log.Write("Pinned shortcut identity unavailable: " + target, error); }
+                _shortcutIdentities.Publish(request, resolved);
+                // Best-effort wake-up only: the heartbeat also drains completions.
+                // Dispatcher shutdown/rejection cannot lose or strand a lookup.
+                try { DispatcherQueue.TryEnqueue(() =>
+                {
+                    if (_released) return;
+                    try { RefreshWindowStates(); }
+                    catch (Exception error)
+                    {
+                        _refreshIncomplete = true;
+                        Log.Write("Dock shortcut visuals require reconciliation", error);
+                    }
+                }); }
+                catch (Exception error) { Log.Write("Dock shortcut refresh deferred to heartbeat", error); }
+            }) { IsBackground = true, Name = "Nexus dock shortcut identity" };
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.Start();
+        }
         catch (Exception error)
         {
-            _pendingShortcuts.Remove(target);
-            _shortcutRetries[target] = retry.Failed(Environment.TickCount64);
+            _shortcutIdentities.Publish(request, null);
             Log.Write("Pinned shortcut resolver could not start", error);
         }
     }
     private RunningWindow? FindPinnedWindow(AppEntry pin)
     {
-        string target = _shortcutTargets.TryGetValue(pin.Target, out var resolved) ? resolved : pin.Target;
+        string target = _shortcutIdentities.TryGetTarget(pin.Target, out var resolved) ? resolved : pin.Target;
         return _windowSet.Windows.FirstOrDefault(window =>
             DockPinnedWindowPolicy.Matches(target, pin.Name, window.Title, window.ProcessName));
     }
@@ -571,6 +566,7 @@ internal sealed class TaskbarView : Grid
     internal void RefreshWindowStates(IntPtr? observedForeground = null)
     {
         if (_released) return;
+        if (_shortcutIdentities.Drain(Environment.TickCount64)) ApplyDensity();
         var foreground = observedForeground ?? NativeMethods.ForegroundTaskWindow();
         foreach (var item in _items.Values) RefreshWindowState(item, foreground);
         RefreshPinnedIndicators(foreground);
@@ -998,6 +994,6 @@ internal sealed class TaskbarView : Grid
         if (_released) return; _released = true; CancelPreviewRequest(); _hoverTimer.Tick -= _hoverTick;
         foreach (var menu in _openContextMenus.ToArray()) menu.Hide();
         _openContextMenus.Clear(); _motion?.Dispose(); _dockMotion?.Dispose(); _pinImages.Clear(); _pinMarkers.Clear(); _iconButtons.Clear(); _items.Clear();
-        _shortcutRetries.Clear(); _shortcutTargets.Clear(); _pendingShortcuts.Clear();
+        _shortcutIdentities.Dispose();
     }
 }
