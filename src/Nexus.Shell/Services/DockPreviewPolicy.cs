@@ -8,6 +8,11 @@ public static class DockPreviewPolicy
     public const int LeaveDelayMilliseconds = 240;
     public const int ThumbnailGeometryRefreshMilliseconds = 300;
 
+    // DWM registration does not make a live preview drawable until its first
+    // destination update succeeds. Do not cover the fallback prematurely.
+    public static bool ShowFallback(bool registered, bool destinationConfigured)
+        => !registered || !destinationConfigured;
+
     // DWM continues compositing a registered thumbnail without repeated
     // property writes. Refresh its source aspect ratio occasionally, or
     // immediately when the viewport changes; don't query native dimensions
