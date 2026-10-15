@@ -53,13 +53,13 @@ internal sealed class FileJobsView : Grid
         _submit = Button("Add to queue", SubmitAsync); Grid.SetRow(_submit, 1); form.Children.Add(_submit); _form = new Border { Child = form, BorderThickness = new Thickness(1) }; _body.Children.Add(_form);
         var queue = new Grid { RowSpacing = 12, Padding = new Thickness(16) }; queue.RowDefinitions.Add(new() { Height = GridLength.Auto }); queue.RowDefinitions.Add(new() { Height = GridLength.Auto }); queue.RowDefinitions.Add(new());
         var commands = new Grid { ColumnSpacing = 8 }; commands.ColumnDefinitions.Add(new()); commands.ColumnDefinitions.Add(new());
-        _pause = Button("Pause queue", () => ControlAsync(Guid.Empty, _snapshot?.Paused == true ? "resume" : "pause")); commands.Children.Add(_pause);
+        _pause = Button("Hold next jobs", () => ControlAsync(Guid.Empty, _snapshot?.Paused == true ? "resume" : "pause")); commands.Children.Add(_pause);
         var history = Button("Clear finished jobs", () => ControlAsync(Guid.Empty, "clear")); Grid.SetColumn(history, 1); commands.Children.Add(history); queue.Children.Add(commands);
         Grid.SetRow(_summary, 1); queue.Children.Add(_summary); var scroll = new ScrollViewer { Content = _jobs, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled }; Grid.SetRow(scroll, 2); queue.Children.Add(scroll);
         _queue = new Border { Child = queue, BorderThickness = new Thickness(1) }; _body.Children.Add(_queue); Grid.SetRow(_body, 1); Children.Add(_body);
         Grid.SetRow(_status, 2); Children.Add(_status); AutomationProperties.SetLiveSetting(_status, Microsoft.UI.Xaml.Automation.Peers.AutomationLiveSetting.Polite);
         _poll.Tick += async (_, _) => await RefreshAsync(); SizeChanged += (_, _) => Layout(); RenderSources(); Layout(); ApplyAppearance();
-        if (validation) { _snapshot = new(Guid.NewGuid(), 1, false, [new(new(Guid.NewGuid(), FileJobKind.Copy, [@"C:\Example\Notes.txt"], @"C:\Destination"), FileJobState.Running, DateTimeOffset.UtcNow, "Copying", new("Copying", "Notes.txt", 1024, 8192, 0, 0, 1))]); RenderJobs(); }
+        if (validation) { _snapshot = new(Guid.NewGuid(), 1, false, [new(new(Guid.NewGuid(), FileJobKind.Copy, [@"C:\Example\Notes.txt"], @"C:\Destination"), FileJobState.Running, DateTimeOffset.UtcNow, "Copying", new("Copying", "Notes.txt", 1024, 8192, 0, 0, 1, 2048, 3.5))]); RenderJobs(); }
     }
     private Button Button(string name, Func<Task> action)
     {
@@ -118,7 +118,13 @@ internal sealed class FileJobsView : Grid
     {
         if (_snapshot is null) await RefreshAsync(); if (_snapshot is null || _released) return;
         _snapshot = await _environment.FileJobsAsync(RuntimeOperations.ControlFileJob, new FileJobControl(_snapshot.Epoch, id, action), _life.Token);
-        if (!_released) { RenderJobs(); _status.Text = action == "pause" ? "Queue paused. The current job continues; the next job waits." : "Queue updated."; }
+        if (!_released) { RenderJobs(); _status.Text = action switch
+        {
+            "pause" => "Later jobs are held. The active transfer continues.",
+            "pause-active" => "Pause requested. The active transfer will stop at its next pause point.",
+            "resume-active" => "Resuming the active transfer. Later jobs keep their queue setting.",
+            _ => "Queue updated."
+        }; }
     }
     private async Task RefreshAsync()
     {
@@ -126,7 +132,8 @@ internal sealed class FileJobsView : Grid
         try
         {
             var snapshot = await _environment.FileJobsAsync(RuntimeOperations.FileJobs, new { }, _life.Token); if (_released) return;
-            bool changed = _snapshot is null || _snapshot.Epoch != snapshot.Epoch || _snapshot.Revision != snapshot.Revision; _snapshot = snapshot;
+            bool changed = _snapshot is null || _snapshot.Epoch != snapshot.Epoch || _snapshot.Revision != snapshot.Revision
+                || snapshot.Jobs.Any(record => record.State == FileJobState.Running && record.Progress.Phase == "Copying"); _snapshot = snapshot;
             if (_pendingSubmission is { } pending && snapshot.Jobs.Any(j => j.Job.Id == pending.Id)) { _pendingSubmission = null; _sources.Clear(); RenderSources(); _status.Text = "The earlier submission was accepted. It will not be added again."; }
             if (changed) RenderJobs(); UpdateActions();
         }
@@ -138,15 +145,28 @@ internal sealed class FileJobsView : Grid
     {
         if (_released || _snapshot is null) return; _jobs.Children.Clear();
         _summary.Text = _snapshot.Jobs.Length + " jobs · " + (_snapshot.Paused ? "queue paused" : "one active job at a time") + (_snapshot.Notice.Length > 0 ? "\n" + _snapshot.Notice : "");
-        _pause.Content = new TextBlock { Text = _snapshot.Paused ? "Resume queue" : "Pause queue", TextWrapping = TextWrapping.Wrap };
+        _pause.Content = new TextBlock { Text = _snapshot.Paused ? "Run next jobs" : "Hold next jobs", TextWrapping = TextWrapping.Wrap };
+        AutomationProperties.SetName(_pause, _snapshot.Paused ? "Allow later jobs to start" : "Hold later jobs without pausing the active transfer");
         foreach (var record in _snapshot.Jobs)
         {
             var content = new StackPanel { Spacing = 7 }; content.Children.Add(new TextBlock { Text = record.Job.Kind + " · " + Path.GetFileName(record.Job.Sources[0]) + (record.Job.Sources.Length > 1 ? " + " + (record.Job.Sources.Length - 1) : ""), FontSize = 15, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap });
             content.Children.Add(new TextBlock { Text = record.State + " · " + record.Detail, FontSize = 12, TextWrapping = TextWrapping.Wrap });
             content.Children.Add(new ProgressBar { Minimum = 0, Maximum = Math.Max(1, record.Progress.TotalBytes), Value = Math.Clamp(record.Progress.BytesCopied, 0, Math.Max(1, record.Progress.TotalBytes)), IsIndeterminate = record.State == FileJobState.Planning });
             content.Children.Add(new TextBlock { Text = record.Progress.Completed + " committed · " + record.Progress.Skipped + " skipped · " + record.Progress.TotalFiles + " files · " + Size(record.Progress.BytesCopied) + " / " + Size(record.Progress.TotalBytes), FontSize = 11, TextWrapping = TextWrapping.Wrap });
+            if (record.State == FileJobState.Running && record.Progress.BytesPerSecond > 0)
+                content.Children.Add(new TextBlock { Text = Size(record.Progress.BytesPerSecond >= long.MaxValue ? long.MaxValue : (long)record.Progress.BytesPerSecond) + "/s"
+                    + (record.Progress.SecondsRemaining is { } remaining ? " · about " + Duration(remaining) + " of copying left" : "")
+                    + " · verification time is additional", FontSize = 11, TextWrapping = TextWrapping.Wrap });
             if (record.Progress.Current.Length > 0) content.Children.Add(new TextBlock { Text = record.Progress.Phase + " · " + record.Progress.Current, FontSize = 11, TextWrapping = TextWrapping.Wrap });
             var actions = new Grid { ColumnSpacing = 6 }; actions.ColumnDefinitions.Add(new()); actions.ColumnDefinitions.Add(new());
+            if (record.State is FileJobState.Planning or FileJobState.Running or FileJobState.Pausing or FileJobState.Paused)
+            {
+                actions.ColumnDefinitions.Add(new());
+                bool paused = record.State is FileJobState.Paused or FileJobState.Pausing;
+                var pauseActive = Button(paused ? "Resume transfer" : "Pause transfer",
+                    () => ControlAsync(record.Job.Id, paused ? "resume-active" : "pause-active"));
+                Grid.SetColumn(pauseActive, 2); actions.Children.Add(pauseActive);
+            }
             actions.Children.Add(Button("Open destination", () => { _environment.OpenTarget(record.Job.Destination); return Task.CompletedTask; }));
             if (!FileJobRules.Terminal(record.State)) { var cancel = Button("Cancel job", () => ControlAsync(record.Job.Id, "cancel")); Grid.SetColumn(cancel, 1); actions.Children.Add(cancel); }
             else
@@ -166,6 +186,8 @@ internal sealed class FileJobsView : Grid
         if (_snapshot.Jobs.Length == 0) _jobs.Children.Add(new TextBlock { Text = "Your queue is clear. Add a transfer to begin.", FontSize = 14, TextWrapping = TextWrapping.Wrap });
     }
     private static string Size(long value) => value >= 1024 * 1024 * 1024 ? $"{value / (1024d * 1024 * 1024):F1} GB" : value >= 1024 * 1024 ? $"{value / (1024d * 1024):F1} MB" : value >= 1024 ? $"{value / 1024d:F1} KB" : value + " B";
+    private static string Duration(double seconds) => seconds < 60 ? Math.Max(1, Math.Ceiling(seconds)) + " sec"
+        : seconds < 3600 ? Math.Ceiling(seconds / 60) + " min" : seconds < 86400 ? (seconds / 3600).ToString("F1") + " hr" : (seconds / 86400).ToString("F1") + " days";
     private void UpdateActions()
     { if (_submit is null) return; _submit.IsEnabled = !_validation && !_busy && (_pendingSubmission is not null || _sources.Count > 0); foreach (var action in _formActions.Concat(_sourceActions)) action.IsEnabled = !_validation && !_busy && _pendingSubmission is null; _clearForm.IsEnabled = !_validation && !_busy; _destination.IsEnabled = _kind.IsEnabled = _collision.IsEnabled = _verify.IsEnabled = !_validation && !_busy && _pendingSubmission is null; _pause.IsEnabled = !_validation && !_busy && _snapshot is not null; }
     internal void SetActive(bool active)

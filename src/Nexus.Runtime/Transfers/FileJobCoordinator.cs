@@ -11,6 +11,9 @@ public sealed class FileJobCoordinator : IAsyncDisposable
     private readonly Dictionary<Guid, string> _accepted = [];
     private readonly CancellationTokenSource _stop = new();
     private CancellationTokenSource? _active;
+    private FileTransferFlow? _flow;
+    private readonly FileTransferMeter _meter = new();
+    private FileJobProgress? _latestProgress;
     private Guid _activeId;
     private Task? _worker;
     private bool _paused, _disposed;
@@ -26,7 +29,7 @@ public sealed class FileJobCoordinator : IAsyncDisposable
             try
             {
                 var safe = Sanitize(record with { Job = FileJobRules.Validate(record.Job) });
-                if (!FileJobRules.Terminal(safe.State)) safe = safe with { State = FileJobState.Interrupted, Detail = "Core stopped before this job finished. Review the destination before retrying." };
+                if (!FileJobRules.Terminal(safe.State)) safe = safe with { State = FileJobState.Interrupted, Detail = "Core stopped before this job finished. Review the destination before retrying.", Progress = safe.Progress with { BytesPerSecond = 0, SecondsRemaining = null } };
                 _jobs.Add(safe);
                 _accepted[safe.Job.Id] = Fingerprint(safe.Job);
             }
@@ -34,7 +37,11 @@ public sealed class FileJobCoordinator : IAsyncDisposable
         }
     }
     public FileJobsSnapshot Snapshot()
-    { lock (_gate) return new(Epoch, _revision, _paused, _jobs.Select(Clone).Reverse().ToArray(), _journal.Notice); }
+    {
+        lock (_gate) return new(Epoch, _revision, _paused, _jobs.Select(job =>
+            Clone(job.Job.Id == _activeId && job.State == FileJobState.Running
+                ? job with { Progress = _meter.Sample(job.Progress, Environment.TickCount64) } : job)).Reverse().ToArray(), _journal.Notice);
+    }
     private static FileJobRecord Clone(FileJobRecord job) => job with { Job = job.Job with { Sources = [.. job.Job.Sources] } };
     private static FileJobRecord Sanitize(FileJobRecord job)
     {
@@ -42,7 +49,9 @@ public sealed class FileJobCoordinator : IAsyncDisposable
         var progress = job.Progress ?? new("", "", 0, 0, 0, 0, 0);
         return job with { Detail = Text(job.Detail, 600), Progress = progress with { Phase = Text(progress.Phase, 64), Current = Text(progress.Current, 4096),
             BytesCopied = Math.Max(0, progress.BytesCopied), TotalBytes = Math.Max(0, progress.TotalBytes), Completed = Math.Clamp(progress.Completed, 0, FileJobRules.MaximumEntries),
-            Skipped = Math.Clamp(progress.Skipped, 0, FileJobRules.MaximumEntries), TotalFiles = Math.Clamp(progress.TotalFiles, 0, FileJobRules.MaximumEntries) } };
+            Skipped = Math.Clamp(progress.Skipped, 0, FileJobRules.MaximumEntries), TotalFiles = Math.Clamp(progress.TotalFiles, 0, FileJobRules.MaximumEntries),
+            BytesPerSecond = double.IsFinite(progress.BytesPerSecond) && progress.BytesPerSecond > 0 ? progress.BytesPerSecond : 0,
+            SecondsRemaining = progress.SecondsRemaining is { } eta && double.IsFinite(eta) && eta >= 0 ? eta : null } };
     }
     private static string Fingerprint(FileJobSpec spec) => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(spec)));
     private void CheckEpoch(Guid epoch)
@@ -83,6 +92,23 @@ public sealed class FileJobCoordinator : IAsyncDisposable
             {
                 case "pause": _paused = true; _revision++; break;
                 case "resume": _paused = false; _revision++; StartWorker(); break;
+                case "pause-active":
+                case "resume-active":
+                    if (request.JobId == Guid.Empty || request.JobId != _activeId || _active is null
+                        || _active.IsCancellationRequested || _flow is null)
+                        throw new RuntimeFailure("file-active", "This transfer is no longer active. Refresh the queue.");
+                    int activeIndex = _jobs.FindIndex(j => j.Job.Id == request.JobId);
+                    if (activeIndex < 0 || FileJobRules.Terminal(_jobs[activeIndex].State))
+                        throw new RuntimeFailure("file-active", "This transfer is no longer active. Refresh the queue.");
+                    _meter.Reset();
+                    if (request.Action == "pause-active" && _flow.Pause())
+                        Set(activeIndex, _jobs[activeIndex] with { State = FileJobState.Pausing,
+                            Detail = "Pausing at the next transfer boundary.",
+                            Progress = _jobs[activeIndex].Progress with { BytesPerSecond = 0, SecondsRemaining = null } }, false);
+                    else if (request.Action == "resume-active" && _flow.Resume())
+                        Set(activeIndex, _jobs[activeIndex] with { State = _jobs[activeIndex].Progress.Phase == "Queued" ? FileJobState.Planning : FileJobState.Running,
+                            Detail = "Resuming transfer.", Progress = _jobs[activeIndex].Progress with { BytesPerSecond = 0, SecondsRemaining = null } }, false);
+                    break;
                 case "clear":
                     var remaining = _jobs.Where(j => !FileJobRules.Terminal(j.State)).ToArray(); _journal.Write(remaining);
                     _jobs.Clear(); _jobs.AddRange(remaining); _revision++; break;
@@ -115,6 +141,19 @@ public sealed class FileJobCoordinator : IAsyncDisposable
         { var next = _jobs.ToArray(); next[index] = record; _journal.Write(next); }
         _jobs[index] = record; _revision++;
     }
+    private void PauseState(Guid id, bool paused)
+    {
+        lock (_gate)
+        {
+            if (_disposed || id != _activeId || _active?.IsCancellationRequested != false || _flow is null) return;
+            int index = _jobs.FindIndex(job => job.Job.Id == id); if (index < 0) return;
+            if (paused != _flow.PauseRequested) return;
+            _meter.Reset();
+            Set(index, _jobs[index] with { State = paused ? FileJobState.Paused : _jobs[index].Progress.Phase == "Queued" ? FileJobState.Planning : FileJobState.Running,
+                Detail = paused ? "Paused. Resume this transfer to continue." : "Resuming transfer.",
+                Progress = (_latestProgress ?? _jobs[index].Progress) with { BytesPerSecond = 0, SecondsRemaining = null } }, false);
+        }
+    }
     private async Task WorkAsync()
     {
         try
@@ -131,6 +170,7 @@ public sealed class FileJobCoordinator : IAsyncDisposable
                     catch (Exception error) when (error is IOException or UnauthorizedAccessException)
                     { Set(index, job with { State = FileJobState.Failed, Detail = "Job history could not be saved. No transfer started: " + error.Message }, false); _paused = true; return; }
                     _activeId = job.Job.Id; _active = CancellationTokenSource.CreateLinkedTokenSource(_stop.Token); _lastProgress = DateTimeOffset.MinValue;
+                    _flow = new(paused => PauseState(job.Job.Id, paused)); _meter.Reset(); _latestProgress = null;
                 }
                 FileJobState final; string detail;
                 try
@@ -140,13 +180,18 @@ public sealed class FileJobCoordinator : IAsyncDisposable
                         lock (_gate)
                         {
                             int index = _jobs.FindIndex(j => j.Job.Id == job.Job.Id); if (index < 0 || _disposed) return;
+                            _latestProgress = progress;
                             // Paint is bounded to four updates per second. File
                             // and job commits still publish their latest totals.
                             if (progress.Phase == "Copying" && DateTimeOffset.UtcNow - _lastProgress < TimeSpan.FromMilliseconds(250)) return;
                             _lastProgress = DateTimeOffset.UtcNow;
-                            Set(index, _jobs[index] with { State = FileJobState.Running, Progress = progress, Detail = progress.Phase }, false);
+                            bool pausing = _flow?.PauseRequested == true;
+                            var state = pausing ? FileJobState.Pausing : FileJobState.Running;
+                            Set(index, _jobs[index] with { State = state,
+                                Progress = pausing ? progress with { BytesPerSecond = 0, SecondsRemaining = null } : _meter.Sample(progress, Environment.TickCount64),
+                                Detail = pausing ? "Pausing at the next transfer boundary." : progress.Phase }, false);
                         }
-                    }, _active.Token).ConfigureAwait(false);
+                    }, _flow, _active.Token).ConfigureAwait(false);
                     final = FileJobState.Complete; detail = "Finished. Existing destination items were never overwritten.";
                 }
                 catch (OperationCanceledException) { final = FileJobState.Cancelled; detail = "Cancelled. Completed items remain; unfinished staging is cleaned where possible."; }
@@ -157,12 +202,13 @@ public sealed class FileJobCoordinator : IAsyncDisposable
                     int index = _jobs.FindIndex(j => j.Job.Id == job.Job.Id);
                     if (index >= 0)
                     {
-                        var done = _jobs[index] with { State = final, Detail = detail };
+                        var done = _jobs[index] with { State = final, Detail = detail,
+                            Progress = (_latestProgress ?? _jobs[index].Progress) with { BytesPerSecond = 0, SecondsRemaining = null } };
                         try { Set(index, done, true); }
                         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
                         { Set(index, done with { Detail = detail + " Job history could not be saved: " + error.Message }, false); }
                     }
-                    _active?.Dispose(); _active = null; _activeId = Guid.Empty;
+                    _active?.Dispose(); _active = null; _activeId = Guid.Empty; _flow = null; _meter.Reset(); _latestProgress = null;
                 }
             }
         }

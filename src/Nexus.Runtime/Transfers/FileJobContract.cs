@@ -2,15 +2,16 @@ namespace Nexus.Runtime.Transfers;
 
 public enum FileJobKind { Copy, Move }
 public enum FileCollision { KeepBoth, Skip }
-public enum FileJobState { Queued, Planning, Running, Complete, Cancelled, Failed, Interrupted }
+public enum FileJobState { Queued, Planning, Running, Complete, Cancelled, Failed, Interrupted, Pausing, Paused }
 public sealed record FileJobSpec(Guid Id, FileJobKind Kind, string[] Sources, string Destination, FileCollision Collision = FileCollision.KeepBoth, bool Verify = true);
 public sealed record FileJobSubmit(Guid Epoch, FileJobSpec Job);
 public sealed record FileJobControl(Guid Epoch, Guid JobId, string Action);
-public sealed record FileJobProgress(string Phase, string Current, long BytesCopied, long TotalBytes, int Completed, int Skipped, int TotalFiles);
+public sealed record FileJobProgress(string Phase, string Current, long BytesCopied, long TotalBytes, int Completed, int Skipped, int TotalFiles,
+    double BytesPerSecond = 0, double? SecondsRemaining = null);
 public sealed record FileJobRecord(FileJobSpec Job, FileJobState State, DateTimeOffset Created, string Detail, FileJobProgress Progress);
 public sealed record FileJobsSnapshot(Guid Epoch, long Revision, bool Paused, FileJobRecord[] Jobs, string Notice = "");
 public interface IFileTransferBackend
-{ Task RunAsync(FileJobSpec job, Action<FileJobProgress> progress, CancellationToken cancellation); }
+{ Task RunAsync(FileJobSpec job, Action<FileJobProgress> progress, FileTransferFlow flow, CancellationToken cancellation); }
 public interface IFileJobsJournal
 { FileJobRecord[] Read(); void Write(IReadOnlyList<FileJobRecord> jobs); string Notice { get; } }
 

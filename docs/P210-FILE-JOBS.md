@@ -15,7 +15,7 @@ Open **Nexus → File jobs**, find it in Launchpad/Spotlight, or use the shortcu
 
 In Nexus Files' normal browsing mode, right-click a selected file/folder and choose **Copy to…** or **Move to…**. The destination uses the existing isolated folder picker. The Files window reports whether Core accepted the job and directs uncertain submissions to File Jobs for review; it never automatically repeats a timed-out request.
 
-The queue shows operation/state, current phase/path, bytes, committed/skipped files and errors. **Open destination** is always available. **Pause queue** lets the current job finish and holds the next job; **Cancel job** requests cancellation. **Clear finished jobs** clears terminal history, not files. **Load into form** fills a terminal job's sources/options for review; it does not execute or resume anything. Adding it again creates a new job.
+The queue shows operation/state, current phase/path, bytes, committed/skipped files and errors. **Open destination** is always available. **Hold next jobs** lets the current job finish and holds later jobs; **Run next jobs** releases that hold. **Pause transfer / Resume transfer** controls the current job independently. **Cancel job** requests cancellation, including while paused. **Clear finished jobs** clears terminal history, not files. **Load into form** fills a terminal job's sources/options for review; it does not execute or resume anything. Adding it again creates a new job.
 
 ## Core ownership and file behavior
 
@@ -34,7 +34,7 @@ Core owns one sequential transfer worker, shared by desktop and Files callers. A
 
 The service uses ordinary user permissions. It is not an installed Windows service. The queue continues while File Jobs is closed or another window is active; exiting Nexus/Core cancels it. File Jobs polls once per second only while active and allows one status read at a time. Queue actions and form submissions are serialized in the view.
 
-Only ordinary file contents and modification timestamps are copied. ACLs, alternate streams, source attributes, provider semantics and full directory metadata are not preserved. Folder rename uses the existing filesystem operation and does not freeze a mutable source tree. No speed/ETA, crash-resume, overwrite or transactional rollback claim is made.
+Only ordinary file contents and modification timestamps are copied. ACLs, alternate streams, source attributes, provider semantics and full directory metadata are not preserved. Folder rename uses the existing filesystem operation and does not freeze a mutable source tree. Copy speed and estimated copying time are measured within the current copy phase; verification and atomic rename time are additional. Crash-resume, overwrite and transactional rollback remain outside this implementation.
 
 ## History and restart recovery
 
@@ -60,3 +60,18 @@ Windows APIs: [CreateFile sharing and flags](https://learn.microsoft.com/en-us/w
 4. Exercise native file moves and same-drive folder moves. Confirm a cross-drive folder move leaves its source and reports failure; use Copy across drives. Test locked/read-only files and denied destination permissions.
 5. Cancel during copy and verification, pause with multiple queued jobs, clear terminal history, close/reopen File Jobs and Files, and check cleanup plus committed-item retention.
 6. Stop Nexus during a temporary transfer, restart, inspect Interrupted history and destination/staging, and review a job using Load into form. Simulate damaged history and a refused history save in disposable data directories.
+
+
+## Active transfer control and estimates — 2026-10-15
+
+- **Pause transfer** requests a cooperative pause of the currently active copy/move. The card first shows **Pausing**, then **Paused** after the worker reaches a checkpoint. **Resume transfer** continues the same job, streams and staging; it does not submit another transfer.
+- Copying checks pause between 128-KiB buffers. SHA-256 verification now also checks between buffered reads. Directory creation, source-file boundaries, destination commit and source deletion have checkpoints. A same-drive folder rename can pause before its atomic operation, not partway through it.
+- Planning, in-flight disk/network I/O and flush/rename calls can finish before pause is acknowledged. A job that already finishes may report Complete. No thread is suspended or killed.
+- **Hold next jobs / Run next jobs** remains independent from the current transfer's pause. A paused transfer keeps Core's sole worker slot, so later work cannot overtake it. Closing/reopening File Jobs preserves a live pause.
+- Cancel and Core shutdown interrupt a paused checkpoint and clean uncommitted staging where possible. Output committed before cancellation remains; pause/resume never turns cancellation into automatic retry. Interrupted/paused history is marked Interrupted after Core restart and requires review.
+- Copy cards show a monotonic average speed for the current copy phase and an estimated copying duration after at least one second of samples. Snapshot reads update that average as time passes, including stalls. Pausing, resuming, counter/clock resets and non-copy phases clear the sample. Verification and directory rename do not fabricate a copying ETA.
+- New Pausing/Paused enum values append to the existing wire/history values; optional rate/ETA fields default to unknown for old snapshots. Exact job-ID/epoch checks and existing desktop-only queue-control permission remain. The internal transfer-backend contract now receives a flow object; ship the complete matching Core/Runtime/Shell build.
+
+**Validation:** portable production-flow/coordinator/engine tests use real temporary files. They verify pause while a read is in flight, exact acknowledged progress despite UI throttling, resume without a second source open, independent queue hold, pause during SHA-256 verification, cancellation/cleanup, same-volume folder boundaries, shutdown while paused, no automatic restart replay, pause-generation races and meter/JSON compatibility. The native File Jobs preflight fixture includes the new active control and rate/ETA card, with actions and polling disabled.
+
+**Windows acceptance pending:** AppVeyor native build/preflight/package, Windows source-handle and drive behavior, large-file and network-path pausing, locked/removable disks, real file moves (including pausing after destination commit), control focus, compact widths/DPI/High Contrast and UI responsiveness. The portable file tests do not certify native Windows UI or driver behavior.

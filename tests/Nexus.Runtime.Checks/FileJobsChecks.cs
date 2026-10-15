@@ -26,7 +26,7 @@ internal static class FileJobsChecks
     {
         internal int Calls, Active, MaximumActive;
         internal readonly TaskCompletionSource Release = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public async Task RunAsync(FileJobSpec job, Action<FileJobProgress> report, CancellationToken cancellation)
+        public async Task RunAsync(FileJobSpec job, Action<FileJobProgress> report, FileTransferFlow flow, CancellationToken cancellation)
         {
             Interlocked.Increment(ref Calls); int active = Interlocked.Increment(ref Active); MaximumActive = Math.Max(MaximumActive, active);
             try { report(new("Copying", job.Sources[0], 1, 2, 0, 0, 1)); await Release.Task.WaitAsync(cancellation); report(new("Finished", "", 2, 2, 1, 0, 1)); }

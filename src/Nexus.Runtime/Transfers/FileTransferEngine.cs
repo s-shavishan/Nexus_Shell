@@ -82,8 +82,11 @@ public sealed class FileTransferEngine(Func<string, bool, ITransferSource>? open
         }
         else File.Delete(path);
     }
-    public async Task RunAsync(FileJobSpec request, Action<FileJobProgress> report, CancellationToken cancellation)
+    public Task RunAsync(FileJobSpec request, Action<FileJobProgress> report, CancellationToken cancellation)
+        => RunAsync(request, report, new FileTransferFlow(), cancellation);
+    public async Task RunAsync(FileJobSpec request, Action<FileJobProgress> report, FileTransferFlow flow, CancellationToken cancellation)
     {
+        await flow.WaitAsync(cancellation).ConfigureAwait(false);
         var job = FileJobRules.Validate(request); cancellation.ThrowIfCancellationRequested(); RejectLinks(job.Destination);
         if (!Directory.Exists(job.Destination)) throw new DirectoryNotFoundException("The destination folder is unavailable.");
         var roots = job.Sources.Select(path => Plan(path, cancellation)).ToArray();
@@ -95,6 +98,7 @@ public sealed class FileTransferEngine(Func<string, bool, ITransferSource>? open
         Progress("Ready", "");
         foreach (var root in roots)
         {
+            await flow.WaitAsync(cancellation).ConfigureAwait(false);
             cancellation.ThrowIfCancellationRequested(); RejectLinks(root.Path); RejectLinks(job.Destination);
             string requested = Path.Combine(job.Destination, Path.GetFileName(root.Path));
             if (job.Collision == FileCollision.Skip && Exists(requested)) { skipped += root.Files.Length; Progress("Skipped", root.Path); continue; }
@@ -102,7 +106,8 @@ public sealed class FileTransferEngine(Func<string, bool, ITransferSource>? open
             {
                 // Directory.Move is an atomic same-volume rename. Cross-volume
                 // failures keep the entire source tree; no recursive deletion.
-                Progress("Moving folder", root.Path); string? result = Commit(root.Path, requested, true, job.Collision);
+                Progress("Moving folder", root.Path); await flow.WaitAsync(cancellation).ConfigureAwait(false);
+                string? result = Commit(root.Path, requested, true, job.Collision);
                 if (result is null) skipped += root.Files.Length; else { completed += root.Files.Length; copied += root.Files.Sum(f => f.Bytes); }
                 Progress("Committed", result ?? root.Path); continue;
             }
@@ -113,26 +118,26 @@ public sealed class FileTransferEngine(Func<string, bool, ITransferSource>? open
                 if (root.Directory)
                 {
                     Directory.CreateDirectory(staged);
-                    foreach (string directory in root.Directories) { cancellation.ThrowIfCancellationRequested(); Directory.CreateDirectory(Path.Combine(staged, directory)); }
+                    foreach (string directory in root.Directories) { await flow.WaitAsync(cancellation).ConfigureAwait(false); Directory.CreateDirectory(Path.Combine(staged, directory)); }
                     foreach (var item in root.Files)
                     {
-                        await CopyAsync(item.Path, Path.Combine(staged, item.Relative), false, job.Verify, bytes => { copied += bytes; Progress("Copying", item.Path); }, () => Progress("Verifying", item.Path), cancellation).ConfigureAwait(false);
+                        await CopyAsync(item.Path, Path.Combine(staged, item.Relative), false, job.Verify, bytes => { copied += bytes; Progress("Copying", item.Path); }, () => Progress("Verifying", item.Path), flow, cancellation).ConfigureAwait(false);
                     }
-                    cancellation.ThrowIfCancellationRequested(); string? result = Commit(staged, requested, true, job.Collision); committed = result is not null;
+                    await flow.WaitAsync(cancellation).ConfigureAwait(false); string? result = Commit(staged, requested, true, job.Collision); committed = result is not null;
                     if (committed) completed += root.Files.Length; else skipped += root.Files.Length;
                     Progress("Committed", result ?? root.Path);
                 }
                 else
                 {
                     using var source = (openSource ?? ((path, _) => new ReadSource(path)))(root.Path, job.Kind == FileJobKind.Move);
-                    await CopyStreamAsync(source.Content, staged, job.Verify, bytes => { copied += bytes; Progress("Copying", root.Path); }, () => Progress("Verifying", root.Path), cancellation).ConfigureAwait(false);
+                    await CopyStreamAsync(source.Content, staged, job.Verify, bytes => { copied += bytes; Progress("Copying", root.Path); }, () => Progress("Verifying", root.Path), flow, cancellation).ConfigureAwait(false);
                     File.SetLastWriteTimeUtc(staged, File.GetLastWriteTimeUtc(root.Path));
-                    cancellation.ThrowIfCancellationRequested(); string? result = Commit(staged, requested, false, job.Collision); committed = result is not null;
+                    await flow.WaitAsync(cancellation).ConfigureAwait(false); string? result = Commit(staged, requested, false, job.Collision); committed = result is not null;
                     if (!committed) { skipped++; Progress("Skipped", root.Path); continue; }
                     completed++; Progress("Committed", result!);
                     if (job.Kind == FileJobKind.Move)
                     {
-                        cancellation.ThrowIfCancellationRequested();
+                        await flow.WaitAsync(cancellation).ConfigureAwait(false);
                         try { source.CommitMove(); }
                         catch (Exception error) { throw new IOException("Copied successfully, but the original could not be removed. Both copies remain: " + error.Message, error); }
                     }
@@ -147,13 +152,14 @@ public sealed class FileTransferEngine(Func<string, bool, ITransferSource>? open
         }
         Progress("Finished", "");
     }
-    private async Task CopyAsync(string path, string staged, bool move, bool verify, Action<int> copied, Action verifying, CancellationToken cancellation)
+    private async Task CopyAsync(string path, string staged, bool move, bool verify, Action<int> copied, Action verifying, FileTransferFlow flow, CancellationToken cancellation)
     {
+        await flow.WaitAsync(cancellation).ConfigureAwait(false);
         RejectLinks(path); using var source = (openSource ?? ((name, _) => new ReadSource(name)))(path, move);
-        await CopyStreamAsync(source.Content, staged, verify, copied, verifying, cancellation).ConfigureAwait(false);
+        await CopyStreamAsync(source.Content, staged, verify, copied, verifying, flow, cancellation).ConfigureAwait(false);
         File.SetLastWriteTimeUtc(staged, File.GetLastWriteTimeUtc(path));
     }
-    private static async Task CopyStreamAsync(Stream input, string staged, bool verify, Action<int> copied, Action verifying, CancellationToken cancellation)
+    private static async Task CopyStreamAsync(Stream input, string staged, bool verify, Action<int> copied, Action verifying, FileTransferFlow flow, CancellationToken cancellation)
     {
         RejectLinks(Path.GetDirectoryName(staged)!); long length = input.Length, read = 0;
         using var hash = verify ? IncrementalHash.CreateHash(HashAlgorithmName.SHA256) : null;
@@ -161,15 +167,23 @@ public sealed class FileTransferEngine(Func<string, bool, ITransferSource>? open
         byte[] buffer = new byte[128 * 1024];
         while (true)
         {
-            cancellation.ThrowIfCancellationRequested(); int size = await input.ReadAsync(buffer, cancellation).ConfigureAwait(false); if (size == 0) break;
+            await flow.WaitAsync(cancellation).ConfigureAwait(false); int size = await input.ReadAsync(buffer, cancellation).ConfigureAwait(false); if (size == 0) break;
             await output.WriteAsync(buffer.AsMemory(0, size), cancellation).ConfigureAwait(false); hash?.AppendData(buffer, 0, size); read += size; copied(size);
         }
         if (read != length || input.Length != length) throw new IOException("The source changed size while it was being copied.");
+        await flow.WaitAsync(cancellation).ConfigureAwait(false);
         await output.FlushAsync(cancellation).ConfigureAwait(false); output.Flush(true);
         if (verify)
         {
             verifying(); output.Position = 0;
-            byte[] actual = await SHA256.HashDataAsync(output, cancellation).ConfigureAwait(false);
+            using var verification = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            while (true)
+            {
+                await flow.WaitAsync(cancellation).ConfigureAwait(false);
+                int size = await output.ReadAsync(buffer, cancellation).ConfigureAwait(false); if (size == 0) break;
+                verification.AppendData(buffer, 0, size);
+            }
+            byte[] actual = verification.GetHashAndReset();
             if (!CryptographicOperations.FixedTimeEquals(hash!.GetHashAndReset(), actual)) throw new IOException("The copied content failed SHA-256 verification. The original is retained.");
         }
     }

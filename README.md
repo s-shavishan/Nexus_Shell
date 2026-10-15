@@ -24,7 +24,8 @@ Nexus Workspaces is removed. Its profile model, resume state, launch planner and
 
 - Add files or folders, choose a destination, and track bytes, committed files and skipped items.
 - Keep both names or skip collisions; existing destination items are never overwritten. Copied contents are verified with SHA-256 by default.
-- Pause the next job, cancel work, open its destination, or load finished/interrupted jobs into the form for review.
+- Pause/resume the active transfer, independently hold later jobs, cancel work, open its destination, or load finished/interrupted jobs into the form for review.
+- View measured copy-phase speed and estimated copying time. Paused and verification phases clear the estimate; verification time is additional.
 - Open File Jobs from the Nexus menu, Launchpad, Spotlight or Controls. Nexus Files gains **Copy to…** and **Move to…** context actions.
 - Closing the utility window leaves accepted jobs running. Closing Nexus stops them; a restart marks unfinished jobs interrupted for manual review.
 
