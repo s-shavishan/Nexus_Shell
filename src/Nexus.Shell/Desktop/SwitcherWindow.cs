@@ -299,19 +299,22 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
     }
     private void UpdateActions()
     {
-        int count = _windows.Count(entry => _selected.Contains(entry.Key)); _grid.IsEnabled = _columns.IsEnabled = _stack.IsEnabled = !_applying && count is > 0 and <= 4;
-        _move.IsEnabled = !_applying && count is > 0 and <= SavedWindowLayouts.MaximumWindows && MonitorId.Length > 0;
+        bool canStage = !_applying && !_placement.HasPendingRecovery;
+        int count = _windows.Count(entry => _selected.Contains(entry.Key)); _grid.IsEnabled = _columns.IsEnabled = _stack.IsEnabled = canStage && count is > 0 and <= 4;
+        _move.IsEnabled = canStage && count is > 0 and <= SavedWindowLayouts.MaximumWindows && MonitorId.Length > 0;
         _undo.IsEnabled = !_applying && (_staged.Count > 0 || _placement.CanUndo);
-        _undo.Content = _staged.Count > 0 ? "Discard staged changes" : "Undo last arrangement";
-        _apply.IsEnabled = !_applying && _staged.Count > 0;
+        _undo.Content = _placement.HasPendingRecovery ? "Retry previous positions"
+            : _staged.Count > 0 ? "Discard staged changes" : "Undo last arrangement";
+        _apply.IsEnabled = canStage && _staged.Count > 0;
         _discard.IsEnabled = !_applying;
         _save.IsEnabled = !_applying && _windows.Any(entry => entry.CanArrange && entry.ProcessPath.Length > 0); _delete.IsEnabled = !_applying && SelectedLayout is not null;
         int matched = SelectedLayout is { } layout ? SavedWindowLayouts.Match(layout.Windows, _windows.Where(entry => entry.CanArrange).Select(entry => entry.Candidate).ToArray()).Count : 0;
-        _restore.IsEnabled = !_applying && matched > 0; _restore.Content = matched > 0 ? "Restore " + matched : "Restore";
+        _restore.IsEnabled = canStage && matched > 0; _restore.Content = matched > 0 ? "Restore " + matched : "Restore";
         _summary.Foreground = _message.Foreground = Environment.Theme.Brush("NexusMuted");
         _summary.Text = _filtered.Count + " windows · " + _staged.Count + " staged · "
             + count + " selected · page " + (_page + 1)
-            + (count == 0 ? " · select window checkboxes to enable Grid/Columns/Stack"
+            + (_placement.HasPendingRecovery ? " · retry previous positions before arranging again"
+                : count == 0 ? " · select window checkboxes to enable Grid/Columns/Stack"
                 : " · drag a preview or choose a layout, then Done");
     }
     private IReadOnlyList<DesktopWindowEntry> Selected() => _windows.Where(entry => _selected.Contains(entry.Key) && entry.CanArrange).ToArray();
@@ -347,18 +350,19 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
     }
     private void Undo()
     {
-        if (_staged.Count > 0) { _staged.Clear(); Render(); _message.Text = "Unapplied changes discarded."; }
+        if (!_placement.HasPendingRecovery && _staged.Count > 0) { _staged.Clear(); Render(); _message.Text = "Unapplied changes discarded."; }
         else
         {
-            int restored = _placement.Undo();
-            _message.Text = restored > 0
-                ? restored + " previous window positions restored."
-                : "Undo could not restore any windows. They may have closed or changed.";
+            var result = _placement.UndoDetailed();
+            _message.Text = $"Restoring previous positions for {result.Queued} windows"
+                + (result.Pending > 0 ? $" · {result.Pending} need another retry" : "")
+                + (result.Unavailable > 0 ? $" · {result.Unavailable} windows closed or changed" : "") + ".";
             UpdateActions(); Environment.UpdateTaskbar();
         }
     }
     private void Stage(IReadOnlyList<WindowMove> changes)
     {
+        if (_placement.HasPendingRecovery) throw new InvalidOperationException("Use Retry previous positions before arranging again.");
         if (_staged.Keys.Union(changes.Select(m => m.Window.Handle.ToInt64() + ":" + m.Window.ProcessId)).Count() > SavedWindowLayouts.MaximumWindows)
             throw new InvalidOperationException("Stage at most twelve windows per arrangement.");
         foreach (var change in changes) _staged[change.Window.Handle.ToInt64() + ":" + change.Window.ProcessId] = change;
@@ -367,7 +371,7 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
     }
     private void ApplyStaged()
     {
-        if (_applying || _staged.Count == 0) return;
+        if (_applying || _placement.HasPendingRecovery || _staged.Count == 0) return;
         _applying = true;
         try
         {
@@ -379,7 +383,8 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
         }
         catch (Exception error)
         {
-            _message.Text = "Arrangement not applied. " + error.Message + " · Cancel leaves existing windows in place.";
+            _message.Text = "Arrangement interrupted. " + error.Message
+                + (_placement.HasPendingRecovery ? " Use Retry previous positions; Cancel only closes this overview." : " Review the affected apps before trying again.");
             Log.Write("Window overview apply failed", error);
         }
         finally { _applying = false; if (!IsClosed) UpdateActions(); }
@@ -420,7 +425,7 @@ internal sealed class SwitcherWindow : DesktopPanelWindow
         }
         surface.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler((_, args) =>
         {
-            if (_applying || !entry.CanArrange || !NativeMethods.OwnsWindow(entry.Window)
+            if (_applying || _placement.HasPendingRecovery || !entry.CanArrange || !NativeMethods.OwnsWindow(entry.Window)
                 || !args.GetCurrentPoint(Root).Properties.IsLeftButtonPressed) return;
             // Capture the original native placement once; ordinary windows
             // do not need an executable path just to drag their HWND.

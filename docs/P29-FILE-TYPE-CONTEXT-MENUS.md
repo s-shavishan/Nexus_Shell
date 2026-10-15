@@ -113,7 +113,7 @@ acceptance. No automatic merge into `main`.
 - The **full release packaging script** now checks for the JSON under `Assets/Configuration/` both before zipping and inside the generated archive. The update builder already includes all `Assets/*` files and its existing test fixture remains compatible.
 - Completed a **13/13 source-level cross-file consistency check** covering catalog parsing and uniqueness, known handler IDs, JSON deployment, Core tests, native Files/Desktop integration, runtime Display test inclusion and Win32 maximize return semantics. This is source inspection, not a C#/WinUI compiler or runtime pass.
 
-**Additional window-overview fix:** Do not interpret `ShowWindowAsync`'s return value as success. Windows documents its return as *previous window visibility*, so a previously hidden/minimized app can return zero after a valid maximize request. The command is now issued with a fresh HWND ownership check, rather than triggering spurious full-layout rollback.
+**Correction, 2026-10-15:** The earlier overview note conflated `ShowWindowAsync` with `ShowWindow`. Microsoft's [ShowWindowAsync contract](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showwindowasync) defines nonzero as successfully starting the operation. The current implementation checks a false maximize result and enters guarded rollback. An accepted asynchronous command still does not prove the target app has completed it. See the P3.0 placement recovery section for retry and native acceptance requirements.
 
 No native Windows compilation was available during this pass. PR #32 must remain draft and `main` unchanged.
 

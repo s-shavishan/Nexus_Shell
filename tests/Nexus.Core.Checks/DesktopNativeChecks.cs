@@ -94,6 +94,19 @@ internal static class DesktopNativeChecks
                 || !GetWindowRect(window, out var afterStagedUndo) || !afterStagedUndo.Equals(original))
                 throw new Exception("Undo after Done must restore the test HWND's original rectangle.");
             Console.WriteLine("PASS: actual Win32 placement, staged overview Apply and Undo, process ownership rejection (own test window).");
+            // ShowWindowAsync reports command admission, unlike ShowWindow's
+            // previous visibility. Exercise the real minimized -> staged
+            // maximize -> Undo path on this fixture's HWND, not a user app.
+            ShowWindow(window, 2); Pump(window);
+            if (!NativeMethods.IsMinimized(window)) throw new Exception("The maximize fixture must start minimized.");
+            if (layouts.Apply([new WindowMove(own, stagedBounds, true)]) != 1)
+                throw new Exception("A valid maximize operation must be admitted for the minimized fixture.");
+            if (!PumpUntil(() => NativeMethods.IsZoomed(window))) throw new Exception("The accepted staged maximize must reach the fixture's native show state.");
+            var maximizeUndo = layouts.UndoDetailed();
+            if (maximizeUndo != new WindowRestoreResult(1, 1, 0, 0) || !PumpUntil(() => NativeMethods.IsMinimized(window)))
+                throw new Exception("Undo after staged maximize must restore the fixture's original minimized state.");
+            ShowWindow(window, 9); Pump(window);
+            Console.WriteLine("PASS: native minimized-window staged maximize admission and Undo show-state restoration (own fixture only).");
             var actions = new List<string>();
             using (var integration = new DesktopIntegration(window, actions.Add))
             {

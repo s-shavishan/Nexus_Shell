@@ -16,6 +16,7 @@ WindowsIntegrationChecks.Run();
 ShellIntegrationChecks.Run();
 WindowsShellRecoveryChecks.Run();
 DockShortcutIdentityChecks.Run();
+WindowLayoutTransactionChecks.Run();
 NexusControlsChecks.Run();
 
 static void Check(bool condition, string message)
