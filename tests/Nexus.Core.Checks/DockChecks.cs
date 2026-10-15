@@ -30,6 +30,11 @@ internal static class DockChecks
         retry = new DockShortcutRetryState().Failed(long.MaxValue - 500);
         Check(retry.NextAttemptTick == long.MaxValue && !retry.CanAttempt(long.MaxValue - 1),
             "A saturated monotonic tick must never wrap and start repeated retries.");
+        Check(DockPreviewPolicy.ShowFallback(false, false)
+            && DockPreviewPolicy.ShowFallback(true, false)
+            && DockPreviewPolicy.ShowFallback(false, true)
+            && !DockPreviewPolicy.ShowFallback(true, true),
+            "A newly registered but unconfigured DWM thumbnail must retain its fallback until a valid destination has been installed.");
         var stableViewport = new ShellRect(-1400, 40, 350, 210);
         Check(DockPreviewPolicy.ReuseThumbnailGeometry(stableViewport, stableViewport, true, 1000, 1190)
             && !DockPreviewPolicy.ReuseThumbnailGeometry(stableViewport, stableViewport, true, 1000, 1300)
