@@ -1,3 +1,4 @@
+<!-- නමෝ බුද්ධාය 🤍 -->
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -13,11 +14,6 @@
     <ApplicationIcon>../Nexus.Shell/Assets/Nexus.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../Nexus.Shell/Services/DesktopShellPolicy.cs" Link="DesktopShellPolicy.cs" />
-    <Compile Include="../Nexus.Shell/Services/DesktopPolicyRequest.cs" Link="DesktopPolicyRequest.cs" />
-    <Compile Include="../Nexus.Shell/Services/MinimizedWindowPolicy.cs" Link="MinimizedWindowPolicy.cs" />
-    <Compile Include="../Nexus.Shell/Services/DesktopShellRegistration.cs" Link="DesktopShellRegistration.cs" />
-    <Compile Include="../Nexus.Shell/Services/DesktopSessionRecovery.cs" Link="DesktopSessionRecovery.cs" />
-    <Compile Include="../Nexus.Shell/Services/DesktopSessionRecord.cs" Link="DesktopSessionRecord.cs" />
+    <ProjectReference Include="../Nexus.Runtime/Nexus.Runtime.csproj" />
   </ItemGroup>
 </Project>

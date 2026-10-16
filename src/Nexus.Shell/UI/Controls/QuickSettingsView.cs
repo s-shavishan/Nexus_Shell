@@ -1,3 +1,4 @@
+// නමෝ බුද්ධාය 🤍
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Automation.Peers;
@@ -227,17 +228,28 @@ internal sealed class QuickSettingsView : Grid, IDisposable
             _queued.Clear(); Log.Write("Control Center " + request.Section + " request failed", error);
             if (!_disposed && _session.Accepts(generation, request.Section))
             {
-                if (request.Section == "Display" && _state is not null)
+                if (ControlCenterTilePolicy.RetainPanelAfterFailure(
+                    request.Section, request.Change is not null, _state is not null))
                 {
-                    // A failed native mode change must NEVER erase the
-                    // pending preview's Keep/Revert controls. The Core timer
-                    // owns rollback independently of this UI; refresh the
-                    // snapshot when the failed request settles.
+                    // A rejected or failed device mutation must not make an
+                    // otherwise working network/Bluetooth/Power panel vanish.
+                    // Never replay a rejected command: the user must decide
+                    // whether to retry after reading the error or refreshing.
                     ShowError(error.Message);
-                    _status.Text = _state.Preview is not null
-                        ? "Display change failed · Keep or Revert remains available. Automatic rollback is still active."
-                        : "Display request failed · existing controls are retained. Refreshing device state…";
-                    _readAgain = request.Change is not null;
+                    if (request.Section == "Display")
+                    {
+                        // Core owns the independent display auto-revert timer.
+                        // Keep/Revert stays visible even if the refresh fails.
+                        _status.Text = _state!.Preview is not null
+                            ? "Display change failed · Keep or Revert remains available. Automatic rollback is still active."
+                            : "Display request failed · existing controls are retained. Refreshing device state…";
+                        _readAgain = request.Change is not null;
+                    }
+                    else
+                    {
+                        _status.Text = "Change not confirmed. Controls remain available; review the error and choose Refresh.";
+                        _readAgain = false;
+                    }
                 }
                 else
                 {
@@ -422,17 +434,33 @@ internal sealed class QuickSettingsView : Grid, IDisposable
     }
     private void RenderNetwork(NetworkState state)
     {
-        foreach (var link in state.Links)
+        // Windows may enumerate a dozen virtual or disconnected adapters.
+        // Keep all connected interfaces and the first two rows visible, but
+        // retain every other adapter under an explicit disclosure action.
+        var links = NetworkPresentationPolicy.OrderedLinks(state.Links);
+        int immediate = NetworkPresentationPolicy.InitiallyVisibleLinks(links);
+        var extraLinks = new List<Border>();
+        for (int i = 0; i < links.Count; i++)
         {
-            var card = Card(link.Name, link.Kind + " · " + link.State + (link.SpeedMbps > 0 ? $" · {link.SpeedMbps} Mbps" : ""));
-            var info = Label($"Address: {link.Address}\nGateway: {link.Gateway}\nDNS: {link.Dns}", 11, true);
-            info.IsTextSelectionEnabled = true; info.Visibility = Visibility.Collapsed;
-            card.Children.Add(info);
-            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-            row.Children.Add(ActionButton("Details", () => info.Visibility =
-                info.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible));
+            var link = links[i];
+            bool live = NetworkPresentationPolicy.Connected(link);
+            var card = Card(link.Name,
+                (live ? "Connected" : link.State) + " · " + link.Kind
+                + (link.SpeedMbps > 0 ? $" · {link.SpeedMbps} Mbps" : ""));
+            if (i >= immediate)
+            {
+                var shell = _cards[^1];
+                shell.Visibility = Visibility.Collapsed;
+                extraLinks.Add(shell);
+            }
+            var details = Label($"Address: {link.Address}\nGateway: {link.Gateway}\nDNS: {link.Dns}", 11, true);
+            details.IsTextSelectionEnabled = true; details.Visibility = Visibility.Collapsed;
+            card.Children.Add(details);
+            var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
+            actions.Children.Add(ActionButton("Details", () => details.Visibility =
+                details.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible));
             if (!string.IsNullOrWhiteSpace(link.Address))
-                row.Children.Add(ActionButton("Copy IP", () =>
+                actions.Children.Add(ActionButton("Copy IP", () =>
                 {
                     try
                     {
@@ -443,32 +471,96 @@ internal sealed class QuickSettingsView : Grid, IDisposable
                     }
                     catch (Exception error) { ShowError("Could not copy the address: " + error.Message); }
                 }));
-            card.Children.Add(row);
+            card.Children.Add(actions);
+        }
+        if (extraLinks.Count > 0)
+        {
+            bool expanded = false;
+            Button? disclosure = null;
+            disclosure = ActionButton($"Show other adapters ({extraLinks.Count})", () =>
+            {
+                expanded = !expanded;
+                foreach (var item in extraLinks)
+                    item.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
+                disclosure!.Content = expanded ? "Hide inactive adapters"
+                    : $"Show other adapters ({extraLinks.Count})";
+            });
+            _body.Children.Add(disclosure);
         }
         foreach (var adapter in state.Wifi)
         {
-            string radio = !adapter.RadioAvailable ? "Radio state unavailable" : !adapter.HardwareOn ? "Hardware radio is off" : adapter.SoftwareOn ? "Wi-Fi on" : "Wi-Fi off";
-            var card = Card(adapter.Name, radio); card.Children.Add(DeviceButton(adapter.SoftwareOn ? "Turn Wi-Fi off" : "Turn Wi-Fi on", () => Queue(new("wifi-radio", adapter.Id, Enabled: !adapter.SoftwareOn), true), adapter.RadioAvailable && adapter.HardwareOn));
+            string radio = !adapter.RadioAvailable ? "Radio state unavailable"
+                : !adapter.HardwareOn ? "Hardware radio is off"
+                : adapter.SoftwareOn ? "Wi-Fi on" : "Wi-Fi off";
+            var card = Card(adapter.Name, radio);
+            card.Children.Add(DeviceButton(adapter.SoftwareOn ? "Turn Wi-Fi off" : "Turn Wi-Fi on",
+                () => Queue(new("wifi-radio", adapter.Id, Enabled: !adapter.SoftwareOn), true),
+                adapter.RadioAvailable && adapter.HardwareOn));
             if (adapter.Message.Length != 0) card.Children.Add(Label(adapter.Message, 11, true));
-            foreach (var network in adapter.Networks)
+            var networks = NetworkPresentationPolicy.OrderedWifi(adapter.Networks);
+            var more = new StackPanel { Spacing = 8, Visibility = Visibility.Collapsed };
+            for (int i = 0; i < networks.Count; i++)
             {
-                card.Children.Add(Label(network.Name + $" · {network.Signal}%" + (network.Secured ? " · secured" : " · open") + (network.Connected ? " · connected" : ""), 12));
-                if (network.Connected) card.Children.Add(DeviceButton("Disconnect", () => Queue(new("wifi-disconnect", adapter.Id), true)));
-                else if (network.Profile.Length != 0) card.Children.Add(DeviceButton("Connect", () => Queue(new("wifi-connect", adapter.Id, network.Profile), true), adapter.SoftwareOn && adapter.HardwareOn));
-                else if (network.CanJoin) card.Children.Add(DeviceButton(network.Secured ? "Connect with password…" : "Connect to open network",
-                    () => { if (network.Secured) JoinEditor(card, adapter.Id, network); else Queue(new("wifi-join", adapter.Id, network.Id), true); }, adapter.SoftwareOn && adapter.HardwareOn));
+                var network = networks[i];
+                var entry = new StackPanel { Spacing = 4 };
+                var summary = Label(network.Name + $" · {network.Signal}%"
+                    + (network.Secured ? " · secured" : " · open")
+                    + (network.Connected ? " · connected" : ""), 12);
+                summary.TextTrimming = TextTrimming.CharacterEllipsis;
+                entry.Children.Add(summary);
+                var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
+                if (network.Connected)
+                    actions.Children.Add(DeviceButton("Disconnect",
+                        () => Queue(new("wifi-disconnect", adapter.Id), true)));
+                else if (network.Profile.Length != 0)
+                    actions.Children.Add(DeviceButton("Connect",
+                        () => Queue(new("wifi-connect", adapter.Id, network.Profile), true),
+                        adapter.SoftwareOn && adapter.HardwareOn));
+                else if (network.CanJoin)
+                    actions.Children.Add(DeviceButton(network.Secured ? "Join…" : "Connect",
+                        () =>
+                        {
+                            if (network.Secured) JoinEditor(card, adapter.Id, network);
+                            else Queue(new("wifi-join", adapter.Id, network.Id), true);
+                        }, adapter.SoftwareOn && adapter.HardwareOn));
                 if (network.CanForget)
                 {
-                    bool confirm = false; Button? forget = null;
-                    forget = DeviceButton("Forget Nexus connection", () => { if (confirm) Queue(new("wifi-forget", adapter.Id, network.Profile), true); else { confirm = true; forget!.Content = "Confirm forget"; } }); card.Children.Add(forget);
+                    bool confirm = false;
+                    Button? forget = null;
+                    forget = DeviceButton("Forget", () =>
+                    {
+                        if (confirm) Queue(new("wifi-forget", adapter.Id, network.Profile), true);
+                        else { confirm = true; forget!.Content = "Confirm forget"; }
+                    });
+                    actions.Children.Add(forget);
                 }
+                if (actions.Children.Count > 0) entry.Children.Add(actions);
+                if (i < NetworkPresentationPolicy.InitialWifiRows) card.Children.Add(entry);
+                else more.Children.Add(entry);
+            }
+            if (networks.Count == 0) card.Children.Add(Label("No visible Wi-Fi networks. Choose Scan to look again.", 12, true));
+            if (more.Children.Count > 0)
+            {
+                bool expanded = false;
+                Button? disclosure = null;
+                disclosure = ActionButton($"More networks ({more.Children.Count})", () =>
+                {
+                    expanded = !expanded;
+                    more.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
+                    disclosure!.Content = expanded ? "Show fewer networks"
+                        : $"More networks ({more.Children.Count})";
+                });
+                card.Children.Add(disclosure);
+                card.Children.Add(more);
             }
         }
         if (state.Message.Length != 0 && (state.Wifi.Length > 0 || state.Links.Length == 0))
             Card("Connection status", state.Message);
         var tools = Card("Network tools");
-        tools.Children.Add(DeviceButton("Windows network settings", () => _environment.OpenWindowsTool("network-settings")));
-        tools.Children.Add(DeviceButton("Network adapters", () => _environment.OpenWindowsTool("network-adapters")));
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
+        row.Children.Add(DeviceButton("Windows settings", () => _environment.OpenWindowsTool("network-settings")));
+        row.Children.Add(DeviceButton("Adapters", () => _environment.OpenWindowsTool("network-adapters")));
+        tools.Children.Add(row);
     }
     private void JoinEditor(StackPanel card, string adapter, WifiNetwork network)
     {

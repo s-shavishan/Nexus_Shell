@@ -1,3 +1,4 @@
+// නමෝ බුද්ධාය 🤍
 using Microsoft.UI.Xaml.Controls;
 using Nexus.Shell.Desktop;
 using Nexus.Shell.Services;
@@ -24,6 +25,7 @@ internal sealed class DesktopMenus(DesktopEnvironment environment)
         menu.Items.Add(ShellMenu.Action("Open desktop folder", () => environment.ShowFiles(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory)), "\uED25"));
         var tools = ShellMenu.Group("Tools", "\uE713");
         tools.Items.Add(Item("Search…", environment.ShowSearch)); tools.Items.Add(Item("File jobs…", () => environment.ShowUtility("File jobs")));
+        tools.Items.Add(Item("System Monitor…", () => environment.ShowUtility("System Monitor")));
         tools.Items.Add(Item("Places…", environment.ShowPlaces)); tools.Items.Add(Item("Windows tools…", environment.ShowWindowsTools)); tools.Items.Add(Item("Clipboard shelf…", environment.ShowClipboardShelf));
         menu.Items.Add(tools);
         menu.Items.Add(ShellMenu.Action("Personalize…", () => environment.ShowControls("personalize"), "\uE790"));
@@ -35,6 +37,7 @@ internal sealed class DesktopMenus(DesktopEnvironment environment)
         menu.Items.Add(ShellMenu.Action("Nexus Controls…", () => environment.ShowControls(), "\uE713"));
         menu.Items.Add(new MenuFlyoutSeparator());
         var tools = ShellMenu.Group("Tools", "\uE8A5"); tools.Items.Add(Item("File jobs…", () => environment.ShowUtility("File jobs"))); tools.Items.Add(Item("Windows tools & keep awake…", environment.ShowWindowsTools)); tools.Items.Add(Item("Session status…", environment.ShowSessionStatus)); tools.Items.Add(Item("Desktop shortcuts…", environment.ShowDesktopGuide)); menu.Items.Add(tools);
+        tools.Items.Insert(1, Item("System Monitor…", () => environment.ShowUtility("System Monitor")));
         menu.Items.Add(ShellMenu.Action("Launchpad…", () => environment.ShowMenu(), "\uE80A")); menu.Items.Add(ShellMenu.Action("Search…", environment.ShowSearch, "\uE721"));
         menu.Items.Add(new MenuFlyoutSeparator()); menu.Items.Add(ShellMenu.Action("Lock screen", environment.LockScreen, "\uE72E"));
         var session = ShellMenu.Group("Session"); session.Items.Add(Item(environment.IsManagedDesktop ? "Return to Windows…" : "Exit Nexus", environment.RequestExit)); session.Items.Add(Item("Startup & recovery…", () => environment.ShowControls("startup"))); menu.Items.Add(session); return menu;
@@ -144,6 +147,7 @@ internal sealed class DesktopMenus(DesktopEnvironment environment)
         var menu = ShellMenu.Create(); var calendar = environment.WindowsRoute(WindowsShellSurface.Calendar);
         menu.Items.Add(ShellMenu.Action("Open Windows calendar", () => environment.OpenWindowsSurface(WindowsShellSurface.Calendar), "\uE787", calendar.Shortcut));
         menu.Items.Add(Item("Date & time settings…", () => environment.RunWindowsTool("date-time")));
+        menu.Items.Add(Item("Windows connection…", () => environment.ShowControls("core", "windows")));
         var clock = ShellMenu.Toggle("24-hour time", environment.Session.State.Clock24Hour, () => { environment.Session.State.Clock24Hour = !environment.Session.State.Clock24Hour; environment.SaveState(); }); menu.Items.Add(clock); menu.Opening += (_, _) => clock.IsChecked = environment.Session.State.Clock24Hour; return menu;
     }
     internal MenuFlyout NotificationsMenu()
@@ -151,6 +155,7 @@ internal sealed class DesktopMenus(DesktopEnvironment environment)
         var menu = ShellMenu.Create(); var route = environment.WindowsRoute(WindowsShellSurface.Notifications);
         menu.Items.Add(ShellMenu.Action(route.Name, () => environment.OpenWindowsSurface(WindowsShellSurface.Notifications), "\uE7E7", route.Shortcut));
         menu.Items.Add(Item("Windows notification settings…", () => environment.RunWindowsTool("notifications")));
+        menu.Items.Add(Item("Windows connection…", () => environment.ShowControls("core", "windows")));
         menu.Items.Add(new MenuFlyoutSeparator()); menu.Items.Add(Item("Nexus activity…", environment.ShowNotifications)); return menu;
     }
     internal MenuFlyout MenuBarMenu()

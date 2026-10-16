@@ -1,3 +1,4 @@
+// නමෝ බුද්ධාය 🤍
 using Nexus.Runtime;
 using Nexus.Shell.Services;
 using System.ComponentModel;

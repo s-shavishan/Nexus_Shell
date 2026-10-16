@@ -1,0 +1,19 @@
+# නමෝ බුද්ධාය 🤍
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{cs,csproj,xaml,ps1}]
+indent_style = space
+indent_size = 4
+
+[*.{bat,sln}]
+end_of_line = crlf
+
+[*.cs]
+dotnet_sort_system_directives_first = true
+csharp_style_namespace_declarations = file_scoped:suggestion

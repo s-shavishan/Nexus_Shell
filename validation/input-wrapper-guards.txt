@@ -1,1 +1,0 @@
-PASS: production input wrapper refuses missing consent and preserves an existing report before any process launch; no Windows input executed.

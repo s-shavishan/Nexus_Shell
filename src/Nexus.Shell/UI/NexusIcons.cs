@@ -1,3 +1,4 @@
+// නමෝ බුද්ධාය 🤍
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Media;
@@ -39,7 +40,7 @@ public static class NexusIcons
     }
     public static string ForApp(AppEntry app) => app.Id switch
     {
-        "jobs" => "Jobs", "controls" or "sections" => "Controls", "files" => "Files", "settings" => "Settings", "terminal" => "Terminal", "calculator" => "Calculator", "notes" => "Note",
+        "monitor" => "Monitor", "jobs" => "Jobs", "controls" or "sections" => "Controls", "files" => "Files", "settings" => "Settings", "terminal" => "Terminal", "calculator" => "Calculator", "notes" => "Note",
         _ => app.Category switch
         { "Browser" => "Browser", "Development" => "Terminal", "Game" => "Game", "System" => "Settings", _ => "Apps" }
     };

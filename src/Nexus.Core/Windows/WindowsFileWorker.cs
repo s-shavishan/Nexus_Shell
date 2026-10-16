@@ -1,3 +1,4 @@
+// නමෝ බුද්ධාය 🤍
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -30,7 +31,7 @@ internal sealed class WindowsFileWorker
             if (core.HasExited || core.SessionId != own.SessionId || !string.Equals(core.MainModule?.FileName, Path.Combine(AppContext.BaseDirectory, "Nexus.Core.exe"), StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("The Windows file-action owner is invalid.");
             _ = core.Handle;
             string line = Console.ReadLine() ?? throw new InvalidDataException("The Windows file request is missing.");
-            if (line.Length > 32768) throw new InvalidDataException("The Windows file request is too large.");
+            if (line.Length > 768 * 1024) throw new InvalidDataException("The Windows file request is too large.");
             var request = WindowsFileActionCoordinator.Validate(JsonSerializer.Deserialize<WindowsFileAction>(line)!);
             if (request.OwnerProcessId <= 0 || GetWindowThreadProcessId(new IntPtr(request.Owner), out uint caller) == 0 || caller != request.OwnerProcessId) throw new InvalidOperationException("The source window closed or changed owners.");
             if (!File.Exists(request.Path) && !Directory.Exists(request.Path)) throw new FileNotFoundException("This item is no longer available.");
@@ -60,7 +61,11 @@ internal sealed class WindowsFileWorker
             _window = CreateWindowEx(0x00080080, className, "Windows file options", 0x80000000, _request.X, _request.Y, 1, 1, new IntPtr(_request.Owner), IntPtr.Zero, kind.Instance, IntPtr.Zero);
             if (_window == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
             SetLayeredWindowAttributes(_window, 0, 1, 2); ShowWindow(_window, 5); SetForegroundWindow(_window); SetTimer(_window, new UIntPtr(1), 250, IntPtr.Zero);
-            if (_request.Kind == "reveal")
+            if (_request.Kind == "recycle")
+            {
+                WindowsRecycleOperation.Run([_request.Path, .. _request.AdditionalPaths ?? []], _window, Admit);
+            }
+            else if (_request.Kind == "reveal")
             {
                 Marshal.ThrowExceptionForHR(SHParseDisplayName(_request.Path, IntPtr.Zero, out pidl, 0, out _));
                 Admit(); Marshal.ThrowExceptionForHR(SHOpenFolderAndSelectItems(pidl, 0, [], 0)); // Absolute single-item form selects it in its parent.

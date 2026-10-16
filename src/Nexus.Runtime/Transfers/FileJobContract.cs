@@ -1,16 +1,18 @@
+// නමෝ බුද්ධාය 🤍
 namespace Nexus.Runtime.Transfers;
 
-public enum FileJobKind { Copy, Move }
+public enum FileJobKind { Copy, Move, CreateZip, ExtractZip }
 public enum FileCollision { KeepBoth, Skip }
-public enum FileJobState { Queued, Planning, Running, Complete, Cancelled, Failed, Interrupted }
-public sealed record FileJobSpec(Guid Id, FileJobKind Kind, string[] Sources, string Destination, FileCollision Collision = FileCollision.KeepBoth, bool Verify = true);
+public enum FileJobState { Queued, Planning, Running, Complete, Cancelled, Failed, Interrupted, Pausing, Paused }
+public sealed record FileJobSpec(Guid Id, FileJobKind Kind, string[] Sources, string Destination, FileCollision Collision = FileCollision.KeepBoth, bool Verify = true, string OutputName = "");
 public sealed record FileJobSubmit(Guid Epoch, FileJobSpec Job);
 public sealed record FileJobControl(Guid Epoch, Guid JobId, string Action);
-public sealed record FileJobProgress(string Phase, string Current, long BytesCopied, long TotalBytes, int Completed, int Skipped, int TotalFiles);
+public sealed record FileJobProgress(string Phase, string Current, long BytesCopied, long TotalBytes, int Completed, int Skipped, int TotalFiles,
+    double BytesPerSecond = 0, double? SecondsRemaining = null);
 public sealed record FileJobRecord(FileJobSpec Job, FileJobState State, DateTimeOffset Created, string Detail, FileJobProgress Progress);
 public sealed record FileJobsSnapshot(Guid Epoch, long Revision, bool Paused, FileJobRecord[] Jobs, string Notice = "");
 public interface IFileTransferBackend
-{ Task RunAsync(FileJobSpec job, Action<FileJobProgress> progress, CancellationToken cancellation); }
+{ Task RunAsync(FileJobSpec job, Action<FileJobProgress> progress, FileTransferFlow flow, CancellationToken cancellation); }
 public interface IFileJobsJournal
 { FileJobRecord[] Read(); void Write(IReadOnlyList<FileJobRecord> jobs); string Notice { get; } }
 
@@ -18,6 +20,9 @@ public static class FileJobRules
 {
     public const int MaximumJobs = 24, MaximumSources = 24, MaximumEntries = 10000, MaximumDepth = 64;
     public static StringComparer Paths => OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+    public static bool Archive(FileJobKind kind) => kind is FileJobKind.CreateZip or FileJobKind.ExtractZip;
+    public static bool MeasuredPhase(string phase) => phase is "Copying" or "Compressing" or "Extracting";
+    public static string KindLabel(FileJobKind kind) => kind switch { FileJobKind.CreateZip => "Create ZIP", FileJobKind.ExtractZip => "Extract ZIP", _ => kind.ToString() };
     public static bool Terminal(FileJobState state) => state is FileJobState.Complete or FileJobState.Cancelled or FileJobState.Failed or FileJobState.Interrupted;
     public static string PathName(string? value)
     {
@@ -46,7 +51,7 @@ public static class FileJobRules
     public static FileJobSpec Validate(FileJobSpec job)
     {
         if (job is null || job.Id == Guid.Empty || !Enum.IsDefined(job.Kind) || !Enum.IsDefined(job.Collision) || job.Sources is null || job.Sources.Length is < 1 or > MaximumSources)
-            throw new RuntimeFailure("file-job", "Choose one to 24 sources and a valid copy or move operation.");
+            throw new RuntimeFailure("file-job", "Choose one to 24 sources and a valid file operation.");
         var sources = job.Sources.Select(PathName).Distinct(Paths).ToArray(); string destination = PathName(job.Destination);
         foreach (string source in sources)
         {
@@ -54,6 +59,17 @@ public static class FileJobRules
             if (Within(destination, source)) throw new RuntimeFailure("file-job", "The destination cannot be inside a selected source.");
             if (sources.Any(other => !Paths.Equals(source, other) && Within(source, other))) throw new RuntimeFailure("file-job", "Select the parent folder once instead of also selecting its contents.");
         }
-        return job with { Sources = sources, Destination = destination };
+        string outputName = job.OutputName ?? "";
+        if (Archive(job.Kind))
+        {
+            outputName = ArchiveJobRules.Leaf(outputName);
+            if (job.Kind == FileJobKind.CreateZip && !outputName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                throw new RuntimeFailure("file-archive", "Use a .zip extension for the archive name.");
+            if (job.Kind == FileJobKind.ExtractZip && (sources.Length != 1 || !Path.GetExtension(sources[0]).Equals(".zip", StringComparison.OrdinalIgnoreCase)))
+                throw new RuntimeFailure("file-archive", "Choose one ZIP file to extract.");
+            _ = PathName(Path.Combine(destination, outputName));
+        }
+        else if (outputName.Length != 0) throw new RuntimeFailure("file-job", "Output names apply only to archive jobs.");
+        return job with { Sources = sources, Destination = destination, OutputName = outputName };
     }
 }

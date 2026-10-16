@@ -1,3 +1,4 @@
+<!-- නමෝ බුද්ධාය 🤍 -->
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -13,9 +14,4 @@
     <ApplicationIcon>../Nexus.Shell/Assets/Nexus.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup><ProjectReference Include="../Nexus.Runtime/Nexus.Runtime.csproj" /></ItemGroup>
-  <ItemGroup>
-    <Compile Include="../Nexus.Shell/Services/AudioController.cs" Link="Settings/AudioController.cs" />
-    <Compile Include="../Nexus.Shell/Services/BrightnessController.cs" Link="Settings/BrightnessController.cs" />
-    <Compile Include="../Nexus.Shell/Services/BrightnessScale.cs" Link="Settings/BrightnessScale.cs" />
-  </ItemGroup>
 </Project>

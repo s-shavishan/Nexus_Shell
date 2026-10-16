@@ -1,0 +1,391 @@
+// නමෝ බුද්ධාය 🤍
+using Microsoft.UI;
+using Microsoft.UI.Windowing;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
+using Nexus.Shell.Interop;
+using Nexus.Shell.Services;
+using Nexus.Shell.UI;
+using Windows.System;
+
+namespace Nexus.Shell.Desktop;
+internal sealed class NotificationWindow : Window
+{
+    private readonly DesktopEnvironment _environment;
+    private readonly IntPtr _handle;
+    private readonly AppWindow _window;
+    private readonly Border _frame;
+    private readonly StackPanel _items = new()
+    {
+        Spacing = 12
+    };
+    private readonly TextBlock _title = new()
+    {
+        Text = "Nexus activity",
+        FontSize = 22,
+        FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+    };
+    private readonly TextBlock _subtitle = new()
+    {
+        Text = "Nexus alert history",
+        FontSize = 12
+    };
+    private readonly WindowChrome _chrome;
+    private readonly WindowMaterial _material = new();
+    private readonly SurfaceMotion _motion;
+    private readonly Button _clear, _undo, _read, _quiet;
+    private readonly Button _previous, _next;
+    private int _page;
+    private readonly TextBox _search = new()
+    {
+        PlaceholderText = "Search Nexus alerts"
+    };
+    private readonly Dictionary<string, Button> _filters = [];
+    private readonly DispatcherTimer _filterTimer = new()
+    {
+        Interval = TimeSpan.FromMilliseconds(100)
+    };
+    private IReadOnlyList<DesktopNotice> _shown = [];
+    private string _appearance = "";
+    private string _filter = "All";
+    private int _refreshQueued;
+    private bool _closed;
+    internal bool IsOpen { get; private set; }
+
+    internal NotificationWindow(DesktopEnvironment environment)
+    {
+        _environment = environment;
+        var root = new Grid
+        {
+            Padding = new Thickness(18),
+            RowSpacing = 13,
+            KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden
+        };
+        root.RowDefinitions.Add(new() { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new() { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new());
+        root.RowDefinitions.Add(new() { Height = GridLength.Auto });
+        var header = new Grid();
+        header.ColumnDefinitions.Add(new());
+        header.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
+        var titles = new StackPanel
+        {
+            Spacing = 5
+        };
+        titles.Children.Add(_title);
+        titles.Children.Add(_subtitle);
+        header.Children.Add(titles);
+        var close = ShellControls.IconButton("\uE8BB", "Close notifications", Hide);
+        Grid.SetColumn(close, 1);
+        header.Children.Add(close);
+        root.Children.Add(header);
+        var filters = new StackPanel
+        {
+            Spacing = 10
+        };
+        filters.Children.Add(_search);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_search, "Search Nexus alert history");
+        var tabs = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 5
+        };
+        foreach (string filter in new[]
+        {
+            "All",
+            "Unread",
+            "Issues",
+            "Snoozed"
+        }
+
+        )
+        {
+            var tab = Button(filter, () =>
+            {
+                _filter = filter;
+                _page = 0;
+                _appearance = "";
+                Refresh();
+            });
+            tabs.Children.Add(tab);
+            _filters.Add(filter, tab);
+        }
+
+        filters.Children.Add(new ScrollViewer { Content = tabs, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled });
+        Grid.SetRow(filters, 1);
+        root.Children.Add(filters);
+        _filterTimer.Tick += (_, _) =>
+        {
+            _filterTimer.Stop();
+            Refresh();
+        };
+        _search.TextChanged += (_, _) =>
+        {
+            _page = 0;
+            _filterTimer.Stop();
+            if (IsOpen)
+                _filterTimer.Start();
+        };
+        var scroll = new ScrollViewer
+        {
+            Content = _items,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+        };
+        Grid.SetRow(scroll, 2);
+        root.Children.Add(scroll);
+        var footer = new StackPanel
+        {
+            Spacing = 7
+        };
+        var edits = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 5
+        };
+        var pages = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 6
+        };
+        _previous = Button("Previous", () =>
+        {
+            _page--;
+            Refresh();
+        });
+        _next = Button("Next", () =>
+        {
+            _page++;
+            Refresh();
+        });
+        pages.Children.Add(_previous);
+        pages.Children.Add(_next);
+        footer.Children.Add(pages);
+        _read = Button("Mark shown read", () => environment.Notifications.MarkRead(_shown.Select(i => i.Id)));
+        edits.Children.Add(_read);
+        _undo = Button("Undo dismiss", environment.Notifications.UndoDismiss);
+        edits.Children.Add(_undo);
+        _clear = Button("Clear all", environment.Notifications.Clear);
+        edits.Children.Add(_clear);
+        footer.Children.Add(new ScrollViewer { Content = edits, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled });
+        _quiet = Button("Quiet alerts", () =>
+        {
+            environment.Session.State.QuietNotifications = !environment.Session.State.QuietNotifications;
+            environment.SaveState();
+            Refresh();
+        });
+        footer.Children.Add(_quiet);
+        footer.Children.Add(new TextBlock { Text = "Nexus alerts only. Windows app notifications stay with Windows.", FontSize = 11, TextWrapping = TextWrapping.Wrap });
+        Grid.SetRow(footer, 3);
+        root.Children.Add(footer);
+        _frame = new Border
+        {
+            Child = root,
+            CornerRadius = new CornerRadius(MidnightGlassMetrics.FrameRadius),
+            BorderThickness = new Thickness(1)
+        };
+        Content = _frame;
+        _handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        _window = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(_handle));
+        _window.Title = "Nexus notifications";
+        WindowSwitcherPolicy.Request(() => _window.IsShownInSwitchers = false, error => Log.Write("Notification switcher fallback", error));
+        if (_window.Presenter is OverlappedPresenter presenter)
+        {
+            presenter.SetBorderAndTitleBar(false, false);
+            presenter.IsResizable = presenter.IsMinimizable = presenter.IsMaximizable = false;
+        }
+
+        ShellLayerInterop.ToolWindow(_handle);
+        _chrome = new(_handle, closeRequested: Hide);
+        _chrome.SetCorners(environment.Theme.HighContrast, MidnightGlassMetrics.FrameRadius);
+        _motion = new(_frame, () => environment.Theme.Animations && !environment.Theme.HighContrast && environment.Session.State.SurfaceAnimations && !environment.Session.State.ReducedEffects);
+        environment.Notifications.Changed += QueueRefresh;
+        var escape = new KeyboardAccelerator
+        {
+            Key = VirtualKey.Escape
+        };
+        escape.Invoked += (_, e) =>
+        {
+            Hide();
+            e.Handled = true;
+        };
+        root.KeyboardAccelerators.Add(escape);
+        Activated += (_, e) =>
+        {
+            if (e.WindowActivationState == WindowActivationState.Deactivated)
+                Hide();
+        };
+        Closed += (_, _) =>
+        {
+            _closed = true;
+            IsOpen = false;
+            _filterTimer.Stop();
+            environment.Notifications.Changed -= QueueRefresh;
+            _chrome.Dispose();
+            _motion.Dispose();
+            environment.NotificationClosed(this);
+        };
+    }
+
+    private static Button Button(string label, Action action)
+    {
+        var button = new Button
+        {
+            Content = label,
+            Padding = new Thickness(9, 6, 9, 6),
+            Style = (Style)Application.Current.Resources["QuietButton"]
+        };
+        button.Click += (_, _) => action();
+        return button;
+    }
+
+    private void QueueRefresh()
+    {
+        if (_closed || !IsOpen || Interlocked.Exchange(ref _refreshQueued, 1) != 0)
+            return;
+        if (!DispatcherQueue.TryEnqueue(() =>
+        {
+            Interlocked.Exchange(ref _refreshQueued, 0);
+            Refresh();
+        }))
+            Interlocked.Exchange(ref _refreshQueued, 0);
+    }
+
+    private void Refresh()
+    {
+        if (_closed || !IsOpen)
+            return;
+        var theme = _environment.Theme;
+        var matching = _environment.Notifications.Query(_search.Text, _filter);
+        int pages = Math.Max(1, (matching.Count + 19) / 20);
+        _page = Math.Clamp(_page, 0, pages - 1);
+        var notices = matching.Skip(_page * 20).Take(20).ToArray();
+        _previous.IsEnabled = _page > 0;
+        _next.IsEnabled = _page + 1 < pages;
+        string appearance = theme.Palette.Name + "|" + theme.HighContrast + "|" + theme.Simple + "|" + _environment.Session.State.NativeGlass + "|" + _environment.Session.State.GlassStyle + "|" + _filter + "|" + DateTime.Now.Date;
+        foreach (var(filter, button)in _filters)
+            button.Background = theme.Brush(filter == _filter ? "NexusSelection" : "NexusInput");
+        _undo.IsEnabled = _environment.Notifications.CanUndoDismiss;
+        _read.IsEnabled = notices.Any(n => !n.Read);
+        _quiet.Content = _environment.Session.State.QuietNotifications ? "Quiet alerts: on · resume" : "Quiet alerts: off · pause";
+        _subtitle.Text = matching.Count == 0 ? "A little quieter here." : matching.Count + " matching alerts · Page " + (_page + 1) + " of " + pages;
+        _clear.IsEnabled = _environment.Notifications.Items.Count != 0;
+        if (_appearance == appearance && _shown.SequenceEqual(notices))
+            return;
+        _appearance = appearance;
+        _shown = notices;
+        _items.Children.Clear();
+        if (notices.Length == 0)
+        {
+            var empty = new StackPanel
+            {
+                Spacing = 15,
+                Margin = new Thickness(10, 65, 10, 10),
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+            empty.Children.Add(ShellControls.Badge("\uE73E", theme, 54));
+            empty.Children.Add(new TextBlock { Text = "Nothing to show here", FontSize = 18, Foreground = theme.Brush("NexusText"), TextAlignment = TextAlignment.Center });
+            empty.Children.Add(new TextBlock { Text = "Try another filter or search.\nNexus alerts and recovery messages appear here.", FontSize = 12, Foreground = theme.Brush("NexusMuted"), TextAlignment = TextAlignment.Center });
+            _items.Children.Add(empty);
+        }
+
+        string group = "";
+        var now = DateTimeOffset.Now;
+        foreach (var notice in notices)
+        {
+            string next = DesktopPresentation.AlertGroup(notice.Created, now);
+            if (next != group)
+            {
+                group = next;
+                _items.Children.Add(new TextBlock { Text = group, FontSize = 11, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Foreground = theme.Brush("NexusMuted"), Margin = new Thickness(3, 8, 0, 0) });
+            }
+
+            var body = new StackPanel
+            {
+                Spacing = 9
+            };
+            var row = new Grid
+            {
+                ColumnSpacing = 9
+            };
+            row.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
+            row.ColumnDefinitions.Add(new());
+            row.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
+            row.Children.Add(ShellControls.Badge(notice.Kind == NoticeKind.Error ? "\uEA39" : notice.Kind == NoticeKind.Warning ? "\uE7BA" : "\uE946", theme, 27));
+            var title = new TextBlock
+            {
+                Text = notice.Title,
+                FontSize = 13,
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                Foreground = theme.Brush("NexusText"),
+                TextWrapping = TextWrapping.Wrap,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            Grid.SetColumn(title, 1);
+            row.Children.Add(title);
+            var dismiss = ShellControls.IconButton("\uE8BB", "Dismiss " + notice.Title, () => _environment.Notifications.Dismiss(notice.Id));
+            Grid.SetColumn(dismiss, 2);
+            row.Children.Add(dismiss);
+            body.Children.Add(row);
+            body.Children.Add(new TextBlock { Text = notice.Message, FontSize = 12, TextWrapping = TextWrapping.Wrap, Foreground = theme.Brush("NexusText") });
+            body.Children.Add(new TextBlock { Text = notice.Created.ToLocalTime().ToString("ddd, HH:mm") + " · " + notice.Kind + (notice.Read ? " · Read" : " · Unread") + (notice.SnoozedUntil is { } until ? " · Returns " + until.ToLocalTime().ToString("HH:mm") : ""), FontSize = 11, TextWrapping = TextWrapping.Wrap, Foreground = theme.Brush("NexusMuted") });
+            var actions = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Spacing = 5
+            };
+            if (_filter == "Snoozed")
+                actions.Children.Add(Button("Bring back now", () => _environment.Notifications.Wake(notice.Id)));
+            else
+                actions.Children.Add(Button("Snooze 15 min", () => _environment.Notifications.Snooze(notice.Id, TimeSpan.FromMinutes(15))));
+            if (!notice.Read)
+                actions.Children.Add(Button("Mark read", () => _environment.Notifications.MarkRead([notice.Id])));
+            body.Children.Add(actions);
+            _items.Children.Add(new Border { Child = body, Padding = new Thickness(16, 15, 16, 15), CornerRadius = new CornerRadius(theme.HighContrast ? 0 : MidnightGlassMetrics.CardRadius), Background = notice.Read ? theme.Material("Card", _environment.Session.State.NativeGlass) : theme.Brush("NexusSidebar"), BorderBrush = notice.Read ? theme.Edge : theme.Brush("NexusAccent"), BorderThickness = new Thickness(notice.Read ? 1 : 1.5) });
+        }
+    }
+
+    internal void Show()
+    {
+        if (_closed)
+            return;
+        ApplyAppearance();
+        Position();
+        _frame.IsHitTestVisible = true;
+        IsOpen = true;
+        Refresh();
+        Activate();
+        _motion.Open();
+    }
+
+    internal void Hide()
+    {
+        if (_closed || !IsOpen)
+            return;
+        IsOpen = false;
+        _filterTimer.Stop();
+        _frame.IsHitTestVisible = false;
+        _window.Hide();
+        _motion.Hide();
+    }
+
+    internal void Position()
+    {
+        var rect = DesktopLayout.PanelBounds(ShellLayerInterop.Monitor(_environment.Desktop.Handle).Monitor.Bounds, ShellLayerInterop.Scale(_handle), 440, 700);
+        ShellLayerInterop.SetWindowPos(_handle, ShellLayerInterop.Topmost, rect.X, rect.Y, rect.Width, rect.Height, 0x0010);
+    }
+
+    internal void ApplyAppearance()
+    {
+        _material.Apply(this, _frame, _environment);
+        _frame.BorderBrush = _environment.Theme.Edge;
+        _frame.CornerRadius = new CornerRadius(_environment.Theme.HighContrast ? 0 : MidnightGlassMetrics.FrameRadius);
+        _title.Foreground = _environment.Theme.Brush("NexusText");
+        _subtitle.Foreground = _environment.Theme.Brush("NexusMuted");
+        _chrome.SetCorners(_environment.Theme.HighContrast, MidnightGlassMetrics.FrameRadius);
+        _motion.Refresh();
+        if (IsOpen)
+            Refresh();
+    }
+}

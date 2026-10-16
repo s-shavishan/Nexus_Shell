@@ -1,3 +1,4 @@
+// නමෝ බුද්ධාය 🤍
 using Microsoft.UI.Xaml.Controls;
 using Nexus.Shell.Services;
 
@@ -9,7 +10,7 @@ namespace Nexus.Shell.UI.Menus;
 internal enum FileContextCommand
 {
     Open, Edit, OpenWith, CopyTo, MoveTo, Rename, CopyPath,
-    Properties, Reveal, WindowsOptions, PinFolder, Undo
+    Properties, Reveal, WindowsOptions, PinFolder, Undo, Copy, Cut, Recycle, CreateZip, ExtractZip
 }
 
 internal static class TypedFileMenu
@@ -71,10 +72,15 @@ internal static class TypedFileMenu
             if (transfer.Items.Count > 0) menu.Items.Add(transfer);
         }
         var organize = ShellMenu.Group("Organize", "\uE8A9");
+        AddChild(organize, "Copy", FileContextCommand.Copy, "\uE8C8", "Ctrl+C");
+        AddChild(organize, "Cut", FileContextCommand.Cut, "\uE8C6", "Ctrl+X");
+        AddChild(organize, "Create ZIP…", FileContextCommand.CreateZip, "\uF012");
+        AddChild(organize, "Extract ZIP…", FileContextCommand.ExtractZip, "\uE8B7");
         if (!multiple) AddChild(organize, "Rename…", FileContextCommand.Rename, "\uE8AC", "F2");
         AddChild(organize, multiple ? "Copy paths" : "Copy path", FileContextCommand.CopyPath, "\uE8C8");
         if (!multiple && targets[0].IsFolder) AddChild(organize, "Pin to Places", FileContextCommand.PinFolder, "\uE718");
         AddChild(organize, undoLabel, FileContextCommand.Undo, "\uE7A7", "Ctrl+Z");
+        AddChild(organize, "Move to Recycle Bin…", FileContextCommand.Recycle, "\uE74D", "Delete");
         if (organize.Items.Count > 0) menu.Items.Add(organize);
 
         if (!multiple && Find(FileContextCommand.Properties) is not null)

@@ -1,0 +1,76 @@
+// නමෝ බුද්ධාය 🤍
+using Nexus.Runtime.Transfers;
+namespace Nexus.Runtime;
+
+public sealed class CoreRouter(CoreStateRepository state, FilesCoordinator files, SystemSettingsCoordinator? settings = null, ControlCenterCoordinator? panels = null, SearchCoordinator? search = null, FileJobCoordinator? jobs = null, WindowsFileActionCoordinator? windowsFiles = null)
+{
+    private int _stop;
+    public bool StopRequested => Volatile.Read(ref _stop) != 0;
+    public async Task<RuntimeResponse> DispatchAsync(RuntimeRequest request, CancellationToken cancellation)
+    {
+        RuntimeProtocol.Validate(request);
+        cancellation.ThrowIfCancellationRequested();
+        switch (request.Operation)
+        {
+            case RuntimeOperations.Health:
+                var health = files.Health();
+                var shell = windowsFiles?.Health() ?? (Count: 0, IssueId: Guid.Empty, Issue: "");
+                bool shellIssue = shell.IssueId != Guid.Empty;
+                Guid issueId = health.IssueId; string issue = health.Issue;
+                if (shellIssue)
+                {
+                    byte[] mixed = shell.IssueId.ToByteArray(), other = health.IssueId.ToByteArray();
+                    for (int i = 0; i < mixed.Length; i++) mixed[i] ^= other[i]; issueId = new Guid(mixed);
+                    issue = (issue.Length > 0 ? issue + "\n" : "") + shell.Issue;
+                }
+                return RuntimeProtocol.Success(request.Id, new RuntimeHealth(Environment.ProcessId, state.Revision, health.Count, issueId, issue, shell.Count));
+            case RuntimeOperations.Stop:
+                Interlocked.Exchange(ref _stop, 1); return RuntimeProtocol.Success(request.Id, new { Stopping = true });
+            case RuntimeOperations.ReadState: return RuntimeProtocol.Success(request.Id, state.Read());
+            case RuntimeOperations.CommitState:
+                // Invalid data is rejected before the atomic write. Transport or
+                // filesystem failures remain uncertain and must be reconciled.
+                try { return RuntimeProtocol.Success(request.Id, state.Commit(RuntimeProtocol.Payload<StateCommit>(request.Payload))); }
+                catch (Exception error) when (error is InvalidDataException or System.Text.Json.JsonException)
+                { throw new RuntimeFailure("state-rejected", error.Message); }
+            case RuntimeOperations.OpenFiles:
+                if (request.Role == "files" && RuntimeProtocol.Payload<FilesLaunch>(request.Payload).Request.Kind != Nexus.Shell.Services.FileSelectionKind.Folder)
+                    throw new RuntimeFailure("file-picker", "Files can open only a destination-folder picker for transfers.");
+                return RuntimeProtocol.Success(request.Id, await files.OpenAsync(request.Id, RuntimeProtocol.Payload<FilesLaunch>(request.Payload), cancellation).ConfigureAwait(false));
+            case RuntimeOperations.FileJobs: return RuntimeProtocol.Success(request.Id, JobService().Snapshot());
+            case RuntimeOperations.WindowsFileAction: return RuntimeProtocol.Success(request.Id, WindowsFileService().Submit(RuntimeProtocol.Payload<WindowsFileAction>(request.Payload), request.ProcessId));
+            case RuntimeOperations.WindowsFileStatus: return RuntimeProtocol.Success(request.Id, WindowsFileService().Status(RuntimeProtocol.Payload<WindowsFileStatusRequest>(request.Payload).Id, request.ProcessId));
+            case RuntimeOperations.SubmitFileJob: return RuntimeProtocol.Success(request.Id, JobService().Submit(RuntimeProtocol.Payload<FileJobSubmit>(request.Payload)));
+            case RuntimeOperations.ControlFileJob: return RuntimeProtocol.Success(request.Id, JobService().Control(RuntimeProtocol.Payload<FileJobControl>(request.Payload)));
+            case RuntimeOperations.Settings:
+                if (settings is null) throw new RuntimeFailure("settings-unavailable", "This Core has no settings service. Keep the complete Nexus build together.");
+                var settingsRequest = RuntimeProtocol.Payload<SettingsRequest>(request.Payload);
+                if (request.Role == "controlcenter") settingsRequest = settingsRequest with { Window = PanelService().DisplayWindow(request.ProcessId) };
+                return RuntimeProtocol.Success(request.Id, await settings.ExecuteAsync(settingsRequest, cancellation).ConfigureAwait(false));
+            case RuntimeOperations.Search:
+                return RuntimeProtocol.Success(request.Id, search is null ? SearchReply.Empty(SearchStatus.Unavailable)
+                    : await search.QueryAsync(RuntimeProtocol.Payload<SearchRequest>(request.Payload), cancellation).ConfigureAwait(false));
+            case RuntimeOperations.PanelSync: return RuntimeProtocol.Success(request.Id, PanelService().Sync(RuntimeProtocol.Payload<PanelSync>(request.Payload)));
+            case RuntimeOperations.PanelPulse: return RuntimeProtocol.Success(request.Id, PanelService().Pulse(request.ProcessId));
+            case RuntimeOperations.PanelWait: return RuntimeProtocol.Success(request.Id, await PanelService().WaitAsync(request.ProcessId, RuntimeProtocol.Payload<PanelWait>(request.Payload).Revision, cancellation).ConfigureAwait(false));
+            case RuntimeOperations.PanelReady: return RuntimeProtocol.Success(request.Id, PanelService().Ready(request.ProcessId, RuntimeProtocol.Payload<PanelReady>(request.Payload)));
+            case RuntimeOperations.PanelHide: return RuntimeProtocol.Success(request.Id, PanelService().Hide(request.ProcessId, RuntimeProtocol.Payload<PanelHidden>(request.Payload).Sequence));
+            case RuntimeOperations.PanelAction: return RuntimeProtocol.Success(request.Id, await PanelService().ActionAsync(request.ProcessId, RuntimeProtocol.Payload<PanelAction>(request.Payload), cancellation).ConfigureAwait(false));
+            case RuntimeOperations.Work: return RuntimeProtocol.Success(request.Id, files.Work(request.ProcessId));
+            case RuntimeOperations.Next:
+                // Wrap nullable commands in an object so every reply has an object body.
+                return RuntimeProtocol.Success(request.Id, new FilesNext(await files.NextAsync(request.ProcessId, cancellation).ConfigureAwait(false)));
+            case RuntimeOperations.Ready:
+                files.Ready(request.ProcessId, RuntimeProtocol.Payload<FilesReady>(request.Payload)); return RuntimeProtocol.Success(request.Id, new { Ready = true });
+            case RuntimeOperations.Complete:
+                files.Complete(request.ProcessId, RuntimeProtocol.Payload<FilesCompletion>(request.Payload)); return RuntimeProtocol.Success(request.Id, new { Completed = true });
+            case RuntimeOperations.Pulse:
+                files.Pulse(request.ProcessId); return RuntimeProtocol.Success(request.Id, state.Appearance());
+            default: throw new RuntimeFailure("operation", "This operation is unavailable.");
+        }
+    }
+    private ControlCenterCoordinator PanelService() => panels ?? throw new RuntimeFailure("panel-unavailable", "This Core has no panel supervisor. Keep the complete build together.");
+    private FileJobCoordinator JobService() => jobs ?? throw new RuntimeFailure("file-jobs", "This Core has no File Jobs service. Keep the complete build together.");
+    private WindowsFileActionCoordinator WindowsFileService() => windowsFiles ?? throw new RuntimeFailure("windows-file", "This Core has no Windows file-action service. Keep the complete build together.");
+}
+public sealed record FilesNext(FilesCommand? Command);
