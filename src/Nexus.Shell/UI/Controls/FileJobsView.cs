@@ -17,7 +17,9 @@ internal sealed class FileJobsView : Grid
     private readonly List<string> _sources = [];
     private readonly StackPanel _sourceRows = new() { Spacing = 5 }, _jobs = new() { Spacing = 10 };
     private readonly TextBox _destination = new() { Header = "Destination folder", MaxLength = 4096 };
-    private readonly ComboBox _kind = new() { Header = "Operation", ItemsSource = new[] { "Copy", "Move" }, SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch };
+    private readonly ComboBox _kind = new() { Header = "Operation", ItemsSource = new[] { "Copy", "Move", "Create ZIP", "Extract ZIP" }, SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch };
+    private readonly TextBox _outputName = new() { Header = "Output name", MaxLength = 240, Visibility = Visibility.Collapsed };
+    private string _suggestedName = "";
     private readonly ComboBox _collision = new() { Header = "When a name exists", ItemsSource = new[] { "Keep both", "Skip existing" }, SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch };
     private readonly CheckBox _verify = new() { Content = "Verify copied contents with SHA-256", IsChecked = true };
     private readonly TextBlock _status = new() { Text = "Choose sources and a destination. Existing items are never overwritten.", FontSize = 12, TextWrapping = TextWrapping.Wrap };
@@ -37,7 +39,7 @@ internal sealed class FileJobsView : Grid
         RowDefinitions.Add(new() { Height = GridLength.Auto }); RowDefinitions.Add(new()); RowDefinitions.Add(new() { Height = GridLength.Auto });
         var intro = new StackPanel { Spacing = 5 };
         intro.Children.Add(new TextBlock { Text = "Your files. Your pace.", FontSize = 28, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
-        intro.Children.Add(new TextBlock { Text = "A single queue for copying and moving. Jobs continue when this window closes; closing Nexus stops them.", FontSize = 12, TextWrapping = TextWrapping.Wrap }); Children.Add(intro);
+        intro.Children.Add(new TextBlock { Text = "Copy, move, create ZIPs and extract archives in one queue. Jobs continue when this window closes; closing Nexus stops them.", FontSize = 12, TextWrapping = TextWrapping.Wrap }); Children.Add(intro);
         var form = new Grid { RowSpacing = 12, Padding = new Thickness(16) }; form.RowDefinitions.Add(new()); form.RowDefinitions.Add(new() { Height = GridLength.Auto });
         var fields = new StackPanel { Spacing = 12 }; fields.Children.Add(new TextBlock { Text = "NEW TRANSFER", FontSize = 12, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
         var select = new Grid { ColumnSpacing = 5 }; for (int i = 0; i < 3; i++) select.ColumnDefinitions.Add(new());
@@ -47,7 +49,7 @@ internal sealed class FileJobsView : Grid
         var destination = new Grid { ColumnSpacing = 6 }; destination.ColumnDefinitions.Add(new()); destination.ColumnDefinitions.Add(new() { Width = GridLength.Auto }); destination.Children.Add(_destination);
         var browse = Button("Choose…", async () => { var picked = await environment.PickAsync(new(FileSelectionKind.Folder, "Choose destination folder"), _life.Token); if (!_released && picked.Count > 0) _destination.Text = picked[0]; });
         browse.VerticalAlignment = VerticalAlignment.Bottom; Grid.SetColumn(browse, 1); destination.Children.Add(browse); _formActions.Add(browse); fields.Children.Add(destination);
-        fields.Children.Add(_kind); fields.Children.Add(_collision); fields.Children.Add(_verify);
+        fields.Children.Add(_kind); fields.Children.Add(_outputName); fields.Children.Add(_collision); fields.Children.Add(_verify);
         fields.Children.Add(new TextBlock { Text = "Folder moves use a same-drive rename. To transfer a folder across drives, choose Copy. Links, encrypted and offline items require their original Windows/provider tools.", FontSize = 11, TextWrapping = TextWrapping.Wrap });
         form.Children.Add(new ScrollViewer { Content = fields, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
         _submit = Button("Add to queue", SubmitAsync); Grid.SetRow(_submit, 1); form.Children.Add(_submit); _form = new Border { Child = form, BorderThickness = new Thickness(1) }; _body.Children.Add(_form);
@@ -59,7 +61,8 @@ internal sealed class FileJobsView : Grid
         _queue = new Border { Child = queue, BorderThickness = new Thickness(1) }; _body.Children.Add(_queue); Grid.SetRow(_body, 1); Children.Add(_body);
         Grid.SetRow(_status, 2); Children.Add(_status); AutomationProperties.SetLiveSetting(_status, Microsoft.UI.Xaml.Automation.Peers.AutomationLiveSetting.Polite);
         _poll.Tick += async (_, _) => await RefreshAsync(); SizeChanged += (_, _) => Layout(); RenderSources(); Layout(); ApplyAppearance();
-        if (validation) { _snapshot = new(Guid.NewGuid(), 1, false, [new(new(Guid.NewGuid(), FileJobKind.Copy, [@"C:\Example\Notes.txt"], @"C:\Destination"), FileJobState.Running, DateTimeOffset.UtcNow, "Copying", new("Copying", "Notes.txt", 1024, 8192, 0, 0, 1, 2048, 3.5))]); RenderJobs(); }
+        _kind.SelectionChanged += (_, _) => UpdateOperation(); UpdateOperation();
+        if (validation) { _kind.SelectedIndex = 2; _snapshot = new(Guid.NewGuid(), 1, false, [new(new(Guid.NewGuid(), FileJobKind.CreateZip, [@"C:\Example\Notes.txt"], @"C:\Destination", OutputName: "Notes.zip"), FileJobState.Running, DateTimeOffset.UtcNow, "Compressing", new("Compressing", "Notes.txt", 1024, 8192, 0, 0, 1, 2048, 3.5))]); RenderJobs(); }
     }
     private Button Button(string name, Func<Task> action)
     {
@@ -94,13 +97,28 @@ internal sealed class FileJobsView : Grid
             var remove = Button("×", () => { _sources.Remove(source); RenderSources(); return Task.CompletedTask; }); AutomationProperties.SetName(remove, "Remove " + Path.GetFileName(source) + " from selection");
             _sourceActions.Add(remove); Grid.SetColumn(remove, 1); row.Children.Add(remove); _sourceRows.Children.Add(row);
         }
-        UpdateActions();
+        UpdateOperation(); UpdateActions();
+    }
+    private void UpdateOperation()
+    {
+        var kind = (FileJobKind)_kind.SelectedIndex; bool archive = FileJobRules.Archive(kind);
+        _outputName.Visibility = archive ? Visibility.Visible : Visibility.Collapsed;
+        _outputName.Header = kind == FileJobKind.CreateZip ? "Archive name (.zip)" : "New folder name";
+        if (archive)
+        {
+            string next = ArchiveJobRules.SuggestedName(_sources, kind);
+            if (string.IsNullOrWhiteSpace(_outputName.Text) || _outputName.Text == _suggestedName) _outputName.Text = next;
+            _suggestedName = next;
+        }
+        _verify.Content = kind == FileJobKind.ExtractZip ? "Verify extracted contents with SHA-256"
+            : kind == FileJobKind.CreateZip ? "Verify ZIP contents with SHA-256" : "Verify copied contents with SHA-256";
     }
     private async Task SubmitAsync()
     {
         bool pending = _pendingSubmission is not null; await RefreshAsync(); if (_released || _snapshot is null || pending && _pendingSubmission is null) return;
         if (_pendingSubmission is not null && _pendingEpoch != _snapshot.Epoch) throw new InvalidOperationException("Core restarted and this submission is absent from retained history. Review the destination, then use Clear form before creating another job.");
-        _pendingSubmission ??= FileJobRules.Validate(new(Guid.NewGuid(), (FileJobKind)_kind.SelectedIndex, _sources.ToArray(), _destination.Text.Trim(), (FileCollision)_collision.SelectedIndex, _verify.IsChecked == true));
+        _pendingSubmission ??= FileJobRules.Validate(new(Guid.NewGuid(), (FileJobKind)_kind.SelectedIndex, _sources.ToArray(), _destination.Text.Trim(), (FileCollision)_collision.SelectedIndex, _verify.IsChecked == true,
+            FileJobRules.Archive((FileJobKind)_kind.SelectedIndex) ? _outputName.Text : ""));
         _pendingEpoch = _snapshot.Epoch;
         _snapshot = await _environment.FileJobsAsync(RuntimeOperations.SubmitFileJob, new FileJobSubmit(_snapshot.Epoch, _pendingSubmission), _life.Token);
         if (_released) return; _pendingSubmission = null; _sources.Clear(); RenderSources(); RenderJobs(); _status.Text = "Accepted by Nexus Core. The queue runs one job at a time.";
@@ -112,7 +130,7 @@ internal sealed class FileJobsView : Grid
             var dialog = new ContentDialog { XamlRoot = XamlRoot, RequestedTheme = RequestedTheme, Title = "Discard the pending request?", Content = "This clears only the local form. A transfer already accepted by Core keeps running. Review the queue and destination before creating another transfer.", PrimaryButtonText = "Discard local request", CloseButtonText = "Keep", DefaultButton = ContentDialogButton.Close };
             if (await dialog.ShowAsync() != ContentDialogResult.Primary || _released) return;
         }
-        _pendingSubmission = null; _pendingEpoch = Guid.Empty; _sources.Clear(); RenderSources();
+        _pendingSubmission = null; _pendingEpoch = Guid.Empty; _sources.Clear(); _outputName.Text = _suggestedName = ""; RenderSources();
     }
     private async Task ControlAsync(Guid id, string action)
     {
@@ -133,7 +151,7 @@ internal sealed class FileJobsView : Grid
         {
             var snapshot = await _environment.FileJobsAsync(RuntimeOperations.FileJobs, new { }, _life.Token); if (_released) return;
             bool changed = _snapshot is null || _snapshot.Epoch != snapshot.Epoch || _snapshot.Revision != snapshot.Revision
-                || snapshot.Jobs.Any(record => record.State == FileJobState.Running && record.Progress.Phase == "Copying"); _snapshot = snapshot;
+                || snapshot.Jobs.Any(record => record.State == FileJobState.Running && FileJobRules.MeasuredPhase(record.Progress.Phase)); _snapshot = snapshot;
             if (_pendingSubmission is { } pending && snapshot.Jobs.Any(j => j.Job.Id == pending.Id)) { _pendingSubmission = null; _sources.Clear(); RenderSources(); _status.Text = "The earlier submission was accepted. It will not be added again."; }
             if (changed) RenderJobs(); UpdateActions();
         }
@@ -149,13 +167,16 @@ internal sealed class FileJobsView : Grid
         AutomationProperties.SetName(_pause, _snapshot.Paused ? "Allow later jobs to start" : "Hold later jobs without pausing the active transfer");
         foreach (var record in _snapshot.Jobs)
         {
-            var content = new StackPanel { Spacing = 7 }; content.Children.Add(new TextBlock { Text = record.Job.Kind + " · " + Path.GetFileName(record.Job.Sources[0]) + (record.Job.Sources.Length > 1 ? " + " + (record.Job.Sources.Length - 1) : ""), FontSize = 15, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap });
+            var content = new StackPanel { Spacing = 7 }; content.Children.Add(new TextBlock { Text = FileJobRules.KindLabel(record.Job.Kind) + " · "
+                + (FileJobRules.Archive(record.Job.Kind) ? record.Job.OutputName : Path.GetFileName(record.Job.Sources[0]))
+                + (record.Job.Sources.Length > 1 ? " + " + (record.Job.Sources.Length - 1) : ""), FontSize = 15, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap });
             content.Children.Add(new TextBlock { Text = record.State + " · " + record.Detail, FontSize = 12, TextWrapping = TextWrapping.Wrap });
-            content.Children.Add(new ProgressBar { Minimum = 0, Maximum = Math.Max(1, record.Progress.TotalBytes), Value = Math.Clamp(record.Progress.BytesCopied, 0, Math.Max(1, record.Progress.TotalBytes)), IsIndeterminate = record.State == FileJobState.Planning });
+            content.Children.Add(new ProgressBar { Minimum = 0, Maximum = Math.Max(1, record.Progress.TotalBytes), Value = Math.Clamp(record.Progress.BytesCopied, 0, Math.Max(1, record.Progress.TotalBytes)), IsIndeterminate = record.State == FileJobState.Planning || !FileJobRules.Terminal(record.State) && record.Progress.TotalBytes == 0 });
             content.Children.Add(new TextBlock { Text = record.Progress.Completed + " committed · " + record.Progress.Skipped + " skipped · " + record.Progress.TotalFiles + " files · " + Size(record.Progress.BytesCopied) + " / " + Size(record.Progress.TotalBytes), FontSize = 11, TextWrapping = TextWrapping.Wrap });
             if (record.State == FileJobState.Running && record.Progress.BytesPerSecond > 0)
                 content.Children.Add(new TextBlock { Text = Size(record.Progress.BytesPerSecond >= long.MaxValue ? long.MaxValue : (long)record.Progress.BytesPerSecond) + "/s"
-                    + (record.Progress.SecondsRemaining is { } remaining ? " · about " + Duration(remaining) + " of copying left" : "")
+                    + (record.Progress.SecondsRemaining is { } remaining ? " · about " + Duration(remaining) + " of "
+                        + (record.Progress.Phase == "Compressing" ? "compression" : record.Progress.Phase == "Extracting" ? "extraction" : "copying") + " left" : "")
                     + " · verification time is additional", FontSize = 11, TextWrapping = TextWrapping.Wrap });
             if (record.Progress.Current.Length > 0) content.Children.Add(new TextBlock { Text = record.Progress.Phase + " · " + record.Progress.Current, FontSize = 11, TextWrapping = TextWrapping.Wrap });
             var actions = new Grid { ColumnSpacing = 6 }; actions.ColumnDefinitions.Add(new()); actions.ColumnDefinitions.Add(new());
@@ -175,6 +196,7 @@ internal sealed class FileJobsView : Grid
                 {
                     if (_pendingSubmission is not null) throw new InvalidOperationException("Reconcile or clear the pending request first.");
                     _sources.Clear(); _sources.AddRange(record.Job.Sources); _destination.Text = record.Job.Destination; _kind.SelectedIndex = (int)record.Job.Kind;
+                    _outputName.Text = record.Job.OutputName;
                     _collision.SelectedIndex = (int)record.Job.Collision; _verify.IsChecked = record.Job.Verify; RenderSources();
                     _status.Text = "Review the destination and remove sources already moved. Add to queue creates a new job; it does not resume or replace previous output.";
                     return Task.CompletedTask;
@@ -189,7 +211,7 @@ internal sealed class FileJobsView : Grid
     private static string Duration(double seconds) => seconds < 60 ? Math.Max(1, Math.Ceiling(seconds)) + " sec"
         : seconds < 3600 ? Math.Ceiling(seconds / 60) + " min" : seconds < 86400 ? (seconds / 3600).ToString("F1") + " hr" : (seconds / 86400).ToString("F1") + " days";
     private void UpdateActions()
-    { if (_submit is null) return; _submit.IsEnabled = !_validation && !_busy && (_pendingSubmission is not null || _sources.Count > 0); foreach (var action in _formActions.Concat(_sourceActions)) action.IsEnabled = !_validation && !_busy && _pendingSubmission is null; _clearForm.IsEnabled = !_validation && !_busy; _destination.IsEnabled = _kind.IsEnabled = _collision.IsEnabled = _verify.IsEnabled = !_validation && !_busy && _pendingSubmission is null; _pause.IsEnabled = !_validation && !_busy && _snapshot is not null; }
+    { if (_submit is null) return; _submit.IsEnabled = !_validation && !_busy && (_pendingSubmission is not null || _sources.Count > 0); foreach (var action in _formActions.Concat(_sourceActions)) action.IsEnabled = !_validation && !_busy && _pendingSubmission is null; _clearForm.IsEnabled = !_validation && !_busy; _destination.IsEnabled = _kind.IsEnabled = _collision.IsEnabled = _verify.IsEnabled = _outputName.IsEnabled = !_validation && !_busy && _pendingSubmission is null; _pause.IsEnabled = !_validation && !_busy && _snapshot is not null; }
     internal void SetActive(bool active)
     { if (_released || _validation) return; if (active) { _poll.Start(); _ = RefreshAsync(); } else _poll.Stop(); }
     internal void ApplyAppearance()

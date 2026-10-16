@@ -183,7 +183,7 @@ public sealed class FileJobCoordinator : IAsyncDisposable
                             _latestProgress = progress;
                             // Paint is bounded to four updates per second. File
                             // and job commits still publish their latest totals.
-                            if (progress.Phase == "Copying" && DateTimeOffset.UtcNow - _lastProgress < TimeSpan.FromMilliseconds(250)) return;
+                            if (FileJobRules.MeasuredPhase(progress.Phase) && DateTimeOffset.UtcNow - _lastProgress < TimeSpan.FromMilliseconds(250)) return;
                             _lastProgress = DateTimeOffset.UtcNow;
                             bool pausing = _flow?.PauseRequested == true;
                             var state = pausing ? FileJobState.Pausing : FileJobState.Running;

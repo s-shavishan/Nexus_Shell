@@ -17,7 +17,7 @@ internal static class FileClipboardService
     internal static bool HasFiles => IsClipboardFormatAvailable(FileDrop);
     internal static void Write(IntPtr owner, IReadOnlyList<string> paths, FileJobKind kind)
     {
-        if (owner == IntPtr.Zero || paths.Count is < 1 or > FileJobRules.MaximumSources || !Enum.IsDefined(kind))
+        if (owner == IntPtr.Zero || paths.Count is < 1 or > FileJobRules.MaximumSources || kind is not (FileJobKind.Copy or FileJobKind.Move))
             throw new RuntimeFailure("file-clipboard", "Select one to 24 files or folders.");
         string[] normalized = paths.Select(FileJobRules.PathName).Distinct(FileJobRules.Paths).ToArray();
         byte[] names = Encoding.Unicode.GetBytes(string.Join('\0', normalized) + "\0\0");

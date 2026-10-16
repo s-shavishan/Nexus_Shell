@@ -7,7 +7,7 @@ public interface ITransferSource : IDisposable
 
 // File content runs in Core's queue worker. Every copy is staged beside its
 // final destination, then committed without replacing an existing item.
-public sealed class FileTransferEngine(Func<string, bool, ITransferSource>? openSource = null) : IFileTransferBackend
+public sealed partial class FileTransferEngine(Func<string, bool, ITransferSource>? openSource = null) : IFileTransferBackend
 {
     private sealed class ReadSource(string path) : ITransferSource
     {
@@ -89,6 +89,8 @@ public sealed class FileTransferEngine(Func<string, bool, ITransferSource>? open
         await flow.WaitAsync(cancellation).ConfigureAwait(false);
         var job = FileJobRules.Validate(request); cancellation.ThrowIfCancellationRequested(); RejectLinks(job.Destination);
         if (!Directory.Exists(job.Destination)) throw new DirectoryNotFoundException("The destination folder is unavailable.");
+        if (FileJobRules.Archive(job.Kind))
+        { await ArchiveAsync(job, report, flow, cancellation).ConfigureAwait(false); return; }
         var roots = job.Sources.Select(path => Plan(path, cancellation)).ToArray();
         int count = roots.Sum(root => root.Files.Length + root.Directories.Length);
         if (count > FileJobRules.MaximumEntries) throw new IOException("This job exceeds 10,000 file/folder entries. Choose smaller sources.");

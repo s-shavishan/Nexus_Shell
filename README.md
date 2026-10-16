@@ -20,12 +20,12 @@ Supervised desktops accept Explorer at sign-in and attempt bounded recovery when
 
 ## Nexus File Jobs (pending Windows validation)
 
-Nexus Workspaces is removed. Its profile model, resume state, launch planner and workspace commands are retired. **File Jobs** replaces that direction with a practical copy/move queue owned by Nexus Core.
+Nexus Workspaces is removed. Its profile model, resume state, launch planner and workspace commands are retired. **File Jobs** replaces that direction with a practical file-operation queue owned by Nexus Core.
 
 - Add files or folders, choose a destination, and track bytes, committed files and skipped items.
 - Keep both names or skip collisions; existing destination items are never overwritten. Copied contents are verified with SHA-256 by default.
 - Pause/resume the active transfer, independently hold later jobs, cancel work, open its destination, or load finished/interrupted jobs into the form for review.
-- View measured copy-phase speed and estimated copying time. Paused and verification phases clear the estimate; verification time is additional.
+- View measured copy, compression or extraction speed and estimated active-phase time. Paused and verification phases clear the estimate; verification time is additional.
 - Open File Jobs from the Nexus menu, Launchpad, Spotlight or Controls. Nexus Files gains **Copy to…** and **Move to…** context actions.
 - Closing the utility window leaves accepted jobs running. Closing Nexus stops them; a restart marks unfinished jobs interrupted for manual review.
 
@@ -39,6 +39,14 @@ Folder moves require the same drive; choose Copy across drives. Notes and indepe
 - **Ctrl+Shift+N** creates a folder while the file list has focus. Text fields retain their normal editing shortcuts.
 
 See [file clipboard/recycle behavior and Windows acceptance](docs/P213-EVERYDAY-FILE-OPERATIONS.md).
+
+## ZIP archives (pending Windows validation)
+
+- Select files/folders in Nexus Files and choose **Archive… → Create ZIP…**, or **Extract ZIP…** for one selected ZIP. Choose an output name in the current folder, or use File Jobs to choose another destination.
+- Archive jobs share progress, pause/resume, cancellation, queue holds and recovery. They publish one complete ZIP or extracted folder, keep both colliding names or skip the whole result, and retain sources.
+- Validate archive paths and limits before extraction; check ZIP CRC integrity and enable SHA-256 readback by default. Preserve empty folders, Unicode names, ZIP modification times and existing Windows origin-zone marks.
+
+See [supported formats, limits and acceptance](docs/P214-ZIP-ARCHIVE-JOBS.md).
 
 ## Nexus Controls (pending Windows validation)
 

@@ -105,7 +105,7 @@ for path in project.glob("*.xaml"):
 
 xns = "{http://schemas.microsoft.com/winfx/2006/xaml}"
 window = ET.parse(project / "MainWindow.xaml").getroot()
-code = "\n".join(p.read_text(encoding="utf-8") for p in project.glob("MainWindow*.cs"))
+code = "\n".join(p.read_text(encoding="utf-8") for p in sorted(project.glob("MainWindow*.cs")))
 names = [node.attrib[xns + "Name"] for node in window.iter() if xns + "Name" in node.attrib]
 assert len(names) == len(set(names)), "Duplicate XAML names"
 handlers = set()
@@ -260,7 +260,11 @@ assert "new MainWindow(" not in startup and "DesktopEnvironment" in startup, "St
 for layer in ["DesktopWindow", "TaskbarWindow", "MenuWindow", "QuickSettingsWindow", "MenuBarWindow", "NotificationWindow"]:
     body = (project / "Desktop" / (layer + ".cs")).read_text()
     assert re.search(r"class\s+" + layer + r"\s*:\s*Window", body), f"{layer} must own a native Window"
-closed = code[code.index("private void Window_Closed("):]
+# Inspect only this handler. A suffix of all concatenated partials can include
+# the explicit desktop stop command, depending on filesystem enumeration order.
+controls_source = (project / "MainWindow.xaml.cs").read_text(encoding="utf-8")
+closed_start = controls_source.index("private void Window_Closed(")
+closed = controls_source[closed_start:controls_source.index("\n    }", closed_start)]
 assert "SaveFinal(" not in closed and "Shutdown(" not in closed and "_timer.Stop()" in closed, "Closing Controls must release local work without finalizing the desktop session"
 assert "AttachSnapshot(" not in code, "Controls must edit shared state without replacing another window snapshot provider"
 build_files = [appveyor_file, root / "scripts/package.ps1", root / "scripts/build.ps1"]

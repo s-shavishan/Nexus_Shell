@@ -2,6 +2,8 @@
 
 The owner requested complete removal of Nexus Workspaces and a usable replacement. Nexus now provides a single copy/move queue with real file operations, progress, cancellation and destination access. It is an independently closable utility alongside Notes and Calculator, integrated with Files and Nexus Controls.
 
+The queue now also supports **Create ZIP** and **Extract ZIP**, including archive output names, content-phase rates and whole-result publication. See [P2.14 archive behavior and limits](P214-ZIP-ARCHIVE-JOBS.md). Existing copy/move semantics below remain.
+
 ## Removed workspace behavior
 
 - Deleted `Services/DesktopWorkspace.cs`, the workspace profile/launch-plan records, profile defaults and normalization, active-profile and last-page fields, and workspace resume state.

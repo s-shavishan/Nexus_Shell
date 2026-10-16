@@ -27,6 +27,7 @@ internal sealed class FilesEnvironment
     internal bool Validation { get; }
     private int _failures;
     private readonly FilePasteSession _paste = new();
+    private FileJobSubmit? _pendingArchive;
     internal IntPtr WindowHandle => _window?.Handle ?? IntPtr.Zero;
     private FilesEnvironment()
     { Validation = true; _stopping = true; _core = null!; _client = null!; Theme.Apply("Midnight"); }
@@ -198,6 +199,36 @@ internal sealed class FilesEnvironment
     }
     internal async Task WindowsFileAsync(string path, string kind)
         => await WindowsFilesAsync([path], kind);
+    internal async Task QueueArchiveAsync(string[] sources, FileJobKind kind, string destination, string outputName)
+    {
+        if (_stopping || _window is null || !FileJobRules.Archive(kind)) return;
+        var draft = FileJobRules.Validate(new(Guid.NewGuid(), kind, sources, destination, OutputName: outputName));
+        var snapshot = await _client.CallAsync<FileJobsSnapshot>(RuntimeOperations.FileJobs, new { }, TimeSpan.FromSeconds(5), _cancel.Token);
+        if (_pendingArchive is { } pending)
+        {
+            if (snapshot.Jobs.Any(record => record.Job.Id == pending.Job.Id))
+            { _pendingArchive = null; _window.View.ShowMessage("The earlier archive request was accepted. Review it in File Jobs; it was not added twice."); return; }
+            if (pending.Epoch != snapshot.Epoch || pending.Job.Kind != draft.Kind || pending.Job.OutputName != draft.OutputName
+                || !FileJobRules.Paths.Equals(pending.Job.Destination, draft.Destination)
+                || !pending.Job.Sources.SequenceEqual(draft.Sources, FileJobRules.Paths))
+                throw new InvalidOperationException("An earlier archive request is unresolved. Retry the same selection, destination and name, or review File Jobs before reopening Files.");
+        }
+        _pendingArchive ??= new(snapshot.Epoch, draft);
+        try
+        {
+            try { await _client.CallAsync<FileJobsSnapshot>(RuntimeOperations.SubmitFileJob, _pendingArchive, TimeSpan.FromSeconds(5), _cancel.Token); }
+            catch (Exception error) when (error is IOException or TimeoutException)
+            {
+                var observed = await _client.CallAsync<FileJobsSnapshot>(RuntimeOperations.FileJobs, new { }, TimeSpan.FromSeconds(5), _cancel.Token);
+                if (observed.Epoch != _pendingArchive.Epoch || !observed.Jobs.Any(record => record.Job.Id == _pendingArchive.Job.Id)) throw;
+            }
+            _pendingArchive = null;
+            if (!_stopping) _window.View.ShowMessage("Archive job accepted. File Jobs has progress, pause and cancellation. Refresh this folder when finished.");
+        }
+        catch (RuntimeFailure) { _pendingArchive = null; throw; }
+        catch (Exception error) when (error is IOException or TimeoutException)
+        { if (!_stopping) _window?.View.ShowMessage("Archive response was lost. Retry the same archive request to check its original job, or review File Jobs before creating another."); }
+    }
     internal async Task PasteFilesAsync(FileClipboardContent clipboard, string destination)
     {
         if (_stopping || _window is null) return;

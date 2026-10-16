@@ -1,19 +1,20 @@
 namespace Nexus.Runtime.Transfers;
 
-// Monotonic, bounded-memory copy-phase average. Pauses and non-copy phases
-// reset the sample; verification/rename time is never advertised as copy ETA.
+// Monotonic, bounded-memory content-phase average. Copy, compression and
+// extraction measure their own byte phase; verification/rename time is extra.
 public sealed class FileTransferMeter
 {
     private long? _started;
     private long _baseline, _lastBytes, _lastTick;
-    public void Reset() => _started = null;
+    private string _phase = "";
+    public void Reset() { _started = null; _phase = ""; }
     public FileJobProgress Sample(FileJobProgress progress, long now)
     {
         var clear = progress with { BytesPerSecond = 0, SecondsRemaining = null };
-        if (progress.Phase != "Copying" || progress.BytesCopied < 0)
+        if (!FileJobRules.MeasuredPhase(progress.Phase) || progress.BytesCopied < 0)
         { Reset(); return clear; }
-        if (_started is null || now < _lastTick || progress.BytesCopied < _lastBytes)
-        { _started = now; _baseline = progress.BytesCopied; }
+        if (_started is null || _phase != progress.Phase || now < _lastTick || progress.BytesCopied < _lastBytes)
+        { _started = now; _baseline = progress.BytesCopied; _phase = progress.Phase; }
         _lastTick = now; _lastBytes = progress.BytesCopied;
         double elapsed = (double)now - _started.Value;
         if (elapsed < 1000) return clear;

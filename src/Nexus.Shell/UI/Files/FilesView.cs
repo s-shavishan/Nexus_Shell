@@ -29,7 +29,7 @@ internal sealed class FilesView : Grid
     private readonly NavigationTrail _history = new();
     private readonly FileMutationHistory _edits = new();
     private readonly Button _rename, _undo;
-    private readonly Button _copy, _cut, _paste, _recycleButton;
+    private readonly Button _copy, _cut, _paste, _recycleButton, _archive;
     private readonly DispatcherTimer _clipboardWatch = new() { Interval = TimeSpan.FromSeconds(1) };
     private uint _clipboardSequence;
     private readonly Button _back, _forward, _gridButton, _listButton;
@@ -214,6 +214,17 @@ internal sealed class FilesView : Grid
             ToolTipService.SetToolTip(button, button.Content + " · " + shortcut);
             views.Children.Add(button);
         }
+        _archive = Button("Archive…", () => Task.CompletedTask);
+        _archive.Visibility = request.Kind == FileSelectionKind.Browse ? Visibility.Visible : Visibility.Collapsed;
+        var archiveMenu = ShellMenu.Create();
+        archiveMenu.Opening += (_, _) =>
+        {
+            archiveMenu.Items.Clear(); var selected = Selection(); string folder = _folder;
+            archiveMenu.Items.Add(ShellMenu.Action("Create ZIP…", () => RunContextAsync(() => ArchiveAsync(FileJobKind.CreateZip, selected, folder)), "\uF012"));
+            if (selected.Length == 1 && !selected[0].IsFolder && Path.GetExtension(selected[0].Path).Equals(".zip", StringComparison.OrdinalIgnoreCase))
+                archiveMenu.Items.Add(ShellMenu.Action("Extract ZIP…", () => RunContextAsync(() => ArchiveAsync(FileJobKind.ExtractZip, selected, folder)), "\uE8B7"));
+        };
+        _archive.Flyout = archiveMenu; views.Children.Add(_archive);
         foreach (string sort in new[] { "Name", "Newest", "Size", "Kind" }) _sort.Items.Add(sort);
         _sort.SelectedIndex = 0; _sort.SelectionChanged += (_, _) => Render(); Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_sort, "Sort files"); views.Children.Add(_sort);
         var viewScroll = new ScrollViewer { Content = views, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled };
@@ -465,6 +476,22 @@ internal sealed class FilesView : Grid
         try { await _environment.PasteFilesAsync(clipboard, destination); }
         finally { _dialog = false; if (!_closed) UpdateActions(); }
     }
+    private async Task ArchiveAsync(FileJobKind kind, IReadOnlyList<FileEntry> selected, string destination)
+    {
+        if (!CanMutate || selected.Count is < 1 or > FileJobRules.MaximumSources) return;
+        string[] paths = selected.Select(item => item.Path).ToArray();
+        _dialog = true; UpdateActions();
+        try
+        {
+            bool create = kind == FileJobKind.CreateZip;
+            var name = new TextBox { Header = create ? "Archive name (.zip)" : "New folder name", Text = ArchiveJobRules.SuggestedName(paths, kind), MaxLength = 240 };
+            var content = new StackPanel { Spacing = 12 }; content.Children.Add(name);
+            content.Children.Add(new TextBlock { Text = "Destination: " + destination + "\nExisting names are kept as separate items. Follow progress in File Jobs.", TextWrapping = TextWrapping.Wrap, MaxWidth = 440 });
+            if (await Dialog(create ? "Create ZIP archive" : "Extract ZIP archive", content, create ? "Create ZIP" : "Extract").ShowAsync() != ContentDialogResult.Primary || _closed) return;
+            await _environment.QueueArchiveAsync(paths, kind, destination, name.Text);
+        }
+        finally { _dialog = false; if (!_closed) UpdateActions(); }
+    }
     private async Task RecycleAsync(IReadOnlyList<FileEntry>? targets = null)
     {
         if (!CanMutate) return;
@@ -564,9 +591,13 @@ internal sealed class FilesView : Grid
         };
         if (selected.Length <= FileJobRules.MaximumSources)
         {
+            string folder = _folder;
             handlers[FileContextCommand.Copy] = () => RunContextAsync(() => CopySelectionAsync(FileJobKind.Copy, selected));
             handlers[FileContextCommand.Cut] = () => RunContextAsync(() => CopySelectionAsync(FileJobKind.Move, selected));
             handlers[FileContextCommand.Recycle] = () => RunContextAsync(() => RecycleAsync(selected));
+            handlers[FileContextCommand.CreateZip] = () => RunContextAsync(() => ArchiveAsync(FileJobKind.CreateZip, selected, folder));
+            if (single is { IsFolder: false } && Path.GetExtension(single.Path).Equals(".zip", StringComparison.OrdinalIgnoreCase))
+                handlers[FileContextCommand.ExtractZip] = () => RunContextAsync(() => ArchiveAsync(FileJobKind.ExtractZip, selected, folder));
         }
         if (single is not null)
         {
@@ -617,12 +648,19 @@ internal sealed class FilesView : Grid
             || mixed.Items.OfType<MenuFlyoutItem>().First().Text != "Copy 2 items to…")
             throw new InvalidOperationException("Mixed file selection must offer safe batch actions instead of single-file execution.");
         var organize = mixed.Items.OfType<MenuFlyoutSubItem>().Single(group => group.Text == "Organize");
-        foreach (string label in new[] { "Copy", "Cut", "Move to Recycle Bin…" })
+        foreach (string label in new[] { "Copy", "Cut", "Move to Recycle Bin…", "Create ZIP…" })
             if (!organize.Items.OfType<MenuFlyoutItem>().Any(item => item.Text == label))
                 throw new InvalidOperationException("The batch context lost a standard file action: " + label);
         var canvas = ShellMenu.Create(); BuildContext(canvas, null);
         if (!canvas.Items.OfType<MenuFlyoutItem>().Any(item => item.Text == "Paste"))
             throw new InvalidOperationException("The folder context lost Paste.");
+        foreach (string extension in new[] { ".zip", ".rar" })
+        {
+            var archive = ShellMenu.Create(); BuildContext(archive, new FileEntry("Example" + extension, @"C:\Example\Example" + extension, false, "Archive"));
+            var actions = archive.Items.OfType<MenuFlyoutSubItem>().Single(group => group.Text == "Organize");
+            if (actions.Items.OfType<MenuFlyoutItem>().Any(item => item.Text == "Extract ZIP…") != (extension == ".zip"))
+                throw new InvalidOperationException("ZIP extraction must only appear for a supported ZIP target.");
+        }
     }
     private ContentDialog Dialog(string title, object content, string primary) => new() { XamlRoot = XamlRoot, RequestedTheme = RequestedTheme, Title = title, Content = content,
         PrimaryButtonText = primary, CloseButtonText = "Cancel", DefaultButton = ContentDialogButton.Close };
@@ -672,7 +710,7 @@ internal sealed class FilesView : Grid
         _undo.IsEnabled = ready && _edits.CanUndo; _undo.Content = _edits.UndoLabel;
         _empty.IsEnabled = ready && _recycle && _binHasItems;
         bool selection = CanMutate && ActiveList.SelectedItems.Count is >= 1 and <= FileJobRules.MaximumSources;
-        _copy.IsEnabled = _cut.IsEnabled = _recycleButton.IsEnabled = selection;
+        _copy.IsEnabled = _cut.IsEnabled = _recycleButton.IsEnabled = _archive.IsEnabled = selection;
         _paste.IsEnabled = CanMutate && !_environment.Validation && FileClipboardService.HasFiles;
     }
     private void ResetPreview()

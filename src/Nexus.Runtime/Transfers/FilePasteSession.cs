@@ -14,7 +14,7 @@ public sealed class FilePasteSession
     private (Guid Epoch, uint Sequence)? _acceptedCut;
     public FileJobSpec Prepare(Guid epoch, FileClipboardContent clipboard, string destination)
     {
-        if (epoch == Guid.Empty || clipboard is null || clipboard.Sequence == 0)
+        if (epoch == Guid.Empty || clipboard is null || clipboard.Sequence == 0 || clipboard.Kind is not (FileJobKind.Copy or FileJobKind.Move))
             throw new RuntimeFailure("file-clipboard", "The file clipboard changed. Copy or cut the items again.");
         var job = FileJobRules.Validate(new(Guid.NewGuid(), clipboard.Kind, clipboard.Paths, destination));
         if (job.Kind == FileJobKind.Move && job.Sources.Any(path => FileJobRules.Paths.Equals(Path.GetDirectoryName(path), job.Destination)))
