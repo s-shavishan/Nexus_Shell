@@ -39,6 +39,12 @@ Find large folders and files from Launchpad, Search, Nexus Tools or Controls. Sc
 
 See [Storage Analyzer and manual checks](docs/STORAGE-ANALYZER.md).
 
+## Startup Apps
+
+Review sign-in registrations, filter by scope/state, and pause supported apps for your account with saved-original Restore. Inspect machine-wide, RunOnce and Startup-folder entries without changing them; open Windows controls or Startup folders when needed. Confirmation, account-bound recovery records and conflict checks protect existing registrations.
+
+See [Startup Apps, recovery and manual checks](docs/STARTUP-APPS.md).
+
 ## Development guides
 
 - [Architecture and source ownership](docs/ARCHITECTURE.md)
