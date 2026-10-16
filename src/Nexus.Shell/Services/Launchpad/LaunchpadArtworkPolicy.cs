@@ -13,7 +13,7 @@ public static class LaunchpadArtworkPolicy
     ];
 
     public static bool UsesNexusArtwork(string? id)
-        => id is "jobs" or "controls" or "sections" or "files" or "settings" or "terminal" or "calculator" or "notes";
+        => id is "storage" or "jobs" or "controls" or "sections" or "files" or "settings" or "terminal" or "calculator" or "notes";
 
     public static string Monogram(string? name)
     {

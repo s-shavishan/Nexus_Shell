@@ -29,7 +29,7 @@ if ([version]$AppVersion -ge [version]'3.1.0') {
     $wallpaperFiles += Get-Item $scene
 }
 if ([version]$AppVersion -ge [version]'0.9.0') {
-    foreach ($name in @('Nexus','Explore','Study','Files','Apps','Browser','Search','Settings','Windows','Note','Document','Terminal','Game')) {
+    foreach ($name in @('Nexus','Explore','Study','Files','Apps','Browser','Search','Settings','Windows','Note','Document','Terminal','Game','Storage')) {
         $asset = Join-Path $publishRoot ("Assets\Icons\" + $name + '.svg')
         if (-not (Test-Path $asset -PathType Leaf)) { throw "The desktop vector asset is missing: $name.svg" }
         [xml]$vector = Get-Content $asset -Raw

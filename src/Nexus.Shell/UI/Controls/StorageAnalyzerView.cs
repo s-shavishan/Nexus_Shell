@@ -92,6 +92,14 @@ internal sealed class StorageAnalyzerView : Grid
             _status.Text = (_scan?.IsCancellationRequested == true ? "Stopping after current filesystem call… " : "Scanning… ") +
                 $"{p.Skipped:N0} skipped · {p.Elapsed:mm\\:ss}\n" + p.Path;
         };
+        var body = new Grid { RowSpacing = 12 };
+        for (int i = 0; i < 5; i++) body.RowDefinitions.Add(new() { Height = GridLength.Auto });
+        var children = Children.ToArray(); Children.Clear();
+        foreach (var child in children) body.Children.Add(child);
+        RowDefinitions.Clear(); RowDefinitions.Add(new());
+        _list.Height = 260;
+        Children.Add(new ScrollViewer { Content = body, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
+        SizeChanged += (_, _) => _list.Height = Math.Clamp(ActualHeight * 0.34, 140, 380);
         ApplyAppearance(); UpdateActions();
     }
 
