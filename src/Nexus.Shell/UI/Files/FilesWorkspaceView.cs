@@ -20,9 +20,12 @@ internal sealed class FilesWorkspaceView : Grid
     private readonly Border _page = new();
     private readonly TextBlock _notice = new() { FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(18, 0, 18, 0) };
     private readonly Button _add, _reopen;
+    private FilesView? _releasedView;
     private bool _released;
     internal event Action<string>? TitleChanged;
-    internal FilesView ActiveView => _views[_session.ActiveId];
+    // Worker acknowledgements can arrive after Closed while the environment
+    // finishes shutdown. Keep one released view as a safe no-op message sink.
+    internal FilesView ActiveView => _releasedView ?? _views[_session.ActiveId];
 
     internal FilesWorkspaceView(FilesEnvironment environment, string folder, Action<IReadOnlyList<string>> complete)
     {
@@ -160,6 +163,7 @@ internal sealed class FilesWorkspaceView : Grid
 
     internal void ApplyAppearance()
     {
+        if (_released) return;
         RequestedTheme = _environment.Theme.ElementTheme;
         _notice.Foreground = _environment.Theme.Brush("NexusMuted");
         foreach (var view in _views.Values) view.ApplyAppearance();
@@ -170,6 +174,7 @@ internal sealed class FilesWorkspaceView : Grid
     {
         if (_released) return;
         _released = true;
+        _releasedView = ActiveView;
         foreach (var view in _views.Values) view.Release();
         _views.Clear(); _page.Child = null; _tabs.Children.Clear();
     }
