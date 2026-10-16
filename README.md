@@ -27,7 +27,13 @@ Open `Nexus.Shell.sln` to develop in Visual Studio. `Build-and-Run.bat` builds a
 
 The full portable output is `artifacts/Nexus-Shell-3.6.0-win-x64/`. Keep its executables, dependencies, resources, assets and recovery helpers together. Source files are not a runnable release.
 
-## Development
+## Files workspace
+
+Browse several folders in one Files window with up to 12 independent tabs. Use Ctrl+T, Ctrl+W, Ctrl+Tab and Ctrl+Shift+T; right-click a folder to open it in a new tab. Each open tab retains its history, filter, selection, sorting and view. External folder requests reuse a matching tab or open another. File pickers keep a single location.
+
+See [Files tabs and manual checks](docs/FILES-WORKSPACE.md).
+
+## Development guides
 
 - [Architecture and source ownership](docs/ARCHITECTURE.md)
 - [Build and contribution guide](docs/DEVELOPMENT.md)

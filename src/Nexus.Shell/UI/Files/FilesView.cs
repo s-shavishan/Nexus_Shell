@@ -112,6 +112,9 @@ internal sealed class FilesView : Grid
     };
     private readonly Dictionary<Button, string> _places = [];
     internal event Action<string>? FolderChanged;
+    internal event Action<string>? NewTabRequested;
+    internal bool CanSwitchTab => !_dialog;
+    internal string CurrentLocation => _recycle ? "nexus:recycle" : _folder;
     private string? _previewPath;
     private int _previewVersion;
     private bool _showGrid, _rendering;
@@ -441,6 +444,12 @@ internal sealed class FilesView : Grid
                 FileShortcut(VirtualKey.V, VirtualKeyModifiers.Control, PasteAsync);
                 FileShortcut(VirtualKey.Delete, VirtualKeyModifiers.None, () => RecycleAsync());
                 FileShortcut(VirtualKey.N, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, NewFolderAsync);
+                FileShortcut(VirtualKey.Enter, VirtualKeyModifiers.Control, () =>
+                {
+                    if (ActiveList.SelectedItem is FileEntry { IsFolder: true } folder)
+                        NewTabRequested?.Invoke(folder.Path);
+                    return Task.CompletedTask;
+                });
                 var context = ShellMenu.Create();
                 context.Opening += (_, _) =>
                 {
@@ -1345,6 +1354,11 @@ internal sealed class FilesView : Grid
         }
 
         TypedFileMenu.Build(menu, selected.Select(item => new FileTypeMenuTarget(item.Path, item.IsFolder)).ToArray(), handlers, _edits.UndoLabel);
+        if (single is { IsFolder: true })
+        {
+            string location = single.Path;
+            menu.Items.Insert(1, ShellMenu.Action("Open in new tab", () => NewTabRequested?.Invoke(location), "\uE8B7"));
+        }
     }
 
     private async void RunContextAsync(Func<Task> action)
@@ -1550,5 +1564,11 @@ internal sealed class FilesView : Grid
         _navigation.Dispose();
         _previews.Dispose();
         _entries = [];
+    }
+
+    internal void Suspend()
+    {
+        _clipboardWatch.Stop();
+        ResetPreview();
     }
 }
