@@ -45,7 +45,7 @@ try {
     $hostProject = Join-Path $projectRoot 'src\Nexus.DesktopHost\Nexus.DesktopHost.csproj'
     $hostOutput = Join-Path $projectRoot 'artifacts\desktop-host'
     if (Test-Path $hostOutput) { Remove-Item $hostOutput -Recurse -Force }
-    & dotnet publish $hostProject --configuration $Configuration --runtime win-x64 --self-contained true --output $hostOutput 2>&1 | Tee-Object -FilePath (Join-Path $logDirectory 'desktop-host-build.txt')
+    & dotnet publish $hostProject --configuration $Configuration --runtime win-x64 --self-contained true --output $hostOutput '/p:Platform=x64' 2>&1 | Tee-Object -FilePath (Join-Path $logDirectory 'desktop-host-build.txt')
     if ($LASTEXITCODE -ne 0) { throw 'The Nexus desktop host could not be published.' }
     foreach ($hostFile in Get-ChildItem $hostOutput -Recurse -File) {
         $relative = $hostFile.FullName.Substring($hostOutput.Length + 1)
