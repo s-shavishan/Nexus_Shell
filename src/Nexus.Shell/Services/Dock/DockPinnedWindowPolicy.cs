@@ -51,6 +51,7 @@ public static class DockPinnedWindowPolicy
                 "nexus:calculator" => "Calculator", "nexus:notes" => "Notes",
                 "nexus:controls" => "Nexus Controls",
                 "nexus:monitor" => "System Monitor",
+                "nexus:storage" => "Storage Analyzer",
                 "nexus:jobs" => "File jobs", _ => null
             };
             return expected is not null && string.Equals(expected, title, StringComparison.OrdinalIgnoreCase);

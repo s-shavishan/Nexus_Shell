@@ -26,6 +26,8 @@ internal sealed partial class DesktopEnvironment
             { var view = new FileJobsView(this); try { window = new(this, name, view, 970, 740, view.ApplyAppearance, view.Release, view.SetActive); } catch { view.Release(); throw; } }
             else if (name == "System Monitor")
             { var view = new SystemMonitorView(this); try { window = new(this, name, view, 900, 780, view.ApplyAppearance, view.Release, view.SetActive); } catch { view.Release(); throw; } }
+            else if (name == "Storage Analyzer")
+            { var view = new StorageAnalyzerView(this); try { window = new(this, name, view, 1000, 820, view.ApplyAppearance, view.Release); } catch { view.Release(); throw; } }
             else return;
             _utilities.Add(name, window);
             window.Closed += (_, _) => { _utilities.Remove(name); if (!IsStopping) UpdateTaskbar(); };

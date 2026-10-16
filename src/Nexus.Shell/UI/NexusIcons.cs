@@ -40,7 +40,7 @@ public static class NexusIcons
     }
     public static string ForApp(AppEntry app) => app.Id switch
     {
-        "monitor" => "Monitor", "jobs" => "Jobs", "controls" or "sections" => "Controls", "files" => "Files", "settings" => "Settings", "terminal" => "Terminal", "calculator" => "Calculator", "notes" => "Note",
+        "storage" => "Storage", "monitor" => "Monitor", "jobs" => "Jobs", "controls" or "sections" => "Controls", "files" => "Files", "settings" => "Settings", "terminal" => "Terminal", "calculator" => "Calculator", "notes" => "Note",
         _ => app.Category switch
         { "Browser" => "Browser", "Development" => "Terminal", "Game" => "Game", "System" => "Settings", _ => "Apps" }
     };

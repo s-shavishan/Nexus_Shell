@@ -534,7 +534,7 @@ internal sealed class StartMenuView : Grid, IDisposable
         environment.Session.Changed += _catalog.Invalidate;
     }
 
-    private IEnumerable<AppEntry> Builtins() => [new("monitor", "System Monitor", "nexus:monitor", "\uE9D9", "System"), new("jobs", "File jobs", "nexus:jobs", "\uE8B7", "Utility"), new("controls", "Nexus Controls", "nexus:controls", "\uE713", "System"), new("files", "Files", "nexus:files", "\uE8B7", "System"), new("settings", "Windows Settings", "ms-settings:", "\uE713", "System"), new("notes", "Notes", "nexus:notes", "\uE70B", "Utility"), new("calculator", "Calculator", "nexus:calculator", "\uE8EF", "Utility")];
+    private IEnumerable<AppEntry> Builtins() => [new("storage", "Storage Analyzer", "nexus:storage", "\uEDA2", "System"), new("monitor", "System Monitor", "nexus:monitor", "\uE9D9", "System"), new("jobs", "File jobs", "nexus:jobs", "\uE8B7", "Utility"), new("controls", "Nexus Controls", "nexus:controls", "\uE713", "System"), new("files", "Files", "nexus:files", "\uE8B7", "System"), new("settings", "Windows Settings", "ms-settings:", "\uE713", "System"), new("notes", "Notes", "nexus:notes", "\uE70B", "Utility"), new("calculator", "Calculator", "nexus:calculator", "\uE8EF", "Utility")];
     private string CurrentCollectionId => _category.StartsWith("collection:", StringComparison.Ordinal) ? _category[11..] : "";
 
     private void Organize(Action action)
