@@ -15,6 +15,8 @@ No project compiles source files from a sibling project's directory. Shared stat
 
 ## Source map
 
+Startup inventory uses the Shell's Windows adapter and Runtime's typed coordinator/journal. Only confirmed supported current-user Run edits are mutable; original registrations live in a separate account-bound journal beside settings. This feature does not change the Core settings writer, desktop sign-in policy or IPC schema.
+
 | Location | Content |
 | --- | --- |
 | Shell/App.xaml.cs | Process role selection and desktop startup |

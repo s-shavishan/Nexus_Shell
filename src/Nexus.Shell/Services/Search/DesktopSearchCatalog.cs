@@ -11,6 +11,7 @@ public static class DesktopSearchCatalog
         new("jobs", "File jobs", "Queue copies and moves with content verification", "transfer copy move queue progress cancel sha256"),
         new("monitor", "System Monitor", "Live CPU, memory, processes and drive space", "task manager performance storage disk free space end process close app ram"),
         new("storage", "Storage Analyzer", "Find large folders and files; export a space report", "disk usage size cleanup large files drive space analyze csv"),
+        new("startup", "Startup Apps", "Review sign-in apps; pause and restore account registrations", "boot login autorun background performance startup manager"),
         new("places", "Places", "Favorite folders and a quick look inside", "favorites pinned folders"),
         new("windows", "Window board", "Switch windows and restore layouts", "arrange snap layout workspace"),
         new("control-center", "Control Center", "Sound, network, display and desktop preferences", "settings system pc"),

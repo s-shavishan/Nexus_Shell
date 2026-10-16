@@ -27,6 +27,7 @@ internal sealed class DesktopMenus(DesktopEnvironment environment)
         tools.Items.Add(Item("Search…", environment.ShowSearch)); tools.Items.Add(Item("File jobs…", () => environment.ShowUtility("File jobs")));
         tools.Items.Add(Item("System Monitor…", () => environment.ShowUtility("System Monitor")));
         tools.Items.Add(Item("Storage Analyzer…", () => environment.ShowUtility("Storage Analyzer")));
+        tools.Items.Add(Item("Startup Apps…", () => environment.ShowUtility("Startup Apps")));
         tools.Items.Add(Item("Places…", environment.ShowPlaces)); tools.Items.Add(Item("Windows tools…", environment.ShowWindowsTools)); tools.Items.Add(Item("Clipboard shelf…", environment.ShowClipboardShelf));
         menu.Items.Add(tools);
         menu.Items.Add(ShellMenu.Action("Personalize…", () => environment.ShowControls("personalize"), "\uE790"));
@@ -40,6 +41,7 @@ internal sealed class DesktopMenus(DesktopEnvironment environment)
         var tools = ShellMenu.Group("Tools", "\uE8A5"); tools.Items.Add(Item("File jobs…", () => environment.ShowUtility("File jobs"))); tools.Items.Add(Item("Windows tools & keep awake…", environment.ShowWindowsTools)); tools.Items.Add(Item("Session status…", environment.ShowSessionStatus)); tools.Items.Add(Item("Desktop shortcuts…", environment.ShowDesktopGuide)); menu.Items.Add(tools);
         tools.Items.Insert(1, Item("System Monitor…", () => environment.ShowUtility("System Monitor")));
         tools.Items.Insert(2, Item("Storage Analyzer…", () => environment.ShowUtility("Storage Analyzer")));
+        tools.Items.Insert(3, Item("Startup Apps…", () => environment.ShowUtility("Startup Apps")));
         menu.Items.Add(ShellMenu.Action("Launchpad…", () => environment.ShowMenu(), "\uE80A")); menu.Items.Add(ShellMenu.Action("Search…", environment.ShowSearch, "\uE721"));
         menu.Items.Add(new MenuFlyoutSeparator()); menu.Items.Add(ShellMenu.Action("Lock screen", environment.LockScreen, "\uE72E"));
         var session = ShellMenu.Group("Session"); session.Items.Add(Item(environment.IsManagedDesktop ? "Return to Windows…" : "Exit Nexus", environment.RequestExit)); session.Items.Add(Item("Startup & recovery…", () => environment.ShowControls("startup"))); menu.Items.Add(session); return menu;

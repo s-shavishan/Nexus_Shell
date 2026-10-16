@@ -1,0 +1,8 @@
+<!-- නමෝ බුද්ධාය 🤍 -->
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs><linearGradient id="p" x2="1" y2="1"><stop stop-color="#4b4074"/><stop offset="1" stop-color="#23223f"/></linearGradient></defs>
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="url(#p)" stroke="#c6b8f2" stroke-opacity=".5" stroke-width="2"/>
+  <path d="M51 35c-16 6-26 24-21 41s24 28 42 23 29-24 23-42c-3-10-10-18-19-22" fill="none" stroke="#cdbff4" stroke-width="7" stroke-linecap="round"/>
+  <path d="M64 27v39" stroke="#9ae7cd" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="64" cy="76" r="7" fill="#9ae7cd"/>
+</svg>

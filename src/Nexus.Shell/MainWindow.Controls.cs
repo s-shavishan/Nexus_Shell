@@ -256,6 +256,7 @@ public sealed partial class MainWindow
         shortcuts.Children.Add(ActionButton("File jobs · copy, move and verify", () => _environment.ShowUtility("File jobs")));
         shortcuts.Children.Add(ActionButton("System Monitor · processes, memory and storage", () => _environment.ShowUtility("System Monitor")));
         shortcuts.Children.Add(ActionButton("Storage Analyzer · large folders and files", () => _environment.ShowUtility("Storage Analyzer")));
+        shortcuts.Children.Add(ActionButton("Startup Apps · review, pause and restore sign-in apps", () => _environment.ShowUtility("Startup Apps")));
         PageContent.Children.Add(Card(shortcuts));
     }
 
