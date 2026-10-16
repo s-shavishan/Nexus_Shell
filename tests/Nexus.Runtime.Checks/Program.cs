@@ -3,6 +3,9 @@ using Nexus.Shell.Models;
 using Nexus.Shell.Services;
 using System.IO.Pipes;
 
+if (args.Contains("--system-monitor-disposable-child")) { await Task.Delay(Timeout.InfiniteTimeSpan); return; }
+if (args.Contains("--system-monitor-native-checks")) { await SystemMonitorChecks.NativeActionsAsync(); return; }
+if (args.Contains("--system-monitor-checks")) { await SystemMonitorChecks.RunAsync(); return; }
 if (args.Contains("--file-clipboard-native-checks")) WindowsFileClipboardChecks.Run();
 if (args.Contains("--archive-checks")) { await ArchiveJobChecks.RunAsync(); return; }
 await RuntimeChecks.RunAsync(args.Contains("--no-native-ipc"));
@@ -40,6 +43,7 @@ internal static class RuntimeChecks
         await FileTransferFeatureChecks.RunAsync();
         await FilePasteChecks.RunAsync();
         await ArchiveJobChecks.RunAsync();
+        await SystemMonitorChecks.RunAsync();
         WindowsFileActionChecks.Run();
         await SearchChecks.RunAsync();
         await WindowsSearchChecks.RunAsync();

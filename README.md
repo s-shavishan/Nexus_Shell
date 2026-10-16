@@ -40,6 +40,15 @@ Folder moves require the same drive; choose Copy across drives. Notes and indepe
 
 See [file clipboard/recycle behavior and Windows acceptance](docs/P213-EVERYDAY-FILE-OPERATIONS.md).
 
+## System Monitor (pending Windows validation)
+
+- Open **System Monitor** from Launchpad, Search, desktop/Nexus menu → Tools or Nexus Controls → Home.
+- Observe CPU, physical memory and uptime; filter processes by name, PID or executable path, sort by CPU/memory/name/PID and inspect working set, private committed memory and executable location.
+- Ask an app's windows to close or explicitly confirm **End process**. Each action checks the original process identity again; Windows/Nexus infrastructure and processes outside your user/session remain protected here.
+- Review local/removable/optical drive capacity and space available to your account, then open a drive in Files. Network drive capacity is not probed. Updates pause when the monitor is inactive or paused.
+
+See [behavior, validation and Windows acceptance](docs/P215-SYSTEM-MONITOR.md).
+
 ## ZIP archives (pending Windows validation)
 
 - Select files/folders in Nexus Files and choose **Archive… → Create ZIP…**, or **Extract ZIP…** for one selected ZIP. Choose an output name in the current folder, or use File Jobs to choose another destination.

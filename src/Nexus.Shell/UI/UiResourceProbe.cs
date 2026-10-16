@@ -33,6 +33,8 @@ internal static class UiResourceProbe
         MainWindow? controls = null;
         Window? jobsWindow = null;
         FileJobsView? jobsView = null;
+        Window? monitorWindow = null;
+        SystemMonitorView? monitorView = null;
         FilesView? filesView = null;
         Window? filesWindow = null;
         var panels = new List<DesktopPanelWindow>();
@@ -206,6 +208,21 @@ internal static class UiResourceProbe
             }
             jobsView.Release(); jobsWindow.Close(); jobsView = null; jobsWindow = null;
             checks.Add("Production File Jobs form, queue progress and responsive columns at two native sizes; isolated fixture with polling, pickers and transfer actions disabled");
+            stage = "system-monitor-construction-and-layout";
+            monitorView = new SystemMonitorView(environment, validation: true);
+            monitorWindow = new Window { Content = monitorView }; monitorWindow.Activate();
+            IntPtr monitorHandle = WinRT.Interop.WindowNative.GetWindowHandle(monitorWindow);
+            var monitorNative = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(Microsoft.UI.Win32Interop.GetWindowIdFromWindow(monitorHandle));
+            double monitorScale = ShellLayerInterop.Scale(monitorHandle);
+            foreach (var size in new[] { (Width: 900, Height: 780), (Width: 500, Height: 650) })
+            foreach (bool storage in new[] { false, true })
+            {
+                monitorView.ValidationPage(storage);
+                monitorNative.Resize(new Windows.Graphics.SizeInt32((int)(size.Width * monitorScale), (int)(size.Height * monitorScale)));
+                await Task.Delay(80); monitorView.UpdateLayout(); monitorView.VerifyValidationLayout(size.Width < 680, storage);
+            }
+            monitorView.Release(); monitorWindow.Close(); monitorView = null; monitorWindow = null;
+            checks.Add("Production System Monitor processes/storage pages at two native sizes; isolated fixture with every command disabled and no Windows reads or process actions");
             stage = "notification-construction-and-layout";
             for (int i = 0; i < 25; i++) environment.Notifications.Publish("Construction sample " + i, "Temporary native UI fixture; no history is persisted.", i % 3 == 0 ? NoticeKind.Warning : NoticeKind.Information);
             notifications = new NotificationWindow(environment);
@@ -287,6 +304,8 @@ internal static class UiResourceProbe
             _loaded = null; menu?.Dispose(); launchpad?.Dispose(); dock?.Release();
             try { controls?.Close(); } catch (Exception error) { failures.Add("Controls cleanup: " + error.Message); }
             jobsView?.Release();
+            monitorView?.Release();
+            try { monitorWindow?.Close(); } catch (Exception error) { failures.Add("System Monitor cleanup: " + error.Message); }
             filesView?.Release();
             try { filesWindow?.Close(); } catch (Exception error) { failures.Add("Files context cleanup: " + error.Message); }
             try { jobsWindow?.Close(); } catch (Exception error) { failures.Add("File Jobs cleanup: " + error.Message); }

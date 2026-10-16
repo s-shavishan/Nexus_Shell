@@ -67,6 +67,13 @@ internal static class DockChecks
             && !DockPinnedWindowPolicy.Matches("Tool.lnk", "Calculator", "Calculator", "Calculator")
             && !DockPinnedWindowPolicy.Matches(@"C:\Apps\calc.exe", "Calculator", "Calculator", "explorer"),
             "Pinned apps must claim only their matching running window identities.");
+        Check(DockPinnedWindowPolicy.Matches("nexus:monitor", "System Monitor", "System Monitor", "nexus")
+            && !DockPinnedWindowPolicy.Matches("nexus:monitor", "System Monitor", "File jobs", "nexus")
+            && !DockPinnedWindowPolicy.Matches("nexus:monitor", "System Monitor", "System Monitor", "anotherapp"),
+            "A pinned System Monitor must claim its own utility window while preserving other app entries.");
+        Check(DesktopSearchCatalog.Find("process memory").Any(command => command.Id == "monitor")
+            && DesktopSearchCatalog.Find("disk free space").Any(command => command.Id == "monitor"),
+            "The monitor must be discoverable using both process and storage terms without Everything.");
         // Regression from P2.8/P2.9: Nexus Files is a supervised
         // Nexus.Shell worker and its title changes with folder navigation.
         // A pinned built-in Files icon must claim its ONE representative HWND,

@@ -7,6 +7,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../src/Nexus.Shell/Interop/WindowsSystemMonitor.cs" Link="WindowsSystemMonitor.cs" />
     <Compile Include="../../src/Nexus.Core/Transfers/WindowsTransferSource.cs" Link="WindowsTransferSource.cs" />
     <Compile Include="../../src/Nexus.Core/Windows/WindowsFileWorker.cs" Link="WindowsFileWorker.cs" />
     <Compile Include="../../src/Nexus.Core/Windows/WindowsRecycleOperation.cs" Link="WindowsRecycleOperation.cs" />

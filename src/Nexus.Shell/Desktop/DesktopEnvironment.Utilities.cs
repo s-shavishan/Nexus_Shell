@@ -23,6 +23,8 @@ internal sealed partial class DesktopEnvironment
             { var view = new CalculatorView(this); window = new(this, name, view, 330, 425, view.ApplyAppearance, () => { }); }
             else if (name == "File jobs")
             { var view = new FileJobsView(this); try { window = new(this, name, view, 970, 740, view.ApplyAppearance, view.Release, view.SetActive); } catch { view.Release(); throw; } }
+            else if (name == "System Monitor")
+            { var view = new SystemMonitorView(this); try { window = new(this, name, view, 900, 780, view.ApplyAppearance, view.Release, view.SetActive); } catch { view.Release(); throw; } }
             else return;
             _utilities.Add(name, window);
             window.Closed += (_, _) => { _utilities.Remove(name); if (!IsStopping) UpdateTaskbar(); };

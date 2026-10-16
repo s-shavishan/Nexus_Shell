@@ -19,6 +19,7 @@ required = [
     "Services/AudioController.cs", "Services/PcMetrics.cs", "Services/WindowLayouts.cs",
     "MainWindow.Controls.cs", "Services/NexusControlsCatalog.cs", "Assets/Icons/Controls.svg",
     "UI/Controls/FileJobsView.cs", "Assets/Icons/Jobs.svg",
+    "UI/Controls/SystemMonitorView.cs", "Interop/WindowsSystemMonitor.cs", "Assets/Icons/Monitor.svg",
     "UI/Menus/ShellMenu.cs", "Desktop/AboutNexusWindow.cs", "Desktop/DesktopEnvironment.Shell.cs", "Services/WindowsShellPolicy.cs", "Services/FileContextPolicy.cs", "Interop/WindowsShellBridge.cs",
     "App.xaml", "App.xaml.cs", "MainWindow.xaml", "MainWindow.xaml.cs", "Services/ExploreWorkspace.cs", "UI/SavedKindConverter.cs", "UI/NexusIcons.cs", "Services/NavigationTrail.cs", "Services/ShellExperience.cs", "Services/AuraPalette.cs", "Interop/DesktopIntegration.cs",
     "Services/FocusSession.cs", "Services/CommandSearch.cs", "Services/WorkspaceState.cs",
@@ -369,6 +370,12 @@ assert "FileJobsAsync" in jobs_view and "File.Copy(" not in jobs_view and "File.
 assert "FileJobCoordinator" in (root / "src/Nexus.Core/Program.cs").read_text() and "WindowsTransferSource.Open" in (root / "src/Nexus.Core/Program.cs").read_text()
 assert "file-jobs-construction-and-layout" in (project / "UI/UiResourceProbe.cs").read_text() and "VerifyValidationLayout" in jobs_view
 print("Workspace retirement, Core-owned File Jobs and isolated native UI probe wiring OK")
+for relative in ["SystemMonitorContract.cs", "SystemMonitorSampler.cs", "SystemMonitorReader.cs", "ProcessActions.cs"]:
+    assert (root / "src/Nexus.Runtime/Monitoring" / relative).is_file(), f"Missing System Monitor component: {relative}"
+assert "system-monitor-construction-and-layout" in (project / "UI/UiResourceProbe.cs").read_text()
+for relative in ["Desktop/DesktopEnvironment.cs", "Services/AppCatalog.cs", "UI/Menus/StartMenuView.cs"]:
+    assert "nexus:monitor" in (project / relative).read_text(), f"System Monitor route is missing: {relative}"
+print("System Monitor runtime, desktop/Launchpad routes and isolated native UI probe wiring OK")
 for relative in ["src/Nexus.Runtime/WindowsFileActions.cs", "src/Nexus.Core/Windows/WindowsFileWorker.cs", "tests/Nexus.Core.Checks/ShellIntegrationChecks.cs", "tests/Nexus.Runtime.Checks/WindowsFileActionChecks.cs"]:
     assert (root / relative).is_file(), f"Missing shell integration component: {relative}"
 menus = (project / "UI/Menus/DesktopMenus.cs").read_text()
