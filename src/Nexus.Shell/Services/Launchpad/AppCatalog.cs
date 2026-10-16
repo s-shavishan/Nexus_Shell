@@ -16,6 +16,7 @@ public static class AppCatalog
             new("controls", "Nexus Controls", "nexus:controls", "\uE713", "System"),
             new("jobs", "File jobs", "nexus:jobs", "\uE8B7", "Utility"),
             new("monitor", "System Monitor", "nexus:monitor", "\uE9D9", "System"),
+            new("storage", "Storage Analyzer", "nexus:storage", "\uEDA2", "System"),
             new("files", "Files", "nexus:files", "\uE8B7", "System"),
             new("browser", "Browser", "https://www.google.com", "\uE774", "Browser"),
             new("terminal", "Terminal", Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "cmd.exe"), "\uE756", "Development"),

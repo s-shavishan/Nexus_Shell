@@ -519,6 +519,7 @@ internal sealed partial class DesktopEnvironment
         if (target == "nexus:notes") { ShowUtility("Notes"); return; }
         if (target == "nexus:jobs") { ShowUtility("File jobs"); return; }
         if (target == "nexus:monitor") { ShowUtility("System Monitor"); return; }
+        if (target == "nexus:storage") { ShowUtility("Storage Analyzer"); return; }
         if (target == "nexus:calculator") { ShowUtility("Calculator"); return; }
         if (target is "nexus:recycle" or "shell:RecycleBinFolder") { ShowFiles("nexus:recycle"); return; }
         if (target == "nexus:files" || IsExplorer(target)) { ShowFiles(); return; }

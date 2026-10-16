@@ -255,6 +255,7 @@ public sealed partial class MainWindow
         shortcuts.Children.Add(Tiles(ActionButton("Sound & audio", () => _environment.ShowControlCenter("Sound")), ActionButton("Network & Wi-Fi", () => _environment.ShowControlCenter("Network")), ActionButton("Display & brightness", () => _environment.ShowControlCenter("Display")), ActionButton("Bluetooth devices", () => _environment.ShowControlCenter("Bluetooth")), ActionButton("Power & battery", () => _environment.ShowControlCenter("Power")), ActionButton("Windows tools & Keep awake", _environment.ShowWindowsTools)));
         shortcuts.Children.Add(ActionButton("File jobs · copy, move and verify", () => _environment.ShowUtility("File jobs")));
         shortcuts.Children.Add(ActionButton("System Monitor · processes, memory and storage", () => _environment.ShowUtility("System Monitor")));
+        shortcuts.Children.Add(ActionButton("Storage Analyzer · large folders and files", () => _environment.ShowUtility("Storage Analyzer")));
         PageContent.Children.Add(Card(shortcuts));
     }
 

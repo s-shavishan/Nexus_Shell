@@ -37,6 +37,7 @@ internal sealed partial class DesktopEnvironment
             case "files": ShowFiles(); break;
             case "jobs": ShowUtility("File jobs"); break;
             case "monitor": ShowUtility("System Monitor"); break;
+            case "storage": ShowUtility("Storage Analyzer"); break;
             case "places": ShowPlaces(); break;
             case "windows": ShowWindowOverview(); break;
             case "control-center": ShowQuickSettings(); break;
