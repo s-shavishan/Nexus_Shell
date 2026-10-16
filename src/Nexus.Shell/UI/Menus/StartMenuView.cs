@@ -1,3 +1,4 @@
+// නමෝ බුද්ධාය 🤍
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
@@ -10,36 +11,48 @@ using Windows.System;
 using System.ComponentModel;
 
 namespace Nexus.Shell.UI.Menus;
-
 internal sealed class LaunchpadTile(AppEntry app, bool highContrast) : INotifyPropertyChanged
 {
     internal AppEntry App => app;
     public string Name => app.Name;
-    private ImageSource? _icon = LaunchpadArtworkPolicy.UsesNexusArtwork(app.Id)
-        ? NexusIcons.Source(NexusIcons.ForApp(app)) : null;
-    private Visibility _placeholder = LaunchpadArtworkPolicy.UsesNexusArtwork(app.Id)
-        ? Visibility.Collapsed : Visibility.Visible;
+
+    private ImageSource? _icon = LaunchpadArtworkPolicy.UsesNexusArtwork(app.Id) ? NexusIcons.Source(NexusIcons.ForApp(app)) : null;
+    private Visibility _placeholder = LaunchpadArtworkPolicy.UsesNexusArtwork(app.Id) ? Visibility.Collapsed : Visibility.Visible;
     public string Monogram => LaunchpadArtworkPolicy.Monogram(app.Name);
-    public SolidColorBrush TileBrush { get; } =
-        new(ShellTheme.Color(LaunchpadArtworkPolicy.BackgroundForContrast(app.Name, highContrast)));
+    public SolidColorBrush TileBrush { get; } = new(ShellTheme.Color(LaunchpadArtworkPolicy.BackgroundForContrast(app.Name, highContrast)));
+
     internal void UpdateContrast(bool highContrast)
     {
         var color = ShellTheme.Color(LaunchpadArtworkPolicy.BackgroundForContrast(app.Name, highContrast));
-        if (TileBrush.Color != color) TileBrush.Color = color;
+        if (TileBrush.Color != color)
+            TileBrush.Color = color;
     }
-    public Visibility PlaceholderVisibility { get => _placeholder; private set
-        { if (_placeholder == value) return; _placeholder = value; PropertyChanged?.Invoke(this, new(nameof(PlaceholderVisibility))); } }
+
+    public Visibility PlaceholderVisibility
+    {
+        get => _placeholder;
+        private set
+        {
+            if (_placeholder == value)
+                return;
+            _placeholder = value;
+            PropertyChanged?.Invoke(this, new(nameof(PlaceholderVisibility)));
+        }
+    }
+
     public ImageSource? Icon
     {
         get => _icon;
         set
         {
-            if (ReferenceEquals(_icon, value)) return;
+            if (ReferenceEquals(_icon, value))
+                return;
             _icon = value;
             PlaceholderVisibility = value is null ? Visibility.Visible : Visibility.Collapsed;
             PropertyChanged?.Invoke(this, new(nameof(Icon)));
         }
     }
+
     public event PropertyChangedEventHandler? PropertyChanged;
 }
 
@@ -48,28 +61,109 @@ internal sealed class LaunchpadTile(AppEntry app, bool highContrast) : INotifyPr
 internal sealed class StartMenuView : Grid, IDisposable
 {
     private readonly DesktopEnvironment _environment;
-    private readonly TextBox _search = new() { PlaceholderText = "Find an app", FontSize = 15, CornerRadius = new CornerRadius(12), Padding = new Thickness(14, 10, 14, 10) };
-    private readonly GridView _apps = new() { IsItemClickEnabled = true, SelectionMode = ListViewSelectionMode.Single, HorizontalAlignment = HorizontalAlignment.Stretch };
-    private readonly TextBlock _title = new() { Text = "Launchpad", FontSize = 32, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
-    private readonly TextBlock _subtitle = new() { Text = "Everything on your desktop, beautifully organized.", FontSize = 12, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis };
-    private readonly StackPanel _dots = new() { Orientation = Orientation.Horizontal, Spacing = 5, VerticalAlignment = VerticalAlignment.Center };
-    private readonly Border _empty = new() { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-    private readonly Border _searchFrame = new() { CornerRadius = new CornerRadius(18), BorderThickness = new Thickness(1) };
-    private readonly Button _organizeButton = new() { Content = "Organize  ▾" };
-    private readonly Border _organizeFrame = new() { Padding = new Thickness(10), CornerRadius = new CornerRadius(14), BorderThickness = new Thickness(1), Visibility = Visibility.Collapsed };
-    private readonly Border _galleryFrame = new() { CornerRadius = new CornerRadius(22), BorderThickness = new Thickness(1), Padding = new Thickness(7) };
+    private readonly TextBox _search = new()
+    {
+        PlaceholderText = "Find an app",
+        FontSize = 15,
+        CornerRadius = new CornerRadius(12),
+        Padding = new Thickness(14, 10, 14, 10)
+    };
+    private readonly GridView _apps = new()
+    {
+        IsItemClickEnabled = true,
+        SelectionMode = ListViewSelectionMode.Single,
+        HorizontalAlignment = HorizontalAlignment.Stretch
+    };
+    private readonly TextBlock _title = new()
+    {
+        Text = "Launchpad",
+        FontSize = 32,
+        FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+    };
+    private readonly TextBlock _subtitle = new()
+    {
+        Text = "Everything on your desktop, beautifully organized.",
+        FontSize = 12,
+        TextWrapping = TextWrapping.Wrap,
+        MaxLines = 2,
+        TextTrimming = TextTrimming.CharacterEllipsis
+    };
+    private readonly StackPanel _dots = new()
+    {
+        Orientation = Orientation.Horizontal,
+        Spacing = 5,
+        VerticalAlignment = VerticalAlignment.Center
+    };
+    private readonly Border _empty = new()
+    {
+        HorizontalAlignment = HorizontalAlignment.Center,
+        VerticalAlignment = VerticalAlignment.Center
+    };
+    private readonly Border _searchFrame = new()
+    {
+        CornerRadius = new CornerRadius(18),
+        BorderThickness = new Thickness(1)
+    };
+    private readonly Button _organizeButton = new()
+    {
+        Content = "Organize  ▾"
+    };
+    private readonly Border _organizeFrame = new()
+    {
+        Padding = new Thickness(10),
+        CornerRadius = new CornerRadius(14),
+        BorderThickness = new Thickness(1),
+        Visibility = Visibility.Collapsed
+    };
+    private readonly Border _galleryFrame = new()
+    {
+        CornerRadius = new CornerRadius(22),
+        BorderThickness = new Thickness(1),
+        Padding = new Thickness(7)
+    };
     private bool _organizerOpen;
     private readonly FontIcon _searchIcon = ShellControls.Icon("\uE721", 18);
-    private readonly TextBlock _hint = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
-    private readonly Button _previous = new() { Content = "‹", Width = 38 }, _next = new() { Content = "›", Width = 38 };
+    private readonly TextBlock _hint = new()
+    {
+        FontSize = 12,
+        VerticalAlignment = VerticalAlignment.Center
+    };
+    private readonly Button _previous = new()
+    {
+        Content = "‹",
+        Width = 38
+    }, _next = new()
+    {
+        Content = "›",
+        Width = 38
+    };
     private readonly Dictionary<string, Button> _categories = [];
     private sealed record CollectionChoice(string Id, string Name);
-    private readonly ComboBox _collections = new() { Width = 178, DisplayMemberPath = "Name" };
-    private readonly ComboBox _order = new() { Width = 115 };
-    private readonly Button _renameCollection = new() { Content = "Rename" }, _deleteCollection = new() { Content = "Remove" }, _restoreHidden = new() { Content = "Restore hidden" };
+    private readonly ComboBox _collections = new()
+    {
+        Width = 178,
+        DisplayMemberPath = "Name"
+    };
+    private readonly ComboBox _order = new()
+    {
+        Width = 115
+    };
+    private readonly Button _renameCollection = new()
+    {
+        Content = "Rename"
+    }, _deleteCollection = new()
+    {
+        Content = "Remove"
+    }, _restoreHidden = new()
+    {
+        Content = "Restore hidden"
+    };
     private bool _organizing;
     private readonly Button _refresh;
-    private readonly DispatcherTimer _filterTimer = new() { Interval = TimeSpan.FromMilliseconds(45) };
+    private readonly DispatcherTimer _filterTimer = new()
+    {
+        Interval = TimeSpan.FromMilliseconds(45)
+    };
     private readonly LaunchpadCatalogCache _catalog;
     private readonly LaunchpadRefreshGate _refreshGate = new();
     private IReadOnlyList<AppEntry> _filtered = [];
@@ -80,32 +174,111 @@ internal sealed class StartMenuView : Grid, IDisposable
     private string _category = "All";
     internal StartMenuView(DesktopEnvironment environment)
     {
-        _environment = environment; _catalog = new(Builtins());
-        Padding = new Thickness(24, 22, 24, 20); RowSpacing = 14;
+        _environment = environment;
+        _catalog = new(Builtins());
+        Padding = new Thickness(24, 22, 24, 20);
+        RowSpacing = 14;
         SizeChanged += (_, _) => _subtitle.MaxWidth = Math.Max(140, ActualWidth - 176);
         KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden;
-        foreach (var height in new[] { GridLength.Auto, GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto }) RowDefinitions.Add(new() { Height = height });
-        var heading = new Grid(); heading.ColumnDefinitions.Add(new()); heading.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
-        var identity = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 13 }; identity.Children.Add(NexusIcons.Image("Launchpad", 42));
-        var titles = new StackPanel { Spacing = 3 }; titles.Children.Add(_title); titles.Children.Add(_subtitle); identity.Children.Add(titles); heading.Children.Add(identity);
-        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
-        _refresh = ShellControls.IconButton("\uE72C", "Refresh installed apps", () => _ = RefreshCatalogAsync(refresh: true)); actions.Children.Add(_refresh);
-        var close = ShellControls.IconButton("\uE8BB", "Close Launchpad", environment.HideMenu); actions.Children.Add(close); Grid.SetColumn(actions, 1); heading.Children.Add(actions); Children.Add(heading);
-        var searchRow = new Grid(); searchRow.ColumnDefinitions.Add(new() { Width = new GridLength(42) }); searchRow.ColumnDefinitions.Add(new());
+        foreach (var height in new[]
+        {
+            GridLength.Auto,
+            GridLength.Auto,
+            GridLength.Auto,
+            new GridLength(1, GridUnitType.Star),
+            GridLength.Auto
+        }
+
+        )
+            RowDefinitions.Add(new() { Height = height });
+        var heading = new Grid();
+        heading.ColumnDefinitions.Add(new());
+        heading.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
+        var identity = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 13
+        };
+        identity.Children.Add(NexusIcons.Image("Launchpad", 42));
+        var titles = new StackPanel
+        {
+            Spacing = 3
+        };
+        titles.Children.Add(_title);
+        titles.Children.Add(_subtitle);
+        identity.Children.Add(titles);
+        heading.Children.Add(identity);
+        var actions = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 4
+        };
+        _refresh = ShellControls.IconButton("\uE72C", "Refresh installed apps", () => _ = RefreshCatalogAsync(refresh: true));
+        actions.Children.Add(_refresh);
+        var close = ShellControls.IconButton("\uE8BB", "Close Launchpad", environment.HideMenu);
+        actions.Children.Add(close);
+        Grid.SetColumn(actions, 1);
+        heading.Children.Add(actions);
+        Children.Add(heading);
+        var searchRow = new Grid();
+        searchRow.ColumnDefinitions.Add(new() { Width = new GridLength(42) });
+        searchRow.ColumnDefinitions.Add(new());
         searchRow.Children.Add(_searchIcon);
-        _search.BorderThickness = new Thickness(0); _search.Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent); Grid.SetColumn(_search, 1); searchRow.Children.Add(_search);
+        _search.BorderThickness = new Thickness(0);
+        _search.Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        Grid.SetColumn(_search, 1);
+        searchRow.Children.Add(_search);
         _searchFrame.Child = searchRow;
         _search.GotFocus += (_, _) => _searchFrame.BorderBrush = environment.Theme.Brush("NexusAccent");
         _search.LostFocus += (_, _) => _searchFrame.BorderBrush = environment.Theme.Edge;
-        Grid.SetRow(_searchFrame, 1); Children.Add(_searchFrame); Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_search, "Find an app in Launchpad");
-        var tabs = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 5 };
-        foreach (string category in new[] { "All", "Pinned", "Recent", "System", "Tools", "Development", "Games", "Hidden" })
+        Grid.SetRow(_searchFrame, 1);
+        Children.Add(_searchFrame);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_search, "Find an app in Launchpad");
+        var tabs = new StackPanel
         {
-            var button = new Button { Content = category, CornerRadius = new CornerRadius(10), Padding = new Thickness(12, 6, 12, 6), Style = (Style)Application.Current.Resources["QuietButton"] };
-            button.Click += (_, _) => { _category = category; _page = 0; RefreshCollections(); Render(); }; _categories.Add(category, button); tabs.Children.Add(button);
+            Orientation = Orientation.Horizontal,
+            Spacing = 5
+        };
+        foreach (string category in new[]
+        {
+            "All",
+            "Pinned",
+            "Recent",
+            "System",
+            "Tools",
+            "Development",
+            "Games",
+            "Hidden"
         }
-        var organization = new StackPanel { Spacing = 9 };
-        var topBar = new Grid { ColumnSpacing = 10 };
+
+        )
+        {
+            var button = new Button
+            {
+                Content = category,
+                CornerRadius = new CornerRadius(10),
+                Padding = new Thickness(12, 6, 12, 6),
+                Style = (Style)Application.Current.Resources["QuietButton"]
+            };
+            button.Click += (_, _) =>
+            {
+                _category = category;
+                _page = 0;
+                RefreshCollections();
+                Render();
+            };
+            _categories.Add(category, button);
+            tabs.Children.Add(button);
+        }
+
+        var organization = new StackPanel
+        {
+            Spacing = 9
+        };
+        var topBar = new Grid
+        {
+            ColumnSpacing = 10
+        };
         topBar.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) });
         topBar.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
         topBar.Children.Add(new ScrollViewer { Content = tabs, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled });
@@ -118,29 +291,71 @@ internal sealed class StartMenuView : Grid, IDisposable
             _organizerOpen = !_organizerOpen;
             _organizeFrame.Visibility = _organizerOpen ? Visibility.Visible : Visibility.Collapsed;
             _organizeButton.Content = _organizerOpen ? "Done  ▴" : "Organize  ▾";
-            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_organizeButton,
-                _organizerOpen ? "Hide Launchpad organization options" : "Show Launchpad organization options");
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_organizeButton, _organizerOpen ? "Hide Launchpad organization options" : "Show Launchpad organization options");
         };
-        Grid.SetColumn(_organizeButton, 1); topBar.Children.Add(_organizeButton);
+        Grid.SetColumn(_organizeButton, 1);
+        topBar.Children.Add(_organizeButton);
         organization.Children.Add(topBar);
-        var tools = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-        tools.Children.Add(_collections); _collections.SelectionChanged += (_, _) => { if (_organizing || _collections.SelectedItem is not CollectionChoice choice) return; _category = choice.Id.Length == 0 ? "All" : "collection:" + choice.Id; _page = 0; RefreshCollections(); Render(); };
+        var tools = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 6
+        };
+        tools.Children.Add(_collections);
+        _collections.SelectionChanged += (_, _) =>
+        {
+            if (_organizing || _collections.SelectedItem is not CollectionChoice choice)
+                return;
+            _category = choice.Id.Length == 0 ? "All" : "collection:" + choice.Id;
+            _page = 0;
+            RefreshCollections();
+            Render();
+        };
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_collections, "App collection");
-        var create = new Button { Content = "+ Collection" }; create.Flyout = CollectionEditor(false); tools.Children.Add(create);
-        _renameCollection.Flyout = CollectionEditor(true); tools.Children.Add(_renameCollection);
-        var removeFlyout = ShellMenu.Create(); var removeGroup = new MenuFlyoutItem { Text = "Remove collection" };
-        removeGroup.Click += (_, _) => Organize(() => { string id = CurrentCollectionId; environment.Session.State.AppCollections.RemoveAll(g => g.Id == id); _category = "All"; }); removeFlyout.Items.Add(removeGroup); _deleteCollection.Flyout = removeFlyout; tools.Children.Add(_deleteCollection);
-        _order.Items.Add("A–Z"); _order.Items.Add("Catalog order"); _order.SelectedIndex = environment.Session.State.LaunchpadOrder == "Catalog" ? 1 : 0;
-        _order.SelectionChanged += (_, _) => { if (!_organizing) Organize(() => environment.Session.State.LaunchpadOrder = _order.SelectedIndex == 1 ? "Catalog" : "Name"); }; tools.Children.Add(_order);
+        var create = new Button
+        {
+            Content = "+ Collection"
+        };
+        create.Flyout = CollectionEditor(false);
+        tools.Children.Add(create);
+        _renameCollection.Flyout = CollectionEditor(true);
+        tools.Children.Add(_renameCollection);
+        var removeFlyout = ShellMenu.Create();
+        var removeGroup = new MenuFlyoutItem
+        {
+            Text = "Remove collection"
+        };
+        removeGroup.Click += (_, _) => Organize(() =>
+        {
+            string id = CurrentCollectionId;
+            environment.Session.State.AppCollections.RemoveAll(g => g.Id == id);
+            _category = "All";
+        });
+        removeFlyout.Items.Add(removeGroup);
+        _deleteCollection.Flyout = removeFlyout;
+        tools.Children.Add(_deleteCollection);
+        _order.Items.Add("A–Z");
+        _order.Items.Add("Catalog order");
+        _order.SelectedIndex = environment.Session.State.LaunchpadOrder == "Catalog" ? 1 : 0;
+        _order.SelectionChanged += (_, _) =>
+        {
+            if (!_organizing)
+                Organize(() => environment.Session.State.LaunchpadOrder = _order.SelectedIndex == 1 ? "Catalog" : "Name");
+        };
+        tools.Children.Add(_order);
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_order, "Launchpad app order");
-        _restoreHidden.Click += (_, _) => Organize(() => environment.Session.State.HiddenAppTargets.Clear()); tools.Children.Add(_restoreHidden);
+        _restoreHidden.Click += (_, _) => Organize(() => environment.Session.State.HiddenAppTargets.Clear());
+        tools.Children.Add(_restoreHidden);
         _organizeFrame.Child = new ScrollViewer
         {
-            Content = tools, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Content = tools,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
             VerticalScrollBarVisibility = ScrollBarVisibility.Disabled
         };
         organization.Children.Add(_organizeFrame);
-        Grid.SetRow(organization, 2); Children.Add(organization); RefreshCollections();
+        Grid.SetRow(organization, 2);
+        Children.Add(organization);
+        RefreshCollections();
         _apps.ItemsPanel = (ItemsPanelTemplate)XamlReader.Load("""
             <ItemsPanelTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"><ItemsWrapGrid Orientation="Horizontal" ItemWidth="110" ItemHeight="137" /></ItemsPanelTemplate>
             """);
@@ -166,124 +381,308 @@ internal sealed class StartMenuView : Grid, IDisposable
             </DataTemplate>
             """);
         _apps.ItemClick += (_, e) => Open(((LaunchpadTile)e.ClickedItem).App);
-        _apps.KeyDown += (_, e) => { if (e.Key == VirtualKey.Enter && _apps.SelectedItem is LaunchpadTile tile) { Open(tile.App); e.Handled = true; } };
-        var context = ShellMenu.Create(); _apps.ContextFlyout = context;
+        _apps.KeyDown += (_, e) =>
+        {
+            if (e.Key == VirtualKey.Enter && _apps.SelectedItem is LaunchpadTile tile)
+            {
+                Open(tile.App);
+                e.Handled = true;
+            }
+        };
+        var context = ShellMenu.Create();
+        _apps.ContextFlyout = context;
         context.Opening += (_, _) =>
         {
-            context.Items.Clear(); if (_apps.SelectedItem is not LaunchpadTile tile) return;
-            var app = tile.App; var state = environment.Session.State;
+            context.Items.Clear();
+            if (_apps.SelectedItem is not LaunchpadTile tile)
+                return;
+            var app = tile.App;
+            var state = environment.Session.State;
             void Action(string text, Action action) => context.Items.Add(ShellMenu.Action(text, () => Organize(action)));
             context.Items.Add(ShellMenu.Action("Open", () => Open(app), "\uE768"));
             Action(LaunchpadCatalog.IsPinned(state.PinnedApps, app) ? "Remove from dock" : "Pin to dock", () => LaunchpadCatalog.TogglePin(state.PinnedApps, app));
             if (LaunchpadCatalog.IsPinned(state.PinnedApps, app))
-            { var dock = ShellMenu.Group("Dock position"); dock.Items.Add(ShellMenu.Action("Move left", () => Organize(() => DesktopOrganization.MovePin(state.PinnedApps, app.Target, -1)))); dock.Items.Add(ShellMenu.Action("Move right", () => Organize(() => DesktopOrganization.MovePin(state.PinnedApps, app.Target, 1)))); context.Items.Add(dock); }
-            var groups = ShellMenu.Group("Collections"); groups.IsEnabled = state.AppCollections.Count > 0;
+            {
+                var dock = ShellMenu.Group("Dock position");
+                dock.Items.Add(ShellMenu.Action("Move left", () => Organize(() => DesktopOrganization.MovePin(state.PinnedApps, app.Target, -1))));
+                dock.Items.Add(ShellMenu.Action("Move right", () => Organize(() => DesktopOrganization.MovePin(state.PinnedApps, app.Target, 1))));
+                context.Items.Add(dock);
+            }
+
+            var groups = ShellMenu.Group("Collections");
+            groups.IsEnabled = state.AppCollections.Count > 0;
             foreach (var group in state.AppCollections)
-            { var member = new ToggleMenuFlyoutItem { Text = group.Name, IsChecked = group.Targets.Contains(app.Target, StringComparer.OrdinalIgnoreCase) }; member.Click += (_, _) => Organize(() => DesktopOrganization.ToggleMember(state, group.Id, app.Target)); groups.Items.Add(member); }
-            context.Items.Add(groups); context.Items.Add(new MenuFlyoutSeparator());
+            {
+                var member = new ToggleMenuFlyoutItem
+                {
+                    Text = group.Name,
+                    IsChecked = group.Targets.Contains(app.Target, StringComparer.OrdinalIgnoreCase)
+                };
+                member.Click += (_, _) => Organize(() => DesktopOrganization.ToggleMember(state, group.Id, app.Target));
+                groups.Items.Add(member);
+            }
+
+            context.Items.Add(groups);
+            context.Items.Add(new MenuFlyoutSeparator());
             bool hidden = state.HiddenAppTargets.Contains(app.Target, StringComparer.OrdinalIgnoreCase);
             Action(hidden ? "Show in Launchpad" : "Hide from Launchpad", () => DesktopOrganization.SetHidden(state, app.Target, !hidden));
             if (Path.IsPathFullyQualified(app.Target))
             {
-                var windows = ShellMenu.Group("Windows", "\uE713"); windows.Items.Add(ShellMenu.Action("Properties…", () => environment.WindowsFileAction(app.Target, "properties"))); windows.Items.Add(ShellMenu.Action("File options…", () => environment.WindowsFileAction(app.Target))); context.Items.Add(windows);
+                var windows = ShellMenu.Group("Windows", "\uE713");
+                windows.Items.Add(ShellMenu.Action("Properties…", () => environment.WindowsFileAction(app.Target, "properties")));
+                windows.Items.Add(ShellMenu.Action("File options…", () => environment.WindowsFileAction(app.Target)));
+                context.Items.Add(windows);
             }
         };
-        _apps.RightTapped += (_, args) => { DependencyObject? node = args.OriginalSource as DependencyObject; while (node is not null && node is not GridViewItem && !ReferenceEquals(node, _apps)) node = VisualTreeHelper.GetParent(node); _apps.SelectedItem = node is GridViewItem item ? item.Content : null; };
+        _apps.RightTapped += (_, args) =>
+        {
+            DependencyObject? node = args.OriginalSource as DependencyObject;
+            while (node is not null && node is not GridViewItem && !ReferenceEquals(node, _apps))
+                node = VisualTreeHelper.GetParent(node);
+            _apps.SelectedItem = node is GridViewItem item ? item.Content : null;
+        };
         var gallery = new Grid();
         gallery.Children.Add(_apps);
         _galleryFrame.Child = gallery;
         Grid.SetRow(_galleryFrame, 3);
         Children.Add(_galleryFrame);
-        var empty = new StackPanel { Spacing = 14, HorizontalAlignment = HorizontalAlignment.Center }; var emptyIcon = ShellControls.Icon("\uE721", 32); emptyIcon.Foreground = environment.Theme.Brush("NexusMuted"); empty.Children.Add(emptyIcon);
+        var empty = new StackPanel
+        {
+            Spacing = 14,
+            HorizontalAlignment = HorizontalAlignment.Center
+        };
+        var emptyIcon = ShellControls.Icon("\uE721", 32);
+        emptyIcon.Foreground = environment.Theme.Brush("NexusMuted");
+        empty.Children.Add(emptyIcon);
         empty.Children.Add(new TextBlock { Text = "Nothing here yet", FontSize = 18, Foreground = environment.Theme.Brush("NexusText"), TextAlignment = TextAlignment.Center });
-        empty.Children.Add(new TextBlock { Text = "Try another category or search.\nRight-click apps to add them to a collection.\nHidden apps can be restored from the Hidden tab.", FontSize = 12, Foreground = environment.Theme.Brush("NexusMuted"), TextAlignment = TextAlignment.Center }); _empty.Child = empty; gallery.Children.Add(_empty);
-        var footer = new Grid(); footer.ColumnDefinitions.Add(new()); footer.ColumnDefinitions.Add(new() { Width = GridLength.Auto }); footer.Children.Add(_hint);
-        var pages = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 9 }; pages.Children.Add(_previous); pages.Children.Add(_dots); pages.Children.Add(_next); Grid.SetColumn(pages, 1); footer.Children.Add(pages); Grid.SetRow(footer, 4); Children.Add(footer);
-        _previous.Style = _next.Style = (Style)Application.Current.Resources["QuietButton"]; _previous.Padding = _next.Padding = new Thickness(0); _previous.Height = _next.Height = 32;
-        _previous.Click += (_, _) => { _page--; Render(); }; _next.Click += (_, _) => { _page++; Render(); };
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_previous, "Previous app page"); Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_next, "Next app page");
-        _filterTimer.Tick += (_, _) => { _filterTimer.Stop(); if (_open) Render(); };
-        _search.TextChanged += (_, _) => { _page = 0; _filterTimer.Stop(); if (_open) _filterTimer.Start(); };
-        _search.KeyDown += (_, e) => { if (e.Key == VirtualKey.Down) { _filterTimer.Stop(); Render(); _apps.Focus(FocusState.Programmatic); e.Handled = true; } else if (e.Key == VirtualKey.Enter) { _filterTimer.Stop(); Render(); if (_filtered.Count > 0) Open(_filtered[0]); e.Handled = true; } };
-        var escape = new KeyboardAccelerator { Key = VirtualKey.Escape }; escape.Invoked += (_, e) => { environment.HideMenu(); e.Handled = true; }; KeyboardAccelerators.Add(escape);
+        empty.Children.Add(new TextBlock { Text = "Try another category or search.\nRight-click apps to add them to a collection.\nHidden apps can be restored from the Hidden tab.", FontSize = 12, Foreground = environment.Theme.Brush("NexusMuted"), TextAlignment = TextAlignment.Center });
+        _empty.Child = empty;
+        gallery.Children.Add(_empty);
+        var footer = new Grid();
+        footer.ColumnDefinitions.Add(new());
+        footer.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
+        footer.Children.Add(_hint);
+        var pages = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 9
+        };
+        pages.Children.Add(_previous);
+        pages.Children.Add(_dots);
+        pages.Children.Add(_next);
+        Grid.SetColumn(pages, 1);
+        footer.Children.Add(pages);
+        Grid.SetRow(footer, 4);
+        Children.Add(footer);
+        _previous.Style = _next.Style = (Style)Application.Current.Resources["QuietButton"];
+        _previous.Padding = _next.Padding = new Thickness(0);
+        _previous.Height = _next.Height = 32;
+        _previous.Click += (_, _) =>
+        {
+            _page--;
+            Render();
+        };
+        _next.Click += (_, _) =>
+        {
+            _page++;
+            Render();
+        };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_previous, "Previous app page");
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_next, "Next app page");
+        _filterTimer.Tick += (_, _) =>
+        {
+            _filterTimer.Stop();
+            if (_open)
+                Render();
+        };
+        _search.TextChanged += (_, _) =>
+        {
+            _page = 0;
+            _filterTimer.Stop();
+            if (_open)
+                _filterTimer.Start();
+        };
+        _search.KeyDown += (_, e) =>
+        {
+            if (e.Key == VirtualKey.Down)
+            {
+                _filterTimer.Stop();
+                Render();
+                _apps.Focus(FocusState.Programmatic);
+                e.Handled = true;
+            }
+            else if (e.Key == VirtualKey.Enter)
+            {
+                _filterTimer.Stop();
+                Render();
+                if (_filtered.Count > 0)
+                    Open(_filtered[0]);
+                e.Handled = true;
+            }
+        };
+        var escape = new KeyboardAccelerator
+        {
+            Key = VirtualKey.Escape
+        };
+        escape.Invoked += (_, e) =>
+        {
+            environment.HideMenu();
+            e.Handled = true;
+        };
+        KeyboardAccelerators.Add(escape);
         ApplyAppearance();
         environment.Session.Changed += _catalog.Invalidate;
     }
+
     private IEnumerable<AppEntry> Builtins() => [new("monitor", "System Monitor", "nexus:monitor", "\uE9D9", "System"), new("jobs", "File jobs", "nexus:jobs", "\uE8B7", "Utility"), new("controls", "Nexus Controls", "nexus:controls", "\uE713", "System"), new("files", "Files", "nexus:files", "\uE8B7", "System"), new("settings", "Windows Settings", "ms-settings:", "\uE713", "System"), new("notes", "Notes", "nexus:notes", "\uE70B", "Utility"), new("calculator", "Calculator", "nexus:calculator", "\uE8EF", "Utility")];
     private string CurrentCollectionId => _category.StartsWith("collection:", StringComparison.Ordinal) ? _category[11..] : "";
+
     private void Organize(Action action)
     {
-        try { action(); _environment.SaveState(); _page = 0; RefreshCollections(); Render(); _subtitle.Text = "Your apps, arranged your way."; }
-        catch (Exception error) { _subtitle.Text = error.Message; }
+        try
+        {
+            action();
+            _environment.SaveState();
+            _page = 0;
+            RefreshCollections();
+            Render();
+            _subtitle.Text = "Your apps, arranged your way.";
+        }
+        catch (Exception error)
+        {
+            _subtitle.Text = error.Message;
+        }
     }
+
     private void RefreshCollections()
     {
         _organizing = true;
         try
         {
-            var choices = new[] { new CollectionChoice("", "All collections") }.Concat(_environment.Session.State.AppCollections.Select(g => new CollectionChoice(g.Id, g.Name))).ToArray();
-            _collections.ItemsSource = choices; _collections.SelectedItem = choices.FirstOrDefault(c => c.Id == CurrentCollectionId) ?? choices[0];
+            var choices = new[]
+            {
+                new CollectionChoice("", "All collections")
+            }.Concat(_environment.Session.State.AppCollections.Select(g => new CollectionChoice(g.Id, g.Name))).ToArray();
+            _collections.ItemsSource = choices;
+            _collections.SelectedItem = choices.FirstOrDefault(c => c.Id == CurrentCollectionId) ?? choices[0];
             _renameCollection.IsEnabled = _deleteCollection.IsEnabled = CurrentCollectionId.Length > 0;
             _restoreHidden.Visibility = _category == "Hidden" ? Visibility.Visible : Visibility.Collapsed;
             _restoreHidden.IsEnabled = _environment.Session.State.HiddenAppTargets.Count > 0;
         }
-        finally { _organizing = false; }
+        finally
+        {
+            _organizing = false;
+        }
     }
+
     private Flyout CollectionEditor(bool rename)
     {
-        var name = new TextBox { Header = rename ? "Collection name" : "New collection", MaxLength = 40, MinWidth = 230 };
-        var feedback = new TextBlock { FontSize = 12, MaxWidth = 260, TextWrapping = TextWrapping.Wrap };
-        var save = new Button { Content = rename ? "Save name" : "Create collection" }; var body = new StackPanel { Spacing = 10 }; body.Children.Add(name); body.Children.Add(feedback); body.Children.Add(save); var flyout = new Flyout { Content = body };
-        flyout.Opening += (_, _) => { feedback.Text = ""; name.Text = rename ? _environment.Session.State.AppCollections.FirstOrDefault(g => g.Id == CurrentCollectionId)?.Name ?? "" : ""; };
+        var name = new TextBox
+        {
+            Header = rename ? "Collection name" : "New collection",
+            MaxLength = 40,
+            MinWidth = 230
+        };
+        var feedback = new TextBlock
+        {
+            FontSize = 12,
+            MaxWidth = 260,
+            TextWrapping = TextWrapping.Wrap
+        };
+        var save = new Button
+        {
+            Content = rename ? "Save name" : "Create collection"
+        };
+        var body = new StackPanel
+        {
+            Spacing = 10
+        };
+        body.Children.Add(name);
+        body.Children.Add(feedback);
+        body.Children.Add(save);
+        var flyout = new Flyout
+        {
+            Content = body
+        };
+        flyout.Opening += (_, _) =>
+        {
+            feedback.Text = "";
+            name.Text = rename ? _environment.Session.State.AppCollections.FirstOrDefault(g => g.Id == CurrentCollectionId)?.Name ?? "" : "";
+        };
         save.Click += (_, _) =>
         {
             try
             {
-                if (rename) DesktopOrganization.RenameCollection(_environment.Session.State, CurrentCollectionId, name.Text);
-                else _category = "collection:" + DesktopOrganization.CreateCollection(_environment.Session.State, name.Text).Id;
-                _environment.SaveState(); _page = 0; RefreshCollections(); Render(); flyout.Hide();
+                if (rename)
+                    DesktopOrganization.RenameCollection(_environment.Session.State, CurrentCollectionId, name.Text);
+                else
+                    _category = "collection:" + DesktopOrganization.CreateCollection(_environment.Session.State, name.Text).Id;
+                _environment.SaveState();
+                _page = 0;
+                RefreshCollections();
+                Render();
+                flyout.Hide();
             }
-            catch (Exception error) { feedback.Text = error.Message; }
+            catch (Exception error)
+            {
+                feedback.Text = error.Message;
+            }
         };
         return flyout;
     }
+
     internal Task OpenAsync(bool search)
     {
-        ++_epoch; _open = true; _title.Text = "Launchpad";
-        _category = "All"; _page = 0; _search.Text = ""; _filterTimer.Stop();
-        _organizerOpen = false; _organizeFrame.Visibility = Visibility.Collapsed;
+        ++_epoch;
+        _open = true;
+        _title.Text = "Launchpad";
+        _category = "All";
+        _page = 0;
+        _search.Text = "";
+        _filterTimer.Stop();
+        _organizerOpen = false;
+        _organizeFrame.Visibility = Visibility.Collapsed;
         _organizeButton.Content = "Organize  ▾";
         RefreshCollections();
-        _catalog.Update(_environment.Session.State.PinnedApps); Render();
+        _catalog.Update(_environment.Session.State.PinnedApps);
+        Render();
         return RefreshCatalogAsync();
     }
-    internal void FocusEntry(bool search) { if (search) _search.Focus(FocusState.Programmatic); else _apps.Focus(FocusState.Programmatic); }
-    internal void PrepareValidation()
-    { _catalog.Update([], []); Render(); }
-    internal void VerifyRetainedRendering()
+
+    internal void FocusEntry(bool search)
     {
-        var items = _apps.ItemsSource; var indicators = _dots.Children.ToArray();
-        for (int i = 0; i < 20; i++) Render();
-        if (!ReferenceEquals(items, _apps.ItemsSource) || !indicators.SequenceEqual(_dots.Children))
-            throw new InvalidOperationException("Unchanged Launchpad renders replaced retained items or page controls.");
+        if (search)
+            _search.Focus(FocusState.Programmatic);
+        else
+            _apps.Focus(FocusState.Programmatic);
     }
+
     private async Task RefreshCatalogAsync(bool refresh = false)
     {
         int epoch = _epoch;
-        if (_disposed || !_open) return;
+        if (_disposed || !_open)
+            return;
         var admission = _refreshGate.Request(refresh);
         if (!admission.Started)
         {
-            if (refresh) _subtitle.Text = "Refresh queued after the current app scan.";
+            if (refresh)
+                _subtitle.Text = "Refresh queued after the current app scan.";
             return;
         }
-        if (admission.Force) { AppIconCache.RefreshCompleted(); _shown = []; }
+
+        if (admission.Force)
+        {
+            AppIconCache.RefreshCompleted();
+            _shown = [];
+        }
+
         // Leave Refresh enabled: a click during a scan queues one follow-up,
         // not a concurrent shortcut enumeration or a lost user request.
         try
         {
             var discovered = await _environment.GetCatalogAsync(admission.Force);
-            if (epoch != _epoch || _environment.IsStopping || !_open || _disposed) return;
+            if (epoch != _epoch || _environment.IsStopping || !_open || _disposed)
+                return;
             _catalog.Update(_environment.Session.State.PinnedApps, discovered);
             Render();
             if (admission.Force)
@@ -292,59 +691,123 @@ internal sealed class StartMenuView : Grid, IDisposable
                 _subtitle.Text = "Installed apps refreshed.";
             }
         }
-        catch (OperationCanceledException) { }
-        catch (Exception error) { if (_open && !_disposed) _environment.Report("Launchpad could not refresh installed apps", error); }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception error)
+        {
+            if (_open && !_disposed)
+                _environment.Report("Launchpad could not refresh installed apps", error);
+        }
         finally
         {
             bool pendingForce = _refreshGate.Complete();
-            if (!_disposed && _open && (epoch != _epoch || pendingForce)) _ = RefreshCatalogAsync();
+            if (!_disposed && _open && (epoch != _epoch || pendingForce))
+                _ = RefreshCatalogAsync();
         }
     }
-    internal void Hide() { ++_epoch; _open = false; _filterTimer.Stop(); }
+
+    internal void Hide()
+    {
+        ++_epoch;
+        _open = false;
+        _filterTimer.Stop();
+    }
+
     private void Render()
     {
-        if (_disposed) return;
+        if (_disposed)
+            return;
         using var work = UiTrace.Measure("launchpad-render", "Launchpad", _catalog.Catalog.Count);
         _filtered = _catalog.Filter(_environment.Session.State, _category, _search.Text);
-        int pages = Math.Max(1, (_filtered.Count + LaunchpadCatalog.PageSize - 1) / LaunchpadCatalog.PageSize); _page = Math.Clamp(_page, 0, pages - 1);
+        int pages = Math.Max(1, (_filtered.Count + LaunchpadCatalog.PageSize - 1) / LaunchpadCatalog.PageSize);
+        _page = Math.Clamp(_page, 0, pages - 1);
         var shown = LaunchpadCatalog.Page(_filtered, _page);
         if (!_shown.SequenceEqual(shown))
         {
-            _shown = shown.ToArray(); var tiles = shown.Select(app => new LaunchpadTile(app, _environment.Theme.HighContrast)).ToArray(); _apps.ItemsSource = tiles;
+            _shown = shown.ToArray();
+            var tiles = shown.Select(app => new LaunchpadTile(app, _environment.Theme.HighContrast)).ToArray();
+            _apps.ItemsSource = tiles;
             _ = RefreshIconsAsync(tiles, ++_renderVersion);
         }
-        _previous.IsEnabled = _page > 0; _next.IsEnabled = _page + 1 < pages;
+
+        _previous.IsEnabled = _page > 0;
+        _next.IsEnabled = _page + 1 < pages;
         _empty.Visibility = _filtered.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         var indicatorKey = (pages, _page, _environment.Theme.HighContrast);
         if (_indicatorKey != indicatorKey)
         {
             _dots.Children.Clear();
             for (int index = Math.Max(0, _page - 2); index < Math.Min(pages, _page + 3); index++)
-            { int target = index; var dot = new Button { Content = new Border { Width = target == _page ? 15 : 5, Height = 5, CornerRadius = new CornerRadius(3), Background = _environment.Theme.Brush(target == _page ? "NexusAccent" : "NexusMuted") }, Width = 22, Height = 28, Padding = new Thickness(0), Style = (Style)Application.Current.Resources["QuietButton"] }; dot.Click += (_, _) => { _page = target; Render(); }; Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(dot, "App page " + (index + 1)); _dots.Children.Add(dot); }
+            {
+                int target = index;
+                var dot = new Button
+                {
+                    Content = new Border
+                    {
+                        Width = target == _page ? 15 : 5,
+                        Height = 5,
+                        CornerRadius = new CornerRadius(3),
+                        Background = _environment.Theme.Brush(target == _page ? "NexusAccent" : "NexusMuted")
+                    },
+                    Width = 22,
+                    Height = 28,
+                    Padding = new Thickness(0),
+                    Style = (Style)Application.Current.Resources["QuietButton"]
+                };
+                dot.Click += (_, _) =>
+                {
+                    _page = target;
+                    Render();
+                };
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(dot, "App page " + (index + 1));
+                _dots.Children.Add(dot);
+            }
+
             _indicatorKey = indicatorKey;
         }
+
         _hint.Text = _filtered.Count == 0 ? "No apps match. Try another category or search." : $"{_filtered.Count} apps   ·   Page {_page + 1} of {pages}";
-        foreach (var (category, button) in _categories) { button.Background = category == _category ? _environment.Theme.Brush("NexusSelection") : _environment.Theme.Material("Card", _environment.Session.State.NativeGlass); button.Foreground = _environment.Theme.Brush("NexusText"); }
+        foreach (var(category, button)in _categories)
+        {
+            button.Background = category == _category ? _environment.Theme.Brush("NexusSelection") : _environment.Theme.Material("Card", _environment.Session.State.NativeGlass);
+            button.Foreground = _environment.Theme.Brush("NexusText");
+        }
     }
+
     private async Task RefreshIconsAsync(LaunchpadTile[] tiles, int render)
     {
-        async Task Load(LaunchpadTile tile) { var icon = await AppIconCache.GetAsync(tile.App); if (!_disposed && render == _renderVersion && icon is not null) tile.Icon = icon; }
+        async Task Load(LaunchpadTile tile)
+        {
+            var icon = await AppIconCache.GetAsync(tile.App);
+            if (!_disposed && render == _renderVersion && icon is not null)
+                tile.Icon = icon;
+        }
+
         await Task.WhenAll(tiles.Select(Load));
     }
-    private void Open(AppEntry app) { _environment.HideMenu(); _environment.Launch(app); }
+
+    private void Open(AppEntry app)
+    {
+        _environment.HideMenu();
+        _environment.Launch(app);
+    }
+
     internal void ApplyAppearance()
     {
-        var theme = _environment.Theme; RequestedTheme = theme.ElementTheme;
+        var theme = _environment.Theme;
+        RequestedTheme = theme.ElementTheme;
         // Reuse realized tiles and loaded Windows thumbnails on theme changes.
         // Update just the mutable brush; no catalog scan or item rebuild.
         if (_apps.ItemsSource is IEnumerable<LaunchpadTile> realized)
-            foreach (var tile in realized) tile.UpdateContrast(theme.HighContrast);
-        _title.Foreground = _apps.Foreground = _search.Foreground = theme.Brush("NexusText"); _hint.Foreground = _subtitle.Foreground = _searchIcon.Foreground = theme.Brush("NexusMuted");
+            foreach (var tile in realized)
+                tile.UpdateContrast(theme.HighContrast);
+        _title.Foreground = _apps.Foreground = _search.Foreground = theme.Brush("NexusText");
+        _hint.Foreground = _subtitle.Foreground = _searchIcon.Foreground = theme.Brush("NexusMuted");
         _searchFrame.Background = theme.Material("Input", _environment.Session.State.NativeGlass);
         _searchFrame.BorderBrush = _search.FocusState == FocusState.Unfocused ? theme.Edge : theme.Brush("NexusAccent");
         _searchFrame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 18);
-        _galleryFrame.Background = MidnightGlassMetrics.ReferenceEnabled(theme.Palette, theme.HighContrast)
-            ? theme.Surface("Dock") : theme.Material("Card", _environment.Session.State.NativeGlass);
+        _galleryFrame.Background = MidnightGlassMetrics.ReferenceEnabled(theme.Palette, theme.HighContrast) ? theme.Surface("Dock") : theme.Material("Card", _environment.Session.State.NativeGlass);
         _galleryFrame.BorderBrush = theme.Edge;
         _galleryFrame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 22);
         _organizeFrame.Background = theme.Material("Card", _environment.Session.State.NativeGlass);
@@ -352,17 +815,32 @@ internal sealed class StartMenuView : Grid, IDisposable
         _organizeFrame.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 14);
         _organizeButton.Background = theme.Brush("NexusSidebar");
         _organizeButton.Foreground = theme.Brush("NexusText");
-        foreach (var (category, button) in _categories) { button.Background = category == _category ? theme.Brush("NexusSelection") : theme.Material("Card", _environment.Session.State.NativeGlass); button.Foreground = theme.Brush("NexusText"); button.BorderBrush = theme.Edge; button.BorderThickness = new Thickness(1); button.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 10); }
-        if (_empty.Child is StackPanel empty) { foreach (var label in empty.Children.OfType<TextBlock>()) label.Foreground = theme.Brush(label.FontSize > 15 ? "NexusText" : "NexusMuted"); foreach (var icon in empty.Children.OfType<FontIcon>()) icon.Foreground = theme.Brush("NexusMuted"); }
-    }
-    internal void VerifyGalleryComposition()
-    {
-        if (_galleryFrame.Child is not Grid stage
-            || !stage.Children.Contains(_apps)
-            || !stage.Children.Contains(_empty)
-            || _organizerOpen || _organizeFrame.Visibility != Visibility.Collapsed)
-            throw new InvalidOperationException("Launchpad glass gallery or its default organization hierarchy is invalid.");
+        foreach (var(category, button)in _categories)
+        {
+            button.Background = category == _category ? theme.Brush("NexusSelection") : theme.Material("Card", _environment.Session.State.NativeGlass);
+            button.Foreground = theme.Brush("NexusText");
+            button.BorderBrush = theme.Edge;
+            button.BorderThickness = new Thickness(1);
+            button.CornerRadius = new CornerRadius(theme.HighContrast ? 0 : 10);
+        }
+
+        if (_empty.Child is StackPanel empty)
+        {
+            foreach (var label in empty.Children.OfType<TextBlock>())
+                label.Foreground = theme.Brush(label.FontSize > 15 ? "NexusText" : "NexusMuted");
+            foreach (var icon in empty.Children.OfType<FontIcon>())
+                icon.Foreground = theme.Brush("NexusMuted");
+        }
     }
 
-    public void Dispose() { if (_disposed) return; _environment.Session.Changed -= _catalog.Invalidate; Hide(); _disposed = true; ++_renderVersion; _filterTimer.Stop(); }
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+        _environment.Session.Changed -= _catalog.Invalidate;
+        Hide();
+        _disposed = true;
+        ++_renderVersion;
+        _filterTimer.Stop();
+    }
 }

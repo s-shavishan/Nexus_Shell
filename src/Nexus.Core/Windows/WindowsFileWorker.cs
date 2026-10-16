@@ -1,3 +1,4 @@
+// නමෝ බුද්ධාය 🤍
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;

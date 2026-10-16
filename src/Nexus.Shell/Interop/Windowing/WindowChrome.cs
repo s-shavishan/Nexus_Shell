@@ -1,0 +1,259 @@
+// නමෝ බුද්ධාය 🤍
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using Nexus.Shell.Services;
+
+namespace Nexus.Shell.Interop;
+
+// Own Nexus HWNDs only. Non-client cleanup and resize hit testing retain native
+// dragging. Window regions change only when size, DPI or the visible dock changes.
+internal sealed class WindowChrome : IDisposable
+{
+    [StructLayout(LayoutKind.Sequential)] private struct Point { public int X, Y; }
+    [StructLayout(LayoutKind.Sequential)] private struct MinMaxInfo { public Point Reserved, MaximumSize, MaximumPosition, MinimumTrackSize, MaximumTrackSize; }
+    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool GetWindowRect(IntPtr window, out ShellLayerInterop.Rect rectangle);
+    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool IsZoomed(IntPtr window);
+    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool IsIconic(IntPtr window);
+    [DllImport("user32.dll")] private static extern short GetAsyncKeyState(int key);
+    [DllImport("user32.dll", SetLastError = true)] private static extern int SetWindowRgn(IntPtr window, IntPtr region, [MarshalAs(UnmanagedType.Bool)] bool redraw);
+    [DllImport("gdi32.dll")] private static extern IntPtr CreateRoundRectRgn(int left, int top, int right, int bottom, int width, int height);
+    [DllImport("gdi32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool DeleteObject(IntPtr value);
+    [DllImport("dwmapi.dll")] private static extern int DwmSetWindowAttribute(IntPtr window, uint attribute, ref int value, uint size);
+    private readonly IntPtr _handle;
+    private readonly bool _resizable, _customClip;
+    private readonly Func<bool>? _resizeAllowed;
+    private readonly int _minimumWidth, _minimumHeight;
+    private readonly Action? _tuck;
+    private readonly Action<bool>? _stateChanged;
+    private readonly Action? _minimizeRequested;
+    private readonly Action? _closeRequested;
+    private bool _wasMinimized, _restoreObserverReported, _stateObserverReported;
+    internal event Action? Restored;
+    private bool? _maximized;
+    internal bool IsAttached => _maximized == true;
+    private readonly ShellLayerInterop.SubclassProc _callback;
+    private readonly UIntPtr _id = new(0x4E10);
+    private ShellRect? _clip;
+    private (ShellRect Rectangle, int Diameter, bool Clear)? _applied;
+    private double _radius = 14;
+    private bool _fullscreen, _disposed, _applying, _reported, _regionsEnabled = true;
+    private bool _interactiveResize, _liveSizeUnclipped;
+    private bool _systemFrame;
+    private readonly string _role;
+    private long _moveStarted;
+    private int _sizeEvents, _regionUpdates;
+    internal int RegionRefreshRequests { get; private set; }
+    internal bool RegionDecorationsEnabled => _regionsEnabled;
+    internal bool? LastRegionRedraw { get; private set; }
+    internal bool LiveResizeSuspended => _liveSizeUnclipped;
+    internal WindowChrome(IntPtr handle, bool resizable = false, bool customClip = false, Action? tuck = null, int minimumWidth = 480, int minimumHeight = 360, Action<bool>? stateChanged = null, Action? minimizeRequested = null, Action? closeRequested = null, string role = "Window", Func<bool>? resizeAllowed = null)
+    {
+        _role = role;
+        _minimumWidth = Math.Max(160, minimumWidth); _minimumHeight = Math.Max(160, minimumHeight);
+        _handle = handle; _resizable = resizable; _resizeAllowed = resizeAllowed; _customClip = customClip; _tuck = tuck; _stateChanged = stateChanged; _minimizeRequested = minimizeRequested; _closeRequested = closeRequested; _callback = Message;
+        if (!ShellLayerInterop.SetWindowSubclass(handle, _callback, _id, UIntPtr.Zero)) throw new Win32Exception("Could not attach the Nexus window frame.");
+        // DWMNCRP_DISABLED removes Windows 10's bright non-client outline.
+        int policy = 1; _ = DwmSetWindowAttribute(handle, 2, ref policy, 4);
+        int none = unchecked((int)0xFFFFFFFE); _ = DwmSetWindowAttribute(handle, 34, ref none, 4);
+        int ownCorners = 1; _ = DwmSetWindowAttribute(handle, 33, ref ownCorners, 4);
+        ShellLayerInterop.SetWindowPos(handle, IntPtr.Zero, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0004 | 0x0010 | 0x0020);
+        Refresh();
+        Trace("chrome-created");
+    }
+    internal void Trace(string stage, int width = 0, int height = 0, int value = 0) => UiTrace.Surface(stage, _role, _handle, width, height, value);
+    private void NotifyRestored()
+    {
+        if (Restored is not { } listeners) return;
+        foreach (Action listener in listeners.GetInvocationList())
+        {
+            try { listener(); }
+            catch (Exception error)
+            {
+                if (_restoreObserverReported) continue;
+                _restoreObserverReported = true;
+                Log.Write("A native window restore observer failed; remaining observers will continue", error);
+            }
+        }
+    }
+    private void NotifyAttached(bool attached)
+    {
+        if (_stateChanged is not { } listeners) return;
+        foreach (Action<bool> listener in listeners.GetInvocationList())
+        {
+            try { listener(attached); }
+            catch (Exception error)
+            {
+                if (_stateObserverReported) continue;
+                _stateObserverReported = true;
+                Log.Write("A native window state observer failed; frame decoration remains available", error);
+            }
+        }
+    }
+    internal void SetCorners(bool highContrast, double radiusDip = 14)
+    {
+        double radius = ChromeAppearancePolicy.Radius(radiusDip, highContrast);
+        if (!ChromeAppearancePolicy.CornersChanged(_radius, radius)) return;
+        _radius = radius;
+        Refresh();
+    }
+    internal void SetFullscreen(bool value)
+    {
+        if (_fullscreen == value) return;
+        _fullscreen = value;
+        Refresh();
+    }
+    internal void SetClip(ShellRect rectangle, double radiusDip)
+    {
+        double radius = ChromeAppearancePolicy.Radius(radiusDip);
+        if (!ChromeAppearancePolicy.ClipChanged(_clip, rectangle, _radius, radius)) return;
+        _clip = rectangle;
+        _radius = radius;
+        Refresh();
+    }
+    internal void UseSystemFrame()
+    {
+        _systemFrame = true; _liveSizeUnclipped = false; _applied = null;
+        _ = SetWindowRgn(_handle, IntPtr.Zero, true);
+        int policy = 0; _ = DwmSetWindowAttribute(_handle, 2, ref policy, 4);
+        ShellLayerInterop.SetWindowPos(_handle, IntPtr.Zero, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0004 | 0x0010 | 0x0020);
+    }
+    private void Refresh()
+    {
+        RegionRefreshRequests++;
+        try { RefreshCore(); }
+        catch (Exception ex)
+        { _regionsEnabled = false; if (!_reported) { _reported = true; Log.Write("Rounded window decoration unavailable", ex); } }
+    }
+    private void RefreshCore()
+    {
+        if (_disposed || _systemFrame || _applying || !_regionsEnabled || _liveSizeUnclipped) return;
+        using var work = UiTrace.Measure("chrome-refresh", _role);
+        if (IsIconic(_handle) || !GetWindowRect(_handle, out var window)) return;
+        int width = window.Right - window.Left, height = window.Bottom - window.Top;
+        if (width <= 0 || height <= 0 || (_customClip && _clip is null)) return;
+        bool clear = !_customClip && (_fullscreen || MenuBarLayout.Attached(window.Bounds, ShellLayerInterop.Monitor(_handle).Work.Bounds, IsZoomed(_handle), ShellLayerInterop.Scale(_handle)));
+        if (_maximized != clear) { _maximized = clear; NotifyAttached(clear); }
+        var rectangle = _clip ?? new ShellRect(0, 0, width, height);
+        int diameter = (int)Math.Round(Math.Min(_radius * ShellLayerInterop.Scale(_handle) * 2, Math.Min(rectangle.Width, rectangle.Height)));
+        var shape = (rectangle, diameter, clear);
+        if (_applied is { } previous && previous.Rectangle == rectangle && previous.Diameter == diameter && previous.Clear == clear) return;
+        _applying = true;
+        try
+        {
+            IntPtr region = clear ? IntPtr.Zero : CreateRoundRectRgn(rectangle.X, rectangle.Y, rectangle.Right, rectangle.Bottom, diameter, diameter);
+            if (!clear && region == IntPtr.Zero) throw new Win32Exception("Could not create the rounded Nexus window.");
+            // SetWindowRgn transfers ownership to Windows only after success.
+            LastRegionRedraw = LiveResizeRegionPolicy.RedrawAfterRestore;
+            if (SetWindowRgn(_handle, region, LiveResizeRegionPolicy.RedrawAfterRestore) == 0)
+            { int error = Marshal.GetLastWin32Error(); if (region != IntPtr.Zero) DeleteObject(region); throw new Win32Exception(error, "Could not round the Nexus window."); }
+            _applied = shape;
+            if (_interactiveResize) _regionUpdates++;
+            Trace("region-applied", rectangle.Width, rectangle.Height, diameter);
+        }
+        finally { _applying = false; }
+    }
+    private IntPtr ResizeHit(IntPtr coordinates)
+    {
+        if (!_resizable || _resizeAllowed?.Invoke() == false || _fullscreen || IsZoomed(_handle) || !GetWindowRect(_handle, out var rect)) return IntPtr.Zero;
+        long value = coordinates.ToInt64();
+        int x = unchecked((short)(value & 0xFFFF)), y = unchecked((short)((value >> 16) & 0xFFFF));
+        int edge = Math.Max(4, (int)Math.Round(7 * ShellLayerInterop.Scale(_handle)));
+        bool left = x < rect.Left + edge, right = x >= rect.Right - edge, top = y < rect.Top + edge, bottom = y >= rect.Bottom - edge;
+        return new IntPtr(top ? left ? 13 : right ? 14 : 12 : bottom ? left ? 16 : right ? 17 : 15 : left ? 10 : right ? 11 : 0);
+    }
+    private IntPtr Message(IntPtr window, uint message, UIntPtr wp, IntPtr lp, UIntPtr id, UIntPtr data)
+    {
+        try
+        {
+            if (!_disposed)
+            {
+                if (message == NativeMethods.NexusMinimizeMessage && _minimizeRequested is not null) { _minimizeRequested(); return IntPtr.Zero; }
+                if (message == NativeMethods.NexusRestoreMessage) { NotifyRestored(); return IntPtr.Zero; }
+                if (message == 0x0214 && LiveResizeRegionPolicy.ShouldSuspend(_interactiveResize, _resizable, _customClip, _systemFrame, _liveSizeUnclipped))
+                {
+                    // Stop clipping to a stale rectangle while WM_SIZING changes
+                    // HWND dimensions. Recreate rounded corners once sizing ends.
+                    if (SetWindowRgn(_handle, IntPtr.Zero, LiveResizeRegionPolicy.RedrawWhileSuspending) != 0)
+                    {
+                        LastRegionRedraw = LiveResizeRegionPolicy.RedrawWhileSuspending;
+                        _liveSizeUnclipped = true; _applied = null; Trace("region-live-sizing");
+                    }
+                }
+                if (message == 0x0231)
+                {
+                    _interactiveResize = true; _moveStarted = Stopwatch.GetTimestamp(); _sizeEvents = _regionUpdates = 0;
+                    UiTrace.MoveSize("enter", _role, _handle, GetAsyncKeyState(1) < 0, 0, 0, 0);
+                }
+                if (message == 0x0232)
+                {
+                    _interactiveResize = false;
+                    UiTrace.MoveSize("exit", _role, _handle, GetAsyncKeyState(1) < 0, _sizeEvents, _regionUpdates,
+                        _moveStarted == 0 ? 0 : Stopwatch.GetElapsedTime(_moveStarted).TotalMilliseconds);
+                    _moveStarted = 0;
+                }
+                if (message == 0x0215) Trace("capture-changed");
+                if (message == 0x001F) Trace("cancel-mode");
+                if (LiveResizeRegionPolicy.IsInterrupted(message) && _interactiveResize)
+                {
+                    // A drag can be interrupted without WM_EXITSIZEMOVE (e.g.
+                    // losing mouse capture). Never leave regions disabled.
+                    _interactiveResize = false;
+                    UiTrace.MoveSize("cancel", _role, _handle, false, _sizeEvents, _regionUpdates,
+                        _moveStarted == 0 ? 0 : Stopwatch.GetElapsedTime(_moveStarted).TotalMilliseconds);
+                    _moveStarted = 0;
+                }
+                if (message == 0x0112 && (wp.ToUInt64() & 0xFFF0) == 0xF060 && _closeRequested is not null) { _closeRequested(); return IntPtr.Zero; }
+                if (_tuck is not null && message == 0x0112 && (wp.ToUInt64() & 0xFFF0) == 0xF020)
+                { _tuck(); return IntPtr.Zero; }
+                if (!_systemFrame && message == 0x0083)
+                {
+                    // RECT is also the first member of NCCALCSIZE_PARAMS.
+                    // A maximized borderless HWND can extend beyond rcWork;
+                    // clamp its client origin so the custom title row stays visible.
+                    if (_resizable && !_fullscreen && IsZoomed(window) && lp != IntPtr.Zero)
+                    {
+                        var proposed = Marshal.PtrToStructure<ShellLayerInterop.Rect>(lp);
+                        var bounds = MenuBarLayout.ClientBounds(proposed.Bounds, ShellLayerInterop.Monitor(window).Work.Bounds, true);
+                        proposed.Left = bounds.X; proposed.Top = bounds.Y; proposed.Right = bounds.Right; proposed.Bottom = bounds.Bottom;
+                        Marshal.StructureToPtr(proposed, lp, false);
+                    }
+                    // Preserve existing client pixels; WinUI redraws newly exposed
+                    // content. WVR_REDRAW invalidated the entire HWND on every size.
+                    return IntPtr.Zero;
+                }
+                if (!_systemFrame && message == 0x0085) return IntPtr.Zero;
+                if (!_systemFrame && message == 0x0086) return new IntPtr(1);
+                if (!_systemFrame && message == 0x0084) { var hit = ResizeHit(lp); if (hit != IntPtr.Zero) return hit; }
+                if (_resizable && !_fullscreen && message == 0x0024 && lp != IntPtr.Zero)
+                {
+                    var monitor = ShellLayerInterop.Monitor(window); var info = Marshal.PtrToStructure<MinMaxInfo>(lp);
+                    info.MaximumPosition = new() { X = monitor.Work.Left - monitor.Monitor.Left, Y = monitor.Work.Top - monitor.Monitor.Top };
+                    info.MaximumSize = new() { X = monitor.Work.Right - monitor.Work.Left, Y = monitor.Work.Bottom - monitor.Work.Top };
+                    info.MinimumTrackSize = new() { X = Math.Min(info.MaximumSize.X, (int)(_minimumWidth * ShellLayerInterop.Scale(window))), Y = Math.Min(info.MaximumSize.Y, (int)(_minimumHeight * ShellLayerInterop.Scale(window))) };
+                    Marshal.StructureToPtr(info, lp, false); return IntPtr.Zero;
+                }
+            }
+        }
+        catch (Exception ex)
+        { if (!_reported) { _reported = true; Log.Write("Nexus frame decoration unavailable", ex); } }
+        var result = ShellLayerInterop.DefSubclassProc(window, message, wp, lp);
+        if (!_disposed && message == 0x0005)
+        {
+            if (_interactiveResize) _sizeEvents++;
+            long packed = lp.ToInt64();
+            Trace("native-size", (int)(packed & 0xFFFF), (int)((packed >> 16) & 0xFFFF), (int)wp.ToUInt64());
+        }
+        if (!_disposed && message == 0x0005) { bool minimized = wp.ToUInt64() == 1; bool restoring = _wasMinimized && !minimized; _wasMinimized = minimized; if (restoring) NotifyRestored(); }
+        if (!_disposed && LiveResizeRegionPolicy.ShouldRestore(message, _liveSizeUnclipped))
+        {
+            _liveSizeUnclipped = false;
+            Refresh();
+        }
+        if (!_disposed && LiveResizeRegionPolicy.ShouldRefreshNative(message, _liveSizeUnclipped))
+            Refresh();
+        return result;
+    }
+    public void Dispose()
+    { if (_disposed) return; Trace("chrome-disposed"); _disposed = true; ShellLayerInterop.RemoveWindowSubclass(_handle, _callback, _id); }
+}

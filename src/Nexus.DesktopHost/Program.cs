@@ -1,3 +1,4 @@
+// නමෝ බුද්ධාය 🤍
 using Nexus.Shell.Services;
 using System.Diagnostics;
 using System.Runtime.InteropServices;

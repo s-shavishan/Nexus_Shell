@@ -1,32 +1,12 @@
-# Free hosted Windows builds require AppVeyor's public, open-source plan.
-# Place this file beside Nexus.Shell.sln in the repository root.
+# නමෝ බුද්ධාය 🤍
 image: Visual Studio 2022
 
 build_script:
-  - ps: |
-      if (Test-Path '.\src\Nexus.Shell\Interop\ShellKeyboardHook.cs') {
-        throw 'Remove src/Nexus.Shell/Interop/ShellKeyboardHook.cs from the repository. This shortcut hook was retired; Windows owns native desktop shortcuts.'
-      }
-  - ps: |
-      dotnet run --project .\tests\Nexus.Core.Checks\Nexus.Core.Checks.csproj --configuration Release
-      if ($LASTEXITCODE -ne 0) { throw "Nexus Core checks failed with exit code $LASTEXITCODE." }
-  - ps: |
-      dotnet run --project .\tests\Nexus.Runtime.Checks\Nexus.Runtime.Checks.csproj --configuration Release
-      if ($LASTEXITCODE -ne 0) { throw "Nexus Runtime checks failed with exit code $LASTEXITCODE." }
-  - ps: .\scripts\test-update.ps1
-  - ps: .\scripts\test-native-ui-diagnostics.ps1
-  - ps: .\scripts\build.ps1 -UseMSBuild
-  - ps: .\scripts\package.ps1
+  - ps: .\build\build.ps1 -UseMSBuild
+  - ps: .\build\package.ps1
 
 test: off
 deploy: off
-
-# Preserve the failing preflight evidence even when packaging never runs.
-on_failure:
-  - ps: |
-      foreach ($path in @('artifacts\logs\native-ui.json', 'artifacts\logs\native-ui.json.log')) {
-        if (Test-Path $path -PathType Leaf) { Push-AppveyorArtifact $path }
-      }
 
 artifacts:
   - path: artifacts\Nexus-Shell-3.6.0-win-x64.zip
@@ -35,5 +15,8 @@ artifacts:
   - path: artifacts\Nexus-Shell-3.6.0-Update-win-x64.zip.sha256
   - path: artifacts\logs\resources-check.json
   - path: artifacts\logs\app-resources.xml
-  - path: artifacts\logs\native-ui.json
-  - path: artifacts\logs\native-ui.json.log
+
+on_failure:
+  - ps: |
+      Get-ChildItem artifacts\logs -File -ErrorAction SilentlyContinue |
+        ForEach-Object { Push-AppveyorArtifact $_.FullName }

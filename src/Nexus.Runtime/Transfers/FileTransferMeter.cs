@@ -1,3 +1,4 @@
+// නමෝ බුද්ධාය 🤍
 namespace Nexus.Runtime.Transfers;
 
 // Monotonic, bounded-memory content-phase average. Copy, compression and

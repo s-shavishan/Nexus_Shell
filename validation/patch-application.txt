@@ -1,3 +1,0 @@
-PASS: first-only and combined git apply --check at f85777c436f050e020aa07361990d126fb5b98e3
-PASS: applied combined tree 72dd01d15ec54e387e55c5a5fe2d8f6c13b25f56 equals 0647e4c14d31eb396cf655e7bc333524f5dedbc4 tree
-PASS: reverse patch check

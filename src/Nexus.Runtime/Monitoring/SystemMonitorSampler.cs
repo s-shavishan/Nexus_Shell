@@ -1,3 +1,4 @@
+// නමෝ බුද්ධාය 🤍
 namespace Nexus.Runtime.Monitoring;
 
 // One view owns one sampler. No history, executable paths or counters are saved.

@@ -1,3 +1,4 @@
+<!-- නමෝ බුද්ධාය 🤍 -->
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -7,20 +8,4 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <Version>3.6.0</Version>
   </PropertyGroup>
-  <ItemGroup>
-    <Compile Include="../Nexus.Shell/Models/ShellState.cs" Link="Models/ShellState.cs" />
-    <Compile Include="../Nexus.Shell/Models/DesktopNotice.cs" Link="Models/DesktopNotice.cs" />
-    <Compile Include="../Nexus.Shell/Services/StateStore.cs" Link="State/StateStore.cs" />
-    <Compile Include="../Nexus.Shell/Services/RecentApplications.cs" Link="State/RecentApplications.cs" />
-    <Compile Include="../Nexus.Shell/Services/GlassStyle.cs" Link="State/GlassStyle.cs" />
-    <Compile Include="../Nexus.Shell/Services/GlassQuality.cs" Link="State/GlassQuality.cs" />
-    <Compile Include="../Nexus.Shell/Services/SavedWindowLayouts.cs" Link="State/SavedWindowLayouts.cs" />
-    <Compile Include="../Nexus.Shell/Services/DesktopOrganization.cs" Link="State/DesktopOrganization.cs" />
-    <Compile Include="../Nexus.Shell/Services/AuraPalette.cs" Link="State/AuraPalette.cs" />
-    <Compile Include="../Nexus.Shell/Services/WorkspaceState.cs" Link="State/WorkspaceState.cs" />
-    <Compile Include="../Nexus.Shell/Services/ExploreWorkspace.cs" Link="State/ExploreWorkspace.cs" />
-    <Compile Include="../Nexus.Shell/Services/ShellExperience.cs" Link="State/ShellExperience.cs" />
-    <Compile Include="../Nexus.Shell/Services/CommandSearch.cs" Link="State/CommandSearch.cs" />
-    <Compile Include="../Nexus.Shell/Services/Log.cs" Link="State/Log.cs" />
-  </ItemGroup>
 </Project>

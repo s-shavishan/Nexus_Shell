@@ -1,3 +1,4 @@
+// නමෝ බුද්ධාය 🤍
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Nexus.Shell.Services;

@@ -1,3 +1,4 @@
+// නමෝ බුද්ධාය 🤍
 using System.Buffers.Binary;
 using System.Text;
 

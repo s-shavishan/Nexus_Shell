@@ -1,3 +1,4 @@
+// නමෝ බුද්ධාය 🤍
 using Nexus.Runtime;
 
 namespace Nexus.Core.Settings;

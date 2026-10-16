@@ -1,3 +1,4 @@
+// නමෝ බුද්ධාය 🤍
 namespace Nexus.Runtime.Monitoring;
 
 // At most one OS read per lane across views, including a closed view whose

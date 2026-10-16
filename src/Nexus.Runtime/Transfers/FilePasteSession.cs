@@ -1,3 +1,4 @@
+// නමෝ බුද්ධාය 🤍
 using System.Security.Cryptography;
 using System.Text.Json;
 

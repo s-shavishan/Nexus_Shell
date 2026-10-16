@@ -1,3 +1,4 @@
+# නමෝ බුද්ධාය 🤍
 **/bin/
 **/obj/
 .vs/
@@ -6,3 +7,8 @@ artifacts/
 *.suo
 *.binlog
 *.patch
+*.log
+*.log.previous
+*.pdb
+*.zip
+WhiteDreams/

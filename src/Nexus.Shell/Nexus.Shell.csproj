@@ -1,3 +1,4 @@
+<!-- නමෝ බුද්ධාය 🤍 -->
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -27,7 +28,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Nexus.Runtime/Nexus.Runtime.csproj" />
-    <Compile Remove="Models/ShellState.cs;Models/DesktopNotice.cs;Services/StateStore.cs;Services/RecentApplications.cs;Services/GlassStyle.cs;Services/GlassQuality.cs;Services/SavedWindowLayouts.cs;Services/DesktopOrganization.cs;Services/AuraPalette.cs;Services/WorkspaceState.cs;Services/ExploreWorkspace.cs;Services/ShellExperience.cs;Services/CommandSearch.cs;Services/Log.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="1.8.260803003" />
@@ -58,7 +58,7 @@
   <!-- ZIP overlays and browser uploads can leave retired files in an old tree.
        Stop with an explicit cleanup instruction before either C# compile pass. -->
   <Target Name="NexusRetiredShortcutGuard" BeforeTargets="XamlPreCompile;CoreCompile">
-    <Error Condition="Exists('$(MSBuildProjectDirectory)/Interop/ShellKeyboardHook.cs')"
+    <Error Condition="Exists('$(MSBuildProjectDirectory)/Interop/ShellKeyboardHook.cs') Or Exists('$(MSBuildProjectDirectory)/Interop/Input/ShellKeyboardHook.cs')"
            Text="Remove Interop/ShellKeyboardHook.cs from the source tree. It is a retired global-shortcut hook; Windows owns native key combinations." />
   </Target>
 </Project>

@@ -1,3 +1,4 @@
+// නමෝ බුද්ධාය 🤍
 using Microsoft.UI.Composition;
 using Microsoft.UI.Composition.SystemBackdrops;
 using Microsoft.UI.Xaml;

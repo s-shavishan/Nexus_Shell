@@ -1,4 +1,0 @@
-PASS: PowerShell parse scripts/verify-native-ui.ps1
-PASS: PowerShell parse scripts/test-native-ui-diagnostics.ps1
-PASS: PowerShell parse scripts/verify-native-input.ps1
-PASS: PowerShell parse scripts/build.ps1

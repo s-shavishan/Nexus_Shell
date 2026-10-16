@@ -1,1 +1,0 @@
-PASS: actual Runtime Log isolates both probe modes, preserves existing normal log/settings, includes HRESULT, and retains normal logging. No WinUI executed.

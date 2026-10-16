@@ -1,3 +1,4 @@
+// නමෝ බුද්ධාය 🤍
 namespace Nexus.Runtime.Transfers;
 
 // Cooperative checkpoints keep the original streams/staging and worker slot.
