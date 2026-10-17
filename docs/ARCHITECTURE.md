@@ -15,6 +15,8 @@ No project compiles source files from a sibling project's directory. Shared stat
 
 ## Source map
 
+Bulk rename keeps rules/preflight, immutable receipts/Undo and admission in Runtime. Shell's Windows adapter verifies opened file/parent identities and performs no-replacement sibling renames; its native Files dialog owns presentation and confirmation. Receipts are session-only unless explicitly exported, and no mutation is automatically replayed. Existing settings/RPC contracts and single-edit Undo remain separate.
+
 Startup inventory uses the Shell's Windows adapter and Runtime's typed coordinator/journal. Only confirmed supported current-user Run edits are mutable; original registrations live in a separate account-bound journal beside settings. This feature does not change the Core settings writer, desktop sign-in policy or IPC schema.
 
 | Location | Content |

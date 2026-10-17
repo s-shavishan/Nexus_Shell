@@ -10,6 +10,7 @@ using Nexus.Shell.Desktop;
 using Nexus.Shell.Interop;
 using Nexus.Shell.Services;
 using Nexus.Runtime.Transfers;
+using Nexus.Runtime.Files;
 using Nexus.Shell.UI.Menus;
 using Nexus.Shell.UI;
 using Windows.System;
@@ -46,7 +47,9 @@ internal sealed class FilesView : Grid
 
     private readonly NavigationTrail _history = new();
     private readonly FileMutationHistory _edits = new();
-    private readonly Button _rename, _undo;
+    private readonly Button _rename, _undo, _bulkRename;
+    private readonly BulkRenameSession _bulkRenames = new(new WindowsBulkRenameBackend());
+    private BulkRenameView? _bulkRenameView;
     private readonly Button _copy, _cut, _paste, _recycleButton, _archive;
     private readonly DispatcherTimer _clipboardWatch = new()
     {
@@ -444,6 +447,7 @@ internal sealed class FilesView : Grid
                 FileShortcut(VirtualKey.V, VirtualKeyModifiers.Control, PasteAsync);
                 FileShortcut(VirtualKey.Delete, VirtualKeyModifiers.None, () => RecycleAsync());
                 FileShortcut(VirtualKey.N, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, NewFolderAsync);
+                FileShortcut(VirtualKey.R, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, () => BulkRenameAsync());
                 FileShortcut(VirtualKey.Enter, VirtualKeyModifiers.Control, () =>
                 {
                     if (ActiveList.SelectedItem is FileEntry { IsFolder: true } folder)
@@ -509,6 +513,10 @@ internal sealed class FilesView : Grid
         _rename.Visibility = _undo.Visibility = request.Kind == FileSelectionKind.Browse ? Visibility.Visible : Visibility.Collapsed;
         views.Children.Add(_rename);
         views.Children.Add(_undo);
+        _bulkRename = Button("Bulk rename…", () => BulkRenameAsync());
+        _bulkRename.Visibility = request.Kind == FileSelectionKind.Browse ? Visibility.Visible : Visibility.Collapsed;
+        ToolTipService.SetToolTip(_bulkRename, "Rename 1–100 selected items or review this tab's batch receipt · Ctrl+Shift+R");
+        views.Children.Add(_bulkRename);
         _copy = Button("Copy", () => CopySelectionAsync(FileJobKind.Copy));
         _cut = Button("Cut", () => CopySelectionAsync(FileJobKind.Move));
         _paste = Button("Paste", PasteAsync);
@@ -1026,6 +1034,11 @@ internal sealed class FilesView : Grid
 
     private async Task RenameAsync(FileEntry? target = null)
     {
+        if (target is null && Selection().Length > 1)
+        {
+            await BulkRenameAsync();
+            return;
+        }
         var item = target ?? ActiveList.SelectedItem as FileEntry;
         if (_closed || _dialog || _navigating || _recycle || _request.Kind != FileSelectionKind.Browse || item is null)
             return;
@@ -1058,6 +1071,40 @@ internal sealed class FilesView : Grid
         await NavigateAsync(_folder);
         ActiveList.SelectedItem = _entries.FirstOrDefault(e => e.Path == destination);
         _status.Text = _edits.CanUndo ? "Renamed. Use Undo edit or Ctrl+Z while the file list has focus." : "Renamed. Metadata was unavailable, so this edit cannot be undone here.";
+    }
+
+    private async Task BulkRenameAsync(IReadOnlyList<FileEntry>? targets = null)
+    {
+        if (!CanMutate) return;
+        var selected = targets?.ToArray() ?? Selection();
+        if (selected.Length > BulkRenameNames.MaximumItems || selected.Length == 0 && _bulkRenames.Receipt is null)
+            throw new InvalidOperationException("Select 1–100 sibling items for bulk rename.");
+        string folder = _folder;
+        _dialog = true; UpdateActions();
+        BulkRenameView? view = null;
+        try
+        {
+            view = new BulkRenameView(_bulkRenames, selected.Select(item => item.Path), folder) { RequestedTheme = RequestedTheme };
+            _bulkRenameView = view;
+            var dialog = new ContentDialog { XamlRoot = XamlRoot, RequestedTheme = RequestedTheme, Title = "Bulk rename",
+                Content = view, CloseButtonText = "Close", DefaultButton = ContentDialogButton.Close };
+            dialog.Closing += (_, args) =>
+            {
+                if (!_closed && view.Busy) { args.Cancel = true; view.RequestCancel(); }
+            };
+            await dialog.ShowAsync();
+        }
+        finally
+        {
+            view?.Release(); _bulkRenameView = null; _dialog = false;
+            if (!_closed) UpdateActions();
+        }
+        if (!_closed)
+        {
+            await NavigateAsync(folder);
+            if (_bulkRenames.Receipt is { } receipt)
+                _status.Text = $"Batch receipt: {receipt.Renamed} renamed, {receipt.Restored} restored. Open Bulk rename to review, export or Undo remaining items.";
+        }
     }
 
     private async Task UndoAsync()
@@ -1324,6 +1371,8 @@ internal sealed class FilesView : Grid
                 }
             }
         };
+        if (_request.Kind == FileSelectionKind.Browse)
+            handlers[FileContextCommand.BulkRename] = () => RunContextAsync(() => BulkRenameAsync(selected));
         if (selected.Length <= FileJobRules.MaximumSources)
         {
             string folder = _folder;
@@ -1467,7 +1516,9 @@ internal sealed class FilesView : Grid
         _forward.IsEnabled = ready && _history.CanGoForward;
         _list.IsEnabled = _tiles.IsEnabled = ready;
         _choose.IsEnabled = _newFolder.IsEnabled = ready && !_recycle && _folder.Length > 0;
-        _rename.IsEnabled = ready && !_recycle && ActiveList.SelectedItems.Count == 1 && ActiveList.SelectedItem is FileEntry;
+        _rename.IsEnabled = ready && !_recycle && ActiveList.SelectedItems.Count is >= 1 and <= BulkRenameNames.MaximumItems;
+        _rename.Content = ActiveList.SelectedItems.Count > 1 ? "Rename items…" : "Rename…";
+        _bulkRename.IsEnabled = CanMutate && (ActiveList.SelectedItems.Count is >= 1 and <= BulkRenameNames.MaximumItems || _bulkRenames.Receipt is not null);
         _undo.IsEnabled = ready && _edits.CanUndo;
         _undo.Content = _edits.UndoLabel;
         _empty.IsEnabled = ready && _recycle && _binHasItems;
@@ -1556,6 +1607,7 @@ internal sealed class FilesView : Grid
     internal void Release()
     {
         _closed = true;
+        _bulkRenameView?.Release();
         _slowRead.Stop();
         _clipboardWatch.Stop();
         _navigationVersion++;
