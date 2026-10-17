@@ -33,6 +33,10 @@ Browse several folders in one Files window with up to 12 independent tabs. Use C
 
 See [Files tabs and manual checks](docs/FILES-WORKSPACE.md).
 
+Select up to 100 sibling files/folders and use **Bulk rename…** or Ctrl+Shift+R for prefix/suffix, literal replacement and sequential numbering. Review every target before Apply; inspect per-item results, export a CSV receipt and Undo unchanged successful outputs. Existing destinations are never replaced. Receipts live in the current tab until cleared/closed.
+
+See [Bulk rename, boundaries and manual checks](docs/BULK-RENAME.md).
+
 ## Storage Analyzer
 
 Find large folders and files from Launchpad, Search, Nexus Tools or Controls. Scan a chosen folder/drive, drill into folder totals, inspect file types and skipped paths, open results in Files, and export a CSV. Scans show real logical sizes and explicit partial results; they never delete data or follow links/cloud-recall items.
