@@ -47,9 +47,10 @@ internal sealed class FilesView : Grid
 
     private readonly NavigationTrail _history = new();
     private readonly FileMutationHistory _edits = new();
-    private readonly Button _rename, _undo, _bulkRename;
+    private readonly Button _rename, _undo, _bulkRename, _quickLook;
     private readonly BulkRenameSession _bulkRenames = new(new WindowsBulkRenameBackend());
     private BulkRenameView? _bulkRenameView;
+    private QuickLookView? _quickLookView;
     private readonly Button _copy, _cut, _paste, _recycleButton, _archive;
     private readonly DispatcherTimer _clipboardWatch = new()
     {
@@ -448,6 +449,7 @@ internal sealed class FilesView : Grid
                 FileShortcut(VirtualKey.Delete, VirtualKeyModifiers.None, () => RecycleAsync());
                 FileShortcut(VirtualKey.N, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, NewFolderAsync);
                 FileShortcut(VirtualKey.R, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, () => BulkRenameAsync());
+                FileShortcut(VirtualKey.Space, VirtualKeyModifiers.None, () => QuickLookAsync());
                 FileShortcut(VirtualKey.Enter, VirtualKeyModifiers.Control, () =>
                 {
                     if (ActiveList.SelectedItem is FileEntry { IsFolder: true } folder)
@@ -517,6 +519,9 @@ internal sealed class FilesView : Grid
         _bulkRename.Visibility = request.Kind == FileSelectionKind.Browse ? Visibility.Visible : Visibility.Collapsed;
         ToolTipService.SetToolTip(_bulkRename, "Rename 1–100 selected items or review this tab's batch receipt · Ctrl+Shift+R");
         views.Children.Add(_bulkRename);
+        _quickLook = Button("Quick Look", () => QuickLookAsync());
+        _quickLook.Visibility = request.Kind == FileSelectionKind.Browse ? Visibility.Visible : Visibility.Collapsed;
+        ToolTipService.SetToolTip(_quickLook, "Read-only file preview · Space"); views.Children.Add(_quickLook);
         _copy = Button("Copy", () => CopySelectionAsync(FileJobKind.Copy));
         _cut = Button("Cut", () => CopySelectionAsync(FileJobKind.Move));
         _paste = Button("Paste", PasteAsync);
@@ -1107,6 +1112,48 @@ internal sealed class FilesView : Grid
         }
     }
 
+    private async Task QuickLookAsync(FileEntry? target = null)
+    {
+        if (!CanMutate) return;
+        var selected = Selection();
+        var item = target ?? (ActiveList.SelectedItem as FileEntry is { IsFolder: false } active ? active : selected.FirstOrDefault(e => !e.IsFolder));
+        if (item is null || item.IsFolder) return;
+        var files = ActiveList.Items.OfType<FileEntry>().Where(e => !e.IsFolder).ToArray();
+        if (target is null && selected.Length > 1)
+        {
+            var chosen = selected.Select(e => e.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            files = files.Where(e => chosen.Contains(e.Path)).ToArray();
+        }
+        int index = Array.FindIndex(files, e => e.Path.Equals(item.Path, StringComparison.OrdinalIgnoreCase));
+        if (index < 0) return;
+        int offset = Math.Clamp(index - QuickLookPolicy.MaximumItems / 2, 0, Math.Max(0, files.Length - QuickLookPolicy.MaximumItems));
+        string[] paths = files.Skip(offset).Take(QuickLookPolicy.MaximumItems).Select(e => e.Path).ToArray();
+        string? open = null, shown = null;
+        _dialog = true; UpdateActions(); QuickLookView? view = null;
+        try
+        {
+            ContentDialog? dialog = null;
+            view = new QuickLookView(paths, item.Path, path => { open = path; dialog?.Hide(); }, files.Length) { RequestedTheme = RequestedTheme };
+            _quickLookView = view;
+            dialog = new ContentDialog { XamlRoot = XamlRoot, RequestedTheme = RequestedTheme, Title = "Quick Look", Content = view,
+                CloseButtonText = "Close", DefaultButton = ContentDialogButton.Close };
+            dialog.Loaded += async (_, _) => await view.StartAsync();
+            dialog.Closing += (_, args) => { if (!_closed && view.Busy) { args.Cancel = true; view.RequestCancel(); } };
+            await dialog.ShowAsync(); shown = view.CurrentPath;
+        }
+        finally
+        {
+            view?.Release(); _quickLookView = null; _dialog = false;
+            if (!_closed) UpdateActions();
+        }
+        if (!_closed)
+        {
+            if (open is not null) _environment.OpenTarget(open);
+            await NavigateAsync(_folder);
+            if (shown is not null) ActiveList.SelectedItem = _entries.FirstOrDefault(e => e.Path.Equals(shown, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
     private async Task UndoAsync()
     {
         if (_closed || _dialog || _navigating || _request.Kind != FileSelectionKind.Browse || !_edits.CanUndo)
@@ -1390,6 +1437,8 @@ internal sealed class FilesView : Grid
             handlers[FileContextCommand.Open] = () => RunContextAsync(() => OpenAsync(captured));
             if (!captured.IsFolder)
             {
+                if (_request.Kind == FileSelectionKind.Browse)
+                    handlers[FileContextCommand.QuickLook] = () => RunContextAsync(() => QuickLookAsync(captured));
                 handlers[FileContextCommand.OpenWith] = () => RunContextAsync(() => _environment.WindowsFileAsync(captured.Path, "open-with"));
                 handlers[FileContextCommand.Edit] = () => _environment.EditTarget(captured.Path);
             }
@@ -1519,6 +1568,7 @@ internal sealed class FilesView : Grid
         _rename.IsEnabled = ready && !_recycle && ActiveList.SelectedItems.Count is >= 1 and <= BulkRenameNames.MaximumItems;
         _rename.Content = ActiveList.SelectedItems.Count > 1 ? "Rename items…" : "Rename…";
         _bulkRename.IsEnabled = CanMutate && (ActiveList.SelectedItems.Count is >= 1 and <= BulkRenameNames.MaximumItems || _bulkRenames.Receipt is not null);
+        _quickLook.IsEnabled = CanMutate && ActiveList.SelectedItems.OfType<FileEntry>().Any(e => !e.IsFolder);
         _undo.IsEnabled = ready && _edits.CanUndo;
         _undo.Content = _edits.UndoLabel;
         _empty.IsEnabled = ready && _recycle && _binHasItems;
@@ -1608,6 +1658,7 @@ internal sealed class FilesView : Grid
     {
         _closed = true;
         _bulkRenameView?.Release();
+        _quickLookView?.Release();
         _slowRead.Stop();
         _clipboardWatch.Stop();
         _navigationVersion++;

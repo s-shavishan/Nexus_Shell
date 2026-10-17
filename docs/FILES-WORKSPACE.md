@@ -1,5 +1,7 @@
 # Files workspace
 
+Use [Quick Look](QUICK-LOOK.md) with Space to preview selected files or captured visible neighbours. Its dialog keeps the owning tab stable while active and releases reads/playback on close.
+
 Nexus Files supports up to 12 folders in one supervised browser window. Each open tab owns its own navigation trail, listing, filter, selection, sort, grid/list choice, inspector and edit Undo history. Switching tabs preserves that state. File operations continue through the existing Core workers and Windows clipboard; tabs do not introduce another mutation engine.
 
 | Action | Control |
