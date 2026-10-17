@@ -37,6 +37,10 @@ Select up to 100 sibling files/folders and use **Bulk rename…** or Ctrl+Shift+
 
 See [Bulk rename, boundaries and manual checks](docs/BULK-RENAME.md).
 
+Press **Space** on a file for **Quick Look**: images, paged/password-protected PDFs, selectable text/code with encoding controls, and audio/video with manual playback. Browse captured selections or visible neighbours, zoom, copy the path or open externally. Reads/rendering are bounded, unsupported formats are explicit, and content is never executed by preview.
+
+See [Quick Look formats, limits and Windows acceptance](docs/QUICK-LOOK.md).
+
 ## Storage Analyzer
 
 Find large folders and files from Launchpad, Search, Nexus Tools or Controls. Scan a chosen folder/drive, drill into folder totals, inspect file types and skipped paths, open results in Files, and export a CSV. Scans show real logical sizes and explicit partial results; they never delete data or follow links/cloud-recall items.

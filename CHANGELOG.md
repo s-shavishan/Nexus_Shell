@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Quick Look: Space/toolbar/context previews for images, paged/encrypted PDFs, bounded text/code encodings and manually played audio/video, with captured navigation, zoom, local read-handle validation and cancellation/resource cleanup.
+
 - Files bulk rename: complete rule/target preview, collision and stale-source checks, guarded native sibling renames, cancellation/partial-result receipts, CSV export and independent guarded batch Undo.
 
 - Startup Apps: real startup inventory, search/scope filters, confirmed pause/restore for supported current-user Run entries, durable originals and interruption/conflict recovery, Windows/Files fallbacks and CSV export.

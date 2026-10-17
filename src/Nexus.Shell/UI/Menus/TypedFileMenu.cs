@@ -10,7 +10,7 @@ namespace Nexus.Shell.UI.Menus;
 internal enum FileContextCommand
 {
     Open, Edit, OpenWith, CopyTo, MoveTo, Rename, CopyPath,
-    Properties, Reveal, WindowsOptions, PinFolder, Undo, Copy, Cut, Recycle, CreateZip, ExtractZip, BulkRename
+    Properties, Reveal, WindowsOptions, PinFolder, Undo, Copy, Cut, Recycle, CreateZip, ExtractZip, BulkRename, QuickLook
 }
 
 internal static class TypedFileMenu
@@ -72,6 +72,7 @@ internal static class TypedFileMenu
             if (transfer.Items.Count > 0) menu.Items.Add(transfer);
         }
         var organize = ShellMenu.Group("Organize", "\uE8A9");
+        AddChild(organize, "Quick Look", FileContextCommand.QuickLook, "\uE890", "Space");
         AddChild(organize, "Copy", FileContextCommand.Copy, "\uE8C8", "Ctrl+C");
         AddChild(organize, "Cut", FileContextCommand.Cut, "\uE8C6", "Ctrl+X");
         AddChild(organize, "Create ZIP…", FileContextCommand.CreateZip, "\uF012");
